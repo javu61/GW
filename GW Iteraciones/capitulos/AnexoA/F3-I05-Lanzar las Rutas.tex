@@ -1,0 +1,141 @@
+\section{Quinta iteración de la Fase 3: Lanzar las rutas}
+\label{sec:LanzarRutas}
+
+	
+	Con el generador de aleatorios verificado esta iteración le da
+	su primer uso real: elegir rutas. Hasta ahora el motor de estados
+	enciende segmentos con una SECUENCIA de prueba escrita en el código;
+	esa secuencia desaparece. A partir de aquí, lo que se enciende y se
+	apaga en el cristal son \textbf{rutas}: cadenas de segmentos que la
+	autoría dibujó con los enlaces a \texttt{siguiente}, y que empiezan en
+	los segmentos de tipo \textbf{inicio}, que el diseñador también numeró
+	(campo \texttt{ruta} del GWI). El motor elige qué ruta lanza de forma 
+	aleatória; el elemento la recorre; cuando termina, desaparece y al tick 
+	siguiente nace otra.
+	
+	Será la primera vez en que algo definido en el cartucho, y no constantes de
+	prueba, definen lo que se ve en pantalla. 
+	
+	De momento solo se presentan los segmentos en las rutas, no se va a verificar las Colisiones con su enlace a vida o muerte, aquí las rutas nacen y continúna hasta el final de su recorrido, lo que permite tanto probar esta características del motor de estados, como visualmente apreciar que las secuencias definidas son correctas.	
+	
+	\subsection{Qué es una ruta en el modelo}
+	
+	Una ruta es la cadena que ya viaja en el GWI desde el diseñador:
+	un segmento \textbf{inicio} (marcado con un número de \texttt{ruta}) y la
+	cadena segmentos definidos por los enlaces \texttt{siguiente} que salen de él. El inicio de la	ruta es quien da el número: el proceso lanza una ruta por su número, se localiza el segmento de inicio correspondiente, y se lanza la cadena.
+	
+	El \emph{elemento} que recorre la ruta no es una entidad nueva:
+	es ``el segmento que está encendido ahora en esa ruta''. Como todo
+	en el modelo, el estado vive en la lista de segmentos: recorrer una
+	ruta es apagar el segmento actual y encender el que marca su enlace a
+	\texttt{siguiente} — el mismo mecanismo que ya usa el jugador, solo
+	que el jugador se mueve con botones y la ruta avanza con el reloj.
+	
+	\subsection{Decisiones actuales}
+	
+	\begin{enumerate}	
+		\item \textbf{¿Cuándo se lanza una nueva ruta?} Se lanzará \emph{en el mismo tick en que muere la anterior}, de forma
+		que las rutas van encadenadas sin huecos. Mientras una ruta vive, no
+		nace ninguna otra; el tick en que la ruta muere, el PRNG elige la
+		siguiente y la arranca. La partida siempre tiene una ruta en marcha
+		(salvo antes del primer tick).
+		
+		Esta política de lanzamiento es para esta fase de pruebas; en una fase
+		posterior, la política, las aceleraciones, lanzar varias rutas a
+		la vez estilo Game B, hacer pausas más cortas, etc. viajarán en el
+		cartucho como parámetros. 
+		
+		\item \textbf{¿Qué hace el elemento al llegar al final de la ruta
+			sin colisión?} \emph{Desaparece}: la ruta muere al final.
+		El último segmento de la cadena se apaga y no se sigue
+		ningún enlace. Los enlaces \texttt{salvado}/\texttt{muerte}
+		se tratarán cuando se aborde el tema de las colisiones, que será la que
+		decida cuál de los dos rutas se toma.
+		
+		\item El PRNG es el ya definido, sin cambios: el motor pide
+		«dame una secuencia» al director con parámetro
+		(\texttt{aleatorio(maxRutas)}) y el director responde con la
+		secuencia determinista generada desde la semilla. Misma semilla, misma
+		partida.
+	\end{enumerate}
+	
+	\subsection{El tick del motor, con rutas}
+	
+	El orden de las acciones del tick no cambia (entrada, apagar
+	banderas de cambiado, avance); lo que cambia es el paso de avance:
+	la SECUENCIA de prueba se sustituye por el avance de la ruta y el
+	lanzamiento de la nueva:
+	
+	\begin{itemize}
+		\item En el barrido solo participan los segmentos de tipo juego (1) e
+		inicio (2). Los segmentos del jugador (0) y los
+		contadores de vida/muerte (3 y 4) jamás son barridos aunque estén
+		encendidos. Para verificarlo se crea una función \texttt{esDeRuta} que nos lo indicará.
+		
+		\item Antes de tocar nada se toma una FOTO de los
+		segmentos de ruta visibles: cada uno avanza exactamente un paso,
+		aunque su \texttt{siguiente} también estuviera visible. Sin esta salvaguardia una cadena podría avanzar dos pasos en un mismo tick.
+		
+		\item \textbf{Avance:} si hay ruta viva, su segmento actual se
+		apaga y se enciende su \texttt{siguiente} (ambos quedan
+		marcados como cambiados). Si el actual no tiene
+		\texttt{siguiente} (el final de la cadena), la ruta MUERE:
+		el segmento se apaga y la ruta deja de existir. Esto ocurre ahora por no controlar colisiones, pero pueden existir cadenas que hagan exactamente esto para lanzar cosas por pantalla que no intervienen en el juego, como en nuestro caso de ejemplo, pueden aparecer tiburones nadando bajo la barca que no intervienen en el juego, solo son un adorno en la pantalla.
+		
+		\item \textbf{Lanzamiento:} si no hay ruta viva, el motor pide un
+		número de ruta al PRNG del director, localiza el segmento de
+		inicio de esa ruta y lo enciende: la ruta nace. Nace en el
+		mismo tick en que se nota la ausencia, así que la partida
+		nunca muestra un tick ``vacío'' (salvo el arranque).
+		
+		\item \textbf{Arranque de la partida} (\texttt{iniciar}): se
+		apagan todas las banderas y NO hay ruta viva: el primer
+		tick lanza la primera. El jugador sigue buscándose y
+		encendiéndose como hasta ahora: la ruta y el
+		jugador conviven en pantalla sin conocerse.
+	\end{itemize}
+	
+	El motor no añade ningún estado propio: si una ruta vive, es porque
+	su segmento actual tiene la bandera \texttt{visible} encendida; si
+	no vive ninguna, es que ningún segmento de ruta la tiene. Como
+	siempre, la lista de segmentos es el estado: activo y visible son
+	lo mismo a efectos de presentación. (Hay una función de diagnóstico,
+	\texttt{rutasVivas()}, que cuenta elementos de ruta visibles, pero
+	no es estado: es una lectura de la lista).
+	
+	El mecanismo no limita el número de rutas simultáneas: si algún
+	día se lanzan varias a la vez, cada una avanza por su propio
+	\texttt{siguiente} en el mismo barrido. Es la política de
+	lanzamiento (una sola viva) lo que impone el encadenado, no el
+	barrido.
+	
+	\subsection{Detalles que la simulación debe cazar}
+	
+	\begin{itemize}
+		\item La primera ruta nace en el primer tick tras
+		\texttt{iniciar()} (no en el propio \texttt{iniciar}).
+		
+		\item La ruta recorre la CADENA completa: la simulación debe
+		verificar la secuencia exacta de segmentos encendidos en
+		pantalla (a nivel de píxel o de banderas), no solo ``algo
+		se enciende''.
+		
+		\item Al morir la ruta, el segmento final se apaga SIN RASTRO
+		(el repintado completo del motor gráfico ya lo garantiza)
+		y al tick siguiente nace la nueva.
+		
+		\item Reproducibilidad: con la misma semilla, dos partidas
+		eligen el MISMO orden de rutas (el PRNG ya está verificado;
+		aquí se comprueba que el consumo de números es estable).
+		
+		\item Regresiones: el jugador sigue moviéndose con los botones
+		por sus enlaces mientras las rutas corren; la cola de
+		pulsaciones, la marca de primer jugador y el motor gráfico
+		no se tocan.
+	\end{itemize}
+	
+	\subsection{Pruebas}
+	
+	Poniendo en marcha el juego, ya se aprecia que de forma aleatoria se van lanzando las tres rutas hasta el final, y siempre que se reinicia el juego comienza la misma secuencia.
+	
+\clearpage

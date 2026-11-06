@@ -1,0 +1,114 @@
+\subsection{Decimocuarta iteración de la Fase 3: Pruebas Finales}
+\label{subsec:VerificacionF3}
+
+Como en las fases anteriores, el cierre de la fase se certifica con una
+iteración de validación que recorre todos los cambios incorporados, desde la
+carga del cartucho hasta la presentación en pantalla con el GWI real del
+
+\subsection{Batería con las pruebas efectuadas y su resultado}
+\label{sec:BateriaPruebasFase3}
+
+% Configuración para que las columnas X justifiquen a la izquierda en lugar de centrado/justificado completo
+\newcolumntype{L}{>{\raggedright\arraybackslash}X} 
+
+\begin{small} 
+	\begin{tabularx}{\textwidth}{c >{\hsize=0.4\hsize}L >{\hsize=1.6\hsize}L c}
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endfirsthead % Cabecera de la primera página
+		
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endhead % Cabecera que se repite en las páginas siguientes
+		
+		\midrule
+		\multicolumn{4}{r}{\small Continúa en la página siguiente...} \\
+		\endfoot % Pie de página en páginas intermedias
+		
+		\bottomrule
+		\endlastfoot % Cierre definitivo al final de toda la tabla
+
+
+	1 & Jugador & El jugador queda visible y presentado en su posición de
+	inicio al primer \textit{iniciar}, sin necesidad de pulsar nada. & OK \\
+	\hline
+	2 & Jugador & Los botones mueven al jugador por sus enlaces de
+	dirección; los enlaces inversos se mantienen automáticamente al
+	marcarlos y al quitarlos. & OK \\
+	\hline
+	3 & Jugador & La verificación al guardar bloquea un cartucho con un
+	jugador sin ningún enlace de dirección a otro jugador. & OK \\
+	\hline
+	4 & Rutas & Los segmentos de juego nacen por azar, avanzan por sus
+	enlaces un segmento por tick y mueren al llegar al final de su
+	concatenación. & OK \\
+	\hline
+	5 & Azar & Con la misma semilla, dos partidas son idénticas: mismas
+	rutas naciendo en los mismos ticks y mismos desenlaces. & OK \\
+	\hline
+	6 & Colisiones & Una colisión solo se decide entre el jugador y un
+	segmento visible que reporta colisión; el desenlace salvado enciende su
+	cadena y el mortal la suya. & OK \\
+	\hline
+	7 & Congelación & Mientras corre una cadena de desenlace el juego queda
+	congelado: no nacen rutas y el jugador no responde; al morir el último
+	eslabón el juego se reanuda. & OK \\
+	\hline
+	8 & Contadores & La familia de vida se enciende desde el primero y la de
+	muerte acumulativamente desde el último, en el orden definido por su
+	cadena y no por la numeración del diseñador. & OK \\
+	\hline
+	9 & Contadores & Los contadores de dígitos presentan su valor con
+	segmentos de siete segmentos y lo actualizan en el mismo tick del
+	cambio. & OK \\
+	\hline
+	10 & Fin de partida & La partida termina al agotarse un contador, al
+	encenderse todos los iconos de muerte o al perderse todas las vidas,
+	según el mecanismo declarado en el cartucho. & OK \\
+	\hline
+	11 & Adicionales & Un segmento \textit{adicional} sin siguiente queda
+	fijo encendido (helicóptero); con siguiente avanza en su propio bucle, y
+	un \textit{inicioAdicional} nace encendido y alterna solo (aspas), sin
+	que nada los interrumpa. & OK \\
+	\hline
+	12 & Secuencia & La Secuencia lanza sus segmentos en orden, uno por
+	tick, y se relanza desde el primero tras esperar los ticks declarados
+	(ciclo completo de $n+m$ ticks). & OK \\
+	\hline
+	13 & Secuencia & Las colisiones y la congelación por desenlace salvado
+	NO interrumpen la Secuencia; solo el nacimiento de un ciclo de muerte
+	la interrumpe. & OK \\
+	\hline
+	14 & Secuencia & Al nacer el ciclo de muerte, el segmento activo de la
+	Secuencia desaparece, la animación se reinicia por completo y espera
+	los ticks necesarios para relanzarse desde su primer segmento. & OK \\
+	\hline
+	15 & Secuencia & La cadena de muerte atraviesa un segmento encendido
+	por la Secuencia (las aletas compartidas): lo toma como eslabón, lo
+	apaga y sigue, produciendo la muerte. & OK \\
+	\hline
+	16 & Acompañantes & Un secundario «Mostrado junto a» se enciende y
+	apaga siempre con su principal, incluidas las cadenas de desenlace, y
+	puede presentarse solo en la animación de fondo. & OK \\
+	\hline
+	17 & Acompañantes & La verificación al guardar bloquea un secundario
+	con cualquier enlace: con siguiente, apuntado por otro, con colisión, de
+	tipo distinto a juego o con dos principales. & OK \\
+	\hline
+	18 & Depuración & La barra de estado con \texttt{GW\_DEBUG} muestra el
+	estado de la Secuencia (contador pendiente, segmento en curso y si
+	anima o está suspendida). & OK \\
+	\hline
+	19 & Integración & Partida completa con el GWI real del Parachute: tres
+	ciclos de muerte que atraviesan las aletas encendidas por la
+	animación, tres iconos de muerte y partida terminada por fin de
+	muerte. & OK \\
+	\hline
+	
+	\end{tabularx}
+	\nopagebreak
+	\captionof{table}{Batería de pruebas de validación de la Fase 3.}
+	\label{tab:PruebasFase3}
+\end{small}

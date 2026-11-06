@@ -1,0 +1,80 @@
+\section{Séptima iteración de la Fase 1: Mejoras en el Diseñador Gráfico}
+\label{sec:MejorasDisenadorGrafico}
+
+En esta iteración introducimos unas mejoras en el diseñador gráfico. En la anterior, el objetivo principal era descomponer y manipular los segmentos; en esta ajustamos el sistema tras haber probado el manejo.
+
+\subsection{Movimientos del jugador y del juego}
+Los segmentos del juego son una carrera encauzada: una caída no retrocede jamás, el tiburón no 'des-come'. El jugador, en cambio, se mueve libremente entre sus posiciones: dos en Parachute, cuatro en juegos con más movilidad. Por tanto separamos los enlaces según el tipo de segmento:
+
+\begin{itemize}
+	\item \textbf{Segmentos de juego}: solo pueden tener el enlace al siguiente elemento (cadena unidireccinal). Se elimina el manejo del elemento anterior, ya que el motor nunca retrocede una caída ni una animación.
+	\item \textbf{Segmentos de jugador}: cuatro enlaces direccionales, cada uno opcional, asociados directamente al botón correspondiente: \texttt{izquierda} y \texttt{derecha} en juegos de dos botones como Parachute; \texttt{izquierda}, \texttt{derecha}, \texttt{arriba} y \texttt{abajo} en juegos de 4 o 5 botones.
+\end{itemize}
+
+Las cuatro direcciones existen siempre en el panel de edición; es el cartucho el que define cuáles usa cada juego: las no usadas quedan vacías y no se incluyen en el GWI. De esta forma el modelo no depende del estilo de máquina, y un juego futuro con cruceta no requiere cambios en el sistema.
+
+\textbf{El panel cambia según el tipo}: como el tipo se decide en el propio panel (todos los segmentos nacen como juego por defecto), el panel ahora muestra los 6 enlaces siempre, pero solo están activos los que puede modificar el usuario según el tipo seleccionado, los otros se ven atenuados y con el botón «Elegir» deshabilitado. Además, como ayuda, una línea bajo el título lo aclara con un texto diferente según el tipo del segmento: 
+\begin{itemize}
+	\item Enlaces de cadena (los demás desactivados para tipo juego)
+	\item Enlaces de direcciones (…para tipo jugador).
+\end{itemize}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/C05-I014}
+	\caption[Configuración de segmentos según su tipo]{}
+	\label{fig:c05-i014}
+\end{figure}
+
+Si se establece un enlace a siguiente, y luego se cambia el tipo a Jugador, este enlace ya no es correcto, por lo que se limpia.
+
+Ventajas de este modelo:
+
+\begin{itemize}
+	\item \textbf{El botón y el enlace son la misma cosa}: pulsar IZQ equivale a decir 'enciende el segmento que esté en mi izquierda'. No hay que traducir teclas a direcciones en el motor: los datos asociados al segmento ya lo dicen.
+	\item \textbf{Inverso calculado en verificación}: si el segmento A declara que B está a su derecha, en la verificación se calcula que en B, a la izquierda, está A. Si el autor señaló ambos lados y no coinciden, se avisa del conflicto.
+	\item \textbf{La colisión no cambia}: sigue siendo 'la ruta del juego llega a la posición de un jugador, ¿está o no encendido?'. Las direcciones solo gobiernan el movimiento del jugador.
+\end{itemize}
+
+Por comodidad de edición, en el panel se presentan, según el tipo, \texttt{siguiente} para los segmentos de juego y las direcciones para los de jugador. En el GWI solo se incluyen los enlaces correspondientes al tipo de cada segmento: el \texttt{JSON} queda así autoexplicativo y puede modificarse a mano con más facilidad si se desea. Al cargar el GWI, solo se restauran los datos que corresponden al tipo de cada nodo, evitando que un futuro autor asigne \texttt{siguiente} a un jugador esperando que el bote caiga.
+
+\subsection{Persistencia: guardar más datos para poder reconstruir exacto}
+Hay que poder guardar los datos de la autoría y, lo que es igual de importante, poder recuperarlos y realizar nuevos ajustes cuando sea necesario. Por tanto, el botón 'Cargar Cartucho' debe revisar el tipo del \texttt{JSON} y, según este, activar el botón de 'Descomponer' o cargar los datos guardados.
+
+Para poder efectuar esto hay temas a considerar:
+
+\begin{itemize}
+	\item \textbf{Guardar los cambios.} La clave de todo es que la extracción es determinista: un mismo PNG genera siempre los mismos componentes con los mismos índices. Por tanto, si la autoría se guarda referida a índices de componente (uniones como pares, propiedades por componente, desplazamientos por grupo), al recargar y re-descomponer todo se reconstruye idéntico, con los mismos números \texttt{seg\_NNN}.
+	\item Hay que añadir datos en el GWI:
+	\begin{itemize}
+		\item El GWI lleva una sección \texttt{autoria} con los cambios: \texttt{uniones} (pares de índices fusionados), \texttt{propiedades} (propiedades por índice de componente) y \texttt{offsets} (desplazamientos de 'posicionar juntos'). Todo en claves de componente: regenerable.
+		\item En cada unión queda constancia de quién se fusionó con quién: el par es el registro de autoría, lo que permite repetirlo al cargar y deshacerlo de manera sencilla.
+		\item \textbf{Índices frente a IDs}: la sección \texttt{autoria} usa índices de componente, porque son deterministas ante cualquier cambio posterior; los identificadores \texttt{seg\_NNN}, en cambio, se renumeran al unir, así que guardar IDs como referencia de reconstrucción conduciría a referencias erróneas. Para lectura humana, el GWI añade en cada segmento un campo informativo \texttt{unidos} con los IDs finales de los componentes que lo forman (p. ej. \texttt{unidos: [seg\_014, seg\_025]}); no es dato de reconstrucción, es documentación.
+		\item Al pulsar sobre un elemento unido, el panel indica los componentes que absorbió y permite \textbf{deshacer la unión}: basta con eliminar su par de la lista \texttt{uniones} y reconstruir. Deshacer no se implementa en esta iteración (alcance), pero el diseño lo deja servido, porque reconstruir es barato.
+	\end{itemize}
+\end{itemize}
+
+\begin{itemize}
+		\item  \textbf{Qué hace 'Cargar Cartucho' según el tipo del \texttt{JSON}}:
+	
+	\begin{itemize}
+		\item \textbf{GWB}: flujo de creación. Se descompone la imagen de manera automática en segmentos, y se crean las  listas de datos necesarias para su manejo. El GWB nunca lleva autoría: la autoría vive solo en el GWI, de modo que el GWB no muta nunca por obra de la herramienta y puede volver a cargarse para empezar de cero.
+		\item \textbf{GWI}: flujo de modificación. Carga directa: las listas de sprites y segmentos pasan a memoria sin descomponer ni extraer.
+		\item \textbf{GWC}: flujo de pruebas. Carga directa en el simulador, será el que consuma el futuro cargador del ESP32.
+	\end{itemize}
+	
+	\item 	Para que el flujo GWI sea autónomo, el GWI debe referenciar la imagen \texttt{img\_s} original (el editor la necesita para pintar el mapa). El guardado la copia junto a los sprites y al \texttt{JSON} del GWI, de modo que la carpeta \texttt{segmentos/} es autosuficiente: recargarla es suficiente para continuar la autoría.
+\end{itemize}
+
+
+\subsection{Otros pequeños detalles ajustados}
+	Hay algun detalle que se ha ajustado para que todo funcione de forma adecuada:
+\begin{itemize}
+	\item El botón «Verificar y Guardar» genera el fichero \texttt{cartucho\_gwi.json}, de manera que el GWB del cartucho no se toca: los cambios solo se guardan en el nuevo GWI, y el GWB no cambia nunca. El GWI guarda además la ruta de la \texttt{img\_s} original para trazabilidad.
+	\item El inverso de cada dirección se calcula en la verificación y \textbf{se guarda también en el GWI}. Es una redundancia deliberada: el motor —y el futuro generador del cartucho compilado para el ESP32— lee los enlaces ya completos sin cálculo adicional, y como ese paso de generación corre en el PC, el coste de espacio es irrelevante.
+\end{itemize}
+
+\subsection{Lista de funciones}
+Como el desarrollo ya ha credido mucho, en el apéndice A se incluye la lista de todas las funciones definidas en los ficheros, con los cambios introducidos en cada iteración.
+
+\clearpage

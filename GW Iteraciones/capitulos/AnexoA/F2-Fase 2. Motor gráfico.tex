@@ -1,0 +1,68 @@
+\section{Fase 2: Motor gráfico}
+\label{sec:Fase2_MotorGrafico}
+
+La \textbf{Fase 1 (Editor Gráfico)} dejó el entorno de autoría cerrado y probado: el diseñador compone cartuchos intermedios (\texttt{GWI}) donde cada segmento conoce su posición, su tipo y sus relaciones. Pero hasta ahora la pantalla del aparato ha sido siempre una \emph{fotografía}: una composición estática que se pinta una vez (fondo con los segmentos encendidos en su estado base) y no vuelve a tocarse hasta que el usuario rehace algo. 
+
+La \textbf{Fase 2 (Motor Gráfico)} le da vida: los segmentos deben encenderse y apagarse, moverse por la pantalla y reaccionar a los botones, tal y como lo haría la máquina Game \& Watch original. Antes de escribir una sola línea del motor conviene detenerse a analizar qué exige exactamente dibujar \emph{dinámicamente} sobre este hardware simulado, porque los problemas encontrados durante la Fase 1 en el dibujado estático ---un error de escala que dejaba los segmentos fuera del lienzo, y la inversión de color al usar el XOR que los pintaba en gris en lugar de negro--- no fueron accidentes aislados: fueron las dos primeras muestras de un problema de fondo, la gestión del borrado.
+
+Desde el inicio del diseño ya se definió que se usaría un director y dos motores, que se desarrollan en el simulador del PC y luego se portarán al ESP:
+
+\begin{itemize}
+	\item \textbf{El director}: lleva el control del tiempo,  llama consecutivamente a ambos motores en cada tic del reloj, luego hace una pausa si es necesario para ajustar el tiempo y que sea uniforme o acelerado según la fase del juego. Al pasar al sistema externo el port  de la lógica general es casi directo, solo cambiará el sistema de temporización.
+
+	\item \textbf{El motor del juego}: lleva la lógica y activa el estado de visibilidad en los segmentos, sin saber nada de como dibujarlos. Este motor será un port casi directo al otro sistema, solo cambiará realmente el lenguaje en que está programado en cada uno.
+	
+	\item \textbf{El motor gráfico}: se limita a dibujar en la pantalla según si ha cambiado el estado de visible de cada segmento y si ha cambiado, sin pensar como o porque están o no activados. Este motor es el que hay que cambiar para cada uno de los sistemas.
+\end{itemize}
+
+\subsection{El problema del borrado}
+\label{subsec:ProblemaBorrado}
+
+Un motor de juego LCD no \emph{dibuja} la pantalla en cada fotograma como haría un motor de \textit{sprites} tradicional: el cristal líquido es una malla de píxeles que \textbf{se enciende y se apaga por partes}. Cuando un segmento cambia de posición, la pantalla queda con su silueta anterior en la posición antigua, por lo que hay que restaurar en esa posición el arte que había debajo. El historial de la Fase 1 ya resolvió \emph{a su manera} las dos caras de ese problema en el editor:
+
+\begin{itemize}
+	\item \textbf{La posición}: las coordenadas de los segmentos viven en el espacio de \texttt{img\_s}, que puede tener una resolución ---incluso una proporción--- distinta de la pantalla declarada por el \textit{setup} y del arte fijo indicado en \texttt{img\_f}. La solución fue escalar por eje al vuelo con muestreo de vecino más cercano; el escalado definitivo lo hará el generador del cartucho final para pasarlo al sistema externo. El motor hereda esta regla sin discusión.
+	
+	\item \textbf{El color}: el intento original de presentar por XOR funcionaba solo sobre huecos en color blanco puro; sobre arte en cualquier otro color el segmento aparecía como la \emph{inversión} del fondo (oscuro sobre cielo claro, claro sobre mar oscuro). La física real lo zanjó: el arte fijo está impreso en una capa aparte y el LCD \textbf{siempre escribe negro encima}. Como mostramos pantallas estáticas, el XOR desapareció en favor de la escritura directa.
+\end{itemize}
+
+Pero la escritura directa, que en el editor es gratis (el aparato se repinta \emph{completo} desde el fondo cada vez que algo cambia), tiene un precio oculto en un motor: \textbf{quitar un segmento exige restaurar lo que había debajo}, y lo que había debajo es el arte fijo \texttt{img\_f} recortado en la caja exacta que el segmento ocupaba. Además los segmentos se moverán: la caja cambia en cada paso, y dos segmentos pueden solaparse, no físicamente su silueta, pero si los recuadros que los incluyen, de modo que restaurar el fondo no siempre basta si debajo hay otro segmento encendido. En resumen, el borrado correcto exige conocer, para cada píxel, el estado \emph{completo} de la escena.
+
+\subsection{Soluciones posibles y su evaluación}
+\label{subsec:SolucionesBorrado}
+
+Las alternativas consideradas para la presentación dinámica son las clásicas del asunto, evaluadas aquí, todas las opciones son posibles en el PC por disponer de memoria y potencia adecuadas, pero hay que considerarlas bien para su manejo en el ESP32):
+
+\begin{enumerate}
+	\item \textbf{XOR simétrico (dibujar dos veces borra).} Presentar un segmento aplicando XOR con el contenido actual, de modo que repetir la operación lo retira y restaura el fondo. Es la opción más barata en memoria: cero bytes de estado. Pero la Fase 1 demostró que es incorrecta con un arte de fondo en color (el negro solo surge del XOR con el blanco puro) y además falla con segmentos solapados: apagar el de encima enciende los píxeles compartidos del de abajo. \textbf{Descartada, \underline{funciona mal en ambos sistemas}}.
+	
+	\item \textbf{Dos imágenes por segmento (silueta y fondo bajo su caja).} Guardar junto a cada sprite el recorte del arte fijo que queda bajo su caja, y \emph{blitear} el recorte para borrar. Sigue siendo barato y local, pero el recorte solo vale si el fondo bajo el segmento no cambia ---y en nuestro caso si que cambia, porque los segmentos se moverán y el fondo bajo una caja depende de su posición. Esto no solo duplica la cantidad de imágenes a guardar, sino que no permite eliminar los segmentos duplicados, ya que al estar en otras zonas de la pantalla el fondo sería diferente, por lo que sería más del doble realmente la necesidad de almacenamiento por cada segmento, lo que no es correcto en un cartucho pensado para guardarse en una flash en el ESP32. \textbf{Descartada por exceso de memoria}.
+	
+	\item \textbf{Repintado completo (fondo + todos los encendidos).} En cada cambio de estado, pintar el fondo entero y encima todos los segmentos encendidos. Es lo que hace el editor y es \emph{siempre correcto}: no hay estado que restaurar porque la escena se reconstruye de cero, pero solo cuando carga el cartucho o cuando se guarda. En este caso su coste es proporcional al tamaño de la pantalla y al número de segmentos, no al del cambio. En el PC, donde el lienzo es un \texttt{canvas} acelerado, es de facto casi gratis. Es la opción natural para el simulador. \textbf{Mala solución en el ESP por necesitar muchos recursos}.
+	
+	\item \textbf{Doble búfer (componer en memoria y volcar).} Una variante formalizada del repintado completo: mantener un búfer de pantalla en memoria, componer ahí el fondo y los segmentos encendidos, y volcar el resultado de una vez. El búfer puede ser completo o, como refinamiento, marcarse por zonas sucias para volcar solo lo cambiado. Es el sistema usado en los sistema de 8 bits tradicionales por ser el que mejor resultado da dibujando pantallas, pero en un ESP con memoria limitada es difícil de que quepa. \textbf{Mala en el ESP por la cantidad de memoria necesaria}.
+	
+	\item \textbf{Respaldo de fondo por caja (\textit{save-under}).} Antes de dibujar un sprite, guardar en un búfer temporal el recorte del fondo bajo su caja; para borrarlo, volcar de vuelta ese recorte. Es la técnica clásica de los sistemas de ventanas y su coste de memoria es mínimo (una caja, no la pantalla). Pero falla en cascada con solapes: el respaldo se tomó \emph{antes} de que otro segmento pisara la caja, y restaurarlo borra también los píxeles ajenos; hacerlo bien exige una lista de redibujo de los segmentos que cortan la caja, en orden de pintor --- es decir, un sistema de zonas sucias con dependencias, más código y más casos borde que el repintado completo, a cambio de un ahorro que en el \texttt{canvas} del navegador es nulo. En cuanto al truco de un color transparente, aquí no aplica: los sprites son siluetas de 1 bit y en el modelo LCD no existe la transparencia del sprite, solo el solape en profundidad. \textbf{Descartada en el PC; candidata legítima para las pruebas del ESP32} (con arte en color, el respaldo sería la caja en RGB565). \textbf{Posible en el ESP, pero usa un algoritmo de repintado más complejo}.
+	
+\end{enumerate}
+
+\subsection{Decisión: abordar ahora en el PC, diferir para el ESP}
+\label{subsec:DecisionDobleVia}
+
+Vemos que no hay una opción que sea la mejor para ambos sistemas, por lo que la conclusión del análisis es doble:
+
+\begin{itemize}
+	\item Primero, que la pieza central es \emph{una función de composición pura} (fondo + lista de segmentos encendidos con sus posiciones $\rightarrow$ imagen de pantalla): todas las estrategias de actualización posibles se montan sobre ella, y por eso es lo único que hay que diseñar bien a la primera.
+	
+	\item Segundo, que la estrategia de actualización \textbf{no se puede decidir ahora para las dos plataformas}: el desarrollo de esta fase arranca sobre el simulador del PC, y posteriormente se abordará el sistema adecuado en la plataforma de hardware final, la decisión se tomará tras realizar pruebas reales en la plataforma, que nos dirá qué sistema conviene usar en el motor gráfico para el ESP32.
+\end{itemize}
+	
+Ante esto, la decisión del sistema a utilizar es la siguiente:
+
+\begin{itemize}
+	\item \textbf{En el PC (simulador), decisión adoptada}: \textbf{repintado completo por estado}. El navegador ya aísla el coste del repintado (el propio \texttt{canvas} es la superficie de presentación); componer de cero elimina cualquier bug de restauración y hereda sin cambios las funciones de pintado de la Fase 1 (\texttt{pintarFondoAparato} y \texttt{pintarSegmentoAparato}). El bucle del motor llama a la composición cada vez que el estado lógico cambia; no hay búfer intermedio que sincronizar ni memoria adicional. Con la pantalla de este proyecto ($320 \times 204$) y aun con decenas de segmentos, el coste es despreciable.
+	
+	\item \textbf{En el ESP32 queda aplazada}: Será necesario efectuar pruebas con el sistema a usar para conocer la mejor opción, por lo que ahora no podemos decidir nada. El único compromiso en esta fase es que la composición pura del simulador esté diseñada de modo que su lógica (qué segmentos encendidos y en qué posiciones) sea traducible a cualquier posibilidad de presentación, de forma sencilla.
+\end{itemize} 
+
+\clearpage

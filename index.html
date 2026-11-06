@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="designer/estilos.css">
+  <title>GW - Simulador Game &amp; Watch</title>
+  <meta name="description"
+    content="Generador de juegos de tipo Game&Watch, genera un 'cartucho' que puede simular directamente, y un programa para su uso en un ESP32." />
+</head>
+
+<body>
+  <h1>Simulador Game &amp; Watch</h1>
+
+  <!-- Barra de botones (F5-I7): UN SOLO ejemplar de cada botón. Cada
+       pestaña muestra solo los suyos (los oculta el CSS según el
+       atributo data-vista del body, que pone mostrarPestanna):
+       Simulador: Cargar Setup · GWI · GWC; Editor: todos (los
+       .soloEditor, además); Segmentos y Sprites: ninguno. La línea de
+       estado (#estado) queda siempre visible. -->
+  <div id="controles">
+    <input type="file" id="ficheroSetup" accept=".json,application/json" class="oculto">
+    <input type="file" id="carpetaCartucho" webkitdirectory class="oculto">
+    <input type="file" id="ficheroGWIZip" accept=".zip,application/zip" class="oculto">
+    <input type="file" id="ficheroGWC" accept=".gwc" class="oculto">
+    <button id="btnCargarSetup">Cargar Setup</button>
+    <button id="btnCargarCartucho" class="oculto soloEditor" disabled>Cargar Cartucho</button>
+    <button id="btnCargarGWIZip" class="oculto" disabled title="Carga un cartucho_gwi.zip">Cargar GWI (ZIP)</button>
+    <button id="btnCargarGWC" class="oculto" disabled
+      title="Carga el cartucho de ejecución cartucho_gwc.gwc">Cargar GWC</button>
+    <button id="btnGuardar" class="oculto soloEditor" disabled>Verificar y Guardar</button>
+    <!-- F5-I6: el par GWI+GWC de una sola foto de memoria —
+         verificación bloqueante, GWC primero y GWI con el Código GWC
+         del par (la suma de verificación del GWC) después. -->
+    <button id="btnGenerar" class="oculto soloEditor" disabled
+      title="Genera cartucho_gwc.gwc y guarda cartucho_gwi.zip con el Código GWC del par">Generar GWI+GWC</button>
+    <button id="btnDeshacer" class="oculto soloEditor" disabled title="Ctrl+Z">Deshacer</button>
+    <button id="btnRehacer" class="oculto soloEditor" disabled title="Ctrl+Y">Rehacer</button>
+    <span id="estado">Sin setup cargado.</span>
+  </div>
+
+  <!-- Pestañas (F5-I7): Simulador siempre; Editor desde que hay setup;
+       Segmentos y Sprites desde que hay un cartucho editable. Durante
+       una partida solo el Simulador. -->
+  <nav id="pestanas">
+    <button id="pesSimulador" class="pestActiva">Simulador</button>
+    <button id="pesEditor" disabled>Editor</button>
+    <button id="pesSprites" disabled>Segmentos y Sprites</button>
+  </nav>
+
+  <!-- Vista SIMULADOR: la carcasa con la pantalla y los botones físicos -->
+  <div id="vistaSimulador">
+
+    <!-- Carcasa: solo visible tras cargar un setup correcto.
+         Hay UN DISEÑO INDEPENDIENTE por cada estilo de máquina; el motor
+         muestra el que toca y cuelga la pantalla en su hueco. -->
+    <div id="maquina" class="oculto">
+
+      <!-- Los diseños parten de disponer a la izquierda de una cruceta, y a la derecha de dos botones, alineados así (se muestra el número asociado a cada botón): -->
+      <!--    2                                                                                                                                                     -->
+      <!--  0   1                    4                                                                                                                              -->
+      <!--    3                      5                                                                                                                              -->
+      <!-- De esta manera se puede distribuir los botones para las máquinas de 2, 4 o 5 botones de manera uniforme, los botones están en el mismo lugar siempre     -->
+      <!-- en el simulador                                                                                                                                          -->
+
+      <!-- Diseño de máquina de 2 botones: 0 a la izquierda, 4 a la derecha -->
+      <div id="maquina-2" class="diseno oculto">
+        <div class="filaJuego">
+          <div id="m2-izq" class="huecoBoton"></div>
+          <div class="huecoPantalla"><canvas id="pantalla"></canvas></div>
+          <div id="m2-der" class="huecoBoton"></div>
+        </div>
+        <div id="m2-sistema" class="filaSistema"></div>
+      </div>
+
+      <!-- Diseño de máquina de 4 botones: 0 y 1 a la izquierda, 4 y 5 a la derecha -->
+      <div id="maquina-4" class="diseno oculto">
+        <div class="filaJuego">
+          <div id="m4-izq" class="huecoBoton columnaPar"></div>
+          <div class="huecoPantalla"></div>
+          <div id="m4-der" class="huecoBoton columnaPar"></div>
+        </div>
+        <div id="m4-sistema" class="filaSistema"></div>
+      </div>
+
+      <!-- Diseño de máquina de 5 botones: cruceta 0,1,2,3 a la izquierda, 4 a la derecha -->
+      <div id="maquina-5" class="diseno oculto">
+        <div class="filaJuego">
+          <div id="m5-izq" class="huecoBoton cruceta"></div>
+          <div class="huecoPantalla"></div>
+          <div id="m5-der" class="huecoBoton"></div>
+        </div>
+        <div id="m5-sistema" class="filaSistema"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Vista EDITOR: el mapa y el panel de propiedades LADO A LADO (el
+       panel a la derecha) para que todo quepa en una sola pantalla.
+       Con ventana estrecha el panel cae debajo del mapa (flex-wrap).
+       Los botones están en la barra contextual superior. -->
+  <div id="vistaEditor" class="oculto">
+    <div id="lienzoEditor">
+      <!-- Mapa de objetos: la imagen con los segmentos numerados, clicable y en colores según su tipo y relaciones -->
+      <div id="zonaMapa" class="oculto">
+        <canvas id="mapaSegmentos"></canvas>
+      </div>
+      <!-- Panel de propiedades del segmento seleccionado -->
+      <div id="panelSegmento" class="oculto"></div>
+    </div>
+  </div>
+
+  <!-- Vista SEGMENTOS Y SPRITES: la lista de segmentos con su imagen,
+       en sublistas, y al final las imágenes sin segmento (la
+       construye BaseDescomponer.pintarListaSegmentos). -->
+  <div id="vistaSprites" class="oculto">
+    <div id="listaSegmentos"></div>
+  </div>
+
+  <!-- Panel de información (F5-I7): Simulador, la máquina y el
+       cartucho; Editor, además, los datos del diseño. En Segmentos y
+       Sprites no se muestra (lo oculta el CSS). -->
+  <div id="panelEstado" class="oculto">
+    <div id="infoMaquina" class="infoLinea"></div>
+    <div id="infoDiseno" class="infoLinea"></div>
+  </div>
+
+  <!-- Scripts clásicos (SIN type="module") para poder abrir con doble clic (file://).
+       Orden: librerías primero (extractor, motor), luego quien las usa
+       (descomponer), el orquestador del editor (director), y al final el
+       simulador de la Fase 2: sus dos motores y el reloj (directorjuego). -->
+  <!-- Llave de depuración de los motores (Fase 2): con true, el
+       motor de juego cuenta en consola (F12) las dos cosas que
+       hace en cada tick (apagar banderas de cambiado, encender o
+       apagar segmentos); con false, la consola queda limpia. -->
+  <script>var GW_DEBUG = true;</script>
+  <script src="designer/jszip.min.js"></script>
+  <script src="designer/ComunListas.js"></script>
+  <script src="designer/BaseExtractor.js"></script>
+  <script src="designer/BaseGraficos.js"></script>
+  <script src="designer/BaseDescomponer.js"></script>
+  <!-- F5-I4: lectura y grabación de los cartuchos (GWB/GWI/GWC) en
+       su propio módulo, cargado tras el descomponedor (que delega en
+       él al guardar el GWI) y ANTES del director, que también lo usa. -->
+  <script src="designer/BaseCartucho.js"></script>
+  <script src="designer/BaseDirector.js"></script>
+  <script src="designer/JuegoMotorEstados.js"></script>
+  <script src="designer/JuegoMotorGrafico.js"></script>
+  <script src="designer/JuegoDirector.js"></script>
+</body>
+
+</html>

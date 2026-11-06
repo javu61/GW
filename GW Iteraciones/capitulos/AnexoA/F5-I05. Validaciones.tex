@@ -1,0 +1,112 @@
+\section{Quinta iteración de la Fase 5: Validación pasa al nuevo módulo de cartuchos}
+\label{sec:F5I5}
+
+La verificación anterior al guardado del GWI — la coherencia
+de las listas que el diseñador deja en memoria — no es lógica del
+editor: es el \textbf{contrato del formato}, lo que un cartucho
+debe cumplir para poder escribirse, igual que \texttt{validarCartucho}
+define lo que puede leerse. Esta iteración es un
+\textbf{traspaso puro}, como el de la anterior: mudar desde 
+\texttt{BaseDescomponer.js} a \texttt{BaseCartucho.js}, sin cambiar
+su comportamiento, pero aprovechar para darle la forma que sus dos
+futuros puntos de llamada necesitan: una \textbf{función independiente}
+que devuelve su resultado en vez de abrir el guardado.
+
+\subsection{Qué se traspasa}
+\label{sec:F5I5Que}
+
+La verificación completa del diseñador: el recorrido de las
+listas que exige que cada cartucho que va a salir tenga sentido
+por sí solo. Comprueba que los enlaces apunten a segmentos
+válidos y con la dirección correcta —calculando la inversa si
+falta, como las direcciones—, que las colisiones estén declaradas
+con sus contadores de desenlace, que los secundarios que se describen en la 
+Sección~\ref{sec:SegmentosPresentanJuntos} (treceava iteración de la fase 3 para los
+segmentos que se presentan juntos), no formen red de enlaces ni queden huérfanos,
+que los contadores de dígitos estén completos, que exista un
+jugador inicial, y que el fin de partida y la Secuencia estén
+declarados con sentido. Su resultado ya era de dos clases, y
+sigue siéndolo: los \textbf{errores}, que impiden guardar, y los
+\textbf{avisos}, que solo informan, este reparto no cambia.
+
+Todo se traslada tal cual funciona actualmente, con la adaptación necesaria para
+que la verificación reciba las listas por parámetro: el módulo
+no conoce al editor, así que no puede leer su memoria interna, usando 
+el mismo criterio que \texttt{validarCartucho} ya aplica al
+recibir el estilo de la máquina.
+
+\subsection{La función independiente}
+\label{sec:F5I5Funcion}
+
+Lo que hoy es el preámbulo de «Verificar y Guardar» pasa a ser
+una función propia del módulo con esta firma:
+
+		
+\begin{description}
+	\item \texttt{verificar(listas)} \\
+	Comprueba la coherencia del cartucho antes de escribirlo: recorre las listas, calcula lo que falte y devuelve los errores que impiden guardar y los avisos que solo informan.
+\end{description}
+
+
+Los procesos de guardado la llaman \textbf{siempre primero}, y la
+severidad la decide el punto de llamada: hoy solo «Verificar y
+Guardar» existe, y es bloqueante con los errores; cuando la
+siguiente iteración añada «Generar GWI+GWC», llamará a esta
+misma función antes que nada, sin duplicar el código y sin necesidad de validar dos
+veces lo mismo. Junto a ella, ya en su sitio, queda también
+\texttt{validarTopes}, que llegará con el GWC: cierto o falso, y
+el aviso o el bloqueo según quién la llame.
+
+\subsection{Los cambios en los módulos}
+\label{sec:F5I5Cambios}
+
+La mudanza es de traspaso, no de reescritura:
+
+\begin{itemize}
+	\item \textbf{BaseCartucho} gana la sección de validación de
+	escritura, junto a la validación de lectura que ya tenía: todo
+	lo que decide si un cartucho puede entrar o salir vive en el
+	mismo módulo.
+	
+	\item \textbf{BaseDescomponer} pierde la verificación y queda
+	con su llamada: el botón «Verificar y Guardar» llama a
+	\texttt{BaseCartucho.verificar}, y solo si no hay errores
+	continúa con el montaje y el guardado de siempre. Se quedan en
+	él lo que es del editor: el check del cartucho en edición, el
+	montaje del GWI y el repintado.
+	
+	\item \textbf{index.html} no cambia: el módulo ya se carga
+	desde el traspaso.
+\end{itemize}
+
+Ningún otro módulo cambia: el motor, el puente y el generador
+gráfico quedan exactamente como están.
+
+\subsection{Pruebas del traspaso}
+\label{sec:F5I5Pruebas}
+
+El traspaso es puro, así que la prueba es una sola:
+\textbf{el comportamiento no cambia}. En simulación y en
+navegador real:
+
+\begin{itemize}
+	\item \textbf{Cartucho válido:} el GWI real del Parachute pasa
+	la verificación con sus avisos de siempre y guarda igual.
+	
+	\item \textbf{Errores:} los mismos defectos de siempre —enlaces
+	colgantes, colisiones sin contador, secundarios con red— dan
+	los mismos mensajes de error, ahora saliendo del módulo.
+	
+	\item \textbf{Avisos:} los avisos no bloquean: el cartucho se
+	guarda igual, con su cuenta de avisos en el mensaje de
+	confirmación.
+	
+	\item \textbf{Cálculos:} las inversas y los lados que la
+	verificación completa sobre la marcha siguen calculándose
+	igual, y los huérfanos se retiran igual.
+	
+	\item \textbf{El botón:} «Verificar y Guardar» se comporta
+	idéntico: primero la verificación, y sin errores el guardado
+	en ZIP con el mismo contenido de siempre.
+\end{itemize}
+

@@ -1,0 +1,85 @@
+\section{Tercera iteración de la Fase 3: La marca de primer jugador en el diseñador}
+\label{sec:PrimerJugador}
+
+La iteración anterior (\emph{F3-I2}) cerró la respuesta al teclado, pero presentar el segmento inicial del \textbf{jugador activo} quedaba sujeto de una búsqueda: el motor tomaba el primer
+segmento de tipo jugador que encontraba en la lista. No existía nada en el diseñador para indicar cual era el primer segmento a presentar al iniciar el juego \emph{por dónde empieza la partida}. Esta iteración retrocede
+un paso al diseñador para dársela: un nuevo estado de los segmentos de tipo jugador, la marca de
+\textbf{primer jugador}, con reglas sencillas y visibles en el panel de propiedades.
+
+\subsection{El diseño}
+\label{subsec:DisenoF3I3}
+
+\begin{itemize}
+	\item \textbf{Un checkbox en el panel}. Cuando el tipo del segmento es
+	\emph{jugador}, el panel de propiedades muestra la fila «Jugador inicial»: marcarla
+	dice que \emph{ese} es el segmento jugador con el que la partida empieza (el que el
+	motor enciende al arrancar y del que salen los enlaces de dirección). Para los demás
+	tipos la fila no existe: la marca es cosa del jugador, como sus enlaces.
+	\item \textbf{Si no se marca ninguno}, el motor usa el primero que se encuentre en
+	la lista de segmentos (la búsqueda de F3-I2 queda como salvavidas): el sistema
+	funciona siempre, marcado o no.
+	\item \textbf{Si se marcan dos, prevalece el que se acaba de marcar}. Solo puede
+	haber una marca: marcar un segundo segmento le quita la marca al anterior. La
+	intención del autor es siempre la última acción, y el sistema la respeta sin preguntar.
+\end{itemize}
+
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\linewidth]{imagenes/propias/C05-I022}
+	\caption[]{Marcar primer jugador.}
+	\label{fig:c05-i022}
+\end{figure}
+
+\subsection{Cómo se realiza}
+\label{subsec:RealizacionF3I3}
+
+\begin{itemize}
+	\item \textbf{Una propiedad más}. La marca vive como la propiedad
+	\texttt{primero} del componente, junto a tipo, orden y enlaces: entra en el
+	\texttt{propPorDefecto} (nada marcado por defecto) y en los \texttt{CAMPOS\_PROP} del
+	historial, con lo que \textbf{viaja en el deshacer/rehacer por inversión} como
+	cualquier otro campo, sobrevive a las uniones (el \emph{merge} de \texttt{reconstruir}
+	la fusiona como el resto) y se reproduce al recargar la autoría.
+	\item \textbf{Marcar dos es una acción atómica}. Quitarle la marca al anterior y
+	dársela al nuevo se registran como el mismo bloque del historial (mismo número,
+	\texttt{relacionados}): deshacer revierte \emph{ambas} cosas de un golpe y rehacer
+	las repone. La unicidad no es un chequeo posterior: se mantiene en el momento del
+	marcaje, recorriendo los grupos jugador marcados.
+	\item \textbf{Cambiar de tipo descarta la marca}. Al dejar de ser jugador, la marca
+	se descarta igual que los enlaces de dirección del tipo anterior (mismo aviso en
+	consola, misma entrada del historial): nada queda huérfano en memoria ni en el GWI.
+	\item \textbf{El GWI la dice solo si está}. El segmento marcado viaja con
+	\texttt{primero: true} y los demás sin el campo (autoexplicativo y editable a mano;
+	si un GWI editado a mano llevase dos marcas, el motor toma la primera que encuentra).
+	La lista auxiliar de lo numerable muestra \textbf{«PRIMER JUGADOR: seg\_NNN»} junto a
+	rutas y contadores: ver por dónde empieza la partida sin buscarlo en el mapa.
+	\item \textbf{El motor solo cambia una prioridad}. \texttt{buscarJugador} consulta
+	primero la marca del diseñador, y solo si no hay cae a la búsqueda anterior (tipo
+	jugador, luego primer segmento con enlaces, luego el primero de la lista con aviso).
+	La regla del usuario queda tal cual: \emph{la marca es la palabra del autor, la
+		búsqueda es el salvavidas}.
+\end{itemize}
+
+\subsection{Verificación}
+\label{subsec:VerificacionF3I3}
+
+La simulación recorre el flujo completo ---diseñador, guardado/carga y motor--- con un
+GWB de cuatro segmentos y un GWI de cuarenta:
+
+\begin{itemize}
+	\item \textbf{Diseñador}: clic en el mapa, tipo jugador y marca: el GWI en memoria
+	lleva \texttt{primero: true}, la lista auxiliar lo muestra y la barra avisa; marcar un
+	segundo le quita la marca al primero (prevalece el último); \textbf{deshacer} restaura
+	la marca original y \textbf{rehacer} vuelve al segundo (acción atómica); desmarcar deja
+	la lista sin marca con aviso; cambiar el tipo a juego descarta la marca con aviso en
+	consola.
+	\item \textbf{Round-trip}: un GWI cuya sección \texttt{autoria.cambios} contiene el
+	marcaje se recarga y la reconstrucción reproduce la marca exactamente (la partida
+	vuelve a empezar por donde el autor dijo).
+	\item \textbf{Motor}: con la marca en el índice 5, el jugador activo es el 5
+	(presentado a píxel; el segmento tipo jugador sin marca NO se presenta); sin marca,
+	el motor cae al primero de la lista; los enlaces de dirección se siguen desde el
+	segmento marcado igual que siempre. Cero errores de consola.
+\end{itemize}
+

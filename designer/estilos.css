@@ -1,0 +1,252 @@
+/* estilos.css - Simulador Game & Watch
+ * Cargado por index.html con <link>. Funciona con file:// (el <link>
+ * a hojas locales NO está afectado por el bloqueo CORS de los módulos).
+ *
+ * Distribución en TRES PESTAÑAS (F5-I7): Simulador (la máquina), Editor
+ * (mapa de objetos con el panel de propiedades a la derecha) y
+ * Segmentos y Sprites (la lista de segmentos con su imagen). La barra
+ * de botones y el panel de información cambian con la pestaña.
+ */
+
+/* ---------- General ---------- */
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #26292e;
+  color: #e8e8e8;
+  margin: 0;
+  padding: 20px;
+}
+h1 { font-size: 1.2rem; margin: 0 0 14px 0; }
+.oculto { display: none !important; }
+
+/* ---------- Barra de carga ---------- */
+#controles { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+#controles button {
+  font-size: 1rem;
+  padding: 8px 14px;
+  border: 1px solid #555;
+  border-radius: 8px;
+  background: #3a3f47;
+  color: #e8e8e8;
+  cursor: pointer;
+}
+#controles button:hover:not(:disabled) { background: #4a5059; }
+#controles button:disabled { opacity: 0.4; cursor: not-allowed; }
+#estado { font-size: 0.9rem; font-weight: 700; color: #9fd89f; }
+#estado.error { color: #f0a0a0; }
+
+/* Botones por pestaña (F5-I7, tabla de la iteración): mostrarPestanna
+ * pone la vista activa en body[data-vista]. Simulador: Setup, GWI y
+ * GWC (los .soloEditor fuera); Editor: todos; Segmentos y Sprites:
+ * ninguno. La línea de estado (#estado) se ve siempre. */
+body:not([data-vista="vistaEditor"]) #controles .soloEditor,
+body[data-vista="vistaSprites"] #controles button { display: none !important; }
+/* Separador visual entre la carga de ficheros y la autoría */
+#controles .soloEditor#btnGuardar { margin-left: 18px; }
+
+/* ---------- Pestañas (Simulador / Editor / Segmentos y Sprites) ----------
+ * La pestaña activa se marca con .pestActiva. */
+#pestanas { display: flex; gap: 6px; margin: 0 0 16px 0; }
+#pestanas button {
+  font-size: 1rem;
+  padding: 8px 18px;
+  border: 1px solid #555;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #3a3f47;
+  color: #b8b8b8;
+  cursor: pointer;
+}
+#pestanas button.pestActiva {
+  background: #4a5059;
+  color: #ffffff;
+  font-weight: 700;
+}
+/* Pestaña sin nada que mostrar (o partida en marcha) */
+#pestanas button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* La máquina centrada en su vista */
+#vistaSimulador { text-align: center; }
+
+/* Vista EDITOR: el mapa con el panel de propiedades LADO A LADO
+ * (panel a la derecha) para que quepa en una sola pantalla. Con
+ * ventana estrecha el panel cae debajo (wrap). */
+#lienzoEditor { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+#lienzoEditor #zonaMapa { margin: 0; flex: 1 1 auto; }
+#lienzoEditor #panelSegmento { margin: 0; flex: 0 1 360px; max-width: 360px; }
+@media (max-width: 980px) {
+  #lienzoEditor #panelSegmento { max-width: 440px; }
+}
+
+/* ---------- Carcasa de la máquina ---------- */
+#maquina {
+  display: inline-block;
+  padding: 18px 22px;
+  background: linear-gradient(160deg, #d7d7d7, #adadad);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 1px 0 #fff;
+}
+
+/* Cada estilo de máquina (2, 4 o 5 botones) es un DISEÑO INDEPENDIENTE
+ * con su propio esqueleto en index.html; solo se muestra el activo. */
+
+/* Fila de juego: laterales flanqueando la pantalla, centrados en altura.
+ * Las estructuras de ambos lados son ESPEJO (mismas dimensiones), así
+ * que los botones de juego quedan siempre a la misma altura, aunque el
+ * cartucho elimine botones. */
+.filaJuego { display: flex; align-items: center; gap: 16px; }
+.huecoPantalla { display: flex; }
+#pantalla {
+  display: block;
+  background: #888888;   /* color neutro hasta cargar cartucho */
+  border: 3px solid #444;
+  border-radius: 4px;
+  max-width: 100%;
+}
+
+/* Columna de par simétrico arriba/abajo (diseño de 4 botones) */
+.columnaPar { display: flex; flex-direction: column; gap: 14px; }
+
+/* Cruceta (diseño de 5 botones): rejilla fija 3x3 con huecos ANCLADOS;
+ * si el cartucho elimina botones, los que quedan no se mueven. */
+.cruceta {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(3, 52px);
+  gap: 8px;
+}
+
+/* Trío de sistema A/B/R: abajo, centrado (como en muchas G&W reales) */
+.filaSistema { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+
+/* ---------- Botones físicos ---------- */
+.botonFisico {
+  font: 600 1rem system-ui, sans-serif;
+  color: #222;
+  background: linear-gradient(180deg, #f2f2f2, #c9c9c9);
+  border: 2px solid #888;
+  box-shadow: 0 3px 0 #909090, inset 0 1px 0 #fff;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  line-height: 1.05;
+}
+.botonFisico.cuadrado { width: 52px; height: 52px; border-radius: 10px; }
+.botonFisico.rect     { width: 76px; height: 30px; border-radius: 15px; font-size: 0.8rem; }
+.botonFisico small { font-size: 0.6rem; font-weight: 400; opacity: 0.65; }
+.botonFisico:active, .botonFisico.pulsado {
+  background: linear-gradient(180deg, #a8e6a1, #6fbf66);
+  box-shadow: 0 1px 0 #909090, inset 0 1px 0 #fff;
+  transform: translateY(2px);
+}
+
+/* Mapa de objetos: la imagen B/N escalada con los segmentos numerados */
+#zonaMapa {
+  margin: 8px auto;
+  text-align: center;
+}
+#mapaSegmentos {
+  border: 1px solid #555;
+  border-radius: 6px;
+  image-rendering: pixelated;
+  max-width: 100%;
+  cursor: crosshair;
+}
+
+/* Panel de propiedades del segmento seleccionado */
+#panelSegmento {
+  max-width: 440px;
+  margin: 8px auto;
+  padding: 8px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#panelSegmento h3 {
+  margin: 0 0 4px 0;
+  font-size: 0.9rem;
+}
+.filaProp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+.filaProp label {
+  flex: 0 0 140px;
+}
+.filaProp .valor {
+  flex: 1;
+  font-family: ui-monospace, Consolas, monospace;
+}
+.filaProp select,
+.filaProp button {
+  background: #222;
+  color: #eee;
+  border: 1px solid #666;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+}
+.filaProp button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.filaProp.inactivo label,
+.filaProp.inactivo .valor {
+  opacity: 0.4;
+}
+.subPanel {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+
+/* ---------- Lista de segmentos (pestaña Segmentos y Sprites) ----------
+ * Una sublista por clase (sin imagen, visibles, no visibles, imágenes
+ * sin segmento); cada fila es id · tipo · imagen y, si es un segmento,
+ * al pulsarla se abre en el Editor. */
+#listaSegmentos { max-width: 900px; }
+#listaSegmentos h3 { font-size: 0.95rem; margin: 16px 0 6px 0; }
+#listaSegmentos h3:first-child { margin-top: 0; }
+#listaSegmentos ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#listaSegmentos li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 190px;
+  padding: 6px 8px;
+  background: #1e2126;
+  border-radius: 6px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+}
+#listaSegmentos li.seleccionable { cursor: pointer; }
+#listaSegmentos li.seleccionable:hover { background: #2e333b; }
+#listaSegmentos .idSeg { color: #9fd89f; }
+#listaSegmentos .tipoSeg { color: #8a8a8a; flex: 1; }
+#listaSegmentos canvas {
+  max-width: 48px;
+  max-height: 48px;
+  background: #ffffff;
+  image-rendering: pixelated;   /* sprites pequeños: nítidos, no borrosos */
+}
+#listaSegmentos .sinImagen { color: #8a8a8a; font-style: italic; }
+
+/* ---------- Panel de información (F5-I7) ----------
+ * Simulador: la máquina y el cartucho; Editor: además el diseño.
+ * En Segmentos y Sprites no se muestra. */
+#panelEstado { margin-top: 16px; max-width: 640px; font-size: 0.9rem; color: #bcbcbc; }
+#panelEstado .infoLinea { margin: 2px 0; }
+#infoDiseno { font-family: ui-monospace, Consolas, monospace; color: #9fd89f; }
+body[data-vista="vistaSprites"] #panelEstado,
+body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }

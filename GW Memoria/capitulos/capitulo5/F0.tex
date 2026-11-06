@@ -1,0 +1,63 @@
+\section{Idea inicial}
+\label{sec:Fase0Resumen}
+
+La primera idea fue seguir al pie de la letra el enunciado propuesto:
+usar un motor de estados genérico que moviera la lógica del juego, para
+lo que habría que diseñar un fichero \emph{JSON} con los datos del
+«cartucho»: la imagen de fondo, la lista de los segmentos a usar, la
+lista de las imágenes de cada segmento y una tabla con la definición
+del motor de estados.
+
+Con esto, el sistema se compondría de un director del juego, que fuera
+llamando al intérprete de los estados para definir las transiciones que
+pusieran visibles o invisibles a los segmentos, y luego al motor gráfico,
+que presentara los visibles y eliminara los invisibles.
+
+El primer problema surgió al pensar que era muy sencillo tomar una
+imagen con todos los segmentos, recortarlos manualmente de forma
+individual y generar los ficheros de imagen separados. Al comenzar esta
+separación aparecieron varios temas:
+
+\begin{itemize}
+	\item En el Parachute hay unos 40 segmentos, y en otros juegos
+	pueden existir muchos más: un trabajo mucho más laborioso de lo que
+	inicialmente parecía.
+	\item Al recortar se ve que no pueden ser rectángulos simples: hay
+	solapamiento de los recuadros, lo que obliga a retocar algunas
+	imágenes después.
+	\item Los programas de dibujo aplican suavizado (\emph{anti-aliasing})
+	para mejorar el resultado, algo que aquí no interesa: tras recortar
+	habría que pasar cada imagen por un proceso que la convierta a blanco
+	y negro puros.
+\end{itemize}
+
+Por tanto, \underline{deseché esta idea y pensé en un diseñador gráfico
+	propio}, que a partir de la imagen en blanco y negro de los segmentos
+facilitara todo el proceso.
+
+Para que esto funcionara, las imágenes debían recortarse y escalarse al
+tamaño de la pantalla del ESP32, por lo que \underline{era necesario
+	añadir una configuración} con ese tamaño en algún lugar; y al pensarlo
+vi que también había que definir cómo están unidos los botones al
+ESP32. Esa configuración es lo que acabaría siendo el \emph{setup}.
+
+Con estas dos ideas iniciales comencé el desarrollo de la primera fase,
+el generador gráfico, pensando que podría añadir luego la tabla de
+estados al fichero del cartucho. Pero hay muchas variables a considerar
+en el juego y muchos eventos externos a los propios segmentos que
+tratar: cuántos se pueden lanzar a la vez en cada iteración, cómo se
+definen los que se lanzan inicialmente, las aceleraciones\ldots{} muchos
+detalles que hay que definir. Las transiciones de estados, por tanto, no
+eran sencillas de definir: aunque se añadan, por ejemplo, 5 variables a
+la tabla, con 40 segmentos habría que montar una tabla de $45 \times 45$
+entradas, lo que hacía muy compleja su definición.
+
+Por tanto deseché también una máquina de estados pura junto a su tabla
+de transiciones, y la cambié por definir cómo se comportan los
+segmentos usando una serie de reglas sencillas, que se pueden definir
+también en el gráfico de los segmentos. De esta forma, el entorno de
+autoría es el propio diseñador gráfico, y no requiere manipular los
+ficheros JSON del cartucho: todo se define usando el propio gráfico
+como punto de partida.
+
+\clearpage

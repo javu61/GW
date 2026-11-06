@@ -1,0 +1,95 @@
+\section{Sexta iteración de la Fase 1: Diseñador Gráfico}
+\label{sec:DiseñadorGrafico}
+
+En esta iteración modificamos el sistema para seguir los nuevos requerimientos definidos en la iteración anterior, solucionando los problemas de usar un diseñador gráfico externo. En general:
+\begin{itemize}
+	\item Partimos de una imagen informada en el \texttt{JSON} del cartucho en Blanco y negro, si no lo está error.
+	\item Extraemos los segmentos, los numeramos y los presentamos debajo de la pantalla como hasta ahora
+	\item Se marca un segmento y aparecen sus propiedades, dejandolas modificar.
+	\item Se definen los datos del segmento, verificando la coherencia en lo posible.
+	\item Se guardan las listas de sprites y de segmentos
+\end{itemize}
+
+Esto requere cambiar todos los elementos anteriores: index.html, estilos.css, director.js y estractor.js requieren pequeñas modificaciones, mientras que creamos un nuevo JavaScript llamado descomponer.js para el manejo de los gráficos.
+
+\subsection{Carga de la imagen de base}
+
+Para efectuar la carga se emplean los elementos anteriores, cargar un setup y cargar un cartucho. Ahora al descomponer la imagen, además de presentar las imágenes, se presenta una nueva ventana donde modificar los segmentos:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I010.png}
+	\caption{Segmentos cargados para su descripción}
+	\label{fig:c05-22.png}
+\end{figure}
+
+Cambiamos la imagen en la pantalla del simulador para presentar como quedarían, y debajo la pantalla de los segmentos, cada uno envuelto en un recuadro azul con el número asignado. De esta manera es muy sencillo definirlos, pulsando en uno de ellos, pudiendo efectuar ciertas operaciones:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I011.png}
+	\caption{Segmento 25 seleccionado}
+	\label{fig:c05-I011.png}
+\end{figure}
+
+\subsubsection{Tipo}
+
+Los segmentos pueden ser del tipo juego o del tipo jugador, pero definimos más subtipos para los segmentos del juego:
+
+\begin{tabularx}{\textwidth}{l c l X}
+	\toprule
+	\textbf{Tipo} & \textbf{Nº GWI} & \textbf{Color en pantalla} & \textbf{Significado} \\
+	\midrule
+	jugador  & 0 & rojo    & los que maneja el jugador (el bote) \\
+	juego    & 1 & negro   & por defecto, todos nacen así \\
+	inicio   & 2 & verde   & primer segmento de una ruta \\
+	vida     & 3 & naranja & contador de vidas (disminuye por colisión)\\
+	muerte   & 4 & naranja & contador de muertes (aumenta por colisión)\\
+	\bottomrule
+\end{tabularx}
+
+Los segmentos de tipo contador de vidas o de muertes permite presentar en pantalla el contador de estas como un segmento (que puede formar la imagen de un número), forman una secuencia de encendidos en caso de muertes, y de apagados si cuentan vidas restantes. Cual de estos comportamientos se usa se definirá como un parámetro en el \texttt{JSON} del cartucho para simplificar el manejo del motor. Se admite tener ambos tipos a la vez.
+
+El indicador de primer segmento de una ruta permite definir que elemento es el inicial de una ruta, para poder contar cuantas rutas diferentes existen, esto se usará junto al generador de aleatorios para poder variar durante el juego el origen de los elementos del juego.
+
+El Número es lo que se guarda en el \texttt{JSON}, para evitar errores, y el color en pantalla es para uso en debug, se presentan los segmentos encendidos y se puede ver el tipo de cada uno, de esta manera se pueden encontrar errores.
+
+\subsubsection{Unir}
+
+Pulsando el botón de unir, seleccionamos un segundo segmento y ambos se unen en una sola imagen:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I012.png}
+	\caption{Segmentos 25 y 30 unidos}
+	\label{fig:c05-I012.png}
+\end{figure}
+
+
+\subsubsection{Posicionar}
+\label{sec:Posicionar}
+
+Pulsando el botón de posicionar cambiamos las coordenadas del segundo segmento, para que se presente en el mismo lugar que el primero. Esto no es un comportamiento adecuado en las G\&W, pero se usará aquí para poder ubicar los contadores de tipo numérico en el mismo lugar de la pantalla, simplificando el tema. Como los segmentos se dibujan completos, y el número uno ocupa menos que el resto, debe ajustarse el tamaño para que todos los números ocupen el mismo espacio, para lo que sería conveniente usar una presentación similar a esta:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I013.png}
+	\caption{Numeros posicionables}
+	\label{fig:c05-I013.png}
+\end{figure}
+
+Como posible extensión, se puede incorporar un sistema que presente los números en la pantalla usando este método de forma automática.
+
+\subsubsection{Siguiente y Anterior}
+Los segmentos se presentan usando secuencias, usando los botones podemos definir cual es el elemento anterior y el siguiente en la secuencia. Los segmento del juego solo necesitan siguiente, los del jugados si requiere poder moverse en cualquier dirección de la secuencia por lo que requiere tener anterios y siguiente informados.
+
+Recorriendo las lista de elementos podemos averiguar cual es el primer elemento de una secuencia, y a cada secuencia de segmentos del juego se le asocia un número, de esta manera se puede usar el generador de aleatorios para que decida qué secuencia comienza en cada momento. Solo se presentan segmentos que formen parte de una secuencia como parte del juego.
+
+\subsubsection{Al salvarse/Al morir va a}
+Cuando un segmento colisiona con un segmento del jugador, si este esta en ese lugar será una vida (en caso de parachute)  o una muerte (en caso de Donkey Kong). De la misma manera si no esta será lo contrario. Podemos asociar una secuencia diferente de segmentos en cada caso, en nuestro ejemplo al morir lo enlazamos con la animación de muerte que tenga debajo, que recorrerá hasta llegar a los tres tiburones y el MISS.
+
+\clearpage
+
+
+
+

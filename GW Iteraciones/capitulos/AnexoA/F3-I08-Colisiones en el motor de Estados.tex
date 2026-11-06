@@ -1,0 +1,118 @@
+\section{Octava iteración de la Fase 3: El motor de estados controla las colisiones}
+\label{sec:MotorColisiones}
+
+La iteración anterior dejó las colisiones \emph{declaradas} en el diseñador: cada
+punto de colisión sabe con qué segmento del jugador choca y qué ocurre en cada
+desenlace (positiva y negativa), con sus contadores. El motor de estados, que ya
+mueve al jugador por enlaces y recorre las rutas por las banderas, todavía no las
+contempla: los elementos avanzan por \texttt{siguiente} sin enterarse de nada. Esta
+iteración ya pone el motor a \textbf{controlar} las colisiones: el corazón del juego late por fin.
+
+\subsection{Qué se construye}
+\label{subsec:QueSeConstruyeF3I8}
+
+\begin{itemize}
+	\item \textbf{La decisión en el barrido}. El paso (2) del tick (el barrido de
+	rutas) gana una regla que va ANTES del avance: si un segmento visible de ruta
+	(tipo juego o inicio) declara \texttt{colision}, es un \emph{punto de colisión} y
+	NO avanza por \texttt{siguiente} --- decide. La comprobación es la definida desde
+	el análisis: leer la bandera \texttt{visible} del segmento del jugador que la
+	colisión señala. Nada más: sin controlar coche por cajas, sin solapes, solo una lectura de bandera.
+	\item \textbf{Los dos desenlaces}. Se controlan las dos posibilidades:
+	\begin{itemize}
+		\item Si el jugador está visible hay \textbf{colisión positiva}: la ruta sigue el enlace \texttt{salvado} (si no
+		lleva este enlace, el elemento desaparece, regla por defecto).
+		\item Si no está visible \textbf{colisión negativa}: la ruta sigue el enlace a \texttt{muerte} (o desaparece como en el caso anterior). 
+	\end{itemize}
+	La cadena
+	elegida se comporta como cualquier ruta: sus segmentos avanzan por
+	\texttt{siguiente} en los barridos posteriores y mueren al final igual que las
+	rutas normales. Nace un concepto nuevo sin añadir código nuevo: la \emph{secuencia de vida o de
+		muerte} son solo una cadena que se activa desde un desenlace. en cualquier cadena los elementos de tipo vida o muerte se activan cuando se hagan visibles, sin necesidad de control adicional por el motor.
+	\item \textbf{Los contadores internos}. El motor mantiene DOS contadores internos: \emph{vidas} y \emph{muertes}. 
+	
+	\begin{itemize}
+		\item En la decisión, el desenlace aumenta un contador según esté definido en la propiedad  \texttt{salvadoContador}/\texttt{muerteContador} (ninguno, vida o muerte) --- \textbf{una sola vez, en la decisión}, como se cerró en el análisis.
+		\item Estos contadores NO son los segmentos de tipo vida/muerte, que son su presentación en pantalla; la presentación se hará cuando toque (fin de partida al agotar vidas). 
+		
+		\item \textbf{Presentar los contadores}. Se definen dos formas diferentes para mostrar estos dos contadores:
+		\begin{itemize}
+			\item \textbf{En la barra de estado}: Si se activa el modo debug, se presentarán tras el contador de ticks: \texttt{Tick N · Vidas: V · Muertes: M}. 
+			
+			\item \textbf{En la pantalla}: En una iteración posterior se usarán para presentar en la pantalla su número en los juegos que lo requieran, por ejemplo en parachute hay un número que representa los paracaidistas salvados, se usará el contador de vidas para ello.
+		\end{itemize}
+	\end{itemize}
+	
+	\item \textbf{El momento de la decisión}. La decisión ocurre en el barrido en el
+	que el punto de colisión ESTÁ VISIBLE --- el mismo tick en que la ruta lo
+	enciende: el elemento llega al punto y la máquina decide ahí, sin un tick de
+	espera. Si el jugador llega tarde, es negativa; el timing es parte del juego,
+	como en las máquinas reales.
+\end{itemize}
+
+Con la configuración actual de prueba para el parachute solo aumenta el contador de vidas, pero cambiando el contador asociado a un desenlace se puede realizar pruebas para validar que funcionen ambos sin problema.
+
+\subsection{Detalles de realización}
+\label{subsec:DetallesF3I8}
+
+\begin{itemize}
+	\item \textbf{Sin estado de colisión aparte}. Como en las rutas de la iteración
+	anterior, no hay variables de ``colisión en curso'': el estado vive en las
+	banderas. Un segmento de desenlace encendido es indistinguible de un segmento de
+	ruta encendido --- el barrido no sabe de dónde vino, solo ve visible y
+	\texttt{siguiente}. Las cadenas de desenlace con \texttt{siguiente} avanzan
+	solas; sin \texttt{siguiente}, mueren al final, igual que una ruta.
+	\item \textbf{Foto antes de cambiar}, igual que en el lanzamiento de rutas: la
+	decisión se toma sobre la FOTO de los visibles del inicio del barrido; los
+	segmentos encendidos por un desenlace en este mismo tick no vuelven a ser
+	examinados hasta el siguiente (sin dobles decisiones).
+	\item \textbf{El jugador no participa}. La decisión es del elemento que choca:
+	lee la bandera del jugador y sigue. El jugador no cambia de estado por la
+	colisión (encima o debajo, el segmento del jugador sigue visible) --- lo que
+	pasa le ocurre al elemento de la ruta. El fin de partida al agotar vidas es tarea de otra iteración.
+	\item \textbf{Relanzar reinicia} los contadores junto al resto: \texttt{iniciar()}
+	restaura vidas y muertes a sus valores de partida (vidas = número de segmentos
+	de tipo vida del cartucho, para que coincida con su presentación; muertes = 0).
+	\item \textbf{Un desenlace sin cadena} no enciende nada: el elemento desaparece
+	Y el contador se toca igualmente (la decisión ya se tomó). Un punto de colisión
+	sin desenlaces declarados no puede existir: el diseñador ya avisa.
+\end{itemize}
+
+\subsection{Verificación}
+\label{subsec:VerificacionF3I8}
+
+\begin{itemize}
+	\item La simulación (DOM falso, canvas de píxeles) monta el caso de prueba del parachute:
+	cuando un segmento del juego colisiona en positivo con uno del jugador; no hay cadena (desaparece) y aumenta el contador de 
+	\texttt{vidas}; negativa pasa a la ruta de muerte y no cambia el contador. 
+	
+	\item Los contadores en la barra: el texto lleva \texttt{Vidas} y
+	\texttt{Muertes} actualizados tras cada decisión; cambiando el contador de un desenlace se comprueba que sube el otro.
+	
+	\item Invariante del barrido: un punto de colisión visible NUNCA avanza por
+	\texttt{siguiente} (decide), y una cadena de desenlace avanza y muere como una
+	ruta más; dos decisiones en el mismo tick (dos rutas en el mismo punto) se
+	toman sobre la foto y no se pisan.
+	\item Relanzar restaura contadores, jugador y rutas; \texttt{GW\_DEBUG} apagado
+	= consola limpia y el juego corre; el resto de regresiones (teclado, rutas,
+	PRNG) intactas.
+	\item Prueba en navegador real con el cartucho de prueba: positiva sube vidas
+	(el elemento desaparece); cambiando la configuración para ver muertes, la
+	negativa enciende la cadena del 29 mientras el contador correspondiente sube.
+\end{itemize}
+
+\subsection{Cambio en el generador de aleatorios}
+\label{subsec:CambioAleatorios}
+
+En las pruebas se detecta que el generador de aleatorios funciona bien, pero al existir solo 3 rutas de salida, estas se repiten demasiadas veces seguidas, y de esta manera la partida parecía un
+bucle. Por eso se va a efectuar un pequeño cambio sobre el generador del número de la siguiente ruta, sin cambiar el generador de números \textbf{aleatorios}.
+
+El cambio no puede prohibir que se repitan, solo controlar que no lo hagan más de $n$ veces seguidas. 
+
+Para esto, el motor guarda una lista con los números de las
+últimas $n$ rutas lanzadas ($n$ es una constante ajustable del motor,
+\texttt{MAX\_REPETICIONES\_RUTA}, inicialmente $n=2$) y al lanzar comprueba si
+\emph{todas} las entradas de la lista son la misma ruta que la calculada; solo en ese caso esa ruta se descarta y se genera otra. Cunado se ha obtenido un número adecuado, se inserta como último de la lista, eliminando el primero. Con $n=2$ una misma ruta puede
+salir dos veces seguidas, nunca tres. Si la lista mezcla rutas no se excluye
+nada: el generador sigue siendo libre y determinista (misma semilla = misma
+partida), porque la elección sigue siendo función del estado del generador. Al iniciar una partida la lista se vacía: la primera ruta siempre es libre.

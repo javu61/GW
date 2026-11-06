@@ -1,0 +1,103 @@
+\section{Cuarta iteración de la Fase 3: Generador de Aleatorios}
+\label{sec:GeneradorAleatorios}
+
+Comenzamos a añadir nuevas funcionalidades al sistema del juego, y el primer
+punto será añadir un generador de números aleatorios.
+
+Los G\&W reales usaban un sistema muy sencillo. Como el contenido de las ROM
+suele ser muy variado (salvo en las zonas que contienen tablas de datos), se
+pueden generar números aleatorios simplemente usando un contador que apunte a
+una zona de la ROM donde resida el programa, usar el valor numérico que contiene esa posición, y luego aumentar el contador. Suelen tener dos variables que marcan la zona inicial y final que se desea usar, para intentar evitar caer en la zona con tablas de
+configuración, que son más homogéneas, aunque no es estrictamente necesario.
+
+En nuestro simulador no hay ROM que leer: el cartucho es una lista de
+segmentos y enlaces. El generador no puede leer memoria de programa, así
+que lo sustituimos por un generador matemático que produce una secuencia
+determinista a partir de una semilla: misma semilla, misma secuencia, misma
+partida. Este generador alimentará cualquier punto donde se necesite generar algo que
+dependa de una decisión al azar, por ejemplo las rutas de los paracaidistas, 
+donde el motor pedirá \emph{dame un número de ruta} al director, y el elemento
+elegido seguirá su cadena de enlaces.
+
+\subsection{¿Dónde ubicar el generador?}
+
+La primera decisión de esta iteración es la ubicación del generador de aleatorios. 
+Hay dos candidatos evidentes: el \emph{motor de estados} o el
+\emph{director del juego}.
+
+El \textbf{motor de estados} es quien consumirá los números (elige ruta), así que
+parece el punto ideal para ubicarlo, pero hay veces que el director puede cambiar la velocidad o lanzar eventos nuevos de forma aleatoria; por tanto, se ubicará en
+el \textbf{director del juego}, de forma que ambos puedan usarlo si lo necesitan, siguiendo
+siempre la idea de que el director es el coordinador general, y no depende del motor al que solo le lanza eventos, mientras que el motor puede consultar al director cuando lo necesite.
+
+\subsection{El generador: LCG de 16 bits}
+
+Se adopta un generador lineal congruencial (LCG) de 16 bits, la opción
+clásica para hardware pequeño:
+
+\begin{itemize}
+	\item Estado: una sola variable de 16 bits, la \textbf{semilla}.
+	
+	\item Avance: $\text{estado} = (a \cdot \text{estado} + c) \pmod{2^{16}}$,
+	con constantes de 16 bits (p.\,ej.,\ las clásicas $a = 25173$,
+	$c = 13849$, de la familia usada por los BASIC de 8 bits). El
+	desbordamiento natural del \texttt{uint16\_t} es el módulo: cero
+	coste en el ESP32.
+	
+	\item Lectura: el número pedido entre 0 y $N-1$ se obtiene con
+	$\text{estado} \bmod N$. Para los $N$ que usaremos (número de rutas,
+	decenas) el sesgo del módulo es despreciable; si algún día hiciera
+	falta, se anota como ampliación (mezcla de bits superiores).
+\end{itemize}
+
+\textbf{Propiedades que buscamos, y se cumplen:}
+
+\begin{itemize}
+	\item \textbf{Determinista:} misma semilla, misma secuencia, misma partida
+	reproducible.
+	
+	\item \textbf{Sin tablas ni estado múltiple:} una variable de 16 bits y dos
+	constantes; idéntico en PC y ESP32.
+	
+	\item \textbf{Suficientemente «aleatorio» para el juego:} no necesitamos
+	calidad criptográfica, solo que las rutas no se repitan de forma
+	perceptible; un LCG de 16 bits con periodo $2^{16}$ sobra para las
+	decenas de tiradas de una partida.
+\end{itemize}
+
+\subsection{API y comportamiento}
+
+En \texttt{JuegoDirector} (el reloj ya reinicia la partida):
+
+\begin{itemize}
+	\item \texttt{aleatorio(max)}: avanza el LCG y devuelve un entero en el rango
+	$[0, \text{max})$. Es la única puerta del generador.
+	
+	\item La \textbf{semilla} es una constante editable del fichero
+	(fijo por código, como la \texttt{SECUENCIA} del motor), mientras no la cambiemos las partidas seguirán siempre en la misma secuencia de eventos, igual que ocurre en las máquinas reales.
+	
+	\item \texttt{arrancar()} reinicia el estado del LCG a la semilla, junto al
+	resto del arranque (reloj, cola vacía, \texttt{iniciar()}): cada
+	partida empieza con la misma secuencia.
+	
+	\item El diagnóstico (secuencia de números entregados) va bajo
+	\texttt{GW\_DEBUG}, como en todo el proyecto.
+\end{itemize}
+
+\textbf{Cuándo se consume un número} lo indica el
+ritmo de juego y se decide cuando lo requiera usar el director o el motor. Aquí solo se
+construye y expone el servicio.
+
+
+\subsection{Pruebas}
+
+Para las pruebas se hace que el director inicialice el sistema, llame a una nueva función en el motor que llame 10 veces seguidas al generador de aleatorios, vuelva a inicializar y llame de nuevo a la función, verificando que ambas veces se obtienen los mismos números. Luego se elimina esa llamada en el director para poder seguir el desarrollo.
+
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\linewidth]{imagenes/propias/C05-I023}
+	\caption[]{Pruebas del generador de números aleatorios.}
+	\label{fig:c05-i023}
+\end{figure}
+

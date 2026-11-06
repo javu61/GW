@@ -1,0 +1,82 @@
+**********************************************************************************\\
+**********************************************************************************\\
+**********************************************************************************\\
+
+\section*{Ampliaciones futuras}
+\label{sec:Ampliaciones}
+
+Temas que quedan fuera del alcance del proyecto actual y se recogen
+como posibles ampliaciones:
+
+\begin{itemize}
+	\item \textbf{Game B}: el segundo juego de las máquinas
+	reales es complejo, pues depende de la propia máquina su diseño. 
+	En el Parachute existe una cuarta ruta, que hace oscilar un tiempo a un paracaidista en el extremo derecho de la pantalla, en otro juego puede ser lanzar las rutas mas rápido o aumentar la velocidad de salida o añadir mas segmentos con obstáculos; En el parachute la política de rutas ya viaja en el cartucho, por lo que Game B sería un segundo conjunto
+	de parámetros de lanzamiento, pero también hay que añadir el tema de la oscilación del paracaidista durante un cierto tiempo, haciendo bucles temporales.
+
+	\item \textbf{Combinación de pulsaciones por ejes}: que dos
+	teclas simultáneas produzcan un solo movimiento combinado (el salto
+	diagonal del Donkey Kong). La regla se retiró del proyecto y hoy solo
+	existe la interpretación de cada pulsación por separado; como
+	ampliación volvería como propiedad del cartucho.
+
+	\item \textbf{Multi-colisión}: permitir que un mismo segmento
+	de jugador sea punto de colisión de varios elementos; hoy la regla
+	«un jugador, un punto de colisión» es bloqueante en el diseñador.
+
+	\item \textbf{Más de una Secuencia}: el cartucho admite hoy una
+	sola animación de fondo; varias Secuencias simultáneas serían una
+	extensión natural del bloque.
+
+	\item \textbf{Flechas del teclado en el PC}: asignar las flechas del
+	cursor a los botones además de las teclas por defecto.
+
+	\item \textbf{Generador inverso de colores} (F1): graficar el GWI
+	como imagen con colores por rol (la vista que sustituyó a la autoría
+	por colores), útil como visualización del cartucho.
+
+	\item \textbf{Menú de cartuchos}: el nombre y la portada
+	(\texttt{img\_m}) no viajan hoy en el GWC; un menú de selección de
+	cartuchos en el hardware los necesitaría.
+
+	\item \textbf{Azar de mejor calidad}: el LCG se lee con
+	\texttt{estado \% N}, que usa los bits bajos — los más predecibles
+	de un generador congruencial — y añade un sesgo mínimo cuando
+	65536 no es divisible por \emph{N}. Es despreciable con los valores
+	de este proyecto; si un juego futuro exigiera azar de calidad
+	(muchas tiradas o \emph{N} potencia de dos), la lectura debería pasar a
+	usar los bits altos del estado.
+	
+	\item \textbf{Cambios en las secuencias}: en Donkey Kong, un
+	barril puede cambiar su secuencia de caída en función del tiempo de
+	juego y nivel de dificultad; sería una regla del cartucho que permita definir
+	bifurcaciones en las rutas, que se activen según el progreso de la partida.
+	
+	\item \textbf{Sonido}: Añadir sonido al juego.
+	
+	\item El generador gráfico que pueda definir los cartuchos GWB, un botón que saque campos que permitan definir los 3 gráficos y los nombres de los botones.
+	
+	\item Controlar que el tamaño del cartucho no sea mayor de un máximo, para que quepa en la memoria del ESP, dando un aviso, pero no se cuanto sería ni donde ubicar el dato, por lo que de momento queda como ampliación.
+\end{itemize}
+
+**********************************************************************************\\
+**********************************************************************************\\
+**********************************************************************************\\
+
+\section*{Temas pendientes}
+\begin{itemize}
+	\item Fase 5 (Cartucho compacto):
+		\begin{itemize}		
+			\item Vamos a añadir una estadística final que muestre el tamaño original con todos los sprites sin deduplicación y la ocupación final en el cartucho con la cantidad ahorrada, y como comparación el tamaño del cartucho GWI con todos lso gráficos y el tamaño final del cartucho GWF con la cantidad ahorrada.
+		\end{itemize}
+	\item Fase 6 (ESP32) 
+	
+	\begin{itemize}
+		\item Añadir el tema de capas en el estudio del motor gráfico para el ESP.
+	
+		\item puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. Lo único deliberadamente aplazado a pruebas reales de hardware es la estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) — acordamos medir en hardware, no decidirlo en escritorio.
+		
+		\item Ampliaciones anotadas (no bloquean ninguna fase, van a la lista de pendientes): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho.
+	\end{itemize}
+
+\end{itemize}

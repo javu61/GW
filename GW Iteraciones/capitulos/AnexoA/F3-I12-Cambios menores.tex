@@ -1,0 +1,112 @@
+\section{Duodécima iteración de la Fase 3: Cambios menores}
+\label{sec:CambiosMenores}
+
+El sistema ya funciona correctamente y se puede jugar con él, pero vamos a hacer unos pequeños ajustes para que el simulador pueda reproducir temas menores de las máquinas reales, y unas validaciones adicionales al crear los cartuchos para evitar ciertos posibles problemas. Los puntos a abordar son:
+
+\begin{itemize}
+	\item Tras las múltiples pruebas anteriores, se ha detectado que hacen falta validaciones adicionales al guardar el cartucho.
+	
+	\item Existen segmentos en pantalla que no intervienen en el juego: en el Parachute, el helicóptero y las aspas en secuencia.
+	
+	\item Cuando un paracaidista cae al agua, comienza la secuencia de muerte bajo las barcas hasta llegar a los tiburones finales. Durante esta secuencia se congela el resto del juego (rutas, lanzamiento de nuevas y el propio jugador), y solo queda activa la animación de las aspas.
+	
+	\item Hay secuencias que comparten segmentos: en el Parachute, por debajo de las barcas merodean aletas de tiburón; cuando uno cae al agua se lanza la secuencia de muerte, donde esas mismas aletas forman parte de la animación y persiguen al paracaidista.
+\end{itemize}
+
+\subsection{Validaciones adicionales}
+
+Las validaciones adicionales al guardar el cartucho que se van a implementar son:
+
+\begin{itemize}
+	\item El sistema debe verificar que, si se ha definido el fin de juego por segmentos de vida o de muerte, exista al menos un segmento de ese tipo. Al contrario, si hay segmentos de vida o de muerte pero el fin está definido por contador, no hay error: el fin se controla por el contador y las familias se visualizan por sus segmentos.
+	
+	\item Hay que verificar que exista al menos un segmento de tipo jugador, y que todos los segmentos de jugador tengan algún enlace a izquierda, derecha, arriba o abajo: un segmento de jugador que no se pueda mover no es correcto nunca.
+	
+	\item Por comodidad y para evitar errores, cuando en un segmento de jugador \textbf{A} se establece un enlace a otro \textbf{B} para indicar que está a su izquierda, en \textbf{B} se debe indicar automáticamente que el segmento \textbf{A} está a su derecha. Lo mismo con los enlaces a arriba y abajo, y también al quitar un enlace: se retira su inverso. Ambas escrituras viajan en la misma acción del historial, de modo que deshacer y rehacer las revierten juntas.
+\end{itemize}
+
+\subsection{Elementos adicionales que no intervienen en el juego}
+
+Para poder usar elementos que se presentan en pantalla pero no intervienen en el juego, se deben marcar estos elementos con dos nuevos tipos de segmento:
+
+\begin{itemize}
+	\item \textbf{Adicional}: no interviene en el juego pero se presenta en pantalla. Puede tener enlace a siguiente. Si no lo tiene, nace encendido y permanece fijo para siempre (el helicóptero). Si lo tiene, nace apagado y solo lo enciende el bucle.
+	
+	\item \textbf{Adicional de inicio}: no interviene en el juego y lanza una secuencia propia de segmentos de este tipo. Debe tener enlace a siguiente, y nace encendido: cada tick avanza (apaga el eslabón actual y enciende el siguiente), indefinidamente, fuera de cualquier otra secuencia.
+\end{itemize}
+
+Los enlaces \texttt{siguiente} de estos tipos deben apuntar siempre a un segmento de tipo adicional o adicional de inicio, nunca a otros elementos del juego. La verificación lo comprueba al guardar, junto con que un segmento adicional no declare colisión.
+
+Con estos dos tipos definimos los elementos fijos del Parachute:
+
+\begin{itemize}
+	\item \textbf{Helicóptero}: un segmento de tipo \textbf{adicional} sin enlace a siguiente: encendido siempre.
+	
+	\item \textbf{Aspa superior}: un segmento de tipo \textbf{adicional de inicio} que apunta al aspa inferior: nace encendida.
+	
+	\item \textbf{Aspa inferior}: un segmento de tipo \textbf{adicional} que apunta al aspa superior: el bucle las alterna, una por tick, sin fin.
+\end{itemize}
+
+\subsection{Animaciones: el elemento Secuencia}
+
+Existen animaciones que no forman parte del juego, pero se presentan en pantalla cada cierto tiempo. En el Parachute aparecen las aletas del tiburón por debajo de las barcas de vez en cuando.
+
+Para generar estas secuencias usaremos un nuevo elemento asociado al cartucho, que denominaremos \textbf{Secuencia}. Cada cartucho puede disponer de una secuencia, con la posibilidad de aumentar el número como ampliación futura. Cada secuencia se compone de estos elementos:
+
+\begin{itemize}
+	\item \textbf{Ticks}: cada cuántos ticks se lanzará la animación. Un tick es una vuelta del juego en el director, como en el resto del juego.
+	
+	\item \textbf{Segmentos}: una lista de hasta cinco, que se lanzarán en el orden indicado, un segmento por tick. Solo pueden ser de tipo juego, inicio o adicional: la animación no debe mover al jugador ni alterar los contadores. Estos segmentos pueden pertenecer también a otras secuencias (las aletas merodean solas y, a la vez, son eslabones de la secuencia de muerte).
+\end{itemize}
+
+El contador de ticks de la animación se pone a cero al inicio del juego o al terminar una animación; luego cuenta los ticks necesarios y vuelve a lanzarla. De esta forma la animación se lanza realmente cada $n$ ticks más los que dura la propia animación $m$, es decir, cada $n+m$ ticks.
+
+El motor de estados controla qué elementos se han activado por la animación: los enciende y los apaga él mismo, y el barrido de rutas no los avanza. De esta manera el motor gráfico no requiere cambios: solo presenta los segmentos marcados como visibles.
+
+\subsubsection{Animaciones: cuando se cancela la secuencia}
+\label{sec:CambiosMenoresError1} 
+Cuando se produce una colisión, positiva o negativa, y se lanza una secuencia de vida o de muerte, la animación en curso se interrumpe (el segmento encendido por ella se apaga). 
+
+La animación no se vuelve a lanzar hasta que termine la secuencia del desenlace, por simplificar se pone al cero cunado hay una colisión o cuando termina una secuencia de vida o de muerte, así sirve tanto para las que usan contador como para las que usan secuencias\footnote{Hay un error, se detecta y corrige en \ref{subsec:VerificacionF3I12} Animaciones}.
+
+\subsection{La secuencia de muerte congela el juego}
+
+Tras una colisión positiva o negativa, si se activa una secuencia de vida o de muerte, en la máquina real vemos que se congela el resto del juego mientras no termine la secuencia enlazada de segmentos:
+
+\begin{itemize}
+	\item Se debe definir una bandera que indique cuando se ha lanzado una secuencia de vida o muerte, cuando el elemento que se pone visible sea de este tipo. Se pone como true al comienzo, y como false cuando termine la secuencia.
+	
+	\item Mientras la bandera esté encendida: Las rutas en marcha no avanzan y no se lanza ninguna nueva. El jugador no responde a los botones. Se para todo menos la propia cadena de vida o muerte, y la de los elementos adicionales definidos (en el parachute las aspas continúan en marcha).
+	
+	\item La bandera se propaga por los enlaces \texttt{siguiente} de la cadena; al morir el último eslabón, la bandera se apaga y el juego se reanuda en el tick siguiente.
+\end{itemize}
+
+Si la cadena de desenlace aterriza directamente en la secuencia de vida o de muerte (una muerte instantánea, sin animación), no hay congelación: solo se cuenta el desenlace y el juego sigue. 
+
+Y como salvaguarda, si una cadena marcada se rompe por un enlace colgante, la marca se limpia sola: un error de autoría no puede congelar el juego para siempre.
+
+El bucle de los segmentos de tipo adicional (el helicóptero y las aspas) no es una Secuencia y no se interrumpe nunca, ni durante secuencias de vida o muerte, ya que realmente no forman parte del juego, son solo un adorno que están fuera del arte fijo del fondo de la pantalla.
+
+\subsection{Verificación}
+\label{subsec:VerificacionF3I12}
+
+Se prueban los cambios que se han incluido en esta iteración, con estos resultados:
+
+\begin{itemize}
+	\item \textbf{Validaciones}: Se verifica que las nuevas validaciones sean correctas, y no se encuentran fallos.
+	
+	\item \textbf{Elementos adicionales}: Se asocian el helicóptero como fijo, y el ciclo de las aspas, y se prueba que se presentan sin problema.
+	
+	\item \textbf{Animaciones}: Se detectan dos problemas en esta funcionalidad.
+	\begin{itemize}
+		\item Se crea una animación con las aletas del tiburón, pero no se activa nunca. Tras revisar todo, detecto que está mal definido este punto: \ref{sec:CambiosMenoresError1}, se corrige usando que «Las animaciones solo se deben cortar cuando comienza una secuencia de muerte, no en las colisiones».
+		
+		\item Tras resolver el tema anterior, se detecta que si durante una animación se produce una muerte, el segmento en curso de la animación queda encendido, y si es un segmento compartido entre ambos, se bloquea la secuencia de muerte cuando se encuentran.
+		
+		\item Si surante una animación se lanza una cadena de muerte, la animación se interrumpe, no se elimina el segmento visible, y cuando termina la cadena de muerte la animación continúa por donde estaba, cuando debe cortarse y recomenzar el conteo de ticks.
+	\end{itemize}
+	
+	\item \textbf{Secuencias que congelan el juego}: Se verifica que durante las secuencias no se lanzan mas animaciones de segmentos, salvo las aspas de los helicópteros.
+\end{itemize}
+
+\clearpage

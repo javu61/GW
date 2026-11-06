@@ -1,0 +1,30 @@
+\section{Decimotercera iteración de la Fase 3: Segmentos que se presentan juntos}
+\label{sec:SegmentosPresentanJuntos}
+
+Tras afinar todos los temas anteriores, solo queda por resolver un tema que se observa en la máquina real, hay veces que dos segmentos se presentan siempre a la vez cuando se recorre una secuencia (similar la unión de segmentos que ya hemos definido), pero que a su vez uno de sus componentes se puede presentar en una animación.
+
+\subsection{Nuevos parámetros}
+Para resolverlo debemos añadir a los segmentos más parámetros para contemplar los nuevos enlaces. Si denominamos a los dos segmentos que queremos presentar juntos principal y 
+secundario:
+\begin{itemize}
+	\item \textbf{En el principal}: añadimos un parámetro «Mostrar junto a» para enlazar con el secundario.
+	\item \textbf{En el secundario}: ponemos un parámetro que indica «Mostrado junto a», que en automático informe de su principal. Los secundarios no pueden formar parte de ninguna secuencia de enlaces, pero si pueden formar parte de una animación.
+\end{itemize}
+
+De esta manera, cuando se enciende o apaga el principal se hace siempre lo mismo con el secundario, pero cuando se enciende directamente un secundario no se altera el principal. Es un comportamiento similar a unir segmentos, pero permite usar a ambos segmentos en una secuencia independiente.
+
+Con este sistema, en el parachute, podemos hacer que al mostrar la secuencia de muerte se enciendan juntos a un nadador que es perseguido por una aleta, y aparte durante la animación general mostrar solo las aletas recorriendo el mar bajo las barcas.
+
+\subsection{Validaciones}
+Al guardar un cartucho, se añaden una verificación bloqueante: un segmento secundario no puede formar parte de NINGUNA red de enlaces, ni tiene un siguiente ni nadie lo apunta como siguiente, no puede reportar colisión, y solo puede ser de tipo juego.
+
+\subsection{Verificación}
+\label{subsec:VerificacionF3I13}
+
+Se prueban los cambios que se han incluido en esta iteración, mostrando las dos secuencias con las aletas, en solitario durante las animaciones, y persiguiendo a los paracaidistas en el agua en las secuencias de muerte. 
+
+Se detecta que cuando hay una animación y se lanza una ruta de muerte, al finalizar esta continúa la animación, cuando debe interrumpirse por completo.
+
+Se corrigen estos errores, se vuelve a probar y ya funciona todo correctamente.
+
+\clearpage

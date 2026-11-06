@@ -1,0 +1,78 @@
+\section{Fase 2: Desarrollo del motor gráfico}
+\label{sec:ResumenFase2}
+
+La segunda fase del proyecto tuvo como objetivo desarrollar el motor gráfico, que permitiera ver segmentos moverse por la pantalla para verificar su funcionamiento, de forma que sea los más sencillo posible para su implementación en el ESP. 
+
+Esta herramienta es fundamental, pero la lógica que maneja es muy sencilla: se recorre la lista de segmentos, los que tengan activa la bandera que indica \textbf{modificado} se presentan o borran según indique su bandera de \textbf{visible}.
+
+\subsection{Fase 2: Objetivos}
+El objetivo estratégico de esta fase consistió en dotar de dinamismo secuencial, sincronización de reloj e interactividad básica al entorno de simulación en el PC. Se planteó una arquitectura basada en un Director y dos motores independientes de ejecución estrictamente secuencial y libre de concurrencia, fundamentada en el principio de que \textbf{la lista única de segmentos en memoria constituye la fuente de verdad y el estado completo de la partida}.
+
+\subsubsection{Primera Iteración: Análisis del Motor Mínimo y Estrategias de Borrado}
+\begin{itemize}
+	\item \textbf{Análisis Conceptual y Objetivos:} El propósito de esta iteración inicial fue definir la viabilidad técnica del dibujado dinámico y la gestión del refresco sobre el hardware simulado. A diferencia de un motor de videojuegos tradicional, una pantalla LCD segmentada no redibuja un \textit{framebuffer} completo, sino que enciende y apaga geometrías discretas fijas. El objetivo fue diseñar un modelo matemático de proyección capaz de conmutar segmentos en un ciclo continuo sin provocar parpadeos ni dejar rastro de los estados previos.
+	\item \textbf{Decisiones de Diseño y Arquitectura:} Se determinó un patrón de funcionamiento asíncrono donde el Director orquesta el reloj y los motores actúan en un único sentido de dependencia lógica: Entrada $\rightarrow$ Cómputo de Estado $\rightarrow$ Renderizado. El motor gráfico se definió como un lector puro de la memoria para garantizar que la lógica de juego nunca dependiera de los ciclos de dibujado.
+	
+	En este punto se desarrolla el motor usando el mecanismo del XOR, pero se encuentran problemas con los colores, por lo que hay que plantear y analizar a fondo todas las posibles soluciones del problema.
+	
+	\item \textbf{Problemas Detectados y Soluciones Implementadas:} 
+	\begin{itemize}
+		\item \textit{El Problema del Colapso del Borrado y Solapamiento de Cajas:} Se constató que retirar un segmento de la pantalla exige restaurar el arte fijo original (\texttt{img\_f}) recortado exactamente en su caja envolvente. Sin embargo, las cajas son rectángulos rígidos pero los segmentos son formas irregulares que pueden cruzarse en sus contenedores; un borrado local simple por sobreescritura dañaba los píxeles de los segmentos adyacentes activos.
+		\item \textit{La Solución de Diseño:} Se evaluaron cinco estrategias de gestión de buffers analizando su impacto tanto en el PC como en el microcontrolador final (recogidas en la Tabla~\ref{tab:estrategias_borrado}).
+	\end{itemize}
+\end{itemize}
+
+\begin{table}[h]
+	\centering
+	\small
+	\begin{tabular}{lp{5.5cm}p{5.5cm}}
+		\hline
+		\textbf{Estrategia} & \textbf{Evaluación en el Simulador (PC)} & \textbf{Evaluación en Hardware Embebido (ESP32)} \\ \hline
+		\textbf{XOR Simétrico} & Incorrecta: produce inversiones cromáticas sobre fondos en color y corrompe píxeles compartidos. & Descartada: no garantiza el color negro LCD nativo sobre matrices complejas. \\
+		\textbf{Dos Imágenes por Caja} & Ineficiente: penaliza el almacenamiento y anula la deduplicación al ligar el sprite a un fondo estático único. & Descartada: la huella de memoria en la flash excede los límites físicos del cartucho. \\
+		\textbf{Repintado Completo} & \textbf{Seleccionada:} el canvas acelerado del navegador aísla el coste, garantizando una restauración limpia y libre de parpadeos. & Inviable: el cuello de botella del bus SPI y la velocidad de dibujado degradan la tasa de refresco. \\
+		\textbf{Doble Búfer} & Redundante: añade capas de sincronización innecesarias para la potencia de computación del PC. & Descartada: la asignación de un framebuffer completo satura la memoria RAM interna disponible. \\
+		\textbf{Respaldo por Caja} & Compleja: exige listas de redibujo ordenadas por capas de pintor para gestionar colisiones de contenedores rectangulares. & \textbf{Candidata:} minimiza el tráfico de bytes en el bus SPI al transferir únicamente bloques sucios en RGB565. \\ \hline
+	\end{tabular}
+	\caption{Evaluación de estrategias de renderizado y borrado de segmentos.}
+	\label{tab:estrategias_borrado}
+\end{table}
+
+Finalmente se decidió adoptar para el simulador de PC la estrategia de \textbf{repintado completo de la escena por cada ciclo de reloj}, aislando el coste computacional gracias a la aceptación nativa del \textit{canvas} del navegador, y posponiendo la optimización por bloques sucios para la fase del hardware real.
+
+\clearpage
+
+\subsubsection{Segunda Iteración: Preparación de la Base Estructural y el Puente de Datos}
+\begin{itemize}
+	\item \textbf{Análisis Conceptual y Objetivos:} Estabilizada la estrategia de renderizado, el objetivo consistió en codificar el armazón de software definitivo: instanciar el bucle del Director, estructurar los ficheros de los dos motores con respuestas síncronas de control y habilitar el arranque manual a través del hardware simulado.
+	\item \textbf{Decisiones de Diseño y Arquitectura:} Para mantener la portabilidad estricta y la compatibilidad con el protocolo \texttt{file://}, se prohibió el uso de módulos ECMAScript en favor de scripts clásicos organizados de forma secuencial en el archivo \texttt{index.html}. El reloj del Director se estructuró mediante temporizadores asíncronos encadenados (\texttt{setTimeout}), impidiendo que un ciclo lógico comience antes de que la proyección visual del fotograma anterior haya concluido.
+	\item \textbf{Problemas Detectados y Soluciones Implementadas:}
+	\begin{itemize}
+		\item \textit{El Problema del Conflicto de Ámbitos y Duplicidad de Directores:} Al coexistir la lógica de la Fase 1 (creación y manipulación de cartuchos) con el nuevo bucle de simulación en tiempo real, se produjeron colisiones críticas en el espacio global de variables, provocando que la recarga de un mapa corrompiera los temporizadores activos del simulador.
+		\item \textit{La Solución de Diseño (Primer Gran Replanteamiento):} Se acometió una reingeniería del árbol de directorios y nomenclatura. Todos los archivos de autoría se aislaron bajo el prefijo \texttt{Base*}, y los de simulación bajo el prefijo \texttt{Juego*}. Paralelamente, se eliminó la persistencia de las listas dentro de los módulos de diseño y se creó el componente independiente \textbf{\texttt{ComunListas.js}}. Este módulo funciona como un puente de datos puro e inmutable (\textit{include} global) que expone las referencias vivas de los segmentos y el fondo técnico a ambos lados de la aplicación, eliminando la duplicidad de memoria.
+	\end{itemize}
+\end{itemize}
+
+\subsubsection{Tercera Iteración: Control del Estado Semántico en la Lista de Segmentos}
+\begin{itemize}
+	\item \textbf{Análisis Conceptual y Objetivos:} El hito central de esta iteración fue dotar de semántica de ejecución a los objetos de la memoria RAM simulada. El motor de juego debía abandonar los mensajes estáticos por consola y aprender a alterar de forma dinámica el estado físico de los componentes para que cualquier subsistema lector pudiera interpretar la escena.
+	\item \textbf{Decisiones de Diseño y Arquitectura:} Cada segmento residente en el puente de datos incorporó dos banderas lógicas de ejecución: \texttt{visible} (el elemento debe proyectarse encendido) y \texttt{cambiar} (registro de modificación o \textit{suciedad} respecto al ciclo anterior). Se implementó la disciplina estricta de \textbf{un único escritor}: el motor de estados es el único autorizado para mutar estas banderas, asegurando la consistencia matemática del estado.
+	\item \textbf{Problemas Detectados y Soluciones Implementadas:}
+	\begin{itemize}
+		\item \textit{El Problema del Rastreo de Banderas y Pérdida de Suciedad:} En las primeras pruebas de ciclo largo, el motor de estados borraba el indicador \texttt{cambiar} de forma asíncrona al procesar una nueva entrada, provocando que los cambios de estado rápidos pasaran desapercibidos para el ciclo de renderizado, dejando elementos congelados o fantasmas en la pantalla.
+		\item \textit{La Solución de Diseño:} Se fijó un orden secuencial inmutable gobernado por el Director en cada tick de reloj: (0) Captura de buffers de entrada, (1) Limpieza síncrona de las banderas \texttt{cambiar} del tick anterior en toda la lista, (2) Computación de la nueva lógica secuencial (apagado del índice previo, encendido del actual y activación de sus indicadores de cambio). Asimismo, se implementó la llave de depuración global \texttt{GW\_DEBUG} para trazar por consola la mutación de bits bit a bit sin saturar el rendimiento del navegador.
+	\end{itemize}
+\end{itemize}
+
+\subsubsection{Cuarta Iteración: Consolidación del Motor Gráfico y Renderizado Selectivo}
+\begin{itemize}
+	\item \textbf{Análisis Conceptual y Objetivos:} La última iteración de la fase tuvo como objetivo acoplar el motor gráfico real al flujo síncrono del Director, sustituyendo definitivamente las constantes y secuencias fijadas en el código por la lectura y proyección de un archivo de cartucho compilado (GWI) real en movimiento.
+	\item \textbf{Decisiones de Diseño y Arquitectura:} El motor gráfico se consolidó como un transformador puro: lee el lienzo base inyectado en \texttt{ComunListas}, barre la propiedad \texttt{visible} de los segmentos y superpone sus máscaras de píxeles sobre la pantalla utilizando el color negro LCD nativo (\texttt{\#000000}). Para asegurar la fidelidad visual retro, la proyección geométrica se independizó de las resoluciones de las imágenes de origen mediante un algoritmo de escalado por eje con muestreo por proximidad absoluta (vecino más cercano), eliminando cualquier suavizado de contornos (\textit{anti-aliasing}) comercial.
+	\item \textbf{Problemas Detectados y Soluciones Implementadas:}
+	\begin{itemize}
+		\item \textit{El Problema de la Desconexión de Recursos de Imagen:} Al importar el archivo GWI intermedio, los segmentos leídos de la estructura JSON carecían de enlace directo con sus mapas de bits deduplicados en memoria, lo que provocaba desbordamientos por referencias nulas e impedía proyectar los gráficos en el lienzo simulado de la carcasa.
+		\item \textit{La Solución de Diseño:} Se modificó el cargador asíncrono del puente de datos para enlazar en tiempo de preparación cada nodo de la lista de segmentos con el elemento de imagen HTML nativo de su sprite correspondiente (\texttt{seg.imagen}). Esta vinculación directa permite al motor gráfico renderizar la escena en un único barrido lineal de O(N) sin realizar consultas a disco ni búsquedas indexadas en tablas auxiliares, garantizando una tasa de refresco fluida y libre de parpadeos que replica con exactitud el comportamiento de la máquina original.
+		\end{itemize}
+	\end{itemize}
+	
+\clearpage

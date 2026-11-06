@@ -1,0 +1,40 @@
+# ==========================================
+# Archivos auxiliares de LaTeX y TeXstudio
+# ==========================================
+*.aux
+*.log
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.out
+*.blg
+*.bbl
+*.pdfsync
+*.bcf
+*.xml
+*.nav
+*.snm
+*.vrb
+*.ilg
+*.ind
+*.lof
+*.lot
+*.lol
+
+# PDF de un capítulo compilado suelto (subfiles): solo se versionan
+# los documentos completos (main.pdf e iteraciones.pdf)
+GW Memoria/capitulos/**/*.pdf
+GW Iteraciones/capitulos/**/*.pdf
+
+# Archivos específicos de configuración de TeXstudio
+*.txsscript
+.texstudio/
+
+# ==========================================
+# JavaScript / Node (Por si acaso lo necesitas)
+# ==========================================
+node_modules/
+.env
+dist/
+.DS_Store

@@ -1,0 +1,610 @@
+\section{Fase 3: Desarrollo del motor de estados}
+\label{sec:Fase3Resumen}
+
+La tercera fase convierte el simulador en un motor de juego completo.
+La Fase 2 dejó resuelta la \emph{presentación}: el reloj late, el motor
+de estados escribe el estado en la lista de segmentos y el motor gráfico
+compone la pantalla con repintado completo. Pero lo que se controla es
+todavía una \emph{demostración}: una secuencia de prueba escrita en el
+código, sin entrada, sin reglas y sin jugador. La Fase 3 construye la
+parte más compleja del simulador, \textbf{el motor de estados}: la pieza
+que piensa. En cada \textit{tick} lee las pulsaciones pendientes, aplica
+las reglas del juego y decide qué segmentos están encendidos y dónde, si
+hay colisión con el jugador aumentando o disminuyendo contadores, y
+controla la vida restante hasta el fin de la partida.
+
+Sobre el contrato fundacional de la Fase 2 —«la lista ES el estado»— el
+trabajo de esta fase se apoya en una sola lista de segmentos en memoria,
+un solo escritor (el motor de estados) y tantos lectores como vías de
+presentación existan (hoy el \textit{canvas} del navegador; mañana el
+LCD del ESP32). El motor debe ser además independiente: del director
+recibe únicamente el \textit{tick}, y el resto de datos los maneja a
+través del puente de datos (\emph{ComunListas}).
+
+La dificultad propia de la fase no es mover figuras: es el
+\textbf{control de colisiones}, delicado por una razón de fondo del
+modelo físico elegido: los segmentos de un cartucho Game \& Watch son
+\emph{piezas separadas}, cada una con su sprite independiente, sin
+tablero de celdas ni escena continua. En las máquinas reales la
+colisión ni siquiera se calcula: el cristal líquido enciende lo que el
+juego le dice, y es el \emph{firmware} original quien, en su ROM de unos
+pocos kilobytes, decide con tablas y comparaciones cuándo el
+paracaidista toca al tiburón. Aquí el motor tendrá que hacer ese trabajo
+de forma explícita, con una decisión de diseño que recorre toda la fase:
+\emph{el cartucho define, el motor ejecuta}.
+
+El trabajo se organiza en catorce iteraciones, que se resumen a
+continuación; el detalle completo de cada una está en el apéndice C.
+
+\subsection{Iteraciones 1 y 2: El teclado}
+\label{sec:F3Teclado}
+
+\subsubsection{Primera iteración: Análisis del manejo del teclado}
+
+\textbf{Análisis conceptual y objetivos.} El primer paso del motor es la
+entrada: que una pulsación —por el botón asociado o por el teclado—
+llegue al motor y mueva el segmento del jugador. Antes del código, la
+iteración cierra cuatro decisiones:
+
+\begin{itemize}
+	\item \textbf{El canal: la pulsación como dato, no como evento de DOM.}
+	El juego no debe conocer el DOM, igual que el firmware del ESP32 no
+	conoce «botones», solo pines que se ponen a nivel. El \emph{BaseDirector}
+	reenvía a \texttt{JuegoDirector.pulsar(numero)} el \emph{número físico}
+	del botón (nada de identificadores del cartucho ni del evento), el
+	director solo acepta pulsaciones con el juego en marcha y las reenvía
+	tal cual al motor. La tabla número $\rightarrow$ dirección viaja en el
+	código del motor, con la misma silueta que tendrá el día que las reglas
+	viajen en el cartucho.
+	\item \textbf{El ritmo: un buffer de movimientos pendientes.} Las
+	máquinas reales muestrean la entrada al ritmo del juego. Las
+	pulsaciones se encolan en un buffer FIFO con tapa (8 entradas) y el
+	motor las procesa al empezar el ciclo siguiente, en un paso (0) previo
+	a todo lo demás: leer pines al inicio del frame, computar, presentar.
+	El estado nunca cambia a mitad de presentación, y el orden del
+	\textit{tick} queda sagrado: (0) entrada, (1) apagar banderas de
+	cambio, (2) secuencia.
+	\item \textbf{La combinación de teclas es una propiedad del cartucho.}
+	En el Donkey Kong de bolsillo, ARRIBA+DERECHA no son dos movimientos:
+	es un salto diagonal. Que un juego permita combinar dos teclas lo
+	decide el diseñador, declarado como un indicador más del JSON
+	(\texttt{combinar}): con combinación activa el motor vacía todo el
+	buffer del tick y lo reduce a los ejes, moviendo el jugador una sola
+	vez con el vector resultante; sin ella, cada entrada es un paso
+	independiente; direcciones opuestas en la misma ventana se anulan.
+	\item \textbf{Qué máquina ejecuta qué cartucho: setup $\geq$ cartucho.}
+	El setup declara la máquina física y el cartucho usa un subconjunto de
+	sus botones: se puede jugar a un juego de dos botones en una máquina de
+	cuatro, pero no al contrario. Si el cartucho declara un botón que la
+	máquina no tiene, el cartucho NO carga (error bloqueante en la barra
+	de estado); los botones de la máquina que el juego no usa se eliminan
+	de la botonera.
+\end{itemize}
+
+\subsubsection{Segunda iteración: El motor responde al teclado}
+
+\textbf{Decisiones de diseño y arquitectura.} La iteración anterior
+deja las decisiones cerradas; esta las hace carne. El motor aprende a
+responder: una pulsación encola, el \textit{tick} la consume y el
+jugador se mueve. Moverse es escribir en la lista: un índice de
+segmento jugador y una tabla \texttt{MOVER} número $\rightarrow$ vector,
+escritos en el código del motor como lo estaba la secuencia de prueba;
+al \texttt{iniciar()} el motor guarda las posiciones originales de la
+lista y mover es escribir \emph{x}/\emph{y} y marcar la bandera de
+cambio; relanzar restaura las posiciones de origen en el mismo barrido
+que limpia banderas. El jugador no se mueve libremente: solo puede
+seguir los enlaces de izquierda, derecha, arriba y abajo, por lo que no
+puede caerse por los bordes. La combinación viaja por el puente:
+\emph{ComunListas} gana una casilla de configuración del juego que la
+autoría escribe al cargar el cartucho y el motor lee en cada
+\textit{tick}. El motor gráfico no se toca: la composición pura
+presenta lo que la lista dice, y la secuencia de fondo sigue latiendo
+en paralelo con el movimiento del jugador, compartiendo el mismo
+\textit{tick} y la misma lista.
+
+\textbf{Verificación.} La simulación ejercita el contrato completo:
+pulsación con el juego parado no se encola; con \texttt{combinar}
+activo, dos pulsaciones en la misma ventana dan UN paso diagonal
+verificado a píxel; sin combinar, dos pasos en orden; opuestas no
+mueven; la tapa descarta el exceso con aviso; relanzar restaura la
+posición de origen; un cartucho que pida un botón inexistente NO
+carga. Cero errores de consola con GW\_DEBUG apagada.
+
+\subsection{Tercera iteración: La marca de primer jugador}
+\label{sec:F3PrimerJugador}
+
+\textbf{Análisis conceptual y objetivos.} El motor tomaba como jugador
+activo el primer segmento de tipo jugador que encontraba en la lista:
+una búsqueda que no decía por dónde empieza la partida. Esta iteración
+retrocede un paso al diseñador para dársela: una fila «Jugador
+inicial» en el panel de propiedades, visible solo para los segmentos
+de tipo jugador.
+
+\textbf{Decisiones de diseño y arquitectura.} La marca vive como la
+propiedad \texttt{primero} del componente: entra en el historial como
+cualquier otro campo y viaja en el GWI como
+\texttt{primero: true}. Marcar dos segmentos es una acción atómica del
+historial: se quita la marca al anterior y se da al nuevo en el mismo
+bloque, de modo que deshacer revierte ambas cosas de un golpe; solo
+puede haber una marca y prevalece la última intención del autor.
+Cambiar de tipo descarta la marca, igual que los enlaces de dirección.
+El motor solo cambia una prioridad: \texttt{buscarJugador} consulta
+primero la marca del diseñador y, si no hay, cae a la búsqueda
+anterior, que queda como salvavidas: el sistema funciona siempre,
+marcado o no.
+
+\subsection{Cuarta iteración: El generador de aleatorios}
+\label{sec:F3PRNG}
+
+\textbf{Análisis conceptual y objetivos.} Los G\&W reales generan
+números aleatorios con un contador que apunta a una zona de la ROM, sin
+tablas dedicadas. En el simulador no hay ROM que leer, así que se
+sustituye por un generador matemático que produce una secuencia
+determinista a partir de una semilla: misma semilla, misma secuencia,
+misma partida, condición indispensable para depurar y para el
+hardware.
+
+\textbf{Decisiones de diseño y arquitectura.} Se adopta un generador
+lineal congruencial (LCG) de 16 bits, la opción clásica para hardware
+pequeño: avance $\text{estado} = (a \cdot \text{estado} + c)
+\bmod 2^{16}$ con las constantes clásicas $a = 25173$ y $c = 13849$, de
+la familia usada por los BASIC de 8 bits; el desbordamiento natural del
+\texttt{uint16\_t} es el módulo, con coste cero en el ESP32. La lectura
+se hace con $\text{estado} \bmod N$, suficiente para los $N$ del juego
+(rutas, dígitos). La ubicación es el \emph{director del juego}: aunque el
+consumidor inmediato es el motor, el director puede necesitar aleatorios
+para eventos propios, y el principio del proyecto es que el director es
+el coordinador al que el motor consulta. La API es una única puerta,
+\texttt{aleatorio(max)}; la semilla es una constante editable del
+fichero y \texttt{arrancar()} reinicia el estado del LCG a la semilla,
+de modo que cada partida empieza con la misma secuencia, igual que en
+las máquinas reales. El diagnóstico va bajo GW\_DEBUG.
+
+\textbf{Verificación.} El director inicializa el sistema, pide diez
+números seguidos, reinicializa y vuelve a pedirlos: ambas tandas son
+idénticas, verificando el determinismo de punta a punta.
+
+\subsection{Quinta iteración: Lanzar las rutas}
+\label{sec:F3Rutas}
+
+\textbf{Análisis conceptual y objetivos.} Con el generador verificado,
+esta iteración le da su primer uso real: elegir rutas. La secuencia de
+prueba desaparece y, por primera vez, algo definido en el cartucho
+decide lo que se ve en pantalla. Una ruta es la cadena que ya viaja en
+el GWI: un segmento \textbf{inicio} (numerado con el campo
+\texttt{ruta}) y los segmentos que cuelgan de sus enlaces
+\texttt{siguiente}. El «elemento» que recorre la ruta no es una entidad
+nueva: es el segmento encendido ahora en esa cadena — recorrer una ruta
+es apagar el segmento actual y encender el que marca su
+\texttt{siguiente}, el mismo mecanismo del jugador, solo que con el
+reloj.
+
+\textbf{Decisiones de diseño y arquitectura.} El paso de avance del
+\textit{tick} cambia: en el barrido solo participan los segmentos de
+tipo juego e inicio (función \texttt{esDeRuta}); antes de tocar nada se
+toma una FOTO de los segmentos de ruta visibles, de modo que cada uno
+avanza exactamente un paso aunque su siguiente también estuviera
+visible; si el actual no tiene siguiente, la ruta muere y el segmento
+final se apaga sin rastro. La política de lanzamiento, de momento de
+pruebas, encadena rutas sin huecos: mientras una ruta vive no nace otra,
+y en el mismo \textit{tick} en que muere el PRNG elige la siguiente, que
+nace al instante — la partida nunca muestra un \textit{tick} vacío. El
+motor no añade estado propio: si una ruta vive, es porque su segmento
+actual tiene la bandera visible encendida; la lista sigue siendo el
+estado. El mecanismo no limita las rutas simultáneas (varias a la vez
+estilo Game B quedará como parámetro del cartucho en fases posteriores):
+es la política de lanzamiento la que impone el encadenado, no el
+barrido.
+
+\textbf{Verificación.} Las tres rutas del cartucho de prueba se lanzan
+de forma aleatoria hasta el final, recorriendo la cadena completa
+verificada segmento a segmento; con la misma semilla, dos partidas
+eligen el MISMO orden de rutas; el jugador sigue moviéndose por sus
+enlaces mientras las rutas corren.
+
+\subsection{Iteraciones 6 a 8: Las colisiones}
+\label{sec:F3Colisiones}
+
+\subsubsection{Sexta iteración: Análisis del problema de las colisiones}
+
+\textbf{Análisis conceptual y objetivos.} Jugador y rutas conviven en
+pantalla sin interferir. La decisión de diseño es que la colisión
+tampoco sea geometría: \textbf{la colisión es un enlace declarado}. En
+un segmento de juego, la autoría marca con qué segmento del jugador
+colisiona; en tiempo de ejecución, el motor solo mira una cosa: ¿está
+el jugador visible en el lugar que marca el enlace? Sin cálculo de
+cajas, sin solapes, sin umbrales: una comparación de índices, como en
+las máquinas reales, donde el programador decidía qué solapes
+contaban. Un punto de colisión es un punto de decisión con dos caminos:
+\emph{colisión positiva} (el jugador está visible) y \emph{colisión
+	negativa} (no lo está). Cada desenlace puede hacer tres cosas definidas
+por la autoría: seguir una cadena (los enlaces ya existentes
+\texttt{salvado} y \texttt{muerte} reciben su semántica definitiva:
+desenlace con jugador y sin jugador), actualizar un contador interno
+una sola vez, en el instante de la decisión — con un indicador
+\emph{vida}, \emph{muerte} o \emph{nada} que viaja junto a su enlace —,
+o nada: lo que no está declarado, no pasa; ninguna colisión puede
+quedar sin comportamiento. Distinción importantísima cerrada aquí: el
+\emph{contador interno} que el motor mantiene no es lo mismo que los
+segmentos de tipo vida o muerte, que son su \emph{presentación} en
+pantalla.
+
+\subsubsection{Séptima iteración: Las colisiones en el diseñador}
+
+\textbf{Decisiones de diseño y arquitectura.} Los segmentos de juego
+ganan la marca de colisión — elegir el segmento jugador con el que
+chocan — y los contadores de desenlace (\emph{vida}, \emph{muerte} o
+\emph{ninguno}). Las propiedades nuevas entran en el historial como
+cualquier otro campo, sobreviven a las uniones re-apuntándose y se
+reproducen al recargar el GWI. La verificación calcula el inverso de
+la colisión (el jugador sabe quién choca contra él, \texttt{colisionDe}),
+avisa de un jugador sin puntos de colisión y bloquea una colisión cuyo
+destino no es un jugador, una cadena de desenlace que enlaza con el
+jugador, o un jugador inalcanzable por los enlaces de dirección: no se
+permiten datos incoherentes. La regla «un jugador, un punto de
+colisión» se sostiene (la multi-colisión queda anotada como ampliación),
+y el mapa pinta los puntos de colisión en verde azulado con su trazo
+al jugador, para verlos de un vistazo.
+
+\subsubsection{Octava iteración: El motor controla las colisiones}
+
+\textbf{Decisiones de diseño y arquitectura.} El paso (2) del
+\textit{tick} gana una regla que va ANTES del avance: un segmento
+visible de ruta que declara colisión NO avanza por \texttt{siguiente} —
+decide. La comprobación es una lectura de bandera del segmento jugador
+señalado; si está visible hay colisión positiva y la ruta sigue
+\texttt{salvado}; si no, negativa y sigue \texttt{muerte}; sin enlace,
+el elemento desaparece (regla por defecto). La cadena elegida se
+comporta como cualquier ruta: sin estado de colisión aparte, las
+banderas son el estado, y la foto del barrido evita dobles decisiones.
+El contador indicado se toca UNA sola vez, en la decisión, nunca en
+cada \textit{tick} de la animación del desenlace. El momento de la
+decisión es el \textit{tick} en que el punto de colisión ESTÁ visible,
+sin un tick de espera: si el jugador llega tarde, es negativa; el
+\emph{timing} es parte del juego, como en las máquinas reales. Los
+contadores internos se muestran en la barra de diagnóstico
+(Tick N · Vidas: V · Muertes: M) y \texttt{iniciar()} los restaura
+(vidas = número de segmentos de tipo vida del cartucho, para que
+coincida con su presentación; muertes = 0).
+
+\textbf{Problemas detectados y corrección.} En las pruebas se observa
+que con solo tres rutas de salida, la misma ruta se repite demasiadas
+veces seguidas y la partida parece un bucle. La corrección no toca el
+generador: el motor guarda una lista con los números de las últimas $n$
+rutas lanzadas ($n$ constante ajustable, inicialmente 2) y descarta la
+ruta elegida solo si las últimas $n$ son todas ella; con $n = 2$ una
+ruta puede salir dos veces seguidas, nunca tres. La elección sigue
+siendo función del estado del generador: libre y determinista (misma
+semilla = misma partida), y al iniciar la lista se vacía.
+
+\subsection{Iteraciones 9 y 10: Los contadores en pantalla}
+\label{sec:F3Contadores}
+
+\subsubsection{Novena iteración: un callejón sin salida}
+
+\textbf{Problema detectado.} Los contadores internos vivían solo en la
+barra de depuración; la iteración se propone presentarlos en pantalla
+como en las máquinas reales, donde el arte lleva un «8» impreso en cada
+posición del número y el sistema sabe qué barras enciende cada dígito
+(un 1 es \emph{b+c}, un 2 es \emph{a,b,g,e,d}; el «8» puede dibujarse
+normal o en cursiva, con tal de que las siete barras se extraigan sin
+ambigüedad). La implementación se apoyó en la \emph{unión} de segmentos
+existente y lo estiró para cubrir la jerarquía contador
+$\rightarrow$ dígitos $\rightarrow$ barras. Los intentos fueron varios
+y ninguno cerró: reciclar una barra como dígito dejaba semántica
+torcida que la verificación rechazaba; separar «segmentos ficticios»
+conviviendo con la unión clásica fue frágil — piezas agrupadas que no
+respondían al clic, «Separar» que no separaba, errores de guardado — y
+cada arreglo tapaba un agujero abriendo otro.
+
+\textbf{La decisión.} El problema no eran los contadores: era el
+sistema de unión. Fusionar los segmentos en uno de los existentes (el
+absorbido desaparece) no podía sostener encima una jerarquía de dos
+niveles con piezas que nacen y se separan. La ventaja de las
+iteraciones pequeñas es que se puede parar y retroceder antes de
+continuar: la iteración se declara fallida y se rehace el mecanismo de
+unión de arriba abajo.
+
+\subsubsection{Décima iteración: un nuevo sistema de unión y los dígitos}
+
+\textbf{Decisiones de diseño y arquitectura.} La unión deja de fundir
+los segmentos en uno de los existentes: al unir \texttt{seg\_020} y
+\texttt{seg\_030} se crea una pieza nueva (\texttt{seg\_F01}) con una
+imagen nueva (\texttt{img\_F01}, fusión de ambas) que absorbe a los
+originales, hereda sus propiedades y re-apunta sus enlaces externos;
+los originales siguen existiendo en el cartucho, marcados
+\texttt{visible:false}, sin presentarse ni manejarse. «Unir», «Hacer
+dígito» y «Hacer contador» pasan a ser el mismo mecanismo de
+absorción, y «Separar» su operación inversa, siempre deshacible.
+
+Sobre esa base se montan los contadores: el autor selecciona las siete
+barras de un «8» y el sistema clasifica cada barra por su geometría
+(las tres horizontales por altura son \emph{a}, \emph{g}, \emph{d}; las
+verticales de la derecha \emph{b} y \emph{c}, las de la izquierda
+\emph{f} y \emph{e}), creando un segmento de tipo \textbf{dígito} que
+agrupa las barras mediante los enlaces \texttt{barra\_a} a
+\texttt{barra\_g}; con los dígitos marcados (hasta 4) se crea el
+\textbf{contador} con los enlaces \texttt{digito\_1} (las unidades,
+obligatorio) a \texttt{digito\_4}. Las barras y los dígitos dejan de ser
+accesibles en el editor (se selecciona la pieza completa), pero siguen
+viajando individualmente en el cartucho: el motor enciende las barras
+reales de cada posición. El contador declara su número de contador
+interno (1 a 4, autoasignado), su valor inicial, si la cuenta es
+ascendente o descendente (que no baja de cero) y si presenta o no el
+cero. Los valores menores que $10^n$ van rellenos con blancos a la
+izquierda si lo necesitan, y los mayores o iguales que $10^n$ se
+presentan rellenos con ceros: el contador interno sigue creciendo y la
+presentación muestra los últimos $n$ dígitos.
+
+Como consecuencia, la funcionalidad «Posicionar juntos» de la autoría
+—nacida precisamente para simular los contadores numéricos de las
+vidas— se retira del editor: con los contadores reales ya no tiene
+sentido.
+
+\subsection{Undécima iteración: El fin de la partida}
+\label{sec:F3Fin}
+
+\textbf{Análisis conceptual y objetivos.} Una partida no terminaba
+nunca. Falta definir las características generales del juego que no
+pertenecen a ningún segmento de arte, y que el motor reaccione a ellas.
+Como el GWI no se monta a mano sino con el editor, se crea un tipo nuevo
+de segmento, \textbf{cartucho} (tipo 7): una pieza ficticia que nunca
+se pinta y cuya ficha se abre con un clic en cualquier punto vacío del
+mapa. Hay exactamente una por cartucho, creada siempre automáticamente,
+que el autor no puede borrar ni duplicar; en el GWI no viaja como
+segmento, sino como propiedad del cartucho al nivel superior:
+
+\begin{lstlisting}[language=json]
+	{ "fin": { "mecanismo": "vida" } }
+	{ "fin": { "mecanismo": "contador", "contador": 1 } }
+\end{lstlisting}
+
+\textbf{Decisiones de diseño y arquitectura.} El autor elige uno de dos
+mecanismos, que no pueden convivir:
+
+\begin{itemize}
+	\item \textbf{Por contador:} uno de los cuatro contadores internos,
+	descendente, iniciado al número de vidas; la partida termina cuando el
+	contador \textbf{transiciona de mayor que cero a cero}. Empezar en cero
+	(que significa «nunca termina») es error bloqueante al guardar, igual
+	que no tener contador en pantalla.
+	\item \textbf{Por iconos de vida o muerte:} los segmentos de muerte
+	(los tres tiburones bajo el aviso) nacen apagados y cada muerte enciende
+	el último no visible; la partida termina al encenderse el último. Los
+	de vida nacen todos encendidos y cada pérdida apaga el último; termina
+	cuando no queda ninguno visible. Las vidas iniciales no hay que
+	definirlas: salen contando los iconos de la familia. Solo puede haber
+	una familia de vida o una de muerte por cartucho.
+\end{itemize}
+
+La asociación del fin es automática cuando ayuda: al convertir un
+segmento a tipo vida o muerte, si el fin está sin definir, se asocia a
+esa familia con su aviso; si el segmento era el último de su familia,
+el fin se retira. Asociación y retirada viajan en la misma acción
+atómica del historial que el cambio de tipo. Para que las dos etapas
+hablen el mismo idioma, la enumeración de tipos de segmento y de
+mecanismos de fin vive en el puente (\emph{ComunListas}): comparar
+contra constantes con nombre en vez de dígitos mágicos.
+
+En el motor, el estado \textbf{terminada} congela la partida como en
+las máquinas reales: la pantalla queda tal cual estaba, el barrido de
+rutas y la entrada del jugador dejan de avanzar y el reloj se detiene,
+con el aviso «Partida terminada — pulsa Start»; el Start existente
+reinicia semilla, cola, contadores e \texttt{iniciar()}: la nueva
+partida es el arranque de siempre, sin piezas nuevas.
+
+\textbf{Problemas detectados y corrección.} En la verificación por
+iconos de muerte, la primera muerte fallaba porque el tiburón que
+quedaba fijo era el primero en lugar del último: el orden de encendido
+de la familia debe marcarlo la cadena de ruta, no la numeración del
+editor. Tras ajustarlo, los tres mecanismos (contador, iconos de
+muerte, iconos de vida) terminan la partida correctamente.
+
+\subsection{Duodécima iteración: Cambios menores, elementos sin interacción y la Secuencia}
+\label{sec:F3Menores}
+
+\textbf{Análisis conceptual y objetivos.} El sistema ya funciona y se
+puede jugar; quedan los temas menores de las máquinas reales: nuevas
+validaciones al guardar, elementos que se presentan pero no
+intervienen, y la congelación del juego durante la secuencia de muerte.
+
+\begin{itemize}
+	\item \textbf{Validaciones adicionales:} el fin por vida o muerte exige
+	que exista al menos un segmento de ese tipo; todo cartucho necesita al
+	menos un jugador, y todo jugador algún enlace de dirección (un jugador
+	que no puede moverse nunca es correcto); y los enlaces de dirección
+	del jugador calculan su inverso automáticamente: al enlazar
+	\texttt{A $\rightarrow$ izquierda: B}, en B se escribe
+	\texttt{derecha: A}, y lo mismo al quitar, en la misma acción del
+	historial.
+	\item \textbf{Elementos sin interacción:} dos tipos nuevos. El
+	\textbf{adicional} se presenta pero no interviene: sin enlace
+	\texttt{siguiente} nace encendido y queda fijo para siempre (el
+	helicóptero); con enlace nace apagado y solo lo enciende su propio
+	bucle. El \textbf{adicional de inicio} lanza la secuencia y nace
+	encendido, alternando un segmento por tick, indefinidamente (las
+	aspas). Sus enlaces \texttt{siguiente} solo pueden apuntar a
+	segmentos de estos tipos.
+	\item \textbf{La Secuencia:} animaciones de fondo que no forman parte
+	del juego (las aletas de tiburón bajo las barcas). Cada cartucho puede
+	disponer de una, definida por sus \textbf{ticks} de espera y una lista
+	de hasta cinco segmentos lanzados en orden, uno por tick; los
+	segmentos pueden ser de juego, inicio o adicional, y pueden pertenecer
+	a la vez a otras secuencias (las aletas merodean solas y, a la vez, son
+	eslabones de la secuencia de muerte). El ciclo real dura $n + m$
+	\textit{ticks} ($n$ de espera más $m$ los que dura la animación).
+	\item \textbf{La congelación por desenlace:} cuando una colisión
+	lanza una cadena de vida o de muerte, en la máquina real el resto del
+	juego se congela hasta que termina la animación. Una bandera nace con
+	la cadena, se propaga por sus enlaces \texttt{siguiente} y cae al morir
+	el último eslabón; mientras está encendida, las rutas no avanzan ni
+	nacen y el jugador no responde — solo sigue vivo el bucle de los
+	elementos adicionales (las aspas). Una muerte instantánea sin animación
+	no congela nada; y como salvaguarda, si una cadena marcada se rompe por
+	un enlace colgante, la marca se limpia sola: un error de autoría no
+	puede congelar el juego para siempre.
+\end{itemize}
+
+\textbf{Problemas detectados y corrección.} Esta iteración obligó a
+depurar tres errores con síntomas parecidos y causas distintas, un buen
+ejemplo del valor del diagnóstico:
+
+\begin{enumerate}
+	\item \textbf{Interrupción en cada colisión:} el diseño original ponía
+	el contador de la Secuencia a cero ante cualquier colisión decidida. En
+	el cartucho real, donde las colisiones son constantes, la animación
+	nunca completaba un ciclo. La corrección limita la suspensión al ciclo
+	de muerte: las colisiones positivas y la congelación por desenlace
+	salvado no la afectan.
+	\item \textbf{Puente de datos desactualizado:} el editor solo escribía
+	la Secuencia en el puente al cargar el cartucho, de modo que definirla
+	en la ficha y arrancar sin recargar dejaba al motor sin verla. La
+	corrección sincroniza el puente al final de cada reconstrucción de la
+	ficha: cualquier edición queda visible al instante.
+	\item \textbf{Ciclo de muerte atascado:} los segmentos de la Secuencia
+	pueden ser a la vez eslabones de las cadenas de desenlace (las aletas
+	compartidas), y el barrido los excluía del avance por estar encendidos
+	por la animación, con lo que la cadena de muerte se detenía en ellos
+	para siempre y no se producían muertes. La corrección distingue los
+	dos contextos: solo el barrido de rutas respeta la marca de animado; un
+	eslabón de la cadena de desenlace avanza aunque esté encendido por la
+	Secuencia. Como remate, al nacer el ciclo de muerte el segmento activo
+	de la animación se apaga y la Secuencia se reinicia por completo.
+\end{enumerate}
+
+La localización se apoyó en la barra de diagnóstico, que con GW\_DEBUG
+muestra en todo momento el estado de la Secuencia (contador de
+\textit{ticks} pendientes, segmento en curso y si anima o está
+suspendida), permitiendo distinguir si el fallo estaba en el motor, en
+el puente de datos o en la presentación.
+
+\subsection{Decimotercera iteración: Segmentos que se presentan juntos}
+\label{sec:F3Juntos}
+
+\textbf{Análisis conceptual y objetivos.} En la máquina real hay
+parejas de segmentos que se presentan siempre a la vez al recorrer una
+secuencia (un nadador perseguido por una aleta), pero cuyo componente
+secundario también aparece solo en la animación de fondo. Ni la unión
+(que fusiona para siempre) ni los enlaces lo cubren.
+
+\textbf{Decisiones de diseño y arquitectura.} El segmento principal
+gana el parámetro «Mostrar junto a», que enlaza con el secundario; en
+el secundario, «Mostrado junto a» informa en automático de su
+principal. Cuando se enciende o apaga el principal se hace siempre lo
+mismo con el secundario; pero un secundario encendido directamente (por
+la animación) no altera al principal. El secundario no puede formar
+parte de ninguna red de enlaces, no reporta colisión y solo puede ser
+de tipo juego, todo verificación bloqueante al guardar.
+
+\textbf{Problema detectado y corrección.} En la verificación se detectó
+que al lanzarse una ruta de muerte durante una animación, esta
+continuaba por donde estaba al finalizar la cadena, cuando debía
+cortarse por completo y recomenzar el conteo de \textit{ticks}. Corregido
+y reverificado, las aletas funcionan en solitario durante las
+animaciones y persiguiendo a los paracaidistas en las secuencias de
+muerte.
+
+\subsection{Cierre de la fase: Batería con las pruebas efectuadas y su resultado}
+\label{sec:F3Pruebas}
+
+Como en las fases anteriores, el cierre se certifica con una iteración
+de validación que recorre todos los cambios incorporados, desde la
+carga del cartucho hasta la presentación en pantalla con el GWI real
+del Parachute:
+
+\begin{longtable}{|c|l|p{8.2cm}|c|}
+	\hline
+	\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\
+	\hline
+	\endfirsthead
+	\hline
+	\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\
+	\hline
+	\endhead
+	
+	1 & Jugador & El jugador queda visible y presentado en su posición
+	de inicio al primer \texttt{iniciar}, sin necesidad de pulsar nada. &
+	OK \\
+	\hline
+	2 & Jugador & Los botones mueven al jugador por sus enlaces de
+	dirección; los enlaces inversos se mantienen automáticamente al marcarlos
+	y al quitarlos. & OK \\
+	\hline
+	3 & Jugador & La verificación al guardar bloquea un cartucho con un
+	jugador sin ningún enlace de dirección a otro jugador. & OK \\
+	\hline
+	4 & Rutas & Los segmentos de juego nacen por azar, avanzan por sus
+	enlaces un segmento por tick y mueren al llegar al final de su
+	concatenación. & OK \\
+	\hline
+	5 & Azar & Con la misma semilla, dos partidas son idénticas: mismas
+	rutas naciendo en los mismos ticks y mismos desenlaces. & OK \\
+	\hline
+	6 & Colisiones & Una colisión solo se decide entre el jugador y un
+	segmento visible que reporta colisión; el desenlace salvado enciende su
+	cadena y el mortal la suya. & OK \\
+	\hline
+	7 & Congelación & Mientras corre una cadena de desenlace el juego queda
+	congelado: no nacen rutas y el jugador no responde; al morir el último
+	eslabón el juego se reanuda. & OK \\
+	\hline
+	8 & Contadores & La familia de vida se enciende desde el primero y la
+	de muerte acumulativamente desde el último, en el orden definido por su
+	cadena y no por la numeración del diseñador. & OK \\
+	\hline
+	9 & Contadores & Los contadores de dígitos presentan su valor con
+	segmentos de siete segmentos y lo actualizan en el mismo tick del
+	cambio. & OK \\
+	\hline
+	10 & Fin & La partida termina al agotarse un contador, al encenderse
+	todos los iconos de muerte o al perderse todas las vidas, según el
+	mecanismo declarado en el cartucho. & OK \\
+	\hline
+	11 & Adicionales & Un segmento \emph{adicional} sin siguiente queda
+	fijo encendido (helicóptero); con siguiente avanza en su propio bucle,
+	y un \emph{inicioAdicional} nace encendido y alterna solo (aspas), sin
+	que nada los interrumpa. & OK \\
+	\hline
+	12 & Secuencia & La Secuencia lanza sus segmentos en orden, uno por
+	tick, y se relanza desde el primero tras esperar los ticks declarados
+	(ciclo completo de $n + m$ ticks). & OK \\
+	\hline
+	13 & Secuencia & Las colisiones y la congelación por desenlace salvado
+	NO interrumpen la Secuencia; solo el nacimiento de un ciclo de muerte
+	la interrumpe. & OK \\
+	\hline
+	14 & Secuencia & Al nacer el ciclo de muerte, el segmento activo de la
+	Secuencia desaparece, la animación se reinicia por completo y espera los
+	ticks necesarios para relanzarse desde su primer segmento. & OK \\
+	\hline
+	15 & Secuencia & La cadena de muerte atraviesa un segmento encendido
+	por la Secuencia (las aletas compartidas): lo toma como eslabón, lo apaga
+	y sigue, produciendo la muerte. & OK \\
+	\hline
+	16 & Acompañantes & Un secundario «Mostrado junto a» se enciende y
+	apaga siempre con su principal, incluidas las cadenas de desenlace, y
+	puede presentarse solo en la animación de fondo. & OK \\
+	\hline
+	17 & Acompañantes & La verificación al guardar bloquea un secundario
+	con cualquier enlace: con siguiente, apuntado por otro, con colisión,
+	de tipo distinto a juego o con dos principales. & OK \\
+	\hline
+	18 & Depuración & La barra de estado con GW\_DEBUG muestra el estado de
+	la Secuencia (contador pendiente, segmento en curso y si anima o está
+	suspendida). & OK \\
+	\hline
+	19 & Integración & Partida completa con el GWI real del Parachute:
+	tres ciclos de muerte que atraviesan las aletas encendidas por la
+	animación, tres iconos de muerte y partida terminada por fin de
+	muerte. & OK \\
+	\hline
+	\caption{Batería de pruebas de validación de la Fase 3.}
+\end{longtable}
+
+Con esta batería en verde, la Fase 3 se cierra con el simulador
+jugable de punta a punta: el cartucho define y el motor ejecuta;
+la misma disciplina con la que afrontaremos la Fase 4, donde los
+parámetros que gobiernan el ritmo de la partida saldrán del código
+para viajar también en el cartucho.
+
+\clearpage

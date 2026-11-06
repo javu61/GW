@@ -1,0 +1,215 @@
+	\section{Primera iteración de la Fase 1: Carga de datos base}
+	\label{sec:Primera-iteracion}
+	
+	El objetivo de esta fase es cargar una configuración (setup) y un juego (cartucho), presentar la pantalla inicial con su botonera, luego la pantalla de fondo del cartucho, y dejar todo listo para el Motor de Juego.
+	
+	\subsection{Estructura del proyecto}
+	\dirtree{%
+		.1 GW/.
+		.2 index.html \dots{} $\Rightarrow$ Página base: controles, carcasa y panel de estado.
+		.2 designer/.
+		.3 estilos.css \dots{} $\Rightarrow$ El CSS.
+		.3 director.js \dots{} $\Rightarrow$ El motor de carga de setup y cartuchos (script clásico, sin módulos ES).
+	}
+	
+	Restricciones técnicas mantenidas:
+	\begin{itemize}
+		\item \textbf{JS puro, sin módulos ES}: compatible con abrir 'index.html' con doble clic ('file://'). El CSS externo vía '<link>' también funciona en 'file://'.
+		\item \textbf{Ámbito global compartido} entre scripts (preparado para añadir más '<script>': Director, Motores de Juego...).
+		\item \textbf{Descomposición descendente}: cada función hace una sola cosa.
+		\item \textbf{Uso de la consola}: (F12) todo fallo deja mensaje en consola y en pantalla.
+	\end{itemize}
+	
+		\clearpage
+		
+	\subsection{Flujo de uso}
+	
+	Cuando arrancamos el fichero Index.html, esta es la secuencia que se ha definido para el manejo:
+	
+	\begin{enumerate}
+		% Paso 1 con su imagen bloqueada abajo
+		\item \begin{minipage}[t]{\linewidth}
+			Al arrancar solo aparece el botón \textbf{Cargar Setup}.
+			\begin{center}
+				\includegraphics[width=0.5\linewidth]{imagenes/propias/c05-I001.png}
+				\captionof{figure}{Pantalla inicial}
+				\label{fig:c05-D1}
+			\end{center}
+		\end{minipage}
+		
+		% Paso 2 con su imagen bloqueada abajo
+		\item \begin{minipage}[t]{\linewidth}
+			Se selecciona un único fichero \texttt{JSON} $\rightarrow$ se valida y con esta información se construye la máquina (\textbf{NOTA:} se presenta la pantalla de 5 botones como referencia únicamente, el juego es para máquina de 2 botones, por lo que se vuelve a cargar luego el setup adecuado).
+			\begin{center}
+				\includegraphics[width=0.5\linewidth]{imagenes/propias/C05-I002.png}
+				\captionof{figure}{Cargado un setup para máquina de 5 botones}
+				\label{fig:c05-D2}
+			\end{center}
+		\end{minipage}
+		
+		% Paso 3 con su imagen bloqueada abajo
+		\item \begin{minipage}[t]{\linewidth}
+			Se activa \textbf{Cargar Cartucho} $\rightarrow$, donde se selecciona una \textbf{carpeta} ('webkitdirectory') $\rightarrow$ se localiza el \texttt{.json}, se resuelven las imágenes por nombre y se pinta el fondo del juego.
+			\begin{center}
+				\includegraphics[width=0.5\linewidth]{imagenes/propias/C05-I003.png}
+				\captionof{figure}{Cargado el juego}
+				\label{fig:c05-D4}
+			\end{center}
+		\end{minipage}
+	\end{enumerate}
+		
+	En cualquier momento es posible volver a cargar un setup, esto reinicia pantalla y botones y \textbf{limpia el cartucho en memoria} (incluidas las object URLs).
+			
+	\subsection{Formato del fichero de setup}
+	
+	En este fichero se define la máquina que vamos a usar a nivel de hardware.
+	Se puede disponer de varios ficheros de configuración de tipo \textbf{json}, dependiendo de los elementos existentes y sus conexiones en la máquina de destino. 
+		
+	\begin{lstlisting}[
+		language=json, 
+		frame=single, 
+		breaklines=true, 
+		basicstyle=\ttfamily\small,
+		caption={Estructura del archivo setup.json},
+		label={lst:setup_base}
+		]
+		{
+			'tipo': 'GW',                                       
+			'version': '1.1',                                   
+			'nombre': 'ESP32 GW con 5 botones',                 
+			'estilo': '5',                                      
+			'pantalla': { 'ancho': 320, 'alto': 240 },          
+			'botones': [                                        
+			{ 'numero': '0', 'puerto': 13, 'tecla': 'Q' },  
+			{ 'numero': '1', 'puerto': 14, 'tecla': 'P' },  
+			{ 'numero': '2', 'puerto': 25 },                
+			{ 'numero': '3', 'puerto': 26 },                
+			{ 'numero': '4', 'puerto': 27 },
+			{ 'numero': '5', 'puerto': 32 },
+			{ 'numero': '6', 'puerto': 33, 'alias': 'A' },
+			{ 'numero': '7', 'puerto': 16, 'alias': 'B' },
+			{ 'numero': '8', 'puerto': 17, 'alias': 'R' }
+			]
+		}
+	\end{lstlisting}
+	
+	Estan son las validaciones del setup, se realizan de tipo bloqueantes, con mensaje claros de error:
+	
+	\begin{itemize}
+		\item \textbf{tipo} debe ser \texttt{'GW'}
+		\item \textbf{version} debe ser la que entiende el motor (actualmente la 1.1).
+		\item \textbf{nombre} identificativo de la máquina, solo como referencia.
+		\item \textbf{estilo} debe ser un estilo del catálogo, indica el número de botones del aparato, con valores 2, 4 o 5.
+		\item \textbf{pantalla.ancho/alto} enteros positivos que indican el tamaño de la pantalla en pixels.
+		\item \textbf{botones} array; cada botón dispone de: 
+		\begin{itemize}
+			\item \textbf{numero} (string; se aceptan números y se convierten con aviso).
+			\item \textbf{puerto} Opcional solo para ejecutar en el ESP: (string; se aceptan números y se convierten con aviso) donde está conectado el botón.
+			\item \textbf{tecla} Opcional solo para ejecutar en el PC: por botón: una sola letra; aviso si se repite. La tecla del teclado que sirve para simular la pulsación del botón.
+			\item \textbf{alias} da el nombre corto de sistema (A/B/R) en lugar del número, para usar en el motor.
+		\end{itemize}
+		\item Los botones A y B sirven para arrancar el juego, con dos niveles de dificultad. Solo se usa actualmente el botón A para el arranque del juego.
+		\item El botón R sirve para manejo del reloj, sin uso actualmente.
+	\end{itemize}
+	
+	\subsection{Estilos de máquina}
+	
+	Cada estilo es un \textbf{diseño completamente independiente} (esqueleto propio en el HTML, contenedores propios). Añadir un estilo futuro = añadir un diseño nuevo, sin retocar los existentes.
+	
+	\begin{table}[htbp]
+		\centering
+		\caption{Configuración de estilos y disposición de botones de juego}
+		\label{tab:estilos_juego}
+		\begin{tabular}{|c|l|p{8cm}|}
+			\hline
+			\textbf{Estilo} & \textbf{Botones de juego} & \textbf{Disposición} \\ \hline \hline
+			2 & 0 y 4 & Uno a cada lado de la pantalla, a media altura (Parachute, Fire) \\ \hline
+			4 & 0, 1, 4, 5 & Pares simétricos a ambos lados \\ \hline
+			5 & 0, 1, 2, 3, 4 & Cruceta (rombo) a la izquierda, 4 a la derecha \\ \hline
+		\end{tabular}
+	\end{table}
+	
+	\begin{itemize}
+		\item El \textbf{trío de sistema 6/7/8 (A/B/R)}, equivalente a GAME A / GAME B / TIME, existe en todos los estilos: botones rectangulares pequeños, \textbf{abajo y centrados}.
+		\item Los botones de juego \textbf{flanquean la pantalla}; las estructuras laterales son espejo, así que ambos lados quedan siempre a la misma altura.
+		\item Los huecos están \textbf{anclados}: si el cartucho elimina botones, los que quedan no se mueven (no hay reflow).
+		\item El motor muestra el esqueleto del estilo y \textbf{mueve el canvas} al hueco de ese diseño.
+	\end{itemize}
+	
+	\subsection{Formato del cartucho}
+	
+	Para definir el juego se utiliza un fichero \texttt{JSON} de configuración con estos datos:
+	
+	\begin{lstlisting}[
+		language=json, 
+		frame=single, 
+		breaklines=true, 
+		basicstyle=\ttfamily\small,
+		caption={Estructura del archivo cartucho.json},
+		label={lst:setup_cartucho}
+		]
+		{
+			'nombre': 'Parachute',
+			'estilo': '2',
+			'pantalla': {								 
+				'img_m': 'parachute_m.png',	
+				'img_f': 'parachute_f.png',
+				'img_s': 'parachute_s.png'
+			},
+			'botones': [
+			{ 'numero': 0, 'id': 'IZQ' },
+			{ 'numero': 4, 'id': 'DER' },
+			{ 'numero': 'A', 'id': 'Start' }		
+			]
+		}
+	\end{lstlisting}
+	
+	\begin{itemize}
+		\item \textbf{nombre} se refiere al nombre que le damos al cartucho
+		\item \textbf{estilo} es \textbf{obligatorio y debe coincidir con el de la máquina cargada} (error bloqueante si difiere).
+		\item \textbf{pantalla} una lista con las 3 pantallas que usaremos para definir el juego. Se valida que f y s deben ser del mismo tamaño:
+		\begin{itemize}
+			\item \textbf{img\_f} se pinta \textbf{escalada para llenar siempre el canvas} (sin letterbox).
+			\item \textbf{img\_s} se valida contra el tamaño de \textbf{img\_f} (aviso por consola, no bloqueante).
+			\item \textbf{img\_m} (portada) se carga en paralelo y queda en memoria para la futura pantalla de selección.
+		\end{itemize}
+		\item \textbf{botones} configura los que se usan en el juego
+		\begin{itemize}
+			\item \textbf{numero} acepta con o sin comillas y los alias declarados en el setup ('A' $\rightarrow$ botón 6).
+			\item \textbf{id} es el nombre que aparecerá en el botón en el PC.
+		\end{itemize}
+	\end{itemize}
+	
+	Al cargar el cartucho se aplica su botonera: los botones usados se \textbf{renombran con su 'id'} y los físicos no usados se \textbf{eliminan del DOM}. Recargar el cartucho o el setup restaura la botonera completa.
+	
+	\subsection{Teclado}
+	
+	Cada botón físico lleva una tecla asociada para jugar sin ratón:
+	\begin{itemize}
+		\item Tabla por defecto (espejo del teclado): 'Q/A/W/S' $\rightarrow$ 0/1/2/3, 'P/L' $\rightarrow$ 4/5, 'G/B/T' $\rightarrow$ 6/7/8 (G de Game, T de Time).
+		\item Reasignable desde el setup con 'tecla' por botón (una letra).
+		\item La tecla se \textbf{pinta bajo la etiqueta} del botón.
+		\item Soporta pulsaciones simultáneas (keydown/keyup) con el mismo resaltado visual que el ratón.
+		\item Pendiente como ampliación: asociar flechas u otras teclas sin letra directa.
+	\end{itemize}
+	
+	\subsection{Interfaz de estado}
+	
+	\begin{itemize}
+		\item Barra superior (negrita): la \textbf{última operación} ('Setup cargado: ...' / 'Cartucho cargado: ...'); en rojo si hay error.
+		\item Panel inferior (aparece con el setup): 'Pantalla: AxB, Estilo: N, Botones: N', línea de cartucho, \textbf{lista de ficheros leídos} con tamaños, y mensajes de error en rojo (nunca duplicados).
+		\item Errores siempre visibles en tres sitios: barra superior, panel inferior y consola.
+		\item Si un setup es inválido, se conserva la máquina anterior (no se destruye nada).
+	\end{itemize}
+	
+	\subsection{Validaciones y mensajes destacados}
+	
+	\begin{itemize}
+		\item Cartucho: varios \texttt{JSON} en la carpeta $\rightarrow$ aviso, usa el primero; si no hay ficheros \texttt{JSON} $\rightarrow$ error.
+		\item Faltan imágenes referenciadas $\rightarrow$ error con el nombre exacto.
+		\item Botón del cartucho que no existe en el estilo cargado $\rightarrow$ aviso en consola.
+		\item Botón del estilo sin declarar en el setup $\rightarrow$ se crea igual (aviso, sin puerto).
+		\item Botón declarado que no pertenece al estilo $\rightarrow$ ignorado (aviso).
+	\end{itemize}
+	
+	\clearpage

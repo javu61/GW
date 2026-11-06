@@ -1,0 +1,62 @@
+	\section{Novena iteración de la Fase 1: Mejoras en el diseñador}
+\label{sec:MejorasDiseñador}
+
+El objetivo de esta fase es añadir ciertas mejoras en el diseñador para hacerlo más cómodo de manejar y preparar la posibilidad de deshacer.
+
+\subsection{Historial de cambios}
+
+Se crea un nuevo historial de cambios, para la futura acción de deshacer:
+\begin{itemize}
+	\item Se elimina la lista de autoría: en ella estaban todas las acciones cuando se descomponen los segmentos desde la imagen de base, pero esto no srive para nada, al cargar la imagen se vuelve a procesar y se 
+	
+	\item Se añade una lista de cambios: se crea una nueva lista cronológica de los cambios reales efectuados tras descomponer la imagen, en la que se incluyen todas las operaciones manuales efectuadas (cambiar un tipo, asignar anterior o siguiente, unir segmentos, etc.)
+	
+	\item La lista usa una numeración correlativa: se numeran cronológiocamente y se mantiene la numeración continúa entre guardados (autoria.ultimoOp persiste).
+	
+	\item Cambios relacionados: Si un cambio involucra efectuar varias acciones (al unir dos segmentos se cambian los enlaces a anterior/siguiente por ejemplo), se unen por un nuevo campo que indica el número del cambio principal. Si este queda a 0 es una acción individual; si una acción genera varias entradas, todas (incluida la primera) llevan relacionados = "nº de la primera". De esta forma cuando se efectúe el proceso de deshacer la última acción, se recorren todos los relacionados para eliminar sus cambios.
+	
+	\item Se elimina la lista de uniones y de offsets: ya no será necesaria al disponer de todos los cambio individuales.
+	
+\end{itemize}
+
+\subsection{GWI compacto y guardado robusto}
+Se revisa el guardado del cartucho GWI, que informa de que está guardando los datos, con un aviso «Guardando GWI (N imagen(es))…», más el bloqueo del botón durante el guardado asíncrono. Al finalizar informa de que ha completado el guardado de los datos. Así se impide cargar el cartucho antes de finalizar su creación o modificación completa, lo que producen errores.
+
+Además, como la lista de segmentos es normalmente larga, se reformatea el \texttt{JSON} que se genera para que sea lo más compacto posible, en una sola línea por cada elemento (sprites, botones y segmentos), así pasamos de generar unas 2500 líneas a solo 300, mucho más sencillo para revisar o modificar a mano (aunque no se recomienda hacerlo).
+ (reactivado siempre en finally); escritura extraída a guardarGWIEnDisco.
+
+\subsection{Bugs resueltos}
+En las pruebas se han detectado dos bug que se solucionan:
+
+\begin{itemize}
+	\item Los botones de Subir/Bajar en los segmentos de inicio de secuencia no hacían nada: al cambiar el orden nacía como null, y el intercambio null \ensuremath{\Leftrightarrow} null no cambiaba nada. 
+	
+	\item El dato de los Segmentos unidos al actual estaba mal calculado, pero al ser redundante por la nueva lista de cambios implementada, se elimina dicho dato.
+	
+	\item Los segmentos unidos no desaparecen: las componentes absorbidas aparecen como fantasmas informativos, con tipo de segmento 99, y se cambia el nombre a seg\_xN, absorbidoPor, por lo que son filtrados por pintarGWI y cargarListas.
+\end{itemize}
+
+\subsection{Unión múltiple por recuadro}
+Para simplificar la unión de segmentos, se usará el ratón para marcar un rectángulo, y aparece un botón que indica si se dese unir n segmentos.
+
+\begin{itemize}
+	\item Marquee: pointerdown anota, pointermove dibuja la banda elástica azul, pointerup marca en rojo todo grupo cuya caja presentada corte el recuadro total o parcialmente; un grupo = selección simple; clic desmarca; soltar fuera se autocierra.
+	\item Panel «N segmentos marcados» + «Unir N segmentos» $\rightarrow$  unirMarcados(): une todos al primero, re-apunta enlaces externos a la raíz resultante y anula con null los enlaces internos (auto-referencias), todo en UNA acción atómica.
+	\item Mismo fix de auto-referencias aplicado a la unión por elección en aplicarEleccion.
+	\item Estado nuevo marcados/arrastre, limpiados en reset(); pintarMapa pinta el rojo múltiple y el recuadro en curso.
+\end{itemize}
+
+\subsection{Unión de segmentos de tipos distintos}
+Hasta ahora al unir dos segmentos, el tipo del resultante era el del primer segmento, pero si ambos son de tipo diferente hay que decidir cual se debe usar en el segmento unido, por lo que el usuario debe decidirlo. Para evitar esto, si los tipos de todos los segmentos a unir no son iguales daremos un \textbf{error bloqueante} en los dos modos de efectuar la unión:
+
+\begin{itemize}
+	\item «Unir con…» (aplicarEleccion): si origen.prop.tipo es diferente a destino.prop.tipo $\rightarrow$ avisarError con los dos tipos, no se toca nada (ni uniones, ni historial, ni reconstrucción).
+	\item «Unir N segmentos» (unirMarcados): si hay más de un tipo entre los marcados $\rightarrow$  avisarError listando los tipos; se conservan las marcas (rojo) para que el autor cambie tipos y reintente, o desmarque con un clic.
+\end{itemize}
+
+Aun así el merge «primer valor gana» de reconstruir se queda como red de seguridad (un GWI editado a mano podría reproducir tipos mezclados), pero desde la UI ya no es alcanzable.
+
+
+
+
+\clearpage

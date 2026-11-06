@@ -1,0 +1,97 @@
+\subsection{Tercera Iteración de la Fase 4: Pruebas Finales}
+\label{sec:PruebasFase4}
+
+Esta fase ha sido muy corta realmente, pues solo había dos cambios a realizar que se resolvieron en una sola iteración. Al cierre de la fase se certifica con esta iteración de validación, que recorre todos los cambios incorporados para verificar que todo continúa funcionando. 
+
+\subsection{Batería con las pruebas efectuadas y su resultado}
+\label{sec:BateriaPruebasFase4}
+
+% Configuración para que las columnas X justifiquen a la izquierda en lugar de centrado/justificado completo
+\newcolumntype{L}{>{\raggedright\arraybackslash}X} 
+
+\begin{small} 
+	\begin{tabularx}{\textwidth}{c >{\hsize=0.4\hsize}L >{\hsize=1.6\hsize}L c}
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endfirsthead % Cabecera de la primera página
+		
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endhead % Cabecera que se repite en las páginas siguientes
+		
+		\midrule
+		\multicolumn{4}{r}{\small Continúa en la página siguiente...} \\
+		\endfoot % Pie de página en páginas intermedias
+		
+		\bottomrule
+		\endlastfoot % Cierre definitivo al final de toda la tabla
+		
+		1 & Ficha & La ficha del cartucho (clic en zona vacía) muestra los campos
+		de pausas, aceleración, \texttt{N\textsuperscript{o}~ para aumentar rutas} y 
+		la casilla Combinar, con los valores del cartucho o vacíos si no los trae. & OK \\
+		\hline
+		2 & Ficha & Los campos numéricos validan entero positivo; la
+		aceleración se guarda completa o no se guarda (los tres valores o
+		ninguno), y un mínimo menor que la pausa del simulador produce aviso. &
+		OK \\
+		\hline
+		3 & Ficha & Las ediciones viajan en el historial: deshacer y rehacer
+		retiran y repone los cuatro bloques como acciones atómicas. & OK \\
+		\hline
+		4 & Ficha & Al guardar, \texttt{pausas}, \texttt{aceleracion},
+		\texttt{rutas} y \texttt{teclado} viajan al nivel superior del GWI; al
+		recargar el GWI la ficha los recupera. & OK \\
+		\hline
+		5 & Puente & Los cuatro pares de accesos del puente
+		(\texttt{fijarPausas}/\texttt{pausasDeCartucho} y equivalentes) devuelven
+		lo fijado, y \texttt{limpiar()} los anula al recargar el cartucho. & OK \\
+		\hline
+		6 & Puente & \texttt{BaseDirector} escribe los cuatro campos al cargar
+		el GWI; con un GWI viejo que traiga \texttt{combinar} plana, el puente
+		recibe \texttt{teclado.combinar} (respaldo de compatibilidad). & OK \\
+		\hline
+		7 & Director & Un cartucho sin \texttt{pausas} arranca a 500 ms
+		(comportamiento histórico) y la barra con \texttt{GW\_DEBUG} presenta
+		«Pausa: 500 ms» junto a \textit{tick}, contadores y Secuencia. & OK \\
+		\hline
+		8 & Director & Con \texttt{pausas.simulador = 480} la partida arranca a
+		480 ms y la barra lo refleja; \texttt{pausas.externo} queda reservado
+		para el ESP32. & OK \\
+		\hline
+		9 & Director & Con aceleración \{cada: 2, resta: 10, mínimo: 460\} sobre
+		una pausa de 480, la pausa vigente baja 480 $\rightarrow$ 470
+		$\rightarrow$ 460 y nunca baja del mínimo. & OK \\
+		\hline
+		10 & Director & Relanzar la partida restaura la pausa base y reinicia
+		el total de rutas lanzadas y el máximo de simultáneas. & OK \\
+		\hline
+		11 & Rutas & Sin \texttt{rutas} en el GWI, el máximo de simultáneas es
+		1 y la regla histórica se cumple: la ruta nueva nace cuando no queda
+		ninguna viva. & OK \\
+		\hline
+		12 & Rutas & Con \texttt{aumentarCada = 3}, al tercer lanzamiento el
+		máximo pasa a 2 y hay dos rutas vivas en pantalla a la vez. & OK \\
+		\hline
+		13 & Rutas & Con \texttt{aumentarCada = 1} y tres rutas definidas en el
+		cartucho, las vivas nunca superan el número de inicios (tope real). & OK \\
+		\hline
+		14 & Rutas & El total de rutas lanzadas no baja con las muertes
+		(progresión de la partida); el máximo solo sube en los múltiplos. & OK \\
+		\hline
+		15 & Regresión & El cartucho real Parachute sin campos nuevos termina
+		por \texttt{fin = muerte} con 3 muertes, una ruta viva como máximo y el
+		reloj detenido al terminar. & OK \\
+		\hline
+		16 & Regresión & Determinismo: dos partidas con la misma semilla
+		recorren los mismos estados (mismo \textit{tick} de fin, mismas muertes,
+		mismos segmentos encendidos), la segunda de ellas con aceleración
+		activa. & OK \\
+		\hline
+		
+	\end{tabularx}
+	\nopagebreak
+	\captionof{table}{Batería de pruebas efectuadas para validar la Fase 4.}
+	\label{tab:PruebasDeLaFase4}
+\end{small}

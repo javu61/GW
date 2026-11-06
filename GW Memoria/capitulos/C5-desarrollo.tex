@@ -1,0 +1,56 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+	\chapter{Desarrollo del proyecto}
+	\label{C:desarrollo}
+	
+	Este capítulo recoge el desarrollo que he realizado. Se divide en Fases, al final de cada una se tiene un artefacto completamente funcional que cumple una característica importante, y en cada fase varias \textbf{iteraciones} evolutivas incrementales. El desarrollo se ha realizado en este orden:
+	
+	\begin{enumerate}
+		
+		\item Fase 1: Desarrollo del generador de cartuchos
+		\begin{enumerate}
+			\item Carga de la máquina base a partir de un \texttt{JSON} de configuración general, creando un canvas.
+			\item Carga de la pantalla del cartucho a partir de un \texttt{JSON} y una imagen del fondo fijo.
+			\item Descomposición de segmentos individuales a partir de una imagen de todos los segmentos y preparar un \texttt{JSON} con el cartucho preparado
+		\end{enumerate}
+		
+		\item Fase 2: Desarrollo del motor gráfico
+		\begin{enumerate}
+			\item Preparar el director del juego
+			\item Desarrollo del motor gráfico	
+		\end{enumerate}
+
+		\item Fase 3: Desarrollo del motor de estados
+		\begin{enumerate}
+			\item Desarrollo del motor del juego.
+		\end{enumerate}
+
+		\item Fase 4: Desarrollo del director del juego
+		\begin{enumerate}
+			\item Completar el director del juego
+		\end{enumerate}
+
+		\item Fase 5: Generador de cartuchos compactos
+		\begin{enumerate}
+			\item Desarrollo del creador de cartuchos compactos
+			\item Cambiar el emulador para que pueda usar cartuchos compactos
+		\end{enumerate}
+
+		\item Fase 6: Paso al ESP32
+		\begin{enumerate}
+			\item Conversión del emulador al ESP32.
+			\item Desarrollo del selector de cartuchos en el ESP32.
+		\end{enumerate}
+	\end{enumerate}
+	
+	La descripción completa de cada iteración se presenta en el apéndice A, el resumen de cada una es el que se muestra en este capítulo, para ver el detalle se debe acudir a dicho apéndice.
+
+\clearpage
+
+\input{capitulos/capitulo5/Parachute.tex}
+\input{capitulos/capitulo5/F0.tex}
+\input{capitulos/capitulo5/F1.tex}
+\input{capitulos/capitulo5/F2.tex}
+\input{capitulos/capitulo5/F3.tex}
+\input{capitulos/capitulo5/F4.tex}

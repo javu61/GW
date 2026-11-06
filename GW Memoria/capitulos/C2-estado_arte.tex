@@ -1,0 +1,85 @@
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+	\chapter{Análisis de soluciones ya existentes}
+	\label{C:estado_arte}
+
+	\section{Introducción} Antes de abordar el diseño de una nueva solución resulta conveniente analizar las alternativas ya existentes, así como los dispositivos y herramientas que han servido de inspiración para este proyecto.
+
+	En este caso, el objetivo no es reproducir exactamente una máquina Game \& Watch original, sino desarrollar un motor genérico que permita crear nuevos juegos inspirados en dicho concepto utilizando tecnologías actuales. Por este motivo, se analizarán tanto las consolas originales como los distintos proyectos de emulación, recreación y desarrollo de juegos existentes.
+
+
+	\section{Las consolas Game \& Watch}
+	\label{sec:consolas-gw}
+	Las consolas Game \& Watch fueron una serie de videojuegos portátiles desarrollados por Nintendo entre 1980 y 1991. Fueron diseñadas por Gunpei Yokoi y se caracterizaban por utilizar una pantalla LCD segmentada en lugar de un sistema gráfico basado en píxeles.
+
+	Cada juego disponía de una disposición fija de segmentos gráficos que representaban los distintos estados posibles de los personajes y objetos. La animación se conseguía encendiendo y apagando dichos segmentos de forma secuencial.
+
+	Estos sistemas pueden considerarse máquinas de estados con una capacidad gráfica muy limitada, pero extremadamente eficientes para el hardware disponible en la época.
+
+	\subsubsection{Arquitectura interna}
+
+	Internamente, cada máquina Game \& Watch se basaba en un único circuito integrado de la familia \textbf{Sharp SM5xx} (SM5A, SM510, SM511, SM512, entre otras variantes), \textbf{microcontroladores} de \textbf{4 bits en un solo chip, con controlador LCD integrado} \cite{retroreversing_gw}. La totalidad del sistema —procesador, memoria de programa, memoria de trabajo y controlador de pantalla— residía en ese único componente, sin necesidad de memoria externa: el ROM de programa y la RAM de trabajo estaban integrados en el propio chip. A modo de referencia, el SM510 disponía de 2772 bytes de ROM y 128 nibbles (medios bytes) de RAM, con capacidad para gobernar hasta 132 segmentos de LCD; los SM511/SM512, algo más capaces, alcanzaban 4032 bytes de ROM, 128/142 nibbles de RAM y hasta 136/200 segmentos, según la variante \cite{sm5_reverse_eng}.
+
+	Cada variante del chip difiere en capacidad de ROM, organización de RAM y periféricos disponibles, pero todas comparten un mismo repertorio de instrucciones, lo que ha permitido a proyectos de emulación como MAME implementarlas mediante una única jerarquía de clases \cite{retroreversing_gw}.
+
+	Como se detalla en la Sección~\ref{sec:prng} de este documento, el contador de programa de estos chips se implementa mediante un registro de desplazamiento con retroalimentación lineal (LFSR) de 6 bits en lugar de un contador binario convencional, una particularidad de diseño que explica el comportamiento pseudoaleatorio determinista observado en los juegos de la serie.
+
+	\subsubsection{Reloj y temporización}
+
+	El propio nombre de la serie —\emph{Game \& Watch}— responde a una característica de diseño real: además de la función de juego, la mayoría de las unidades incorporaban un reloj con despertador. Esto era posible porque el oscilador de referencia del sistema era un cristal de cuarzo estándar de \textbf{32.768~kHz} —el mismo tipo de cristal empleado habitualmente en relojería de cuarzo, cuya frecuencia es una potencia de dos ($2^{15}$) elegida precisamente para facilitar su división mediante etapas binarias—. Un circuito divisor de frecuencia integrado en el propio chip reducía esta señal hasta obtener una base de un segundo, empleada tanto para el funcionamiento del reloj y la alarma como para la temporización interna del propio juego.
+
+	\subsubsection{Alimentación y entrada}
+
+	Las unidades se alimentaban mediante pilas de botón, coherente con el bajo consumo propio de una pantalla LCD y un chip de estas características. La entrada del jugador se gestionaba mediante una matriz de pulsadores explorada periódicamente por el propio chip, sin electrónica adicional de por medio.
+
+	\subsubsection{Relevancia para este trabajo}
+
+	Desde el punto de vista técnico, estos sistemas eran extremadamente eficientes para el hardware disponible en la época. La ausencia de memoria externa, la ejecución estrictamente secuencial (sin concurrencia real) y el uso de segmentos LCD predefinidos en lugar de un framebuffer son, precisamente, las características que se han tomado como referencia para el diseño del motor propuesto en este trabajo (véase el Capítulo~\ref{C:disenno}).
+
+	Esta arquitectura sencilla es otro motivo para haber sido elegidas como inspiración para el presente trabajo, emular máquinas complejas requiere procesadores potentes.
+
+
+	\section{Emulación de Game \& Watch}
+	Existen diversos proyectos capaces de emular las Game \& Watch originales.
+
+	Uno de los más conocidos es MAME (Multiple Arcade Machine Emulator), que incorpora soporte para numerosos dispositivos portátiles basados en los microcontroladores Sharp SM5xx utilizados por Nintendo.
+
+	El enfoque seguido por MAME persigue la máxima fidelidad histórica posible. Para ello se emula el procesador original y se utilizan representaciones gráficas detalladas de las pantallas LCD obtenidas a partir de escaneos reales de las máquinas originales.
+
+	Este enfoque proporciona una reproducción extremadamente precisa del hardware original, aunque introduce una complejidad considerable y no resulta especialmente adecuado para la creación de nuevos juegos.
+
+	\section{Recreaciones en hardware moderno}
+	La popularidad de las Game \& Watch ha dado lugar a numerosos proyectos que utilizan microcontroladores modernos para recrear dispositivos similares. Entre las plataformas más empleadas destacan Arduino y ESP32 debido a su bajo coste, amplia documentación y facilidad de programación. En estos proyectos suele utilizarse una pantalla LCD o TFT convencional sobre la que se representa una simulación gráfica de los segmentos LCD originales.
+
+	La mayoría de estas implementaciones están orientadas a reproducir juegos concretos y no a ofrecer un sistema genérico que permita definir nuevos títulos mediante una estructura de datos reutilizable.
+
+	\section{Motores y herramientas de autoría}
+	En el ámbito del desarrollo de videojuegos existen multitud de motores de propósito general como Unity, Godot o Unreal Engine. Estas herramientas proporcionan sistemas gráficos avanzados, motores físicos, editores visuales y numerosos servicios auxiliares. Sin embargo, la potencia de estas plataformas supone también una complejidad considerable y un volumen de recursos muy superior al requerido por un sistema inspirado en Game \& Watch.
+
+	Por otro lado, no se ha encontrado ninguna herramienta de uso general orientada específicamente a definir juegos basados en pantallas LCD segmentadas mediante una descripción estructurada independiente del motor de ejecución. Esta carencia constituye el principal espacio de mejora identificado durante el análisis realizado.
+
+	\section{Justificación de la solución propuesta}
+	Las alternativas existentes se centran principalmente en dos enfoques:
+
+	\begin{itemize}
+		\item Emular con precisión el hardware original.
+		\item Recrear juegos concretos sobre plataformas modernas.
+	\end{itemize} Sin embargo, ninguna de estas aproximaciones resuelve de forma directa el problema planteado en este trabajo: disponer de un motor genérico que permita definir nuevos juegos mediante una estructura de datos independiente del hardware utilizado.
+
+	La solución propuesta adopta una aproximación intermedia. En lugar de emular el hardware original o desarrollar juegos específicos, se define un modelo abstracto basado en:
+	\begin{itemize}
+		\item Una máquina de estados para representar la lógica del juego.
+		\item Un sistema gráfico basado en segmentos reutilizables.
+		\item Un formato de cartucho independiente de la implementación física.
+		\item Un simulador para validar el comportamiento antes de desplegarlo sobre hardware real.
+	\end{itemize}
+
+	Este enfoque permite conservar la filosofía de las Game \& Watch originales al mismo tiempo que facilita la creación de nuevos juegos y su adaptación a diferentes plataformas hardware.
+
+	\section{Conclusiones}
+	El análisis realizado muestra que existen soluciones maduras para la emulación de Game \& Watch y numerosos proyectos basados en hardware moderno inspirados en estas consolas. Sin embargo, no se ha identificado una herramienta que combine un motor genérico, un sistema de autoría y un mecanismo de despliegue orientado específicamente a juegos LCD segmentados.
+
+	Por este motivo, se considera que el proyecto desarrollado aporta una solución diferenciada dentro de este ámbito, permitiendo la creación de nuevos juegos inspirados en Game \& Watch mediante una arquitectura abierta y fácilmente portable.
+
+\end{document}

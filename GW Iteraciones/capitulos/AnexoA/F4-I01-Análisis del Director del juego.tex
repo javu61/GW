@@ -1,0 +1,39 @@
+\subsection{Primera iteración de la Fase 4: Análisis de los cambios necesarios}
+\label{subsec:F4I1}
+
+\subsubsection{Diferentes velocidades por plataforma}
+
+El reloj del Director encadena sus \textit{ticks} con \texttt{setTimeout} y
+una pausa fija de 500 milisegundos escrita en el código
+(\texttt{PAUSA = 500}). Este valor es bastante correcto para el simulador en
+PC\footnote{En mi ordenador, usar 480 es más aproximado al G\&W real.},
+pero no tiene por qué serlo para el ESP32: la duración real de cada
+\textit{tick} (barrido, motor de estados y renderizado) depende del
+procesador, y replicar la velocidad subjetiva de la máquina original puede
+exigir pausas distintas en cada plataforma. Además, un valor fijo en el
+código obliga a recompilar para probar ritmos distintos, y la fase siguiente
+(el generador del cartucho compacto) necesita que el ritmo sea una propiedad
+del cartucho para que el sistema sobre ESP32 lo reciba ya resuelto.
+
+\subsubsection{Aceleración del juego con el tiempo}
+
+En las máquinas reales la partida no mantiene un ritmo constante: a medida
+que avanza el tiempo, el juego se vuelve más difícil. El simulador actual
+mantiene la misma pausa durante toda la partida, de modo que la dificultad
+solo crece por acumulación de desenlaces, no por velocidad. Falta el
+mecanismo que reduzca la pausa del reloj con el tiempo, de forma que la
+partida acelere sola, sin necesidad de modos de juego separados.
+
+\subsubsection{Política de lanzamiento de rutas}
+
+El nacimiento de rutas es hoy una política fija del motor de estados: solo
+nace una ruta nueva en el \textit{tick} en que ha finalizado la vida de la
+anterior (las animaciones pueden ser simultáneas, pero no son parte del juego
+ni son rutas que se lancen). En las máquinas reales la densidad de tráfico es
+parte del diseño de cada juego y crece con la partida: comienzan cruzando
+pocas rutas y, a medida que avanza, van aumentando las rutas simultáneas.
+Falta, por tanto, que esta política se pueda redefinir y suba al cartucho,
+editable desde el diseñador gráfico.
+
+\subsubsection{Revisión de campos en el cartucho}
+Como hay que añadir todos los temas de configuración general en el cartucho para su uso por el director del juego y por el diseñador de cartuchos compactos, se revisará que incluya toda la información necesaria para generar el cartucho final.

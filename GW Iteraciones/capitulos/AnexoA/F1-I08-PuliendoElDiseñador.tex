@@ -1,0 +1,115 @@
+\section{Octava iteración de la Fase 1: Puliendo el Diseñador Gráfico}
+\label{sec:PuliendoDisenadorGrafico}
+
+En esta iteración seguiremos afinando el diseñador gráfico para
+dejarlo lo más terminado posible. Como el proceso es iterativo, la
+lógica puede volver a ajustarse en etapas posteriores, por lo que no
+podemos darlo por cerrado definitivamente. Los elementos que vamos a
+ajustar son:
+
+\begin{itemize}
+	\item \textbf{Unión de segmentos:} cuando selecciono un segmento A y como anterior o siguiente digo un B, y luego uno un segmento C con el B, desaparece el B, siendo ahora el C el que engloba ambos. En caso de uniones, hay que revisar todas las referencias al segmento que desaparece para evitar estas discrepancias.
+	\item \textbf{Bug de colores al cambiar tipo:} cuando cambiábamos el tipo de elemento gráfico, el segmento coloreado se dibujaba como un rectángulo opaco, machacando lo que hubiera debajo. Hay que presentar los segmentos como \textit{sprites}, con un \texttt{XOR} puro.
+	\item \textbf{Mejoras en la apariencia:} al cargar el GWB, la pantalla debe mostrar únicamente la imagen de fondo; al cargar un GWI deben fusionarse el fondo y los segmentos para ver el resultado final.
+	\item \textbf{Separar segmentos unidos tras guardar:} la unión fusiona en una sola imagen y ya no se puede deshacer sin rehacer la autoría.
+	\item \textbf{Limpieza de pantalla al cargar setup:} no limpia bien la pantalla, permanece el canvas de asignación de tipos a los segmentos; debería redibujar por completo la pantalla.
+\end{itemize}
+
+\subsection{Arreglar enlaces en la unión de segmentos}
+
+El mecanismo: los enlaces se guardan como \texttt{p[campo] = destino.raiz} ---el índice del componente raíz del segmento resultante en el momento del enlace. Cuando unes dos, el grupo se reconstruye y los miembros del seleccionado a unir pasan al grupo fusionado. Ahí está lo delicado: la referencia de un segmento apunta a un componente que ahora pertenece a un grupo.
+
+La resolución debería funcionar vía \texttt{indiceGrupo} (cualquier miembro resuelve al grupo), pero esto hace que haya elementos con referencias a elementos que ya no existen, lo que se ve en la pantalla y en el \texttt{JSON} creado al guardar.
+
+No podemos dejar que al guardar estas referencias queden sin cambiar, por lo que la solución sería:
+
+\begin{itemize}
+	\item \textbf{Verificación de referencias al entrar:} al cargar el cartucho, si se detecta un enlace que no resuelva a ningún grupo existente, es un error en el \texttt{JSON} con aviso ---nunca en silencio.
+	\item \textbf{Re-apuntar al unir:} al ejecutar unir, recorrer TODOS los segmentos y cambiar cualquier enlace que apunte a un miembro del grupo absorbido para que apunte al raíz del grupo resultante. Esto hace el estado más robusto: las referencias siempre apuntan a un segmento vigente, no a un miembro interior que no es seleccionable.
+	\item \textbf{Verificación de referencias colgantes:} en \textit{verificarYGuardar}, un enlace que no resuelva a ningún grupo existente es un error de autoría, que debe dar el aviso y no guardar nada.
+\end{itemize}
+
+Es un bug que realmente es solucionable por el sistema de forma automática, pero que produce inconsistencias que pueden llevar al usuario a engaños, por lo que es prioritario solucionarlo.
+
+
+\subsection{Dibujo en colores}
+
+Para poder dibujar correctamente un segmento en un color, no podemos simplemente presentar el dibujo: una imagen es un recuadro, y hay zonas de la pantalla en las que colisionaría con el recuadro de otro segmento.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.3\linewidth]{imagenes/propias/C05-I015}
+	\caption[Colisión en el diseñador]{Colisión en el diseñador}
+	\label{fig:c05-i015}
+\end{figure}
+
+La solución es el \texttt{XOR} puro, la técnica clásica de los \textit{sprites}: un segmento \textbf{no sabe qué hay debajo de él}. Se pinta el fondo y, al presentar un segmento, cada píxel oscuro del \textit{sprite} se combina con \texttt{XOR} con el color elegido; los píxeles blancos son transparentes y no tocan nada. Para quitar el segmento de la pantalla se aplica \textbf{el mismo \texttt{XOR} otra vez}: el fondo queda restaurado sin recordar nada. Presentar y borrar son, literalmente, la misma operación aplicada dos veces.
+
+Es importante considerar que, tras el proceso de extracción, los segmentos existen como ficheros individuales solo tras almacenarlos en disco, y únicamente para el montaje del cartucho final: para el trabajo con los segmentos y sus gráficos se usan las \textbf{listas en memoria}, no los ficheros.
+
+\subsection{Las primeras funciones del motor gráfico}
+
+Nace el fichero \texttt{designer/motor.js} (objeto global \texttt{Motor}), que a partir de ahora forma parte de la arquitectura y se cargará en \texttt{index.html} entre \texttt{extractor.js} y \texttt{descomponer.js}. Sus funciones:
+
+\begin{itemize}
+	\item \texttt{DibujarFondo}: dibuja el fondo de la pantalla (\texttt{img\_f}), estirado para llenar el canvas, como el arte fijo detrás del cristal líquido de la máquina real. Recibe:
+	\begin{itemize}
+		\item \textbf{Donde}: canvas en el que se dibuja.
+	\end{itemize}
+	\item \texttt{DibujarSegmento}: dibuja (o borra) un segmento con \texttt{XOR} puro, canal a canal sobre el \texttt{ImageData} del canvas. Recibe:
+	\begin{itemize}
+		\item \textbf{Donde}: canvas en el que se dibuja.
+		\item \textbf{Segmento}: posición en la lista de segmentos a presentar; de ahí salen automáticamente su imagen y su posición.
+		\item \textbf{Color}: cómo se combina con lo que hay debajo. Aplicada una vez presenta en pantalla (enciende el segmento); aplicada dos veces con los mismos argumentos restaura el fondo (apaga el segmento), con estos valores:
+		\begin{itemize}
+			\item \texttt{false} (por defecto): \texttt{XOR} con blanco puro. Sobre el hueco del fondo el segmento aparece en negro, como en el LCD real.
+			\item \texttt{true}: \texttt{XOR} con el color que hayamos asociado al tipo del segmento (jugador rojo, inicio verde, vida/muerte naranja). Solo lo usa el diseñador gráfico como ayuda visual, no se usa en el simulador ni pasa al ESP32.
+		\end{itemize}
+	\end{itemize}
+	\item \texttt{fijarFondo} y \texttt{fijarSegmentos}: fijan el estado interno del motor ---la imagen de fondo y la \textbf{lista residente} de segmentos \texttt{\{x, y, imagen, color\}}. Quien carga el cartucho las invoca; a partir de ahí el ciclo de presentación solo consulta la lista, jamás los ficheros.
+\end{itemize}
+
+Con esto las vistas quedan unificadas por composición:
+\begin{itemize}
+	\item \textbf{Pantalla con GWB}: solo \texttt{DibujarFondo} ---el juego en reposo, tal y como quedará la máquina real.
+	\item \textbf{Pantalla con GWI}: \texttt{DibujarFondo} + todos los segmentos con color 0 ---la fusión de fondo y segmentos, el resultado final del cartucho.
+	\item \textbf{Mapa del diseñador}: \texttt{DibujarFondo} + todos los segmentos con color 2 + cajas y numeraciones ---la vista de trabajo.
+\end{itemize}
+
+Una consecuencia de diseño: \texttt{img\_s} deja de dibujarse en pantalla y en el mapa. \texttt{img\_s} es \textbf{solo la entrada de la extracción} (la fuente de datos); \texttt{img\_f} es siempre el fondo en todas las vistas.
+
+\subsection{El factor de escala}
+
+La escala del mapa (x2, x3\dots) se define como \textbf{propiedad del canvas} (\texttt{canvas.escala}), que es lo que consulta el motor para dimensionar el bloque de cada píxel del \textit{sprite}. Si el canvas no la declara, se deduce del ancho del canvas entre el ancho del fondo; si el resultado no es entero, el motor avisa por consola (nunca en silencio), porque una escala no entera puede perder píxeles en los bordes.
+
+\subsection{Optimización del manejo}
+
+Existen dos maneras de trabajar el proceso de presentación:
+
+\begin{itemize}
+	\item \textbf{Procesar al dibujar}: la función lee los píxeles de la imagen tal cual (canvas o PNG cargado) con \texttt{getImageData} en cada presentación. Es la opción más simple y es la que usamos en el simulador.
+	\item \textbf{Precalcular}: pedir la máscara de 1 bit precalculada de cada imagen (calculada una sola vez al entrar en la lista), lo que evita manipular la imagen en cada ciclo. Es más rápido y será lo que implementaremos en el ESP32 (bitmap en RAM).
+\end{itemize}
+
+De esta manera, el motor, al cargar el GWI, lee los archivos PNG una sola vez al inicio y los convierte en una lista de imágenes en memoria. A partir de ahí, el ciclo de presentación solo consulta esa lista, jamás el disco.
+
+En el futuro paso al ESP32 (otro sistema, otra reescritura): los gráficos vendrán de la memoria flash o tarjeta SD a una lista en RAM, y el ciclo ejecutará exactamente lo mismo. El motor gráfico que diseñamos en esta fase sirve solo para el PC, y aunque se diseña pensando solo en esta posibilidad, cuando se escriba para el ESP32 no hará falta reanalizar el sistema, solo adaptarlo.
+
+Es decir, la arquitectura que se diseña ahora mantiene la misma forma de pensar en las tres plataformas (generador de cartuchos, simulador y ESP32): siempre es una lista de gráficos residente más un bucle de presentación que solo realiza operaciones \texttt{XOR} desde la lista. El ESP32 no heredará el código JavaScript, pero sí el diseño arquitectónico.
+
+\subsection{Color para las relaciones de secuencia}
+
+Cuando se selecciona un segmento de usuario, este puede apuntar a un izquierdo o a un derecho, y cuando se selecciona un segmento de inicio de secuencia existe una cadena de elementos siguientes; igual que cuando en un segmento marco el siguiente, todos los elementos que están en un enlace que apunte al actual deben presentarse también con un color para indicarlo. Como son elementos auxiliares sobre el actual, usaremos un solo color para todos estos usos:
+
+\begin{itemize}
+	\item \textbf{Un solo color para todos los enlaces:} sea dirección de jugador, cadena de inicio o siguiente, el pintarlos en azul significa <<esto está enlazado con lo que tienes seleccionado>>. Es simple de leer visualmente por el usuario que crea el cartucho, y simple de implementar: es un color más en la lista de \texttt{listaMotor} para los segmentos relacionados.
+	\item \textbf{Selección de inicio $\rightarrow$ toda la cadena:} seguir el siguiente (y las ramas salvado/muerte si las hay) de forma transitiva hasta agotar la cadena. Así, un inicio muestra su ruta completa de un vistazo ---lo cual resulta muy útil para comprobar si la cadena está bien construida o se corta antes de tiempo.
+	\item \textbf{Selección de jugador $\rightarrow$ sus direcciones:} los cuatro enlaces (izquierda/derecha/arriba/abajo) que continúan sobre el seleccionado.
+	\item \textbf{Marca de siguiente:} es el mismo criterio; si estoy en un elemento, ver su siguiente.
+\end{itemize}
+
+\subsection{Documentación del código}
+
+A partir de esta iteración, todas las funciones nuevas o reescritas llevan cabecera \textbf{JSDoc} (el estándar de JavaScript que VS\,Code entiende y muestra como ayuda emergente): propósito, parámetros con \texttt{@param}, retorno con \texttt{@returns} y una marca propia \texttt{@iteracion} que anota en qué iteración nació la función. Las cabeceras de los ficheros existentes se añadirán progresivamente al reescribir cada fichero, para no regenerar código ya probado.
+
+\clearpage

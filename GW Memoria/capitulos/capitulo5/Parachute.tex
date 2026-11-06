@@ -1,0 +1,57 @@
+	\section{Juego de ejemplo: Parachute}
+\label{sec:mecanica-parachute}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-003}
+	\caption{Máquina parachute original}
+	\label{fig:c05-003.}. 
+\end{figure}
+
+Como caso de estudio para validar el motor se ha adaptado un juego real, \emph{Parachute}. La idea es recoger con una barca unos paracaidistas que caen, salvándoles de los tiburones si tocan el agua. El objetivo es salvar al mayor número de paracaidistas posibles, antes de que tres fallezcan a mano de los tiburones. Conforme pasa el tiempo aparecen los paracaidistas de dos en dos o de tres en tres, y conforme pasa el tiempo se acelera la tasa de aparición de los mismos. Existen dos niveles de dificultad, en el \textbf{Game B} se permite que el paracaidista de la derecha se enganche en una palmera y quede columpiando el ella un tiempo, dificultando la recogida.
+
+El aparato es un Game \& Watch, lo que significa que incluye el manejo de un reloj con alarma, este se activa pulsado el botón \textbf{TIME}, y el reloj aparece cuando no se está jugando.00 
+
+\subsection{Elementos del juego}
+
+\begin{itemize}
+	\item \textbf{Helicóptero}: Está siempre fijo en la pantalla, pero alterna los segmentos de las aspas para simular movimiento.
+	\item \textbf{El bote}: se desplaza entre tres posiciones posibles, izquierda, centro y derecha, mediante los botones correspondientes.
+	\item \textbf{Los paracaidistas}: aparecen de forma periódica en una de tres columnas fijas de la pantalla, y descienden hasta la parte inferior en un tiempo determinado. La columna en la que aparece cada paracaidista se decide mediante el generador pseudoaleatorio del motor. Existe una cuarta columna que se activa en la opción de dificultad B solo para el enganche en la palmera.
+	\item \textbf{El tiburón}: aparece brevemente en la zona inferior solo como amenaza, y en la zona donde un paracaidista cae al agua sin ser rescatado para devorarlo.
+	\item \textbf{Defunciones}: Como contador de defunciones, aparece un tiburón en la zona derecha de la pantalla, cuando los no rescatados superan el número termina el juego.
+	\item \textbf{Contador}: Ya que al ser un Game \& Watch dispone de un reloj con despertador programable, en la zona superior izquierda aparece el reloj del aparato cuando no estamos jugando, y durante el juego pasa a ser el contador de paracaidistas rescatados.
+	\item \textbf{Mono} y {Campanas}: No forman parte del juego, aparecen en la zona derecha cuando suena la alarma del aparato.
+\end{itemize}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-004}
+	\caption{Máquina con todos los segmentos del juego activados}
+	\label{fig:c05-004}
+\end{figure}
+
+
+En el proyecto desarrollo una versión básica del juego, sin incluir elementos adicionales como el reloj, solo usaré el nivel A de dificultad, y no mostrará el número de paracaidistas salvados, estos temas se dejarán para una posible ampliación posterior.
+
+\subsection{Reglas de juego}
+
+Cuando un paracaidista llega a la parte inferior de su columna, el motor comprueba si la posición del bote es compatible con esa columna (cada posición del bote cubre una de las columnas, ya que los paracaidistas de la cuarta comparten la recogida o la caída al agua con la tercera columna):
+
+\begin{itemize}
+	\item Si el bote está en la posición adecuada, el paracaidista se considera \textbf{rescatado}: desaparece de la columna y se suma un punto al contador de salvados.
+	\item En caso contrario, el paracaidista \textbf{cae al agua}, nada a la izquierda perseguido por el tiburón, luego hacia la derecha, hasta que es capturado por el tiburón, por lo que se incrementa el contador de fallos apareciendo una silueta de tiburón fija en la parte inferior derecha, junto a la palabra \textbf{MISS}.
+\end{itemize}
+
+La partida finaliza cuando el número de fallos alcanza el límite de 3 tiburones, momento en el que se detiene la generación de nuevos paracaidistas y se congela la pantalla.
+
+\subsection{Dificultad progresiva}
+
+A medida que aumenta la puntuación, el motor reduce el tiempo de espera entre iteraciones del bucle principal (\texttt{tiempoEspera}, véase la Sección~\ref{sec:arquitectura-ejecucion}), lo que se traduce en una aparición más frecuente de paracaidistas y una caída más rápida. Esta progresión reproduce el comportamiento observado en el juego original, en el que la dificultad aumenta con el tiempo de juego sin depender de un cambio real en la frecuencia del oscilador del sistema.
+
+\subsection{Diferencias respecto al juego original}
+
+La versión que desarrollaré no implementa el reloj ni el Modo~B del juego original. Ambas características quedan planteadas como posibles ampliaciones futuras del sistema, una vez validado el funcionamiento básico del motor.
+
+\clearpage
+

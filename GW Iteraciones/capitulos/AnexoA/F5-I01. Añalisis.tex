@@ -1,0 +1,301 @@
+\section{Primera iteración de la Fase 5. Análisis del Generador de cartuchos compactos}
+\label{sec:F5Intro}
+
+El PC ya ejecuta cartuchos completos: la autoría produce el GWI y el
+simulador lo consume. Pero el GWI es un formato de \emph{autoría}:
+JSON legible, imágenes PNG sueltas, ids en texto, un historial
+cronológico de edición y campos pensados para que una persona (y el
+diseñador gráfico) los lea y edite. El firmware del ESP32 no es una
+persona ni un navegador: no tiene parser de JSON, no tiene sistema de
+ficheros cómodo, y cada byte de RAM y cada ciclo cuentan.
+
+Esta fase construye el \textbf{generador del cartucho compacto} (GWC):
+la pieza que traduce el GWI, un fichero JSON editable con la fuente de datos, gráficos y sus relaciones, a un \textbf{fichero binario mínimo} que el firmware posterior puede lee en
+una pasada y ejecuta sin interpretar nada. El GWC es al GWI lo que el
+código objeto al código fuente: lo que queda cuando la validación, la
+legibilidad y la reversibilidad ya no hacen falta, porque todo ese
+trabajo lo ha hecho el PC.
+
+El principio es el mismo que gobierna todo el proyecto: \emph{el cartucho define,
+el motor ejecuta}; y su consecuencia práctica: \emph{el PC valida, el ESP32 confía}.
+
+\section{Primera iteración: Análisis del generador del cartucho compacto}
+\label{sec:F5I1}
+
+Esta iteración analiza qué información debe viajar en el GWC, cómo se
+transforma y con qué forma de fichero; las decisiones de realización
+(código, validaciones, pruebas) son de la siguiente iteración.
+
+\subsection{Por qué un formato binario}
+\label{sec:F5Porque}
+
+El firmware del ESP32 se escribirá en C++ sobre un microcontrolador
+de recursos limitados. Un GWI del Parachute son decenas de KB de JSON
+en texto y un ontón de PNG en un ZIP; leerlo exigiría al menos de un descompresor de ficheros ZIP, un parser JSON y un decodificador de ficheros PNG, todo en RAM y todo para acabar
+teniendo los mismos datos que ya había. La decisión de diseño es
+incluir en el GWC \textbf{los datos ya cocinados y en la forma en que el motor los consume}:
+
+\begin{itemize}
+	\item \textbf{Sin interpretación:} el firmware lee, no parsea. Los
+	números están en binario con tamaños fijos; las referencias son
+	índices de tabla, no cadenas \texttt{seg\_NNN} que haya que buscar.
+	
+	\item \textbf{Sin cálculo de escala:} decisión ya cerrada en la Fase
+	2: las coordenadas y los sprites viajan ya escalados al tamaño real
+	de la pantalla; el ESP32 los vuelca tal cual.
+	
+	\item \textbf{Sin validación:} todo el trabajo de verificación (los
+	mismas comprobaciones bloqueantes del diseñador) se hace al generar;
+	si el GWI no es coherente, el GWC no se produce.
+	
+	\item \textbf{Tamaño mínimo:} los sprites viajan como máscaras de
+	1 bit (un LCD segmentado enciende píxeles, no colores), y el texto
+	desaparece: los nombres legibles son fundamentales para las personas, pero el GWC
+	ya no hay necesidad de editarlo.
+\end{itemize}
+
+\subsection{Inventario: qué viaja, qué se transforma, qué no viaja}
+\label{sec:F5Inventario}
+
+El punto de partida es el GWI real que produce la autoría. Sus
+campos se clasifican en tres grupos:
+
+% Definimos Y para que se repartan el espacio al 50% cada una (0.5 + 0.5 = 1)
+\newcolumntype{Y}{>{\hsize=0.5\hsize}X}
+
+\begin{small}
+	\begin{xltabular}{\textwidth}{@{}l Y Y@{}}
+		
+	
+		\toprule
+		\textbf{Campo del GWI} & \textbf{Contenido} & \textbf{Destino en el GWC} \\
+		\midrule
+		\endfirsthead
+		
+		\multicolumn{3}{l}{\small\itshape (Continuación de la tabla anterior)} \\
+		\toprule
+		\textbf{Campo del GWI} & \textbf{Contenido} & \textbf{Destino en el GWC} \\
+		\midrule
+		\endhead
+		
+		\midrule
+		\multicolumn{3}{r}{\small\itshape Continúa en la página siguiente...} \\
+		\endfoot
+		
+		\bottomrule
+		\endlastfoot
+		
+		\texttt{segmentos} & Tipos, posición, enlaces, propiedades de contadores y marca de primer jugador & \textbf{Viaja transformado}: tipos y propiedades como bytes; posiciones escaladas a la pantalla real; enlaces como índices binarios de segmento \\ \hline
+		
+		\texttt{sprites} & PNG en \texttt{segmentos/}, deduplicados & \textbf{Viaja transformado}: máscaras de 1 bit empaquetadas (8 píxeles por byte), escaladas al tamaño real \\ \hline
+		
+		\texttt{fin} & Mecanismo de fin (contador o familia de iconos) & \textbf{Viaja}: mecanismo y contador como bytes \\ \hline
+		
+		\texttt{secuencia} & Ticks de espera y lista de hasta cinco segmentos & \textbf{Viaja}: ticks y lista de índices \\ \hline
+		
+		\texttt{pausas} & \texttt{simulador} y \texttt{externo} & \textbf{Viaja}: la plataforma lee la suya; el simulador mantiene la suya para sus pruebas \\ \hline
+		
+		\texttt{aceleracion} & \texttt{cada}, \texttt{resta}, \texttt{minimo} & \textbf{Viaja} tal cual (enteros) \\ \hline
+		
+		\texttt{rutas} & \texttt{aumentarCada} & \textbf{Viaja} tal cual; el número de rutas lo dan los inicios del cartucho \\ \hline
+		
+		\texttt{estilo} & Estilo de máquina & \textbf{Viaja como comprobación}: el firmware comprueba que el cartucho es para su máquina (setup $\geq$ cartucho también en el hardware) \\ \hline
+		
+		\texttt{autoria} & Historial cronológico completo de edición & \textbf{No viaja}: es el mecanismo del editor; del GWC al GWI no hay camino de vuelta (el GWI es la fuente de verdad) \\ \hline
+		
+		\texttt{botones} & Botones usados del cartucho & \textbf{No viaja}: los puertos GPIO son de la máquina y viajan en el setup; el GWC es solo el juego \\ \hline
+		
+		\texttt{pantalla} & Referencias a \texttt{img\_f}, \texttt{img\_s}, \texttt{img\_m} & \texttt{img\_s} (origen de la extracción) y \texttt{img\_m} (portada) \textbf{no viajan}; \texttt{img\_f} queda como decisión abierta (sección de abajo) \\ \hline
+		
+		\texttt{nombre} & Título legible & \textbf{No viaja}: nadie lo muestra en juego; si el futuro menú de cartuchos lo pide, será una ampliación \\ \hline
+		
+		\texttt{Fantasmas} & Tipo 99 y segmentos con \texttt{visible: false} absorbidos. Restos informativos de las uniones & \textbf{No viajan}: nadie los enciende ni pinta (las barras y dígitos que el motor enciende sí viajan, con sus enlaces) \\ \hline
+		
+		\texttt{Enlaces redundantes} & Inversos calculados & \textbf{No viajan}: el motor no los lee; eran para la verificación y el panel \\ \hline
+		
+	\end{xltabular}
+
+\nopagebreak
+\captionof{table}{Campos GWI a GWC}
+\label{tab:CamposGWIaGWC}
+\end{small}
+
+La lectura de la tabla es la definición misma del GWC: \emph{todo lo que el motor de estados 
+y el motor gráfico leen en un tick, y nada más}.
+
+\subsection{El escalado se hace al generar}
+\label{sec:F5Escala}
+
+Esto estuvo cerrado ya como criterio en la Fase 2: la resolución real de la pantalla final la declara el setup, y las coordenadas de los segmentos viven en el espacio de la imagen de
+origen. En el simulador ambas cosas se reconcilian estirando al vuelo
+con muestreo por vecino más cercano y escala por eje. Ese trabajo es
+exactamente el que el ESP32 no debe hacer: el generador escala una
+vez, al compilar el cartucho, y lo que viaja son las posiciones y
+sprites definitivos en el espacio de la pantalla física. El firmware
+recibe coordenadas y máscaras listas para volcar: cero multiplicaciones
+en tiempo de juego.
+
+Ya que un mismo GWI puede generar genera GWC distintos para
+pantallas distintas, cuando cambia la resolución declarada en el setup. No se pudo hacer en el GWI para poder generar el cartucho para diversas resoluciones.
+
+El GWI sigue siendo la fuente de verdad; el GWC es un \emph{build} para un objetivo concreto, como un binario compilado para una plataforma.
+
+\subsection{Sprites compactos: máscaras de 1 bit}
+\label{sec:F5Sprites}
+
+El LCD de una Game \& Watch real es monocromo y segmentado: un
+segmento está encendido o apagado. El GWC ya trae esa simplificación
+de nacimiento — la deduplicación y las huellas píxel-exacta del
+extractor son máscaras de bits —, así que el generador solo tiene que
+empaquetarlas: cada sprite será un array de bytes con 8 píxeles por
+byte, filas completas redondeadas a byte, precedido de su ancho y
+alto. Un sprite de $16 \times 10$ ocupa 2 bytes por fila, 20 bytes en
+total; los PNG de cientos de bytes han desaparecido.
+
+Los sprites siguen deduplicados (la tabla de sprites es compartida
+por los segmentos que la repiten, como en el GWI), y el orden es el
+del GWI: determinista, mismo GWI $\rightarrow$ mismo GWC byte a
+byte.
+
+\subsection{La forma del fichero: tablas con conteos y registros fijos}
+\label{sec:F5Forma}
+
+El firmware necesita leer el GWC con el mínimo código posible. La
+forma analizada sigue el patrón clásico de los formatos binarios
+antiguos:
+
+\begin{itemize}
+	\item \textbf{Cabecera:} identificación (los cuatro bytes
+	«GWC1»), versión del formato y suma de verificación. Es lo único
+	que el firmware comprueba: la validación completa ya se hizo al
+	generar.
+	\item \textbf{Tablas con conteo y tamaño de registro fijo:} una
+	tabla de sprites (direcciones de las máscaras) y una tabla de
+	segmentos con todos los enlaces en cada registro; un enlace ausente
+	es un valor reservado ($0\text{x}FFFF$). Registros de tamaño fijo
+	significa acceso directo por índice: el motor dice «el segmento 23»
+	y el firmware calcula su posición sin recorrer nada.
+	\item \textbf{Bloques al final:} los parámetros del Director
+	(pausas, aceleración, política de rutas), el fin de partida, la
+	Secuencia y los bloques opcionales. Bloque marcado como ausente =
+	comportamiento por defecto (pausa 500, sin acelerar, una ruta a la
+	vez), igual que un GWI sin esos campos.
+\end{itemize}
+
+Con el Parachute (unos 40 segmentos, unos 45 sprites) la estimación
+del resultado es de pocos KB: la cabecera y las tablas ocupan
+apenas unos cientos de bytes, y las máscaras de todos los sprites
+juntos caben con holgura en la RAM de un microcontrolador moderno.
+El dato exacto será el resultado de la primera compilación real,
+una cifra ilustrativa para la memoria de lo que cabe en el hardware
+frente a lo que ocupaba el ZIP del GWI.
+
+\subsection{El fondo: una decisión abierta que el formato no cierra}
+\label{sec:F5Fondo}
+
+El único bloque que en esta la Fase 5 no se decide es la imagen de
+fondo (\texttt{img\_f}), porque depende de la presentación física
+elegida en la Fase 6, deliberadamente aplazada a pruebas de
+hardware:
+
+\begin{itemize}
+	\item Si la réplica física usa el diseño de la máquina original
+	(arte impreso en una capa y LCD monocromo delante), el fondo no
+	viaja: no hay nada que dibujar, el firmware solo enciende segmentos.
+	\item Si usa un único TFT de color, el fondo debe estar disponible
+	para el firmware, ya sea como bloque del GWC o como fichero
+	acompañante en la memoria de programa.
+\end{itemize}
+
+El análisis deja la puerta abierta a ambas: el GWC reserva un
+\textbf{bloque opcional de fondo} que la Fase 6 rellenará (o no)
+según lo que midan las pruebas reales. El formato no se rompe por
+ello: un bloque ausente es un bloque ausente.
+
+\subsection{Los botones no viajan: el GWC es solo el juego}
+\label{sec:F5Botones}
+
+En el PC, el setup y el cartucho se cargan por separado y el
+cartucho declara qué botones usa; en el hardware la relación es aún
+más simple: los pines GPIO están cableados a la máquina y son
+configuración del firmware (el setup del ESP32). El GWC no necesita
+la botonera: el firmware lee sus pines, el motor traduce número
+físico a movimiento, exactamente como hace hoy con la tabla del
+simulador. La comprobación de compatibilidad (setup $\geq$
+cartucho) se hace al generar: un GWC para una máquina que no tiene
+sus botones no se produce; y por prudencia el GWC lleva el estilo
+declarado, para que el firmware pueda rechazar un cartucho cambiado
+a otra máquina con un error visible en lugar de un comportamiento
+extraño.
+
+\subsection{El generador confía en sí mismo; el firmware confía en el generador}
+\label{sec:F5Confianza}
+
+El reparto de responsabilidades es el que sigue:
+
+\begin{itemize}
+	\item \textbf{Al generar:} la verificación completa del diseñador,
+	bloqueante: enlaces colgantes, contadores completos, jugador con
+	movimiento, mecanismos de fin coherentes. Un GWI con errores no
+	produce GWC, y el error es visible en la barra de estado, como
+	siempre.
+	
+	\item \textbf{En el firmware:} solo la comprobación de identidad
+	(magia, versión, suma). Todo lo demás es confianza: los índices son
+	válidos, los enlaces apuntan a segmentos existentes, los contadores
+	están declarados. Repetir la validación en el microcontrolador
+	sería escribir el diseñador dos veces.
+	
+	\item \textbf{La reversibilidad no existe:} del GWC al GWI no hay
+	camino de vuelta. La fuente de verdad sigue siendo el GWI editable;
+	regenerar el GWC tras cualquier cambio es parte del flujo natural
+	(compilar de nuevo), igual que el GWI se regenera desde el GWB.
+	
+\end{itemize}
+
+\subsection{Estadística final}
+\label{sec:F5Estadistica}
+Al finalizar el proceso, la
+generación presentará una comparación de tamaños con la ocupación
+real de cada paso. Por un lado, la ocupación que tendrían todos los
+sprites \emph{sin} deduplicación frente a la ocupación final de los
+sprites en el GWC, con la cantidad ahorrada por la deduplicación.
+Por otro, como comparación global, el tamaño del cartucho GWI
+completo (el JSON con todos sus gráficos) frente al tamaño final
+del cartucho GWC, con la cantidad total ahorrada. El Parachute real
+será el caso de estudio: los números concretos ilustran en la
+memoria la distancia entre un formato de autoría y uno de ejecución.
+
+
+\subsection{Decisiones menores}
+\label{sec:F5Menores}
+
+\begin{itemize}
+	\item La semilla y las constantes del PRNG no viajan: son
+	constantes del firmware (las mismas 25173/13849 y la misma semilla
+	del simulador), garantizando partidas idénticas entre PC y ESP32.
+	
+	\item La política de repeticiones de rutas
+	(\texttt{MAX\_REPETICIONES\_RUTA}) sigue interna del motor: la
+	variedad del generador no es dato del cartucho.
+	
+	\item El formato versiona desde el primer día (Tipo «GWC» Versión 1): las
+	ampliaciones posibles, como el juego de tipo B con su cuarta ruta, la multi-colisión,
+	más de una Secuencia, añadirán campos en futuras versiones, y el
+	firmware comprueba la versión al cargarlo para verificar que sea un tipo correcto y soportado por el sistema.
+	
+	\item La generación se ofrecerá en el editor gráfico, ya que el editor tiene el cartucho en diseño en memoria, por lo que se añade un botón 
+	«Generar GWI+GWC» junto al de verificar y guardar, que hará los dos procesos:
+	primero guardar el GWI con su verificación previa necesaria para evitar errores, y si todo es
+	correcto guardar el GWC, todo a la vez para que ambos cartuchos sean copia uno del otro siempre, y sin necesidad de salir del entorno.
+	
+	
+\end{itemize}
+
+Con este análisis cerrado, la iteración siguiente aborda la
+realización: la estructura exacta de los registros en bytes, el
+código del generador sobre el GWI en memoria y su verificación con
+el cartucho real del Parachute.
+
+
+

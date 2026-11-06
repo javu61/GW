@@ -1,0 +1,15 @@
+\section{Fase 4. Desarrollo del Director del juego}
+\label{sec:Fase4}
+
+Hasta ahora disponemos de un director del juego básico, que lanza los dos motores necesarios y poco mas. Ahora lo ajustaremos para incluir todas sus tareas. Esta fase saca del código todos los parámetros que gobiernan el ritmo de la partida y los convierte en propiedades del cartucho, editables desde el diseñador gráfico. La motivación es doble: por un lado, el simulador de PC y el futuro sistema sobre ESP32 comparten toda la lógica del motor de estados, que es determinista en \textit{ticks}, pero sus procesadores trabajan a velocidades muy distintas y pueden exigir pausas de reloj diferentes para ofrecer el mismo \textit{feel} de juego; por otro, la fase siguiente (el generador del cartucho compacto) necesita que \textbf{todo} lo configurable viaje en el GWI, incluido lo que hasta ahora solo vivía en el setup o en constantes del código.
+
+Cerraremos en esta fase dos temas: 
+\begin{itemize}
+	\item Esta fase ajusta el Director del juego: todos los parámetros que gobiernan el ritmo y la dificultad de la partida dejan de ser constantes del código o del \emph{setup} y pasan a ser propiedades del cartucho, editables desde el diseñador gráfico y visibles para el motor al instante, sin guardar ni recargar. En concreto: una velocidad de reloj por plataforma (el simulador de PC y el futuro sistema sobre ESP32 comparten la lógica, que es determinista en \textit{ticks}, pero pueden necesitar pausas distintas para ofrecer el mismo \textit{feel} de juego), una aceleración que reduce la pausa con el tiempo, una política de lanzamiento de rutas con densidad creciente y la combinación de pulsaciones del teclado. Con esto queda cerrado en el PC todo lo configurable del juego, requisito de la fase siguiente: el generador del cartucho compacto, que debe llevarlo todo incluido, y a continuación el desarrollo sobre el ESP32.
+	
+	\item Como objetivo secundario, cerraremos todos los temas pendientes para la generación del cartucho intermedio, que debe llevar toda la información necesaria para en la siguiente fase, generar el cartucho compacto.
+\end{itemize}.
+
+Al igual que en las fases anteriores, los parámetros pueden llegar opcionalmente del archivo de setup, pero la fuente de verdad durante la autoría es siempre el diseñador gráfico: cualquier edición en la ficha del cartucho se sincroniza con el motor al instante, sin guardar ni recargar.
+
+\clearpage

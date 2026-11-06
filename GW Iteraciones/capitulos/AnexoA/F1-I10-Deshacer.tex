@@ -1,0 +1,67 @@
+\section{Décima iteración de la Fase 1: Deshacer y otras mejoras}
+\label{sec:DeshacerYMejoras}
+
+Aunque tras la iteración anterior el sistema parecía prácticamente cerrado a falta del mecanismo de deshacer, durante el manejo de la herramienta aparecieron pequeñas inconsistencias y oportunidades de mejora. Lejos de ser un contratiempo, esta dinámica evidencia la principal ventaja del prototipado evolutivo: disponer de un artefacto funcional en el que probar los desarrollos permite detectar carencias sutiles, refinar la usabilidad y resolver escenarios no previstos en el análisis inicial, y ajustar el desarrollo de manera más eficiente.
+
+El objetivo prioritario de esta iteración es doble. Por un lado, implementar la funcionalidad de \textbf{deshacer} y la contraria de \textbf{rehacer}, aprovechando el historial cronológico de cambios atómicos estructurado incluido en la iteración anterior. Por otro lado, consolidar el cierre del \textbf{Editor Gráfico}. Tras evaluar las pruebas de interfaz, el catálogo completo de puntos pendientes a resolver antes de cerrar el editor y pasar a la siguiente fase queda definido de la siguiente manera:
+
+\begin{enumerate}
+	\item \textbf{Deshacer y rehacer dinámicos:} Revertir o reaplicar en bloque las acciones del usuario decrementando o incrementando el contador de operaciones y procesando los cambios relacionados de forma atómica.
+
+	\item \textbf{Visualización de enlaces entrantes:} El color azul de relación de la interfaz gráfica solo destaca los enlaces salientes. Para evitar que el autor destruya flujos lógicos al modificar un segmento del que dependen otros, el sistema debe reflejar de manera explícitamente diferenciada qué referencias externas apuntan hacia el elemento seleccionado, limitándose al enlace directo.
+		
+	\item \textbf{Depuración de componentes fantasma (Tipo 99):} Al unificar segmentos, las entidades absorbidas permanecen en el sistema como registros informativos para no alterar los índices deterministas. Se debe excluir el nodo raíz de esta condición para evitar redundancias estéticas dentro del archivo \texttt{JSON}.
+	
+	\item \textbf{Clic en el mapa por geometría original:} Cuando un segmento ha sido reubicado mediante la función \texttt{Posicionar juntos}, el evento de selección del ratón (\texttt{alPulsarMapa}) debe evaluar la colisión geométrica en las coordenadas donde el segmento nació originalmente en \texttt{img\_s}, y no donde se renderiza de forma superpuesta. Tras el análisis se decide mantener este comportamiento y dejar como ampliación futura un sistema más elaborado de autoría de este tipo de elementos.
+
+\end{enumerate}
+
+Los cuatro puntos, centrados exclusivamente en la lógica interna y la usabilidad del diseñador, se integran y resuelven por completo dentro de la presente iteración. Los temas restantes que afectan a la infraestructura de entrada/salida general del sistema ---la fusión compositiva en los flujos \texttt{GWI} y la sustitución de la API de almacenamiento por un paquete \texttt{ZIP} universal--- se abordarán en la iteración siguiente como cierre de la herramienta de autoría, permitiendo que la arquitectura quede perfectamente estabilizada antes de iniciar la segunda fase. 
+
+\subsection{Lógica del sistema de deshacer y rehacer}
+\label{subsec:LogicaDeshacer}
+
+La existencia de una lista cronológica lineal donde cada inserción registra de forma unívoca su identificador de operación (\texttt{ultimoOp}) y un puntero de agregación (\texttt{relacionados}) permite que el proceso de reversión sea estrictamente determinista.
+
+Para ello se ha modificado levemente la lista de cambios, añadiendo a cada registro el estado anterior y el nuevo de cada campo afectado (campo \texttt{antes}); de esta manera se dispone de toda la información necesaria para invertir la operación sin recalcular nada. En la pantalla se incluyen dos botones, \textit{Deshacer} y \textit{Rehacer}, que responden a las combinaciones de teclas \texttt{Ctrl+Z} y \texttt{Ctrl+Y} (o \texttt{Ctrl+Shift+Z}) respectivamente.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.35\linewidth]{imagenes/propias/C05-I017}
+	\caption[Botones para deshacer y rehacer]{Botones para deshacer y rehacer en la interfaz de usuario.}
+	\label{fig:c05-i017}
+\end{figure}
+
+Cuando el usuario solicita deshacer la última acción a través de la interfaz de usuario, el objeto global \texttt{Descomponer} ejecuta un retroceso estructurado en base a las siguientes etapas lógicas:
+\begin{itemize}
+	\item \textbf{Aislamiento de la operación atómica:} Se recupera el valor actual de \texttt{autoria.ultimoOp}. Si este índice es igual a cero, la acción se aborta de forma segura al no existir antecedentes en el repositorio de cambios. En caso contrario, el bloque atómico lo forman todos los registros que comparten el identificador de la última entrada (el campo \texttt{relacionados} de cada una apunta a la primera del bloque, garantizando que todas lleven el mismo número).
+	\item \textbf{Reversión del estado semántico:} Por cada registro del bloque, recorrido en orden inverso, el sistema aplica la operación inversa según la naturaleza del cambio original. En el caso de modificaciones de propiedades o enlaces, se restituyen los valores previos guardados en el campo \texttt{antes}; en los desplazamientos, la ausencia de valor anterior indica que el segmento no tenía \textit{offset}. En el escenario de las uniones, retirar el par del historial basta: la reconstrucción recalcula los grupos desde la geometría original de la extracción, por lo que los componentes absorbidos reaparecen con su definición geométrica inicial y sus enlaces reasignados, sin necesidad de consultar los registros informativos de tipo \texttt{99}. Para cartuchos de autoría anteriores a esta iteración, cuyos registros no contienen el campo \texttt{antes}, el sistema recurre a un mecanismo de respaldo: descarta el bloque y reproduce el historial restante desde el estado inicial.
+	\item \textbf{Sincronización del historial y reconstrucción:} Una vez revertido el bloque de cambios, las entradas procesadas se transfieren a una pila de rehacer en memoria y el puntero \texttt{autoria.ultimoOp} se actualiza apuntando al índice de la acción inmediatamente anterior. El botón \textit{Rehacer} reaplica el bloque hacia delante con sus valores nuevos; el historial de deshacer es estrictamente lineal, de modo que cualquier acción nueva del autor vacía la pila de rehacer. Finalmente, se invoca de manera secuencial a las funciones \texttt{reconstruir()} y \texttt{refrescar()} para recalcular la matriz de adyacencia de los grupos y actualizar tanto el mapa visual como los paneles del DOM.
+\end{itemize}
+
+\subsection{Visualización del elemento anterior en las secuencias}
+\label{subsec:ElementoAnterior}
+
+De la misma manera que al pulsar en un segmento se muestran en color azul todos los elementos que le siguen en una secuencia, se ha incorporado la funcionalidad de que el elemento anterior ---aquel que apunta directamente hacia el seleccionado--- se muestre en color magenta. Esta mejora dota a la interfaz de un carácter mucho más visual para validar el recorrido de las cadenas que se presentarán correlativamente en la pantalla, evitando errores en la asignación de enlaces. 
+
+La búsqueda se realiza mediante un barrido directo de las propiedades de todos los grupos (la matriz de inversos solo cubre las direcciones del jugador, por lo que no resulta necesaria) y se limita estrictamente al enlace directo: una cadena completa pintada hacia atrás añadiría ruido visual y confundiría al diseñador. En aquellos casos excepcionales donde un segmento actúe simultáneamente como anterior y siguiente del seleccionado, la representación visual del color azul tendrá prioridad.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.35\linewidth]{imagenes/propias/C05-I016}
+	\caption[Anterior y siguientes en la secuencia]{Visualización de los elementos anteriores (magenta) y siguientes (azul) de un segmento seleccionado.}
+	\label{fig:c05-i016}
+\end{figure}
+
+
+\subsection{Tratamiento de elementos fantasma}
+\label{subsec:ElementosFantasma}
+
+Al unir dos segmentos, el sistema generaba originalmente dos entradas de tipo \texttt{99}: una para el elemento que se mantenía y otra para el que se unía. Esta aproximación resultaba redundante, puesto que el elemento que permanece sigue vigente en el sistema. Se ha modificado el código para que únicamente se creen elementos fantasma de tipo \texttt{99} para los segmentos que desaparecen (absorbidos por la raíz). En fases posteriores, durante la generación del cartucho compilado final (\texttt{GWC}), estos elementos de tipo \texttt{99} serán completamente ignorados y excluidos para optimizar el consumo de memoria en el hardware de destino.
+
+\subsection{Gestión de elementos superpuestos}
+\label{subsec:ElementosSuperpuestos}
+
+El sistema mantiene la pulsación en el lugar de origen del segmento para poder manipularlo; por tanto, esta operativa no se modifica en este punto. Se refleja aquí que dicha funcionalidad permanece estable, dejando como una ampliación futura el desarrollo de un sistema más elaborado para la autoría de este tipo de elementos.
+
+\clearpage

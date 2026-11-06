@@ -1,0 +1,173 @@
+\section{Sexta Iteración de la Fase 3: Análisis del problema de las Colisiones}
+\label{sec:AnalisisColisiones}
+
+Tenemos al jugador respondiendo a los botones y los gráficos moviéndose por 
+''el cristal'', pero hasta ahora los segmentos de jugador y del juego
+conviven en pantalla sin interferir unos con otros. 
+En esta iteración se analiza un tema muy importante
+en el motor del juego, \textbf{el control de colisiones}, que es la 
+parte más delicada del motor de estados. 
+
+Como hemos echo hasta ahora, debe ser en el diseñador donde se declaran, 
+con la información sobre dónde puede 
+haber colisión, y qué pasa si el jugador está allí o no lo está. Las reglas 
+estarán definidas de forma que en la iteración siguiente el motor del juego 
+use esas reglas \emph{escritas en el cartucho} y solo tenga que
+obedecerlas.
+
+Al igual que con las rutas, volveremos al diseñador gráfico para que sea algo
+definido por el autor del cartucho (y no constantes fijas de prueba) las que decidan 
+una regla de juego. Y como con las rutas, con el mismo principio que
+gobierna todo el proyecto: \emph{el cartucho define, el motor ejecuta}.
+
+\subsection{Qué es una colisión en el modelo}
+
+En las máquinas reales no hay cajas que puedan solaparse: el firmware compara
+posiciones. Aquí el modelo es de segmentos, y la decisión de diseño es
+que la colisión tampoco sea geometría: \textbf{la colisión es un enlace
+	declarado}. En un segmento de juego, la autoría marca con qué segmento
+del jugador colisiona ese elemento. En tiempo de ejecución, cuando una
+ruta activa un segmento que declara colisión, el motor solo tiene que
+mirar una cosa: \emph{¿está el jugador visible en el lugar que marca el enlace?}
+Si lo está hay \textbf{colisión positiva}; si no está hay \textbf{colisión negativa}. 
+Sin cálculo de cajas, sin
+solapes, sin umbrales: una comparación de índices. La decisión es del
+diseñador del cartucho, y por tanto no tiene ambigüedad posible.
+
+Esta definición encaja con los juegos reales. En el Donkey Kong, el
+barril que llega a la fila del jugador mata si el jugador está en ese
+lugar; si no lo está, el barril simplemente continúa. En el Parachute,
+la aleta del tiburón se traga el bote si está debajo; si no, nada. La
+colisión siempre es \emph{elemento en un punto + jugador en ese punto}.
+
+\subsection{Los dos desenlaces de un punto de colisión}
+
+Un punto de colisión es un \textbf{punto de decisión con dos caminos}.
+Cuando la ruta activa un segmento del juego, que tiene un enlace al 
+segmento de jugador, se genera una colisión, en ese momento con la 
+pregunta ``¿está el visible ese segmento?'' decide qué camino sigue el
+elemento a partir de ese tick. Para definir correctamente esto, usaremos esta terminología:
+\begin{itemize}
+	\item \textbf{Colisión Positiva}: El segmento del jugador está visible en el momento de la colisión.
+	\item \textbf{Colisión Negativa}: El segmento del jugador NO está visible en el momento de la colisión.
+\end{itemize}
+
+En las colisiones, cada uno de estos dos camino puede hacer tres cosas, 
+definidas por la autoría del cartucho:
+
+\begin{enumerate}
+	\item \textbf{Seguir una cadena}: el elemento deja de seguir
+	\texttt{siguiente} y pasa a recorrer el segmento apuntado por el
+	enlace del desenlace (la animación del desenlace: las fauces del
+	tiburón, el paracaídista rescatado). La cadena se recorre igual
+	que una ruta: un segmento por tick, por los enlaces
+	\texttt{siguiente} de esa cadena.
+	
+	\item \textbf{Actualziar un contador}: el desenlace lleva un indicador — vida o muerte — que dice qué contador interno se toca: el de vidas o el de muertes. El contador se actualiza UNA sola vez, en el instante de la decisión: no en cada tick de la animación del desenlace, que puede durar varios segmentos. El indicador pertenece a la decisión, no a la cadena. Los segmentos de tipo 3 y 4 del GWI no SON el contador: son su \textbf{presentación} — qué segmentos se encienden para mostrar el valor del contador es una decisión de presentación (dígitos, marcas, secuencia de encendidos) que ya viaja como parámetro del cartucho, y no cambia en esta iteración..
+	
+	\item \textbf{Nada}: si el desenlace no declara cadena, el
+	elemento simplemente desaparece (igual que muere una ruta al
+	llegar al final); si no declara indicador, los contadores no se
+	tocan. Los dos son reglas por defecto: lo que no está declarado,
+	no pasa.
+\end{enumerate}
+
+\subsection{Reutilización de los enlaces del GWI}
+
+El GWI ya viaja con dos enlaces pensados para esto desde la iteración 
+en que definimos los enlaces por tipo: \texttt{salvado} y \texttt{muerte}. Esta
+iteración les da su semántica definitiva, sin crear campos nuevos ni
+romper los cartuchos existentes:
+
+\begin{itemize}
+	\item \texttt{salvado} es el desenlace \textbf{con jugador}: qué
+	cadena sigue el elemento cuando el jugador SÍ está en el punto de
+	colisión.
+	
+	\item \texttt{muerte} es el desenlace \textbf{sin jugador}: qué
+	cadena sigue cuando el jugador NO está.
+\end{itemize}
+
+Los nombres son los del dominio y vienen de la lógica de las máquinas
+reales — ``si el bote está, el tiburón se lo traga (muerte); si no, la
+presa se salva (salvado)'' — pero conviene dejar escrito que el motor
+no interpreta los nombres: el motor solo sigue el enlace que le toca
+según esté o no visible el jugador. La \emph{vida} o \emph{muerte} del
+desenlace la dice el indicador, no el nombre del enlace.
+
+¿Y si un desenlace es de vida o de muerte sin cadena (sin animación)?
+Las reglas por defecto lo cubren: el elemento desaparece y el
+indicador, si lo hay, toca su contador. Un paracaidista que colisiona 
+en positivo desaparece y aumenta el contador de vidas, la colisión en 
+negativo lanza la ruta de muerte, que al final tiene su propio contador.
+
+\subsection{El indicador de desenlace}
+
+Junto al enlace, cada desenlace lleva un indicador opcional con tres
+valores posibles:
+
+\begin{itemize}
+	\item \textbf{vida}: la colisión aumenta el contador de vidas (presentado por los segmentos de tipo 3).
+	\item \textbf{muerte}: la colisión aumenta el contador de muertes (presentado por los segmentos de tipo 4).
+	\item \textbf{nada} (o ausente): los contadores no se tocan; el
+	desenlace es solo animación.
+\end{itemize}
+
+El indicador viaja en el GWI junto a su enlace
+(\texttt{salvadoIndicador} / \texttt{muerteIndicador}), porque es
+propiedad del desenlace: \texttt{salvado} puede ser de vida y
+\texttt{muerte} de muerte, o al revés, o ambos de nada. La autoría
+decide. Un punto de colisión \emph{con} los dos enlaces definidos y
+\emph{sin} ninguno de los dos indicadores es válido: será puro teatro
+(el elemento cambia de cadena según esté el jugador, pero nadie muere).
+
+\subsection{Qué va a tocar este requisito}
+
+Se hará en dos partes, en una iteración se añaden los cambios necesarios 
+en el diseñador gráfico, en la siguiente se aborda el cambio del motor
+de estados. El motor gráfico no cambia. Concretamente:
+
+\begin{itemize}
+	\item \textbf{Panel}: los segmentos de tipo juego ganan la marca
+	de colisión — seleccionar el segmento del jugador con el que
+	colisiona — y, para cada uno de los dos desenlaces, su cadena
+	(el enlace ya existente) y su indicador (vida/muerte/nada).
+	
+	\item \textbf{Mapa de objetos}: los segmentos que declaran
+	colisión se señalan con un color propio (\texttt{teal}), y el
+	trazo de la relación colisión—jugador se pinta también, para ver
+	de un vistazo dónde están los puntos de colisión del cartucho.
+	
+	\item \textbf{Verificación}: los mismos criterios que ya se
+	aplican a los enlaces del jugador — el inverso calculado se
+	guarda en el GWI (el segmento jugador sabe qué puntos de
+	colisión dependen de él), avisos de conflictos (un jugador sin
+	ningún punto de colisión asociado, un desenlace con cadena pero
+	sin colisión declarada), y la exigencia de que los segmentos
+	que deben colisionar (los de la última línea de las rutas del
+	cartucho de prueba) tengan su colisión declarada antes de
+	poder guardar.
+\end{itemize}
+
+\subsection{Decisiones menores}
+
+\begin{itemize}
+	\item Todo segmento que declara colisión debe tener
+	ambos desenlaces definidos, si uno no lo está se usa la
+	regla por defecto: \textbf{desaparece sin tocar contadores}.
+	
+	\item Un segmento de jugador no puede ser punto de
+	colisión de varios elementos, se deja como posible
+	ampliación que se permita, aunque no se ve este caso en los
+	juegos que se han consultado.
+	
+	Pero no hay que confundir la cadena de desenlace con la ruta de juego: las aletas del tiburón bajo las barcas en el Parachute no son segmentos de ruta — forman parte del desenlace de muerte o de una animación independiente — y por eso no declaran colisión.
+	
+	
+	\item La verificación avisará de una colisión declarada
+	con un segmento del jugador \emph{inalcanzable} por los enlaces
+	de dirección del jugador, bloqueado la creación del cartucho hasta
+	su resolución. No permitimos datos incoherentes.
+\end{itemize}
+
+\clearpage

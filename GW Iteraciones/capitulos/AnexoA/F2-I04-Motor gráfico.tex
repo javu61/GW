@@ -1,0 +1,81 @@
+\section{Cuarta iteración de la Fase 2: Motor Gráfico}
+\label{sec:MotorGrafico}
+
+
+Las iteraciones anteriores dejaron todo listo para este momento: el reloj funciona
+(\emph{F2-I2}), el estado del juego vive en la lista de segmentos en memoria con sus
+banderas \texttt{visible} y \texttt{cambiar} (\emph{F2-I3}). Esta iteración construye
+\textbf{la pieza central de la Fase 2}: el motor gráfico que \emph{presenta} la pantalla.
+Y lo hace con la decisión firme del análisis (\emph{F2-I1}): \textbf{composición pura con
+	repintado completo por estado} --- en cada presentación se pinta el fondo y, encima, TODOS
+los segmentos encendidos; nada de operaciones incrementales. El contrato es el mismo que
+consumirán las vías de hardware futuras: «la lista ES el estado», y el motor gráfico es un
+\emph{lector puro} de ella. Nada de estados paralelos ni copias: una lista, un escritor, muchos lectores.
+
+\subsection{Qué se construye}
+\label{subsec:QueSeConstruyeF2I4}
+
+Aunque es la pieza más visible del sistema, es realmente muy sencilla por la forma de dibujar que se ha decidido:
+
+\begin{itemize}
+	\item \textbf{Dos instrucciones, como definió el análisis}: el director de juego da al
+	motor gráfico exactamente dos instrucciones. 
+	
+	\begin{enumerate}
+		\item 	\texttt{inicializar()}: presenta el	\textbf{fondo fijo solo} (la máquina queda operativa antes de que empiece el juego;	el Start ya limpió la pantalla al fondo neutro, y esta instrucción pone el arte real encima). 
+		\item 	\texttt{tick()} (la presentación de cada tick): \textbf{repintado completo} --- fondo y, encima, todos los segmentos con \texttt{visible=true}, en negro puro, en su posición y con la escala del aparato.
+	\end{enumerate}
+
+	\item \textbf{Hereda el dibujo de la Fase 1, no lo reinventa}: la composición se monta
+	sobre las funciones de autoría ya probadas (\texttt{pintarFondoAparato} y
+	\texttt{pintarSegmentoAparato}), que se \emph{exponen} desde el módulo de autoría para
+	que el motor las use. La escala por eje del aparato ya quedó fijada al cargar el GWI
+	(\texttt{fijarEscalaAparato}); nada de escalar aquí.
+
+	\item \textbf{Las imágenes de los sprites, al alcance del motor}: al cargar un GWI, el
+	flujo de autoría ya lee todos los PNG de sprites; esta iteración deja esas imágenes
+	\emph{colgadas del propio segmento en memoria} (\texttt{seg.imagen}), de modo que el
+	motor gráfico no carga ni cachea nada: lee la lista y dibuja. El GWI sigue siendo el
+	único dueño de los recursos; el motor solo los consume.
+
+	\item \textbf{Diagnóstico con la misma llave}: con \texttt{GW\_DEBUG} activo, el motor
+	gráfico anuncia cuántos segmentos presenta en cada tick (y avisa si hay segmentos
+	visibles sin imagen); con ella apagada, solo dibuja, en silencio.
+\end{itemize}
+
+\subsection{Detalles de realización}
+\label{subsec:DetallesF2I4}
+
+\begin{itemize}
+	\item \textbf{El bucle queda completo}: \texttt{arrancar()} del director de juego, tras
+	limpiar el entorno, pide \texttt{inicializar()} al motor gráfico (fondo en pantalla)
+	y arranca el reloj; en cada tick, el motor de juego escribe el estado en la lista y
+	el motor gráfico la lee y repinta. Estado $\rightarrow$ presentación, la dependencia
+	en un solo sentido, funcionando de verdad.
+	\item \textbf{Repintado completo, sin sorpresas}: como se repinta el fondo en cada
+	tick, un segmento que se apaga desaparece \emph{sin rastro y sin parpadeo} (no hay
+	que borrarlo: el fondo lo cubre). En PC el coste es despreciable; en el ESP32 este
+	mismo contrato se traducirá a framebuffer, pero eso se decidirá con hardware real.
+	\item \textbf{Verificación}: la simulación comprueba los PÍXELES de la pantalla ---
+	el segmento encendido deja su caja negra en su posición exacta, el anterior vuelve
+	al color del fondo al tick siguiente (sin rastro), la cuenta de encendidos coincide
+	con la lista, y el bucle largo es estable. También que \texttt{inicializar} deja
+	solo el fondo, y que sin \texttt{GW\_DEBUG} no hay consola pero sí dibujo.
+\end{itemize}
+	
+
+\subsection{Ejecución}
+
+Cargamos un setup, luego un cartucho, y al pulsar sobre START vemos como los segmentos definidos en la lista se mueven por la pantalla.
+
+\begin{figure}[H]¢
+	\centering
+	\includegraphics[width=0.9\linewidth]{imagenes/propias/C05-I021}
+	\caption[]{Ejecución del motor de gráfico básico.}
+	\label{fig:c05-i021}
+\end{figure}
+
+\subsection{Cambios futuros}
+En este momento no se preveen cambios futuros del motor gráfico, al ser muy sencillo su algoritmo solo puede ser necesario algún ajuste, pero como su trabajo es dibujar el fondo y luego los segmentos visibles encima, no es necesaria mayor complejidad en esta fase, se complicará cuando pasemos al ESP32.
+
+\clearpage

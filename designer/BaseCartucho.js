@@ -1462,10 +1462,29 @@ var BaseCartucho = (function () {
 
     const cabecera = montarCabecera(cuerpo);
 
+    // Espacio ahorrado por la deduplicación de sprites (informativo):
+    // cada máscara se escribe UNA vez aunque la usen varios segmentos;
+    // sin deduplicación, cada segmento que viaja llevaría la suya. El
+    // tamaño de la máscara es el mismo que calcula escalar (4 bytes de
+    // ancho/alto + filas de bits escaladas a la pantalla declarada).
+    const usosDeSprite = new Map();
+    for (const s of viaja.segmentos) {
+      usosDeSprite.set(s.sprite, (usosDeSprite.get(s.sprite) || 0) + 1);
+    }
+    let ahorroSprites = 0;
+    for (const sprite of viaja.sprites) {
+      const n = usosDeSprite.get(sprite.id) || 0;
+      if (n < 2) continue;
+      const anchoDestino = Math.max(1, Math.round(sprite.ancho * escala.x));
+      const altoDestino = Math.max(1, Math.round(sprite.alto * escala.y));
+      ahorroSprites += (n - 1) * (4 + Math.ceil(anchoDestino / 8) * altoDestino);
+    }
+
     return {
       bytes: cabecera.bytes,
       checksum: cabecera.checksum,
       codigo: cabecera.codigo,          // el Código GWC «#HHHH#», para el par del GWI
+      ahorroSprites: ahorroSprites,     // bytes ahorrados por la deduplicación
       nSprites: viaja.sprites.length,
       nSegmentos: viaja.segmentos.length,
       bloques: {

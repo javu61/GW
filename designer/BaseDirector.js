@@ -40,7 +40,7 @@
 //
 //  Panel de información (F5-I7)
 //   pintarInfo               Máquina y cartucho; en el Editor, el diseño.
-//   informarTamanos          Tamaños del GWI y del GWC generados.
+//   informarTamanos          Tamaños del GWI y del GWC generados y línea de deduplicación.
 //   sumarGWI                 Tamaño aproximado de un GWI cargado.
 //   avisarEtiquetas          Etiquetas que no corresponden a nada.
 //
@@ -90,6 +90,7 @@ var BaseDirector = (function () {
   let enJuego = false;   // partida en marcha: solo el Simulador
   let tamGWI = null;     // bytes del GWI generado o cargado (JSON + PNG, aproximado)
   let tamGWC = null;     // bytes del GWC generado o cargado (exacto)
+  let deduplicacion = null; // línea de deduplicación del último «Generar GWI+GWC»
 
   // Botones de carga: se deshabilitan durante la partida
   const BOTONES_CARGA = ['btnCargarSetup', 'btnCargarCartucho', 'btnCargarGWIZip',
@@ -576,17 +577,23 @@ var BaseDirector = (function () {
       ' · Imágenes: ' + (diseno ? diseno.imagenes : '—') +
       ' · GWI: ' + textoBytes(tamGWI) + (tamGWI === null ? '' : ' (aprox.)') +
       ' · GWC: ' + textoBytes(tamGWC);
+    // F5-I7+: debajo, la línea de la deduplicación (solo si la hay).
+    $('infoDiseno').textContent +=
+      deduplicacion ? '\n' + deduplicacion : '';
   }
 
   /**
    * Anota los tamaños del GWI y/o del GWC recién generados (los
    * campos ausentes no cambian) y repinta el panel.
-   * @param {{gwi:?number, gwc:?number}} tamanos - Bytes de cada uno.
+   * @param {{gwi:?number, gwc:?number, deduplicacion:?string}} tamanos -
+   *        Bytes de cada uno y la línea de deduplicación (o null para
+   *        quitarla).
    * @returns {void}
    */
   function informarTamanos(tamanos) {
     if (tamanos.gwi !== undefined) tamGWI = tamanos.gwi;
     if (tamanos.gwc !== undefined) tamGWC = tamanos.gwc;
+    if (tamanos.deduplicacion !== undefined) deduplicacion = tamanos.deduplicacion;
     pintarInfo();
   }
 

@@ -241,12 +241,16 @@ body[data-vista="vistaSprites"] #controles button { display: none !important; }
   image-rendering: pixelated;   /* sprites pequeños: nítidos, no borrosos */
 }
 #listaSegmentos .sinImagen { color: #8a8a8a; font-style: italic; }
+/* Segmentos deduplicados (comparten la misma imagen): destacados en
+ * púrpura para que se vean de un vistazo. */
+#listaSegmentos li.deduplicado .idSeg,
+#listaSegmentos li.deduplicado .tipoSeg { color: #c9a0ff; font-weight: 600; }
 
 /* ---------- Panel de información (F5-I7) ----------
  * Simulador: la máquina y el cartucho; Editor: además el diseño.
  * En Segmentos y Sprites no se muestra. */
 #panelEstado { margin-top: 16px; max-width: 640px; font-size: 0.9rem; color: #bcbcbc; }
 #panelEstado .infoLinea { margin: 2px 0; }
-#infoDiseno { font-family: ui-monospace, Consolas, monospace; color: #9fd89f; }
+#infoDiseno { font-family: ui-monospace, Consolas, monospace; color: #9fd89f; white-space: pre-line; }
 body[data-vista="vistaSprites"] #panelEstado,
 body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }

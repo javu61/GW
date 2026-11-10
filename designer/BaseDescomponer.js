@@ -69,9 +69,9 @@
 //   resumen                Nº de segmentos e imágenes (panel del Editor).
 //
 //  Lista de segmentos (pestaña Segmentos y Sprites, F5-I7)
-//   pintarListaSegmentos   Las cuatro sublistas con su imagen.
-//   filaDeLista / agregarSublista
-//                          Una fila y una sublista con título.
+//   pintarListaSegmentos   Las cinco sublistas con su imagen.
+//   filaDeLista / agregarSublista / usosDeSprite
+//                          Una fila, una sublista con título y los usos de un sprite.
 //   abrirEnEditor          Pulsar una fila: el segmento en el Editor.
 //   segmentos / listar    Las listas (fantasmas incluidos) y su vuelco.
 //   colorRGB / relacionadosDe / entrantesDe / listaMotor
@@ -1367,17 +1367,29 @@ const BaseDescomponer = (() => {
   }
 
   /**
-   * Pinta la lista de segmentos con su imagen en cuatro sublistas:
+   * Pinta la lista de segmentos con su imagen en cinco sublistas:
    * sin imagen (dígitos, contadores y la ficha del cartucho), visibles
    * con imagen (los normales y las piezas de unión, con su imagen
-   * combinada), no visibles con imagen (los absorbidos por una unión)
-   * e imágenes sin segmento (solo si las hay).
+   * combinada), no visibles con imagen (los absorbidos por una unión),
+   * imágenes sin segmento (solo si las hay) y segmentos deduplicados
+   * (los que comparten la misma imagen, abajo del todo). Las filas de
+   * los segmentos deduplicados llevan la clase «deduplicado» (púrpura
+   * en los estilos) para distinguirlos de un vistazo.
    * @param {HTMLElement} contenedor - Donde se pinta la lista.
    * @returns {void}
    */
   function pintarListaSegmentos(contenedor) {
     contenedor.replaceChildren();
     const SIN_IMAGEN = ['dígito', 'contador', 'cartucho'];
+    // Deduplicación: qué sprites usa cada segmento. Los sprites con
+    // DOS o más segmentos son los deduplicados (el extractor ya los
+    // fusionó por huella idéntica: comparten el objeto sprite).
+    const usos = new Map();                 // sprite → [grupos]
+    for (const g of grupos) {
+      if (!g.sprite) continue;
+      if (!usos.has(g.sprite)) usos.set(g.sprite, []);
+      usos.get(g.sprite).push(g);
+    }
     const sublistas = [
       { titulo: 'Segmentos sin imagen',
         grupos: grupos.filter(g => SIN_IMAGEN.includes(g.prop.tipo)) },
@@ -1391,7 +1403,9 @@ const BaseDescomponer = (() => {
       const ul = document.createElement('ul');
       for (const g of sub.grupos) {
         const imagen = SIN_IMAGEN.includes(g.prop.tipo) ? null : g.sprite && g.sprite.imagen;
-        ul.appendChild(filaDeLista(segId(g), g.prop.tipo, imagen, g));
+        const li = filaDeLista(segId(g), g.prop.tipo, imagen, g);
+        if (g.sprite && usos.get(g.sprite).length > 1) li.classList.add('deduplicado');
+        ul.appendChild(li);
       }
       agregarSublista(contenedor, sub.titulo + ' (' + sub.grupos.length + ')', ul);
     }
@@ -1402,6 +1416,34 @@ const BaseDescomponer = (() => {
       for (const s of libres) ul.appendChild(filaDeLista(s.id, 'imagen', s.imagen, null));
       agregarSublista(contenedor, 'Imágenes sin segmento (' + libres.length + ')', ul);
     }
+    // Abajo del todo, la lista de deduplicados: UNA fila por imagen
+    // compartida (la imagen, su id y los segmentos que la usan), sin
+    // importar cuántos sean: una imagen, una línea.
+    const compartidos = [...usos.entries()].filter(([, gs]) => gs.length > 1);
+    if (compartidos.length > 0) {
+      const ul = document.createElement('ul');
+      for (const [sprite, gs] of compartidos) {
+        const fila = filaDeLista(sprite.id,
+          'usada por ' + gs.map(segId).join(', '), sprite.imagen, null);
+        fila.title = 'Imagen compartida por ' + gs.length +
+          ' segmentos (deduplicación: se guarda una sola vez).';
+        ul.appendChild(fila);
+      }
+      agregarSublista(contenedor, 'Segmentos deduplicados (' + compartidos.length + ')', ul);
+    }
+  }
+
+  /**
+   * Número de segmentos que usan un sprite (deduplicación: los sprites
+   * del extractor se comparten por huella idéntica, así que DOS o más
+   * segmentos pueden apuntar al MISMO objeto sprite).
+   * @param {Object} sprite - El sprite a contar.
+   * @returns {number} Cuántos grupos lo usan.
+   */
+  function usosDeSprite(sprite) {
+    let n = 0;
+    for (const g of grupos) if (g.sprite === sprite) n++;
+    return n;
   }
 
   /**
@@ -4601,6 +4643,30 @@ const BaseDescomponer = (() => {
     };
     BaseDirector.avisar('Generando GWC…');
     const gwc = BaseCartucho.generarGWC(json, sprites, pantalla);
+    // Espacio ahorrado por la deduplicación de sprites: los segmentos
+    // que comparten imagen solo la escriben UNA vez (sin deduplicación,
+    // cada segmento llevaría su copia). GWI: bytes del PNG real de cada
+    // imagen compartida × sus referencias de más; GWC: bytes de la
+    // máscara escalada, que los informa el propio generador. El
+    // porcentaje se mide contra el cartucho SIN deduplicar (lo que
+    // ocuparía con una copia de la imagen por segmento).
+    let nDedup = 0;
+    let ahorroGWI = 0;
+    for (const sprite of sprites) {
+      const usos = usosDeSprite(sprite);
+      if (usos < 2) continue;
+      nDedup++;
+      let bytes = sprite.ancho * sprite.alto;   // aproximación si no hay toBlob
+      if (typeof sprite.imagen.toBlob === 'function') {
+        const png = await new Promise(resolver => sprite.imagen.toBlob(resolver, 'image/png'));
+        if (png) bytes = png.size;
+      }
+      ahorroGWI += (usos - 1) * bytes;
+    }
+    const pctGWI = (tamanoSinDedup) => tamanoSinDedup > 0
+      ? Math.round((ahorroGWI / tamanoSinDedup) * 100) : 0;
+    const pctGWC = gwc.bytes.length + gwc.ahorroSprites > 0
+      ? Math.round((gwc.ahorroSprites / (gwc.bytes.length + gwc.ahorroSprites)) * 100) : 0;
     descargarGWC(gwc.bytes);
     BaseDirector.avisar(BaseCartucho.estadistica(gwc));
     // 4. El GWI después, con el Código GWC del par: el código del
@@ -4614,7 +4680,15 @@ const BaseDescomponer = (() => {
       BaseDirector.imagenFondo(), BaseDirector.imagenSegmentos(),
       hallazgos.avisos.length);
     // F5-I7: los dos tamaños del par, a la vista en el Editor
-    BaseDirector.informarTamanos({ gwi: tamGWI || null, gwc: gwc.bytes.length });
+    // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del
+    // panel (informarTamanos la reparte; sin deduplicación, la línea
+    // se queda vacía y el CSS la oculta).
+    BaseDirector.informarTamanos({
+      gwi: tamGWI || null, gwc: gwc.bytes.length,
+      deduplicacion: 'Deduplicadas ' + nDedup + ' imágenes, ahorro GWI ' +
+        ahorroGWI + ' bytes (' + pctGWI((tamGWI || 0) + ahorroGWI) + '%), GWC ' +
+        gwc.ahorroSprites + ' bytes (' + pctGWC + '%)'
+    });
     // El canvas del aparato presenta el estado vigente, igual que
     // tras «Verificar y Guardar».
     if (tamGWI) {
@@ -4753,7 +4827,7 @@ const BaseDescomponer = (() => {
     if (tamGWI) {
       // F5-I7: el tamaño del GWI nuevo; el GWC anterior ya no es su
       // pareja, así que su tamaño deja de mostrarse.
-      BaseDirector.informarTamanos({ gwi: tamGWI, gwc: null });
+      BaseDirector.informarTamanos({ gwi: tamGWI, gwc: null, deduplicacion: null });
       // El canvas del aparato presenta el estado vigente tras
       // guardar: fondo + TODOS los segmentos en negro (look LCD).
       componerPantalla = true;

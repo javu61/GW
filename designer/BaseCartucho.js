@@ -20,7 +20,7 @@
 //  Lectura de GWB / GWI
 //   construirMapaFicheros  Mapa nombre → File de la carpeta o del ZIP.
 //   elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
-//   validarCartucho        Valida el JSON de un cartucho contra la máquina.
+//   validarCartucho        Valida el JSON de un cartucho contra la máquina (img_f opcional).
 //   cargarDelMapa          Carga una imagen referenciada por el JSON.
 //   validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
 //   leerCartucho           Lectura completa: JSON, validación e imágenes.

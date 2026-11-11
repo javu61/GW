@@ -41,7 +41,7 @@ La representación del valor \textbf{nulo} depende de la anchura del campo, pero
 \subsection{Estructura del fichero}
 \label{sec:F5I2Estructura}
 
-El fichero se estructura en un registro de cabecera que lo identifica y valida, seguido de varios bloques de datos de longitud variable, alguno de ellos opcionales. Todos los bloques usan la misma estructura general:
+El fichero se estructura en un registro de cabecera que lo identifica, seguido de varios bloques de datos de longitud variable, algunos opcionales. Todos los bloques usan la misma estructura:
 
 \begin{table}[H]
 	\centering
@@ -74,7 +74,7 @@ El fichero se estructura en un registro de cabecera que lo identifica y valida, 
 \subsection{La cabecera}
 \label{sec:F5I2Cabecera}
 
-El fichero empieza por una cabecera de tamaño fijo que lo identifica únicamente para especificar que es un cartucho:
+El fichero comienza por una cabecera de tamaño fijo que lo identifica unívocamente:
 
 \begin{table}[H]
 	\centering
@@ -83,19 +83,21 @@ El fichero empieza por una cabecera de tamaño fijo que lo identifica únicament
 		\textbf{Campo} & \textbf{Tipo} & \textbf{Bytes} & \textbf{Contenido} \\
 		\hline
 		
-		Identificador & Char & 3 & Los caracteres «GWC» como identificación del cartucho \\ \hline
+		Identificador & Char & 3 & Los caracteres «GWC» como identificación \\ \hline
 		
-		Versión & Char & 1 & Número de la versión del formato, inicialmente «1» \\ \hline
+		Versión & Char & 1 & Versión del formato, inicialmente «1» \\ \hline
 		
-		CheckSum & Char & 6 & Suma de verificación de 16 bits del resto del fichero tras esta cabecera, sin incluirla, en formato "\#hhhh\#" para que sea visible \\
-
+		CheckSum & Char & 6 & Suma de verificación de 16 bits del resto del fichero tras esta cabecera, sin incluirla, en formato «\#hhhh\#» para que sea visible\footnotemark \\ \hline
+		
 		Tamaño & Num & 4 & Tamaño del fichero \\ \hline	
 		\hline\hline
-		\multicolumn{4}{c}{\textbf{Tamaño: 14↑ Bytes}} \\ \hline
+		\multicolumn{4}{c}{\textbf{Tamaño: 14 Bytes}} \\ \hline
 	\end{tabular}
 	\caption{Campos de la cabecera del GWC.}
 	\label{tab:cabeceraGWC}
 \end{table}
+\footnotetext{Se incluye en la generación del GWI el campo «CódigoGWC» que incluye este mismo valor como referencia de que ambos se han generado desde el mismo código.}
+
 
 \subsection{Bloque 0: Datos Generales}
 \label{sec:F5I2DatosGenerales}
@@ -132,9 +134,9 @@ estructura de C y sepa dónde está todo sin recorrer nada (se indica expresamen
 		\textbf{Campo} & \textbf{Tipo} & \textbf{Bytes} & \textbf{Contenido} & \textbf{Bloque} \\
 		\hline
 		
-		Estilo & Num & 1 & Número con el estilo de máquina declarado: el firmware comprueba que el cartucho es adecuado para su máquina & -  \\ \hline
+		Estilo & Num & 1 & Estilo necesario: Se comprueba que el cartucho es adecuado para esa máquina & -  \\ \hline
 		Ancho & Num & 2 & Ancho de la pantalla al que el generador ha escalado el cartucho & -  \\ \hline
-		Alto & Num & 2 & Alto de la pantalla al que el generador ha escalado el cartucho & -  \\ \hline
+		Alto & Num & 2 & Igual para el alto de la pantalla & -  \\ \hline
 		Sprites & Num & 1 & Número de sprites en el cartucho & -  \\ \hline
 		Segmentos & Num & 1 & Número de segmentos en el cartucho & -  \\ \hline
 		Secuencias & Num & 1 & Número de secuencias en el cartucho & - \\ \hline
@@ -472,6 +474,8 @@ La generación es siempre \textbf{determinista}: el mismo GWI debe
 producir siempre el mismo GWC byte a byte, con la misma suma de
 verificación. El generador es equivalente a un compilador, con
 el mismo origen siempre produce el mismo resultado.
+
+Para asegurar esto, se añade en el Cartucho GWI un campo denominado \textbf{codigoGWC} con el contenido del campo Checksum del cartucho GWC junto a sus marcas de inicio y fin (formato \#FFFF\#), que coincide cuando ambos cartuchos se han generado a partir de los mismos datos exactamente.
 
 \subsection{Posibles mejoras}
 \label{sec:F5I2Mejoras}

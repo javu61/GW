@@ -262,5 +262,75 @@ El Parachute real es el caso de estudio: su tamaño final en el GWC
 —recogido en la memoria al cierre de la fase— ilustra la distancia
 entre un formato de autoría (legible, editable, con historial e
 imágenes PNG) y uno de ejecución (binario, mínimo, listo para el
-microcontrolador).
+microcontrolador). Los datos finales para la pantalla declarada de $320 \times 240$ han sido:
 
+
+% ---------------------------------------------------------------
+% Cifras del cartucho Parachute (F5-I7)
+% ---------------------------------------------------------------
+\begin{table}[H]
+	\centering	
+	\begin{tabular}{lr}
+		\toprule
+		Concepto & Valor \\
+		\midrule
+		Segmentos en el editor & 139 \\
+		Imágenes en el editor & 125 \\
+		GWI (JSON + PNG, aproximado) & 285\,558 bytes \\
+		PNG de segmentos & 129\,352 bytes \\
+		GWC generado & 7\,342 bytes \\
+		\bottomrule
+	\end{tabular}
+	\caption{Cifras del cartucho Parachute en el editor y en la generación}
+	\label{tab:F5I7CifrasParachute}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llrr}
+		\toprule
+		Tipo & Bloque & Tamaño & Contenido \\
+		\midrule
+		- & Cabecera & 14 & \texttt{GWC1\#0BAD\#} + tamaño \\
+		0 & Datos & 40 & estilo, pantalla, conteos, direcciones \\
+		1 & Configuración & 21 & pausas, aceleración, rutas, fin \\
+		2 & Sprites & 5\,523 & 52 máscaras \\
+		3 & Segmentos & 1\,733 & 54 registros de 32 bytes \\
+		4 & Secuencias & 11 & 1 secuencia de 5 segmentos \\
+		5 & Fondo & -- & reservado (nulo) \\
+		\midrule
+		&Total & 7\,342 & \\
+		\bottomrule
+	\end{tabular}
+	\caption{Desglose del GWC del Parachute por bloques}
+	\label{tab:F5I7BloquesParachute}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lr}
+		\toprule
+		Concepto & Valor \\
+		\midrule
+		Imágenes deduplicadas (compartidas en el editor) & 8 \\
+		Ahorro en el GWI & 3\,829 bytes ($\approx 1'1\%$) \\
+		Ahorro en el GWC & 52 bytes ($\approx 1'1\%$) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Ahorro por deduplicación de sprites en el Parachute}
+	\label{tab:F5I7DedupParachute}
+\end{table}
+
+\subsection{Deduplicación aproximada}
+\label{sec:F5I6Estadistica}
+
+
+Si buscamos imágenes que sean casi iguales aunque no idénticas, analizando el porcentaje de diferencia entre ambas, para intentar fusionarlas y reducir un poco mas el tamaño, vemos que hay 3 pares «casi iguales» que la deduplicación exacta no fusiona:
+
+\begin{itemize}
+	\item par 24×20: 8 píxeles distintos (1,67\% de diferencia entre ambos)
+	\item par 13×10: 3 píxeles distintos (2,31\% de diferencia entre ambos) 
+	\item par 4×10: 3 píxeles distintos (7,5\% de diferencia entre ambos)
+\end{itemize}
+
+Con umbral del dos y medio por ciento entrarían los dos primeros, con un ahorro adicional de unos 88-102 bytes de GWC (~1,3\%). Es decir, usar una deduplicación de imágenes que sea aproximada añadiría poco sobre la actual que busca imágenes exactamente iguales, \underline{por lo que creo que no merece la pena implementarla}.

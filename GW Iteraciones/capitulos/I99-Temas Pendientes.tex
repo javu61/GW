@@ -57,6 +57,8 @@ como posibles ampliaciones:
 	\item El generador gráfico que pueda definir los cartuchos GWB, un botón que saque campos que permitan definir los 3 gráficos y los nombres de los botones.
 	
 	\item Controlar que el tamaño del cartucho no sea mayor de un máximo, para que quepa en la memoria del ESP, dando un aviso, pero no se cuanto sería ni donde ubicar el dato, por lo que de momento queda como ampliación.
+	
+	\item \textbf{Deduplicación de imágenes aproximadas}: Aunque se ha visto que no aporta casi nada, pero o bien no afecta o reduce algo el GWC, por lo que es abordable.
 \end{itemize}
 
 **********************************************************************************\\
@@ -65,10 +67,9 @@ como posibles ampliaciones:
 
 \section*{Temas pendientes}
 \begin{itemize}
-	\item Fase 5 (Cartucho compacto):
-		\begin{itemize}		
-			\item Vamos a añadir una estadística final que muestre el tamaño original con todos los sprites sin deduplicación y la ocupación final en el cartucho con la cantidad ahorrada, y como comparación el tamaño del cartucho GWI con todos lso gráficos y el tamaño final del cartucho GWF con la cantidad ahorrada.
-		\end{itemize}
+
+	\item El cartucho GRB no puede tener una imagen de fondo obligatorio, revisar las resoluciones entonces.
+	
 	\item Fase 6 (ESP32) 
 	
 	\begin{itemize}
@@ -78,5 +79,10 @@ como posibles ampliaciones:
 		
 		\item Ampliaciones anotadas (no bloquean ninguna fase, van a la lista de pendientes): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho.
 	\end{itemize}
+
+	\item Añadir los formatos como anexo general en ambos documentos
+
+	\item Ajustar los programas Juego*.js: Cabecera PROPÓSITO/SEPARACIÓN/FUNCIONES, eliminar @since
+
 
 \end{itemize}

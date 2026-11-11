@@ -36,7 +36,7 @@
 //  Limpieza y dibujo
 //   limpiarCartucho          Vacía el cartucho en memoria (y la autoría).
 //   pintarFondoNeutro        Color de "sin cartucho".
-//   pintarFondoCartucho      img_f escalada para LLENAR el canvas.
+//   pintarFondoCartucho      img_f escalada para LLENAR el canvas (blanco sin fondo).
 //
 //  Panel de información (F5-I7)
 //   pintarInfo               Máquina y cartucho; en el Editor, el diseño.

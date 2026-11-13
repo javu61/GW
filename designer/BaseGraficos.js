@@ -61,7 +61,8 @@ var BaseGraficos = (function () {
   /**
    * Fija la imagen de fondo (img_f) que usarán DibujarFondo y el
    * cálculo de escala. La llama el Director al cargar el cartucho.
-   * @param {HTMLImageElement} imagen - Imagen de fondo (img_f).
+   * @param {?HTMLImageElement} imagen - Imagen de fondo (img_f), o null
+   *        si el cartucho no tiene fondo (opcional, punto 8 de la Fase 5).
    * @returns {void}
    */
   function fijarFondo(imagen) {
@@ -134,20 +135,22 @@ var BaseGraficos = (function () {
    * artwork), sin esto el canvas quedarí­a con alfa 0 y los XOR de
    * los segmentos escribirí­an RGB invisibles (bug de "los segmentos
    * no aparecen en el aparato"). El blanco es además el color real
-   * del LCD apagado.
+   * del LCD apagado. Sin fondo fijado (cartucho sin img_f, opcional
+   * desde el punto 8 de la Fase 5) queda el blanco y no hay aviso.
    * @param {HTMLCanvasElement} donde - Canvas en el que se dibuja.
    * @returns {void}
    */
   function DibujarFondo(donde) {
     if (!fondo) {
-      console.warn('[motor] DibujarFondo sin fondo fijado.');
-      return;
+      // Sin fondo fijado: cartucho sin img_f (opcional desde el punto 8
+      // de la Fase 5) o sin cartucho. La base blanca ya queda pintada
+      // abajo (es el color real del LCD apagado): no es un aviso.
     }
     const ctx = donde.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#FFFFFF';               // base opaca, siempre
     ctx.fillRect(0, 0, donde.width, donde.height);
-    ctx.drawImage(fondo, 0, 0, donde.width, donde.height);
+    if (fondo) ctx.drawImage(fondo, 0, 0, donde.width, donde.height);
   }
 
   /**
@@ -194,10 +197,9 @@ var BaseGraficos = (function () {
       console.warn('[motor] DibujarSegmento: no hay segmento ' + n + ' en la lista.');
       return;
     }
-    if (!fondo) {
-      console.warn('[motor] DibujarSegmento sin fondo fijado.');
-      return;
-    }
+    // Sin guard de fondo: el segmento no usa el fondo (escribe directo
+    // sobre el canvas); el fondo del cartucho es opcional desde el
+    // punto 8 de la Fase 5 y null es un estado válido.
     const escribir = tipico && seg.color;    // diseñador: color del tipo
     const rgb = escribir ? seg.color : COLOR_PRESENTAR;
 

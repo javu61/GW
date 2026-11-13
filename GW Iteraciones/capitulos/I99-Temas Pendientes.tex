@@ -9,6 +9,10 @@ Temas que quedan fuera del alcance del proyecto actual y se recogen
 como posibles ampliaciones:
 
 \begin{itemize}
+	\item Unificar los 3 botones de carga de cartuchos en uno solo.
+	
+	\item El generador gráfico que pueda definir los cartuchos GWB, un botón que saque campos que permitan definir los 3 gráficos y los nombres de los botones.
+	
 	\item \textbf{Game B}: el segundo juego de las máquinas
 	reales es complejo, pues depende de la propia máquina su diseño. 
 	En el Parachute existe una cuarta ruta, que hace oscilar un tiempo a un paracaidista en el extremo derecho de la pantalla, en otro juego puede ser lanzar las rutas mas rápido o aumentar la velocidad de salida o añadir mas segmentos con obstáculos; En el parachute la política de rutas ya viaja en el cartucho, por lo que Game B sería un segundo conjunto
@@ -54,8 +58,6 @@ como posibles ampliaciones:
 	
 	\item \textbf{Sonido}: Añadir sonido al juego.
 	
-	\item El generador gráfico que pueda definir los cartuchos GWB, un botón que saque campos que permitan definir los 3 gráficos y los nombres de los botones.
-	
 	\item Controlar que el tamaño del cartucho no sea mayor de un máximo, para que quepa en la memoria del ESP, dando un aviso, pero no se cuanto sería ni donde ubicar el dato, por lo que de momento queda como ampliación.
 	
 	\item \textbf{Deduplicación de imágenes aproximadas}: Aunque se ha visto que no aporta casi nada, pero o bien no afecta o reduce algo el GWC, por lo que es abordable.
@@ -64,25 +66,23 @@ como posibles ampliaciones:
 **********************************************************************************\\
 **********************************************************************************\\
 **********************************************************************************\\
-
-\section*{Temas pendientes}
-\begin{itemize}
-
-	\item El cartucho GRB no puede tener una imagen de fondo obligatorio, revisar las resoluciones entonces.
-	
-	\item Fase 6 (ESP32) 
-	
-	\begin{itemize}
-		\item Añadir el tema de capas en el estudio del motor gráfico para el ESP.
-	
-		\item puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. Lo único deliberadamente aplazado a pruebas reales de hardware es la estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) — acordamos medir en hardware, no decidirlo en escritorio.
-		
-		\item Ampliaciones anotadas (no bloquean ninguna fase, van a la lista de pendientes): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho.
-	\end{itemize}
-
-	\item Añadir los formatos como anexo general en ambos documentos
-
-	\item Ajustar los programas Juego*.js: Cabecera PROPÓSITO/SEPARACIÓN/FUNCIONES, eliminar @since
-
-
-\end{itemize}
+%
+%\section*{Temas pendientes}
+%\begin{itemize}
+%
+%	\item P02 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
+%	
+%	\item P03 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
+%	
+%	\item P04 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
+%	
+%	\item P05 — Ajustar los programas Juego*.js: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES y eliminar @since (era el punto 7 de la lista vieja).
+%	
+%	\item P06 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
+%	
+%	\item P07 — Selector de cartuchos: la portada img_m ya carga sin usar; aquí encuentra su sitio.
+%	
+%	\item P08 y siguientes — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
+%
+%
+%\end{itemize}

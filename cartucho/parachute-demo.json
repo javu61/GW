@@ -4,9 +4,9 @@
     "nombre": "Parachute",
     "estilo": "2",
     "pantalla": {
-        "img_m": "parachute_m.png",
+        "img_s": "parachute_s.png",
         "img_f": "parachute_f.png",
-        "img_s": "parachute_s.png"
+        "img_m": "parachute_m.png"
     },
     "botones": [
         {"numero": 0, "id": "IZQ"},

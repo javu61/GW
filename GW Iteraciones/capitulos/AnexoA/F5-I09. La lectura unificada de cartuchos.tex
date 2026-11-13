@@ -1,0 +1,202 @@
+\section{Novena iteración de la Fase 5: La lectura unificada del cartucho}\label{sec:F5I9}
+
+El cartucho llega al simulador en tres formas: el GWB como CARPETA
+con su JSON y sus imágenes, el GWI como ZIP (realmente es una
+carpeta) y el GWC como FICHERO suelto. Hasta ahora cada forma
+tenía su propio botón y su propio camino de entrada, cuando el
+formato ya declara por sí mismo qué es: el campo \texttt{tipo} del
+JSON en los cartuchos de autoría y la cabecera «GWC» en el binario.
+
+La idea general sería cambiar a un solo botón, que presente
+un panel donde arrastrar los ficheros que se van a cargar, para lo que es
+necesario ejecutar dos cambios, y en este orden concreto:
+
+\begin{itemize}
+	\item Cambio del programa para unificar la forma de carga. El campo
+	\texttt{tipo} del JSON en los cartuchos de autoría y la cabecera
+	«GWC» en el binario indican el tipo de cartucho, así que basta con
+	una única función que reciba todo lo cargado y decida por el
+	CONTENIDO el tipo de cartucho y el proceso a ejecutar. El usuario
+	deja así de declarar la forma en el código: la detecta el
+	programa, y el botón solo la comprueba.
+	
+	\item Cambio en la pantalla para sustituir los botones por uno
+	único, que abra un panel donde soltar los ficheros a cargar, con
+	dos botones auxiliares de cargar fichero y cargar directorio.
+\end{itemize}
+
+Esta iteración aborda solo el primer punto, mejorando el código que carga los
+cartuchos: un solo flujo que admite cualquiera de las tres formas y decide por
+el CONTENIDO, no por el botón que se pulsó para cargarlo.
+
+El segundo punto en este momento se deja como posible mejora general del
+sistema, solo cambiaría el editor gráfico usando el nuevo proceso de lectura
+de cartuchos.
+
+\subsection{Las tres formas y su detección}
+\label{sec:F5I9Formas}
+
+El nuevo núcleo de carga (\texttt{cargarCartucho}, en
+\texttt{BaseDirector.js}) recibe una lista de ficheros y el tipo
+esperado, sea la lista de una carpeta, de un ZIP descomprimido o de
+una selección de ficheros sueltos, y aplica un detector de forma en
+este orden:
+
+\begin{enumerate}
+	\item Si la selección trae UN fichero \texttt{.zip}: se
+	descomprime en memoria (\texttt{abrirZIP}) y el resultado vuelve a
+	entrar en el detector (un ZIP es una carpeta en memoria).
+	
+	\item Si trae UN fichero \texttt{.gwc}: carga binaria
+	(\texttt{procesarGWC}), como hasta ahora.
+	
+	\item En cualquier otro caso: flujo de carpeta, que ya resuelve el
+	JSON prioritario por tipo (GWC $>$ GWI $>$ GWB) y despacha el
+	flujo automático.
+\end{enumerate}
+
+La detección es por extensión y por contenido, no por el botón: el
+mismo flujo sirve para el GWB en carpeta, el GWI en ZIP o descomprimido
+y el GWC suelto.
+
+\subsection{La entrada del usuario}
+\label{sec:F5I9Entrada}
+
+Los botones actuales se renombran y se mantienen, porque una
+limitación del navegador impide que un \texttt{input} elija a la vez
+una carpeta y ficheros sueltos, y los tres caminos resultan claros
+de manejar:
+
+\begin{itemize}
+	\item \textbf{Cargar GWB}: se cambia el nombre que antes era
+	«Cargar cartucho», ya que así es más claro; carga un directorio
+	completo y se pasan los ficheros al proceso.
+	
+	\item \textbf{Cargar GWI}: se mantiene; se elige un fichero
+	\texttt{.zip}, se descomprime y se pasan los ficheros al proceso.
+	
+	\item \textbf{Cargar GWC}: se mantiene; carga un solo fichero y
+	se lo pasa al proceso.
+\end{itemize}
+
+La unificación es del FLUJO, no del botón: todos los botones llaman al
+MISMO \texttt{cargarCartucho}, de modo que la forma la detecta el
+código, no el botón. El proceso sería:
+
+\begin{itemize}
+	\item Se pulsa el botón. Entonces:
+	\begin{itemize}
+		\item Se selecciona el fichero o el directorio.
+		\item Se cargan los ficheros 
+		\item Se llama al proceso que carga	el cartucho, pasándole como parámetro 
+		el tipo esperado según el botón. El proceso detecta el tipo real por el 
+		CONTENIDO, y entonces:
+		\begin{itemize}
+			\item Si el tipo detectado NO coincide con el esperado: error
+			BLOQUEANTE (el cartucho no se carga), con el motivo concreto
+			en el mensaje.
+			\item Si coincide, se carga y se muestra en pantalla el tipo
+			de cartucho cargado.
+		\end{itemize}
+	\end{itemize}
+\end{itemize}
+
+Los mensajes de error se unifican en uno solo («Cartucho NO cargado:
+\dots»), con el motivo concreto detrás; desaparecen los mensajes
+específicos de cada botón («ZIP GWI NO cargado», «GWC NO cargado»),
+que ya no tienen sentido con un flujo único.
+
+\subsection{Mejora futura: un solo botón con panel de carga}
+\label{sec:F5I9Unificacion}
+
+Como posible mejora futura queda anotada la sustitución de los tres
+botones por UNO solo que abra un PANEL de carga: una zona donde
+soltar ficheros y carpetas, con botones auxiliares de elegir fichero
+y elegir carpeta.
+
+El manejo del panel no exige ningún cambio adicional en el proceso
+de lectura de cartuchos, solo tendría que llamar al mismo
+\texttt{cargarCartucho} con su lista de ficheros; su coste está en
+la interfaz (el panel en sí y la recursión de arrastre de carpetas,
+que el navegador no resuelve por sí solo). La misma detección por
+contenido permitiría además la entrada por ARRASTRE sobre la
+máquina.
+
+Al ser una mejora sobre el proceso actual, se deja de momento
+pendiente, anotándose en la lista de posibles mejoras; al finalizar
+el proyecto se decidirán las mejoras a incluir.
+
+\subsection{La validación despachada por tipo}
+\label{sec:F5I9Validacion}
+
+La validación se reorganiza en tres funciones en
+\texttt{BaseCartucho.js}, con la convención camelCase del proyecto:
+
+\begin{itemize}
+	\item \texttt{validarGWB} y \texttt{validarGWI}: las reglas
+	específicas de cada tipo, que LLAMAN a \texttt{validarComunes} al
+	principio y después añaden las suyas. Hoy no hay reglas
+	específicas más allá del tipo (el contrato común las cubre), así que
+	de momento son paso por el común + comprobación del tipo; la
+	estructura deja el hueco preparado para cuando los formatos
+	diverjan.
+	
+	\item \texttt{validarComunes}: el contrato de ENTRADA común a
+	GWB y GWI (tipo, versión, estilo, pantalla y las tres imágenes:
+	img\_s obligatoria; img\_f e img\_m opcionales pero presentes si
+	se declaran). Es la \texttt{validarCartucho} actual, renombrada.
+\end{itemize}
+
+El despacho ocurre DENTRO de \texttt{leerCartucho}, una vez elegido
+el JSON por prioridad de tipo: así las específicas se ejecutan
+SIEMPRE, venga el cartucho de carpeta o de ZIP, y los envoltorios
+\texttt{leerGWB}/\texttt{leerGWI} dejan de ser código que nadie
+llama. Las funciones se exponen en el \texttt{return} del módulo
+(nombre externo primero, función local después), lo que permite
+probarlas de forma aislada.
+
+\subsection{Qué cambia para el usuario}
+\label{sec:F5I9Usuario}
+
+Dos cambios visibles: los botones se
+renombran de forma mas clara (\textbf{Cargar GWB}, 
+\textbf{Cargar GWI} y \textbf{Cargar GWC}), y en pantalla se
+muestra el tipo de cartucho cargado. 
+
+Internamente, ningún error de
+«botón equivocado» puede colar un cartucho por el camino incorrecto
+(si el tipo detectado no coincide con el esperado, el cartucho no se
+carga), y los mensajes de error pasan a un formato único. El anexo
+de formatos (\ref{sec:F1A01GWI}) se ajusta en su redacción: el GWI se
+entrega como ZIP O COMO CARPETA (mismo contenido), y la elección por
+prioridad de tipos se documenta como el mecanismo que permite que
+una carpeta conviva con sus tres estados.
+
+\subsection{Problemas detectados}
+\label{sec:F5I9Problemas}
+
+Al cargar un GWI, se ha detectado que este \textbf{tenía declarada una imagen que no se incluía en el contenedor} (img\_m). 
+
+Tras los cambios efectuados, al cargar un GWI generado por el sistema la
+validación lo bloqueaba, dando un mensaje de error «no se encuentra en la carpeta:
+img\_m.png», esta es la imagen opcional de la portada que se usará en un futuro selector de cartuchos. 
+
+La cadena real del fallo:
+\texttt{formatearGWI} copiaba la sección \texttt{pantalla} del GWB tal
+cual (con img\_m si el GWB la declaraba), pero \texttt{guardarGWIEnDisco} 
+nunca empaquetaba esa imagen en el ZIP (una decisión anterior errónea ya 
+que el GWI debe incluir siempre todo lo necesario, será el GWC el que 
+elimine lo que no sea imprescindible). 
+
+El GWI resultante declaraba una imagen ausente: roto por construcción, y
+el validador de entrada lo rechazaba correctamente. La primera
+corrección (no declarar img\_m en el GWI) se descartó por decisión de
+diseño: el GWI es el contenedor intermedio y debe ser AUTOSUFICIENTE,
+llevando SIEMPRE todo lo declarado, incluso aunque resulte redundante.
+
+La corrección final hace lo correcto: \texttt{guardarGWI} y
+\texttt{guardarGWIEnDisco} reciben ahora la portada en memoria (nuevo
+acceso \texttt{imagenPortada} en BaseDirector) y la empaquetan en el
+ZIP con el nombre que el JSON referencia; declarada sin imagen en
+memoria, error explícito. El generador del cartucho binario decidirá 
+por su cuenta donde viaja la imagen para su uso en el selector de cartuchos.

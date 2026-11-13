@@ -46,11 +46,15 @@
 //
 //  Carga del cartucho (delegada en BaseCartucho)
 //   alSeleccionarCartucho    Evento de la carpeta (copia los File).
-//   procesarCartucho         Núcleo común: lectura, puente y flujo.
-//   alSeleccionarGWIZip      GWI empaquetado: abrirZIP + mismo flujo.
-//
-//  Carga del GWC
+//   alSeleccionarGWBZip      Botón «Cargar GWB (ZIP)» (F5-I10): doble
+//                            vía de entrada del GWB hasta el panel único.
+//   cargarCartucho           Núcleo UNIFICADO (F5-I9): detector de forma
+//                            por el CONTENIDO + tipo esperado del botón.
+//   procesarCartucho         Flujo de carpeta: lectura, puente y flujo.
+//   alSeleccionarGWIZip      Botón «Cargar GWI»: el .zip viaja solo.
 //   alSeleccionarGWC         Botón «Cargar GWC»: el .gwc viaja solo.
+//
+//  Presentación del GWC
 //   procesarGWC              Binario: leerGWC + puente + presentación.
 //   fabricarFondoColor       Canvas plano del color del Bloque 0.
 //   fabricarSprite           Imagen de una máscara de 1 bit.
@@ -93,8 +97,8 @@ var BaseDirector = (function () {
   let deduplicacion = null; // línea de deduplicación del último «Generar GWI+GWC»
 
   // Botones de carga: se deshabilitan durante la partida
-  const BOTONES_CARGA = ['btnCargarSetup', 'btnCargarCartucho', 'btnCargarGWIZip',
-    'btnCargarGWC'];
+  const BOTONES_CARGA = ['btnCargarSetup', 'btnCargarCartucho', 'btnCargarGWBZip',
+    'btnCargarGWIZip', 'btnCargarGWC'];
 
   const COLOR_FONDO_NEUTRO = '#888888';
 
@@ -310,13 +314,21 @@ var BaseDirector = (function () {
 
   /**
    * Pinta una imagen (img_f) en la pantalla, escalada para LLENAR el
-   * canvas siempre (aunque no respete la proporción original).
-   * @param {HTMLImageElement} img - Imagen de fondo del cartucho.
+   * canvas siempre (aunque no respete la proporción original). Con
+   * fondo null (cartucho sin img_f, opcional desde el punto 8 de la
+   * Fase 5) pinta la pantalla en blanco, como define el anexo del
+   * formato GWB.
+   * @param {?HTMLImageElement} img - Imagen de fondo del cartucho (o null).
    * @returns {void}
    */
   function pintarFondoCartucho(img) {
     const canvas = $('pantalla');
     const ctx = canvas.getContext('2d');
+    if (!img) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   }
 
@@ -627,15 +639,13 @@ var BaseDirector = (function () {
   // ---------------- Carga del cartucho (delegada en BaseCartucho) ----------------
   // La LECTURA (mapa de ficheros, JSON prioritario, validación e imágenes)
   // vive en BaseCartucho.js (traspaso F5-I4); el director conserva la
-  // orquestación: eventos de los inputs, el flujo automático por tipo y
-  // el arrastre de las listas al puente.
+  // orquestación: eventos de los inputs, el detector de forma (F5-I9),
+  // el flujo automático por tipo y el arrastre de las listas al puente.
 
   /**
-   * Evento del input de carpeta del cartucho: copia inmediata de los File
-   * (al vaciar el input, su FileList muere), localiza el JSON por
-   * prioridad de tipo, valida, carga las imágenes y lanza el flujo
-   * automático según el tipo (GWB → descomponer; GWI → listas + edición;
-   * un fichero .gwc → carga binaria con leerGWC, F5-I6).
+   * Evento del botón «Cargar GWB» (input de carpeta): copia inmediata de
+   * los File (al vaciar el input, su FileList muere) y llamada al núcleo
+   * unificado con el tipo esperado.
    * @returns {Promise<void>}
    */
   async function alSeleccionarCartucho() {
@@ -649,26 +659,101 @@ var BaseDirector = (function () {
       return;
     }
     console.log('[cartucho] carpeta seleccionada: ' + ficheros.length + ' fichero(s)');
-    await procesarCartucho(ficheros);
+    await cargarCartucho(ficheros, 'GWB');
   }
 
   /**
-   * Núcleo común de carga de un cartucho, venga de una carpeta
-   * (input webkitdirectory) o de un ZIP descomprimido en memoria: el
-   * director DELEGA la lectura en BaseCartucho (mapa de ficheros, JSON
-   * prioritario, validación e imágenes, F5-I4) y orquesta lo demás:
-   * flujo automático por tipo y arrastre de las listas al puente.
-   * Cada fichero solo necesita ".name" y comportarse como Blob (File
-   * ya lo es).
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho.
+   * Evento del botón «Cargar GWB (ZIP)» (F5-I10): la doble vía de
+   * entrada del GWB hasta el panel único de carga. El ZIP viaja solo
+   * hasta el núcleo unificado, que lo descomprime en memoria y entra
+   * en el flujo de carpeta con el tipo esperado 'GWB': un GWB
+   * empaquetado carga IGUAL que la carpeta (la forma la detecta el
+   * programa por el contenido).
    * @returns {Promise<void>}
    */
-  async function procesarCartucho(ficheros) {
+  async function alSeleccionarGWBZip() {
+    const fichero = $('ficheroGWBZip').files[0];
+    $('ficheroGWBZip').value = '';            // permite recargar el mismo ZIP
+    if (!fichero) return;
+    console.log('[cartucho] ZIP de GWB seleccionado: ' + fichero.name);
+    await cargarCartucho([fichero], 'GWB');
+  }
+
+  /**
+   * Núcleo UNIFICADO de carga (F5-I9): un solo flujo para las tres
+   * formas del cartucho, decididas por el CONTENIDO de la selección y
+   * no por el botón. El botón declara el tipo ESPERADO; el código
+   * detecta el tipo real y, si no coincide, error BLOQUEANTE (el
+   * cartucho no se carga). Detector de forma, en este orden:
+   *   1. UN fichero .zip → se descomprime (abrirZIP) y el resultado
+   *      vuelve a entrar aquí (un ZIP es una carpeta en memoria).
+   *   2. UN fichero .gwc → carga binaria (procesarGWC).
+   *   3. Resto → flujo de carpeta (procesarCartucho), que resuelve el
+   *      JSON prioritario por tipo (GWC > GWI > GWB).
+   * @param {Array<Blob>} ficheros - Ficheros del cartucho.
+   * @param {string} tipoEsperado - 'GWB', 'GWI' o 'GWC' según el botón.
+   * @returns {Promise<?string>} El tipo de cartucho cargado (o null si
+   *   no se cargó nada).
+   */
+  async function cargarCartucho(ficheros, tipoEsperado) {
+    try {
+      if (ficheros.length === 1) {
+        const nombre = ficheros[0].name || '';
+        // UN .zip: carpeta empaquetada; se descomprime en memoria y el
+        // resultado vuelve a entrar en el detector, con el MISMO tipo
+        // esperado (la forma no cambia al descomprimir).
+        if (/\.zip$/i.test(nombre)) {
+          return await cargarCartucho(
+            await BaseCartucho.abrirZIP(ficheros[0]), tipoEsperado);
+        }
+        // UN .gwc: el cartucho de ejecución binario viaja solo.
+        if (/\.gwc$/i.test(nombre)) {
+          if (tipoEsperado !== 'GWC') {
+            throw new Error('se esperaba un cartucho ' + tipoEsperado +
+              ' y el fichero es un GWC binario.');
+          }
+          await procesarGWC(ficheros[0]);
+          return 'GWC';
+        }
+      }
+      // En cualquier otro caso: flujo de carpeta (GWB, GWI en carpeta o
+      // en ZIP ya descomprimido, o una carpeta que trae un .gwc).
+      return await procesarCartucho(ficheros, tipoEsperado);
+    } catch (e) {
+      // Mensaje de error ÚNICO de la carga (F5-I9): desaparecen los
+      // «ZIP GWI NO cargado» y «GWC NO cargado» por botón.
+      avisarError('Cartucho NO cargado: ' + e.message);
+      return null;
+    }
+  }
+
+  /**
+   * Flujo de CARPETA del cartucho (F5-I9: llamado desde el núcleo
+   * unificado cargarCartucho), venga la carpeta de un input
+   * webkitdirectory o de un ZIP descomprimido en memoria: el
+   * director DELEGA la lectura en BaseCartucho (mapa de ficheros, JSON
+   * prioritario, validación despachada por tipo e imágenes, F5-I4) y
+   * orquesta lo demás: flujo automático por tipo y arrastre de las
+   * listas al puente. Cada fichero solo necesita ".name" y
+   * comportarse como Blob (File ya lo es).
+   * @param {Array<Blob>} ficheros - Ficheros del cartucho.
+   * @param {string} tipoEsperado - Tipo que espera el botón (F5-I9).
+   * @returns {Promise<?string>} El tipo de cartucho cargado (o null).
+   */
+  async function procesarCartucho(ficheros, tipoEsperado) {
     // El GWC (F5-I6) es BINARIO: no hay JSON que leer. Si la carpeta
     // trae un .gwc, se carga por su propio flujo (leerGWC) y el JSON
-    // prioritario ni se mira.
+    // prioritario ni se mira; pero el tipo esperado del botón manda
+    // (F5-I9): una carpeta con .gwc en «Cargar GWB» no carga.
     const gwc = ficheros.find(f => /\.gwc$/i.test(f.name || ''));
-    if (gwc) return procesarGWC(gwc);
+    if (gwc) {
+      if (tipoEsperado !== 'GWC') {
+        throw new Error('se esperaba un cartucho ' + tipoEsperado +
+          ' y la selección trae un GWC binario.');
+      }
+      await procesarGWC(gwc);
+      return 'GWC';
+    }
     try {
       // Las object URLs del cartucho ANTERIOR mueren antes de leer el
       // nuevo: leerCartucho crea las del nuevo en su módulo, y una
@@ -677,8 +762,10 @@ var BaseDirector = (function () {
       // necesita su URL).
       BaseCartucho.revocarURLs();
       // Lectura completa en el módulo: JSON prioritario, validación
+      // despachada por tipo con el tipo esperado del botón (F5-I9)
       // contra la máquina (estilo del setup) e imágenes img_f/img_s.
-      const leido = await BaseCartucho.leerCartucho(ficheros, setup.estilo);
+      const leido = await BaseCartucho.leerCartucho(ficheros, setup.estilo,
+        tipoEsperado);
       const json = leido.json;
       const mapa = leido.mapa;
 
@@ -746,13 +833,10 @@ var BaseDirector = (function () {
           ' sprite(s), ' + (json.segmentos ? json.segmentos.length : 0) +
           ' segmento(s) en memoria, listos para el motor.');
         descomponerImagen();                   // editar autoría, automático
-      } else if (tipo === 'GWC') {
-        // Un JSON NO puede ser un GWC: el cartucho de ejecución es un
-        // fichero BINARIO que se carga por su propio flujo (leerGWC,
-        // F5-I6). Llegar aquí es un JSON mal etiquetado.
-        throw new Error('un GWC es un cartucho binario (.gwc), no un JSON: ' +
-          'usa el fichero cartucho_gwc.gwc generado.');
       } else {
+        // GWB: flujo de creación — se descompone DIRECTAMENTE al cargar.
+        // (Un JSON etiquetado GWC ya no llega aquí: la validación
+        // despachada por tipo lo bloquea dentro de leerCartucho, F5-I9.)
         // GWB: flujo de creación — se descompone DIRECTAMENTE al cargar.
         if (!imgS) console.warn('El cartucho no declara img_s: no hay nada que descomponer.');
         descomponerImagen();                   // descomposición, automática
@@ -764,20 +848,21 @@ var BaseDirector = (function () {
       leido.imgM.then(img => { imgM = img; });
 
       pintarInfo();
-      // Arriba indica la última operación realizada
+      // Arriba indica la última operación realizada (con el tipo de
+      // cartucho cargado, F5-I9)
       avisar('Cartucho cargado (' + tipo + '): ' + (json.nombre || '(sin nombre)'));
+      return tipo;
     } catch (e) {
       pintarInfo();
       avisarError('Cartucho NO cargado: ' + e.message);
+      return null;
     }
   }
 
   /**
-   * Carga de un GWI empaquetado en ZIP: BaseCartucho.abrirZIP lo
-   * descomprime en memoria (cada entrada es un Blob con ".name", el
-   * nombre base, sin carpetas) y se reutiliza el MISMO flujo que la
-   * carpeta. Así el GWI guardado como cartucho_gwi.zip carga solo,
-   * sin descomprimirlo a mano.
+   * Evento del botón «Cargar GWI» (input de ficheros .zip, F5-I9): el
+   * ZIP viaja solo hasta el núcleo unificado, que lo descomprime en
+   * memoria y entra en el flujo de carpeta con el MISMO tipo esperado.
    * @returns {Promise<void>}
    */
   async function alSeleccionarGWIZip() {
@@ -785,19 +870,14 @@ var BaseDirector = (function () {
     $('ficheroGWIZip').value = '';            // permite recargar el mismo ZIP
     if (!fichero) return;
     console.log('[cartucho] ZIP seleccionado: ' + fichero.name);
-    try {
-      await procesarCartucho(await BaseCartucho.abrirZIP(fichero));
-    } catch (e) {
-      avisarError('ZIP GWI NO cargado: ' + e.message);
-    }
+    await cargarCartucho([fichero], 'GWI');
   }
 
   /**
-   * Carga de un cartucho GWC por su PROPIO botón (el cartucho de
-   * ejecución viaja SOLO: fichero .gwc sin carpeta). El flujo es el
-   * mismo que cuando la carpeta del cartucho trae un .gwc:
-   * procesarGWC valida, fabrica fondo y sprites y deja el juego
-   * LISTO para el Start.
+   * Evento del botón «Cargar GWC» (F5-I9): el .gwc viaja solo hasta el
+   * núcleo unificado, que lo reconoce por el CONTENIDO y ejecuta la
+   * carga binaria: procesarGWC valida, fabrica fondo y sprites y deja
+   * el juego LISTO para el Start.
    * @returns {Promise<void>}
    */
   async function alSeleccionarGWC() {
@@ -805,7 +885,7 @@ var BaseDirector = (function () {
     $('ficheroGWC').value = '';             // permite recargar el mismo GWC
     if (!fichero) return;
     console.log('[cartucho] GWC seleccionado: ' + fichero.name);
-    await procesarGWC(fichero);
+    await cargarCartucho([fichero], 'GWC');
   }
 
   // ---------------- Carga del GWC (F5-I6) ----------------
@@ -839,7 +919,7 @@ var BaseDirector = (function () {
           ' y la máquina cargada es de estilo ' + setup.estilo + '.');
       }
     } catch (e) {
-      avisarError('GWC NO cargado: ' + e.message +
+      avisarError('Cartucho NO cargado: ' + e.message +
         ' (se conserva el cartucho anterior).');
       return;
     }
@@ -874,6 +954,11 @@ var BaseDirector = (function () {
       rutas: leido.rutas,
       sprites: leido.sprites, segmentos: leido.segmentos
     };
+    // Botonera: el GWC NO declara botones (son físicos del setup): se
+    // restaura la botonera COMPLETA de la máquina (por si un cartucho
+    // anterior eliminó alguna) y el Start vuelve a ser el de defecto.
+    construirBotonera();
+    numeroStart = '8';
     // Puente, como en el flujo del GWI: fondo, reglas, fin, Secuencia y
     // los campos del Director; y las listas con la imagen colgada de
     // cada segmento, listas para el motor.
@@ -904,6 +989,7 @@ var BaseDirector = (function () {
       ' sprite(s), ' + leido.segmentos.length +
       ' segmento(s) en memoria, listos para el motor.');
     avisar('Cartucho cargado (GWC): ' + fichero.name);
+    actualizarPestanas();       // solo Simulador: el GWC no se edita
     // El GWC es PURA EJECUCIÓN: al cargarlo, la máquina queda delante,
     // lista para pulsar Start (de venga de la pestaña que venga).
     mostrarPestanna('vistaSimulador');
@@ -1066,25 +1152,37 @@ var BaseDirector = (function () {
   function mostrarPestanna(id) {
     pestanaVista = id;
     const botones = { vistaSimulador: 'pesSimulador',
-      vistaEditor: 'pesEditor', vistaSprites: 'pesSprites' };
+      vistaEditor: 'pesEditor', vistaSprites: 'pesSprites',
+      vistaCartucho: 'pesCartucho' };
     for (const v of Object.keys(botones)) {
       $(v).classList.toggle('oculto', v !== id);
       $(botones[v]).classList.toggle('pestActiva', v === id);
     }
     document.body.dataset.vista = id;
     if (id === 'vistaSprites') BaseDescomponer.pintarListaSegmentos($('listaSegmentos'));
+    // F5-I10: la ficha del cartucho se repinta al ENTRAR en la pestaña
+    // (así siempre refleja el estado vigente del cartucho en memoria).
+    if (id === 'vistaCartucho') BaseDescomponer.pintarFichaCartucho($('fichaCartucho'));
   }
 
   /**
    * Habilita las pestañas que tienen algo que mostrar: el Simulador
    * siempre; el Editor con el setup cargado (desde él se carga el
-   * GWB); Segmentos y Sprites con autoría en marcha. Durante la
+   * GWB); Segmentos y Sprites con autoría en marcha; Cartucho (F5-I10)
+   * con un GWB o un GWI cargado (la ficha es manipulable con ambos;
+   * el GWC, ejecución pura, no la activa). Durante la
    * partida, solo el Simulador.
    * @returns {void}
    */
   function actualizarPestanas() {
-    $('pesEditor').disabled = enJuego || !setup;
-    $('pesSprites').disabled = enJuego || !editable;
+    // El GWC no trae la parte PC del cartucho (sin img_s no hay
+    // geometría ni autoría): su edición queda como AMPLIACIÓN futura.
+    // Con un GWC cargado, solo la pestaña Simulador está activa.
+    const soloSimulador = cartucho !== null && cartucho.tipo === 'GWC';
+    $('pesEditor').disabled = enJuego || !setup || soloSimulador;
+    $('pesSprites').disabled = enJuego || !editable || soloSimulador;
+    // F5-I10: la ficha del cartucho, con GWB o GWI en memoria.
+    $('pesCartucho').disabled = enJuego || !cartucho || soloSimulador;
   }
 
   /**
@@ -1130,8 +1228,10 @@ var BaseDirector = (function () {
       'listaSegmentos', 'zonaMapa', 'mapaSegmentos',
       'panelSegmento', 'ficheroSetup', 'carpetaCartucho',
       'ficheroGWIZip', 'ficheroGWC',
-      'pesSimulador', 'pesEditor', 'pesSprites',
-      'vistaSimulador', 'vistaEditor', 'vistaSprites', 'lienzoEditor',
+      'ficheroGWBZip', 'btnCargarGWBZip',
+      'pesSimulador', 'pesEditor', 'pesSprites', 'pesCartucho',
+      'vistaSimulador', 'vistaEditor', 'vistaSprites', 'vistaCartucho',
+      'fichaCartucho', 'lienzoEditor',
       'btnCargarSetup', 'btnCargarCartucho', 'btnCargarGWIZip', 'btnCargarGWC',
       'btnGuardar', 'btnGenerar', 'btnDeshacer', 'btnRehacer'];
     const faltan = necesarios.filter(id => $(id) === null);
@@ -1173,6 +1273,8 @@ var BaseDirector = (function () {
     if (!comprobarSalud()) return;            // sin index correcto no hay nada que cablear
     $('btnCargarSetup').addEventListener('click', () => $('ficheroSetup').click());
     $('btnCargarCartucho').addEventListener('click', () => $('carpetaCartucho').click());
+    // F5-I10: la doble vía del GWB (carpeta o ZIP).
+    $('btnCargarGWBZip').addEventListener('click', () => $('ficheroGWBZip').click());
     $('btnCargarGWIZip').addEventListener('click', () => $('ficheroGWIZip').click());
     $('btnCargarGWC').addEventListener('click', () => $('ficheroGWC').click());
     // Las TRES pestañas: máquina, autoría y segmentos con sus imágenes
@@ -1180,6 +1282,7 @@ var BaseDirector = (function () {
     $('pesSimulador').addEventListener('click', () => mostrarPestanna('vistaSimulador'));
     $('pesEditor').addEventListener('click', () => mostrarPestanna('vistaEditor'));
     $('pesSprites').addEventListener('click', () => mostrarPestanna('vistaSprites'));
+    $('pesCartucho').addEventListener('click', () => mostrarPestanna('vistaCartucho'));
     $('btnGuardar').addEventListener('click', verificarYGuardar);
     // F5-I6: el botón «Generar GWI+GWC» — verificación bloqueante,
     // topes bloqueantes, GWC primero y GWI con el Código GWC del par
@@ -1190,6 +1293,7 @@ var BaseDirector = (function () {
     BaseDescomponer.inicializar();                 // el clic del mapa, cableado por BaseDescomponer.js
     $('ficheroSetup').addEventListener('change', alSeleccionarSetup);
     $('carpetaCartucho').addEventListener('change', alSeleccionarCartucho);
+    $('ficheroGWBZip').addEventListener('change', alSeleccionarGWBZip);
     $('ficheroGWIZip').addEventListener('change', alSeleccionarGWIZip);
     $('ficheroGWC').addEventListener('change', alSeleccionarGWC);
     document.addEventListener('keydown', alPulsarTecla);
@@ -1201,8 +1305,8 @@ var BaseDirector = (function () {
   // usan BaseExtractor/BaseGraficos/BaseDescomponer vía BaseDirector.avisar /
   // BaseDirector.avisarError), la entrada y salida del modo juego (las
   // llama el JuegoDirector), el panel de información (lo repinta
-  // BaseDescomponer) y las imágenes en memoria del cartucho (img_f/img_s),
-  // que BaseDescomponer pasa a BaseCartucho.guardarGWI.
+  // BaseDescomponer) y las imágenes en memoria del cartucho (img_f/img_s/
+  // img_m), que BaseDescomponer pasa a BaseCartucho.guardarGWI.
   return {
     inicializar: inicializar, avisar: avisar, avisarError: avisarError,
     jugar: jugar, finDePartida: finDePartida,
@@ -1211,6 +1315,7 @@ var BaseDirector = (function () {
     pantallaDeSetup: () => (setup && setup.pantalla)
       ? { ancho: setup.pantalla.ancho, alto: setup.pantalla.alto } : null,
     imagenFondo: () => imgF, imagenSegmentos: () => imgS,
+    imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
     imagenBlob: (img) => BaseCartucho.imagenBlob(img)
   };
 

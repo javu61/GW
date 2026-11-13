@@ -20,17 +20,23 @@
 //  Lectura de GWB / GWI
 //   construirMapaFicheros  Mapa nombre → File de la carpeta o del ZIP.
 //   elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
-//   validarCartucho        Valida el JSON de un cartucho contra la máquina (img_f opcional).
+//   validarComunes         Contrato de ENTRADA común a GWB y GWI (img_s
+//                          obligatoria; img_f e img_m opcionales).
+//   validarGWB/GWI         Validación ESPECÍFICA por tipo (F5-I9): llaman
+//                          a validarComunes al principio.
 //   cargarDelMapa          Carga una imagen referenciada por el JSON.
 //   validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
-//   leerCartucho           Lectura completa: JSON, validación e imágenes.
+//   leerCartucho           Lectura completa: JSON, validación despachada
+//                          por tipo, tipo esperado e imágenes.
 //   abrirZIP               Descomprime un GWI empaquetado en ZIP.
-//   leerGWB / leerGWI      Lectura exigiendo el tipo concreto.
+//   leerGWB / leerGWI      Lectura específica: delegan en leerCartucho
+//                          con el tipo esperado.
 //
 //  Grabación del GWI
 //   formatearGWI           Serializa el GWI en JSON compacto.
 //   guardarGWI             Guarda el GWI en ZIP (avisos y bloqueo del botón).
 //   guardarGWIEnDisco      Escribe realmente el ZIP y lo descarga.
+//   guardarGWB             Guarda el GWB en ZIP (F5-I10: JSON + imágenes).
 //
 //  Verificación del diseñador
 //   verificarCartucho      Recorre los grupos y devuelve errores y avisos
@@ -263,15 +269,19 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Valida el JSON del cartucho. Tipo y versión son OBLIGATORIOS: sin
+   * Contrato de ENTRADA común a GWB y GWI (F5-I9: antes
+   * validarCartucho). Tipo y versión son OBLIGATORIOS: sin
    * tipo no se asume nada. El estilo debe coincidir con la máquina cargada
-   * (se recibe por parámetro: el módulo no conoce el setup).
+   * (se recibe por parámetro: el módulo no conoce el setup). Contrato
+   * común de GWB y GWI en las imágenes de pantalla: img_s OBLIGATORIA
+   * (y su fichero presente); img_f e img_m OPCIONALES, pero si se
+   * declaran sus ficheros deben estar (el GWC se valida en leerGWC).
    * @param {Object} json - JSON del cartucho.
    * @param {Map<string,File>} mapa - Mapa nombre → File de la carpeta.
    * @param {string} estiloMaquina - Estilo del setup cargado.
    * @returns {?string} null si es válido, o el mensaje de error.
    */
-  function validarCartucho(json, mapa, estiloMaquina) {
+  function validarComunes(json, mapa, estiloMaquina) {
     if (!json || typeof json !== 'object' || Array.isArray(json)) {
       return 'el cartucho no es un objeto JSON.';
     }
@@ -288,14 +298,70 @@ var BaseCartucho = (function () {
       return 'el cartucho es para una máquina de estilo ' + json.estilo +
         ' y el setup es de estilo ' + estiloMaquina + '.';
     }
-    if (!json.pantalla || typeof json.pantalla.img_f !== 'string') {
-      return 'el cartucho necesita "pantalla" con "img_f".';
+    // Las tres imágenes de pantalla (contrato común de GWB y GWI):
+    // img_s OBLIGATORIA (de ella se extrae la geometría) e img_f e
+    // img_m OPCIONALES (punto 8 de la Fase 5: hay cartuchos sin arte
+    // de fondo). Si una se declara, su fichero DEBE estar presente.
+    if (!json.pantalla || typeof json.pantalla !== 'object' ||
+      Array.isArray(json.pantalla)) {
+      return 'el cartucho necesita "pantalla" con las imágenes ' +
+        '(img_s obligatoria; img_f e img_m opcionales).';
     }
-    if (!mapa.has(json.pantalla.img_f)) {
-      return 'no se encuentra en la carpeta: ' + json.pantalla.img_f;
+    if (typeof json.pantalla.img_s !== 'string') {
+      return 'el cartucho necesita "pantalla" con "img_s": la imagen de ' +
+        'segmentos es obligatoria (de ella se extrae la geometría).';
+    }
+    if (!mapa.has(json.pantalla.img_s)) {
+      return 'no se encuentra en la carpeta: ' + json.pantalla.img_s;
+    }
+    for (const campo of ['img_f', 'img_m']) {
+      const referencia = json.pantalla[campo];
+      if (referencia !== undefined && referencia !== null &&
+        typeof referencia === 'string' && !mapa.has(referencia)) {
+        return 'no se encuentra en la carpeta: ' + referencia;
+      }
     }
     if (json.botones !== undefined && !Array.isArray(json.botones)) {
       return 'el campo "botones" del cartucho debe ser un array.';
+    }
+    return null;
+  }
+
+  /**
+   * Validación ESPECÍFICA del GWB (F5-I9): el contrato común al
+   * principio y, después, las reglas propias del tipo. Hoy no hay
+   * reglas específicas más allá de la comprobación del tipo (el
+   * contrato común las cubre): el hueco queda preparado para cuando
+   * los formatos diverjan.
+   * @param {Object} json - JSON del cartucho.
+   * @param {Map<string,File>} mapa - Mapa nombre → File de la carpeta.
+   * @param {string} estiloMaquina - Estilo del setup cargado.
+   * @returns {?string} null si es válido, o el mensaje de error.
+   */
+  function validarGWB(json, mapa, estiloMaquina) {
+    const error = validarComunes(json, mapa, estiloMaquina);
+    if (error) return error;
+    if (json.tipo !== 'GWB') {
+      return 'se esperaba un cartucho GWB y el contenido es de tipo ' +
+        json.tipo + '.';
+    }
+    return null;
+  }
+
+  /**
+   * Validación ESPECÍFICA del GWI (F5-I9): el contrato común al
+   * principio y, después, las reglas propias del tipo (ver validarGWB).
+   * @param {Object} json - JSON del cartucho.
+   * @param {Map<string,File>} mapa - Mapa nombre → File de la carpeta.
+   * @param {string} estiloMaquina - Estilo del setup cargado.
+   * @returns {?string} null si es válido, o el mensaje de error.
+   */
+  function validarGWI(json, mapa, estiloMaquina) {
+    const error = validarComunes(json, mapa, estiloMaquina);
+    if (error) return error;
+    if (json.tipo !== 'GWI') {
+      return 'se esperaba un cartucho GWI y el contenido es de tipo ' +
+        json.tipo + '.';
     }
     return null;
   }
@@ -314,15 +380,16 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * img_s debe medir exactamente lo mismo que img_f. Aviso por consola,
+   * img_s debe medir exactamente lo mismo que img_f (si hay fondo:
+   * sin él no hay contra qué comparar). Aviso por consola,
    * NO bloqueante.
    * @param {?HTMLImageElement} imgS - Imagen de segmentos.
-   * @param {HTMLImageElement} imgF - Imagen de fondo.
+   * @param {?HTMLImageElement} imgF - Imagen de fondo (o null: sin fondo).
    * @param {string} nombre - Nombre del fichero img_s (para el aviso).
    * @returns {void}
    */
   function validarTamanoImgS(imgS, imgF, nombre) {
-    if (imgS && (imgS.naturalWidth !== imgF.naturalWidth ||
+    if (imgS && imgF && (imgS.naturalWidth !== imgF.naturalWidth ||
       imgS.naturalHeight !== imgF.naturalHeight)) {
       console.warn(nombre + ' no mide lo mismo que img_f: ' +
         imgS.naturalWidth + '×' + imgS.naturalHeight + ' vs ' +
@@ -332,26 +399,56 @@ var BaseCartucho = (function () {
 
   /**
    * Lectura COMPLETA de un cartucho JSON (GWB o GWI): mapa de ficheros,
-   * JSON prioritario, validación contra la máquina y las imágenes (img_f
-   * obligatoria; img_s e img_m si están). Cada fichero solo necesita
+   * JSON prioritario, validación DESPACHADA por tipo contra la máquina y
+   * las imágenes (img_f OPCIONAL: null si el cartucho no la declara;
+   * img_s e img_m si están). Cada fichero solo necesita
    * ".name" y comportarse como Blob.
    * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o ZIP).
    * @param {string} estiloMaquina - Estilo del setup cargado.
+   * @param {string} [tipoEsperado] - Tipo que espera el botón ('GWB' o
+   *   'GWI', F5-I9): si el contenido detectado es otro, error BLOQUEANTE.
    * @returns {Promise<{nombre:string, json:Object, mapa:Map,
-   *                     imgF:HTMLImageElement, imgS:?HTMLImageElement,
+   *                     imgF:?HTMLImageElement, imgS:?HTMLImageElement,
    *                     imgM:Promise<?HTMLImageElement>}>} Cartucho leído.
    */
-  async function leerCartucho(ficheros, estiloMaquina) {
+  async function leerCartucho(ficheros, estiloMaquina, tipoEsperado) {
     const mapa = construirMapaFicheros(ficheros);
     const elegido = await elegirJSONCartucho(mapa);
     const json = elegido.json;
 
-    const error = validarCartucho(json, mapa, estiloMaquina);
+    // Validación despachada por tipo (F5-I9): la específica se ejecuta
+    // SIEMPRE (validarGWB/validarGWI llaman al contrato común al
+    // principio). Un JSON etiquetado GWC no tiene validador: el GWC es
+    // un cartucho BINARIO, no un JSON.
+    const validar = json.tipo === 'GWB' ? validarGWB :
+      json.tipo === 'GWI' ? validarGWI : null;
+    if (!validar) {
+      throw new Error('[' + elegido.nombre + '] un GWC es un cartucho ' +
+        'binario (.gwc), no un JSON: usa el fichero cartucho_gwc.gwc ' +
+        'generado.');
+    }
+    const error = validar(json, mapa, estiloMaquina);
     if (error) throw new Error('[' + elegido.nombre + '] ' + error);
 
-    const imgF = await cargarImagen(mapa.get(json.pantalla.img_f));
-    console.log('[cartucho] img_f: ' + json.pantalla.img_f + ' ' +
-      imgF.naturalWidth + '×' + imgF.naturalHeight);
+    // Tipo esperado (F5-I9): el botón declara qué espera; si el
+    // contenido es otro tipo, error BLOQUEANTE (el cartucho no se
+    // carga). Sin tipoEsperado, cualquier tipo válido carga.
+    if (tipoEsperado && json.tipo !== tipoEsperado) {
+      throw new Error('[' + elegido.nombre + '] se esperaba un cartucho ' +
+        tipoEsperado + ' y el contenido es de tipo ' + json.tipo + '.');
+    }
+
+    // img_f: OPCIONAL (punto 8 de la Fase 5). Sin fondo: imgF null y el
+    // simulador pinta la pantalla en blanco.
+    const referenciaImgF = json.pantalla &&
+      typeof json.pantalla.img_f === 'string' ? json.pantalla.img_f : null;
+    const imgF = referenciaImgF ? await cargarImagen(mapa.get(referenciaImgF)) : null;
+    if (imgF) {
+      console.log('[cartucho] img_f: ' + referenciaImgF + ' ' +
+        imgF.naturalWidth + '×' + imgF.naturalHeight);
+    } else {
+      console.log('[cartucho] img_f: (sin fondo: el cartucho no declara img_f)');
+    }
 
     // img_s: base de la geometría. En un GWI puede venir como fichero
     // propio (copiado al guardar); si no, la de pantalla.
@@ -392,40 +489,27 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Lectura completa exigiendo un tipo concreto: si el JSON elegido no es
-   * de ese tipo, error explícito.
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho.
-   * @param {string} estiloMaquina - Estilo del setup cargado.
-   * @param {string} tipoExigido - 'GWB' o 'GWI'.
-   * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
-   */
-  async function leerExigiendoTipo(ficheros, estiloMaquina, tipoExigido) {
-    const leido = await leerCartucho(ficheros, estiloMaquina);
-    if (leido.json.tipo !== tipoExigido) {
-      throw new Error('[' + leido.nombre + '] se esperaba un cartucho ' + tipoExigido +
-        ' y el fichero es de tipo ' + leido.json.tipo + '.');
-    }
-    return leido;
-  }
-
-  /**
-   * Carga un cartucho GWB (base dibujada) exigiendo ese tipo.
+   * Carga un cartucho GWB (base dibujada) exigiendo ese tipo (F5-I9):
+   * delega en leerCartucho con el tipo esperado, que valida con la
+   * específica validarGWB y bloquea si el contenido es otro tipo.
    * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o ZIP).
    * @param {string} estiloMaquina - Estilo del setup cargado.
    * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
    */
   function leerGWB(ficheros, estiloMaquina) {
-    return leerExigiendoTipo(ficheros, estiloMaquina, 'GWB');
+    return leerCartucho(ficheros, estiloMaquina, 'GWB');
   }
 
   /**
-   * Carga un cartucho GWI (autoría hecha) exigiendo ese tipo.
+   * Carga un cartucho GWI (autoría hecha) exigiendo ese tipo (F5-I9):
+   * delega en leerCartucho con el tipo esperado, que valida con la
+   * específica validarGWI y bloquea si el contenido es otro tipo.
    * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o ZIP).
    * @param {string} estiloMaquina - Estilo del setup cargado.
    * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
    */
   function leerGWI(ficheros, estiloMaquina) {
-    return leerExigiendoTipo(ficheros, estiloMaquina, 'GWI');
+    return leerCartucho(ficheros, estiloMaquina, 'GWI');
   }
 
   // ---------------- Grabación del GWI ----------------
@@ -474,13 +558,20 @@ var BaseCartucho = (function () {
     const lineaCodigo = (json.codigoGWC !== undefined && json.codigoGWC !== null)
       ? [lineaDeCampo('codigoGWC', json.codigoGWC)] : [];
 
+    // pantalla TAL CUAL (decisión del cierre de la F5-I9): el GWI es el
+    // contenedor intermedio y debe ser AUTOSUFICIENTE — declara todo lo
+    // que el GWB declara, incluso redundante, y guardarGWIEnDisco incluye
+    // en el ZIP cada imagen declarada (img_m incluida). Si se declarara
+    // sin viajar, el GWI generado no cargaría: contrato de entrada.
+    const pantallaGWI = json.pantalla;
+
     const lineas = [
       lineaDeCampo('tipo', json.tipo),
       lineaDeCampo('version', json.version),
       lineaDeCampo('nombre', json.nombre),
       lineaDeCampo('estilo', json.estilo),
       ...lineaCodigo,
-      lineaDeCampo('pantalla', json.pantalla),
+      lineaDeCampo('pantalla', pantallaGWI),
       ...lineasOpcionales(json),
       lineaDeLista('botones', json.botones),
       lineaDeLista('sprites', json.sprites),
@@ -499,11 +590,12 @@ var BaseCartucho = (function () {
    *        con su imagen (su PNG va a segmentos/id.png).
    * @param {?HTMLImageElement} imgF - Imagen de fondo en memoria.
    * @param {?HTMLImageElement} imgS - Imagen de segmentos en memoria.
+   * @param {?HTMLImageElement} imgM - Imagen de portada en memoria (img_m).
    * @param {number} nAvisos - Avisos de la verificación (informativo).
    * @returns {Promise<number>} Tamaño aproximado del GWI en bytes (ver
    *          guardarGWIEnDisco), o 0 si falló.
    */
-  async function guardarGWI(json, sprites, imgF, imgS, nAvisos) {
+  async function guardarGWI(json, sprites, imgF, imgS, imgM, nAvisos) {
     if (typeof JSZip === 'undefined') {
       BaseDirector.avisarError('Guardar en ZIP requiere la librería JSZip: ' +
         'coloca jszip.min.js junto a los demás scripts.');
@@ -514,7 +606,7 @@ var BaseCartucho = (function () {
       const botonGuardar = document.getElementById('btnGuardar');
       botonGuardar.disabled = true;
       try {
-        return await guardarGWIEnDisco(json, sprites, imgF, imgS, nAvisos);
+        return await guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos);
       } finally {
         botonGuardar.disabled = false;   // siempre, aunque el guardado falle
       }
@@ -526,18 +618,25 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Escribe realmente el GWI en el ZIP: sprites en segmentos/, img_f e
-   * img_s con el nombre que el JSON referencia, y el JSON en la raíz. El
-   * ZIP carga solo, sin la carpeta del GWB. img_m (portada) no se incluye.
+   * Escribe realmente el GWI en el ZIP: sprites en segmentos/, img_f,
+   * img_s e img_m con el nombre que el JSON referencia, y el JSON en la
+   * raíz. El ZIP carga solo, sin la carpeta del GWB. img_f es OPCIONAL:
+   * si el cartucho no tiene fondo no viaja (punto 8 de la Fase 5). img_m
+   * (portada) SÍ VIAJA si está declarada (decisión del cierre de la
+   * F5-I9): el GWI es el contenedor intermedio y debe llevar SIEMPRE
+   * todo lo declarado, incluso redundante — si se declarara sin viajar,
+   * el GWI generado no cargaría. El GWC decidirá lo suyo para el
+   * selector de cartuchos (P07).
    * @param {Object} json - GWI completo.
    * @param {Array<{id:string, imagen:HTMLImageElement}>} sprites - Sprites.
    * @param {?HTMLImageElement} imgF - Imagen de fondo en memoria.
    * @param {?HTMLImageElement} imgS - Imagen de segmentos en memoria.
+   * @param {?HTMLImageElement} imgM - Imagen de portada en memoria (img_m).
    * @param {number} nAvisos - Avisos de la verificación (informativo).
    * @returns {Promise<number>} Tamaño aproximado del GWI (F5-I7): la suma
    *          de los bytes del JSON y de los PNG que contiene, no el ZIP.
    */
-  async function guardarGWIEnDisco(json, sprites, imgF, imgS, nAvisos) {
+  async function guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos) {
     const zip = new JSZip();
     const carpetaSprites = zip.folder('segmentos');
     let tamano = 0;                       // JSON + PNG, sin comprimir
@@ -549,12 +648,18 @@ var BaseCartucho = (function () {
     }
 
     const referenciaImgS = (json.pantalla && json.pantalla.img_s) || json.img_s || null;
-    if (imgF && json.pantalla && json.pantalla.img_f) {
+    const referenciaImgF = (json.pantalla && json.pantalla.img_f) || null;
+    if (imgF && referenciaImgF) {
       const png = await imagenBlob(imgF);
-      zip.file(json.pantalla.img_f, png);
+      zip.file(referenciaImgF, png);
       tamano += png ? png.size : 0;
-    } else {
+    } else if (referenciaImgF) {
       BaseDirector.avisarError('El ZIP no incluye img_f: el GWI no podrá cargar solo.');
+    } else {
+      // Cartucho sin fondo (img_f opcional, punto 8 de la Fase 5):
+      // legítimo, no es un error; solo se deja constancia en consola.
+      console.info('[guardar] cartucho sin fondo: el ZIP no incluye img_f ' +
+        '(el GWI carga igual y el simulador pinta la pantalla en blanco).');
     }
     if (imgS && referenciaImgS) {
       const png = await imagenBlob(imgS);
@@ -563,6 +668,24 @@ var BaseCartucho = (function () {
     } else {
       console.warn('[guardar] img_s no incluida en el ZIP: ' +
         'el GWI cargará pero no se podrá re-extraer la geometría.');
+    }
+    // img_m (portada): SÍ VIAJA si el GWI la declara (cierre de la
+    // F5-I9: el GWI lleva siempre todo lo declarado). Declarada y sin
+    // imagen en memoria → error: el GWI resultante no cargaría.
+    const referenciaImgM = (json.pantalla && json.pantalla.img_m) || null;
+    if (referenciaImgM) {
+      if (imgM) {
+        const png = await imagenBlob(imgM);
+        zip.file(referenciaImgM, png);
+        tamano += png ? png.size : 0;
+      } else {
+        BaseDirector.avisarError('El ZIP no incluye img_m (' + referenciaImgM +
+          '), pero el GWI la declara: el GWI no podrá cargar solo.');
+      }
+    } else {
+      // Cartucho sin portada: legítimo (img_m opcional), constancia en
+      // consola.
+      console.info('[guardar] cartucho sin portada: el ZIP no incluye img_m.');
     }
     const texto = formatearGWI(json);
     zip.file('cartucho_gwi.json', texto);
@@ -574,6 +697,82 @@ var BaseCartucho = (function () {
       ' imagen(es) en segmentos/ + cartucho_gwi.json en la raíz' +
       (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.');
     return tamano;
+  }
+
+  /**
+   * Guarda el cartucho de autoría GWB como ZIP descargable
+   * (cartucho_gwb.zip), F5-I10: la misma vía del GWI, porque un
+   * navegador no puede escribir una carpeta de disco. El ZIP lleva el
+   * JSON en la raíz (cartucho_gwb.json) y las imágenes de pantalla
+   * declaradas con el nombre que el JSON referencia: img_s
+   * OBLIGATORIA (sin ella el GWB no es un cartucho), img_f e img_m si
+   * están declaradas (cierre de la F5-I9: el cartucho lleva SIEMPRE
+   * todo lo declarado). El núcleo de carga del director (F5-I9) lee
+   * este ZIP por contenido: ZIP → abrirZIP → flujo de carpeta con el
+   * tipo esperado 'GWB'.
+   * @param {Object} json - GWB completo (el cartucho en memoria).
+   * @param {?HTMLImageElement} imgF - Imagen de fondo en memoria.
+   * @param {?HTMLImageElement} imgS - Imagen de segmentos en memoria.
+   * @param {?HTMLImageElement} imgM - Imagen de portada en memoria.
+   * @returns {Promise<number>} Tamaño aproximado en bytes (JSON + PNG,
+   *          sin comprimir), o 0 si falló.
+   */
+  async function guardarGWB(json, imgF, imgS, imgM) {
+    if (typeof JSZip === 'undefined') {
+      BaseDirector.avisarError('Guardar en ZIP requiere la librería JSZip: ' +
+        'coloca jszip.min.js junto a los demás scripts.');
+      return 0;
+    }
+    try {
+      BaseDirector.avisar('Guardando GWB…');
+      const zip = new JSZip();
+      let tamano = 0;                     // JSON + PNG, sin comprimir
+      const referenciaImgS = (json.pantalla && json.pantalla.img_s) || null;
+      const referenciaImgF = (json.pantalla && json.pantalla.img_f) || null;
+      const referenciaImgM = (json.pantalla && json.pantalla.img_m) || null;
+      if (referenciaImgS && imgS) {
+        const png = await imagenBlob(imgS);
+        zip.file(referenciaImgS, png);
+        tamano += png ? png.size : 0;
+      } else {
+        // img_s es OBLIGATORIA en el contrato de entrada: sin ella el
+        // GWB guardado no cargaría, así que no se guarda a medias.
+        BaseDirector.avisarError('El GWB no se guarda: falta img_s' +
+          (referenciaImgS ? ' (' + referenciaImgS + ')' : '') +
+          ' en memoria (es obligatoria).');
+        return 0;
+      }
+      if (referenciaImgF) {
+        if (imgF) {
+          const png = await imagenBlob(imgF);
+          zip.file(referenciaImgF, png);
+          tamano += png ? png.size : 0;
+        } else {
+          BaseDirector.avisarError('El ZIP no incluye img_f (' +
+            referenciaImgF + '), pero el GWB la declara: el GWB no podrá cargar solo.');
+        }
+      }
+      if (referenciaImgM) {
+        if (imgM) {
+          const png = await imagenBlob(imgM);
+          zip.file(referenciaImgM, png);
+          tamano += png ? png.size : 0;
+        } else {
+          BaseDirector.avisarError('El ZIP no incluye img_m (' +
+            referenciaImgM + '), pero el GWB la declara: el GWB no podrá cargar solo.');
+        }
+      }
+      const texto = formatearGWI(json);   // el serializador es común
+      zip.file('cartucho_gwb.json', texto);
+      tamano += new Blob([texto]).size;   // bytes UTF-8 del JSON
+      descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_gwb.zip');
+      BaseDirector.avisar('GWB guardado en cartucho_gwb.zip (JSON + ' +
+        'imágenes de pantalla). Cárgalo con «Cargar GWB (ZIP)».');
+      return tamano;
+    } catch (e) {
+      BaseDirector.avisarError('Guardado del GWB fallido: ' + e.message);
+      return 0;
+    }
   }
 
   // ---------------- Verificación del diseñador ----------------
@@ -2030,11 +2229,16 @@ var BaseCartucho = (function () {
   return {
     // Lectura (GWB / GWI / genérico por tipo)
     leerCartucho: leerCartucho,
+    // Validación despachada por tipo (F5-I9), exportada para prueba aislada
+    validarComunes: validarComunes,
+    validarGWB: validarGWB,
+    validarGWI: validarGWI,
     leerGWB: leerGWB,
     leerGWI: leerGWI,
     abrirZIP: abrirZIP,
     // Grabación (GWI)
     guardarGWI: guardarGWI,
+    guardarGWB: guardarGWB,
     // Verificación del diseñador
     verificarCartucho: verificarCartucho,
     // GWC: grabación, lectura y validación

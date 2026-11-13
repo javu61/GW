@@ -60,9 +60,9 @@ limpia:
 		\textbf{Botón} & \textbf{Simulador} & \textbf{Editor} & \textbf{Segmentos y Sprites} \\
 		\hline
 		Cargar Setup        & Sí & Sí & No \\
-		Cargar Cartucho     & No & Sí & No \\
+		Cargar Cartucho\footnotemark & No & Sí & No \\
 		Cargar GWI (ZIP)    & Sí & Sí & No \\
-		Cargar GWC          & Sí & Sí & No \\
+		Cargar GWC          & Sí & No & No \\
 		Verificar y Guardar & No & Sí & No \\
 		Generar GWI+GWC     & No & Sí & No \\
 		Deshacer / Rehacer  & No & Sí & No \\
@@ -71,6 +71,8 @@ limpia:
 	\caption{Botones visibles en cada pestaña}
 	\label{tab:F5I7Botones}
 \end{table}
+\footnotetext{Se cambió el nombre a \textbf{Cargar GWB} en la novena iteración, ver sección \ref{sec:F5I9Entrada}.}
+
 
 \texttt{BaseDirector} decide qué botones se ven al cambiar de pestaña
 y \texttt{estilos.css} los oculta. La línea de estado, donde aparecen

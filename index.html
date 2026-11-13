@@ -16,17 +16,23 @@
   <!-- Barra de botones (F5-I7): UN SOLO ejemplar de cada botón. Cada
        pestaña muestra solo los suyos (los oculta el CSS según el
        atributo data-vista del body, que pone mostrarPestanna):
-       Simulador: Cargar Setup · GWI · GWC; Editor: todos (los
-       .soloEditor, además); Segmentos y Sprites: ninguno. La línea de
-       estado (#estado) queda siempre visible. -->
+       Simulador: Cargar Setup · GWB · GWB (ZIP) · GWI · GWC; Editor:
+       todos (los .soloEditor, además); Segmentos y Sprites: ninguno.
+       La línea de estado (#estado) queda siempre visible. -->
   <div id="controles">
     <input type="file" id="ficheroSetup" accept=".json,application/json" class="oculto">
     <input type="file" id="carpetaCartucho" webkitdirectory class="oculto">
+    <!-- F5-I10: doble vía de entrada del GWB hasta el panel único de
+         carga (mejora futura): carpeta (webkitdirectory) o fichero ZIP. -->
+    <input type="file" id="ficheroGWBZip" accept=".zip,application/zip" class="oculto">
     <input type="file" id="ficheroGWIZip" accept=".zip,application/zip" class="oculto">
     <input type="file" id="ficheroGWC" accept=".gwc" class="oculto">
     <button id="btnCargarSetup">Cargar Setup</button>
-    <button id="btnCargarCartucho" class="oculto soloEditor" disabled>Cargar Cartucho</button>
-    <button id="btnCargarGWIZip" class="oculto" disabled title="Carga un cartucho_gwi.zip">Cargar GWI (ZIP)</button>
+    <button id="btnCargarCartucho" class="oculto soloEditor" disabled
+      title="Carga la carpeta del cartucho de autoría (GWB)">Cargar GWB</button>
+    <button id="btnCargarGWBZip" class="oculto soloEditor" disabled
+      title="Carga el cartucho de autoría en ZIP (cartucho_gwb.zip)">Cargar GWB (ZIP)</button>
+    <button id="btnCargarGWIZip" class="oculto" disabled title="Carga un cartucho_gwi.zip">Cargar GWI</button>
     <button id="btnCargarGWC" class="oculto" disabled
       title="Carga el cartucho de ejecución cartucho_gwc.gwc">Cargar GWC</button>
     <button id="btnGuardar" class="oculto soloEditor" disabled>Verificar y Guardar</button>
@@ -41,12 +47,14 @@
   </div>
 
   <!-- Pestañas (F5-I7): Simulador siempre; Editor desde que hay setup;
-       Segmentos y Sprites desde que hay un cartucho editable. Durante
-       una partida solo el Simulador. -->
+       Segmentos y Sprites desde que hay un cartucho editable; Cartucho
+       (F5-I10) con un GWB o GWI cargado. Durante una partida solo el
+       Simulador. -->
   <nav id="pestanas">
     <button id="pesSimulador" class="pestActiva">Simulador</button>
     <button id="pesEditor" disabled>Editor</button>
     <button id="pesSprites" disabled>Segmentos y Sprites</button>
+    <button id="pesCartucho" disabled>Cartucho</button>
   </nav>
 
   <!-- Vista SIMULADOR: la carcasa con la pantalla y los botones físicos -->
@@ -118,6 +126,14 @@
        construye BaseDescomponer.pintarListaSegmentos). -->
   <div id="vistaSprites" class="oculto">
     <div id="listaSegmentos"></div>
+  </div>
+
+  <!-- Vista CARTUCHO (F5-I10): la ficha del cartucho cargado (GWB o
+       GWI): identidad, las tres imágenes con su botón de sustitución
+       y la tabla de botones; sin cartucho, el asistente de creación.
+       La construye BaseDescomponer.pintarFichaCartucho. -->
+  <div id="vistaCartucho" class="oculto">
+    <div id="fichaCartucho"></div>
   </div>
 
   <!-- Panel de información (F5-I7): Simulador, la máquina y el

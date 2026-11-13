@@ -4678,7 +4678,7 @@ const BaseDescomponer = (() => {
     BaseDirector.avisar('Guardando GWI…');
     const tamGWI = await BaseCartucho.guardarGWI(json, sprites,
       BaseDirector.imagenFondo(), BaseDirector.imagenSegmentos(),
-      hallazgos.avisos.length);
+      BaseDirector.imagenPortada(), hallazgos.avisos.length);
     // F5-I7: los dos tamaños del par, a la vista en el Editor
     // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del
     // panel (informarTamanos la reparte; sin deduplicación, la línea
@@ -4761,8 +4761,9 @@ const BaseDescomponer = (() => {
       ...(codigo !== undefined && codigo !== null ?
         { codigoGWC: codigo } : {}),
       // Copia de pantalla y botones del GWB: el GWI es autónomo,
-      // carga sin su GWB. img_s/img_f/img_m NO se copian: ya están
-      // en el directorio con su nombre original.
+      // carga sin su GWB. img_s/img_f/img_m se copian TAL CUAL (cierre
+      // de la F5-I9: el GWI declara todo lo que declara el GWB) y
+      // guardarGWIEnDisco incluye en el ZIP cada una de las declaradas.
       pantalla: orig.pantalla || null,
       botones: orig.botones || undefined,
       // Mecanismo de fin de partida (F3-I11, v12.5): PROPIEDAD DEL
@@ -4823,7 +4824,8 @@ const BaseDescomponer = (() => {
     // El módulo de cartuchos gestiona JSZip, los avisos de inicio y
     // fin, y el bloqueo del botón mientras el ZIP se escribe.
     const tamGWI = await BaseCartucho.guardarGWI(montarGWI(), sprites,
-      BaseDirector.imagenFondo(), BaseDirector.imagenSegmentos(), nAvisos);
+      BaseDirector.imagenFondo(), BaseDirector.imagenSegmentos(),
+      BaseDirector.imagenPortada(), nAvisos);
     if (tamGWI) {
       // F5-I7: el tamaño del GWI nuevo; el GWC anterior ya no es su
       // pareja, así que su tamaño deja de mostrarse.

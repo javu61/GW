@@ -178,3 +178,24 @@ controla \texttt{BaseDirector}:
 	pestaña ni cargar; al terminar, todo vuelve a estar disponible sin
 	recargar la página.
 \end{itemize}
+
+\subsection{Parar el juego}
+\label{sec:F5I7Parar}
+Como he visto en la última prueba, no es posible parar la partida a mitad. 
+Al lanzar el juego todos los botones quedan desactivados mientras se juega, 
+lo que no permite pararlo hasta que no termina. Hay que hacer algo sobre esto. 
+
+Aunque no sea igual en la máquina real, solo para el emulador cambio el manejo, 
+de forma que el botón B pase a ser stop y pare el juego como si fuera el
+final del mismo, y durante el juego el A pause el juego. Para esto:
+
+\begin{itemize}
+	\item Al cargar el Setup, aparecen los botones A como Start y B como Stop. 
+ 
+	\item Durante el juego, el botón A pasa a ser Pausa, pulsando se detiene, volviendo 
+	a pulsar continúa. Para no romper mucho, la pausa es al fina de un tick, no a 
+	medias, así todo está completado y el siguiente pude comenzar sin problemas.
+	
+	\item Al pulsar B, el juego llama a la rutina del fin del juego de inmediato.
+	
+\end{itemize}

@@ -1,6 +1,7 @@
-\section{Novena iteración de la Fase 5: La lectura unificada del cartucho}\label{sec:F5I9}
+\section{Novena iteración de la Fase 5: La lectura unificada}
+\label{sec:F5I9}
 
-El cartucho llega al simulador en tres formas: el GWB como CARPETA
+Los datos que cargamos llegan al simulador en varias formas: el GWS como json individual, el GWB como CARPETA
 con su JSON y sus imágenes, el GWI como ZIP (realmente es una
 carpeta) y el GWC como FICHERO suelto. Hasta ahora cada forma
 tenía su propio botón y su propio camino de entrada, cuando el
@@ -33,11 +34,24 @@ El segundo punto en este momento se deja como posible mejora general del
 sistema, solo cambiaría el editor gráfico usando el nuevo proceso de lectura
 de cartuchos.
 
-\subsection{Las tres formas y su detección}
+\subsection{El GWS para cargar el setup}
+\label{sec:F5I9GWS}
+Como esta iteración unifica le lectura de los ficheros, se debe incluir al 
+fichero de setup. Como complemento se aborda un pequeño cambio en los ficheros 
+de setup que se definieron en la primera iteración de la fase 1 (ver apartado 
+\ref{sec:Primera-iteracion}). En concreto se cambia el tipo, que era "GW", 
+pasando a ser "GWS", de manera unificada con el resto de formatos.
+
+De esta manera se puede incluir en el proceso como un tipo mas de los ficheros 
+tratados, y visualmente se declara de forma mucho  más específica, pues usar 
+solo "GW" podría considerarse solo el prefijo de cualquier otro tipo, al usar 
+\textbf{GWS} nos aseguramos de que es un tipo único.
+
+\subsection{Las diversas formas y su detección}
 \label{sec:F5I9Formas}
 
-El nuevo núcleo de carga (\texttt{cargarCartucho}, en
-\texttt{BaseDirector.js}) recibe una lista de ficheros y el tipo
+El nuevo núcleo de carga  usa la función (\texttt{cargarCartucho}, en
+\texttt{BaseDirector.js}), que recibe una lista de ficheros y el tipo
 esperado, sea la lista de una carpeta, de un ZIP descomprimido o de
 una selección de ficheros sueltos, y aplica un detector de forma en
 este orden:
@@ -51,8 +65,9 @@ este orden:
 	(\texttt{procesarGWC}), como hasta ahora.
 	
 	\item En cualquier otro caso: flujo de carpeta, que ya resuelve el
-	JSON prioritario por tipo (GWC $>$ GWI $>$ GWB) y despacha el
-	flujo automático.
+	JSON prioritario por tipo (GWC $>$ GWI $>$ GWB  $>$ GWS
+	\footnote{Se ha incluido el GWS para unificar completamente el sistema}) 
+	y despacha el flujo automático.
 \end{enumerate}
 
 La detección es por extensión y por contenido, no por el botón: el
@@ -68,6 +83,10 @@ una carpeta y ficheros sueltos, y los tres caminos resultan claros
 de manejar:
 
 \begin{itemize}
+	\item \textbf{Cargar GWS}: se cambia el nombre que antes era 
+	«Cargar Setup», por unificar; carga un solo fichero y
+	se lo pasa al proceso.
+	
 	\item \textbf{Cargar GWB}: se cambia el nombre que antes era
 	«Cargar cartucho», ya que así es más claro; carga un directorio
 	completo y se pasan los ficheros al proceso.
@@ -83,23 +102,37 @@ La unificación es del FLUJO, no del botón: todos los botones llaman al
 MISMO \texttt{cargarCartucho}, de modo que la forma la detecta el
 código, no el botón. El proceso sería:
 
-\begin{itemize}
-	\item Se pulsa el botón. Entonces:
-	\begin{itemize}
-		\item Se selecciona el fichero o el directorio.
-		\item Se cargan los ficheros 
-		\item Se llama al proceso que carga	el cartucho, pasándole como parámetro 
-		el tipo esperado según el botón. El proceso detecta el tipo real por el 
-		CONTENIDO, y entonces:
-		\begin{itemize}
-			\item Si el tipo detectado NO coincide con el esperado: error
-			BLOQUEANTE (el cartucho no se carga), con el motivo concreto
-			en el mensaje.
-			\item Si coincide, se carga y se muestra en pantalla el tipo
-			de cartucho cargado.
-		\end{itemize}
-	\end{itemize}
-\end{itemize}
+
+\begin{algorithm}[H]
+	\caption{Flujo de selección y validación de carga del cartucho}
+	\label{alg:carga_cartucho}
+	
+	\KwData{Evento de pulsación de botón en la interfaz}
+	\KwResult{Cartucho cargado en el sistema o notificación de error bloqueante}
+	
+	\BlankLine
+	\tcp{1. Interacción con el usuario}
+	\textbf{Al pulsar} el botón de carga\;
+		$ruta \leftarrow \text{seleccionarFicheroODirectorio}()$\;
+		$ficheros \leftarrow \text{cargarFicheros}(ruta)$\;
+		$tipoEsperado \leftarrow \text{obtenerTipoSegunBoton}()$\;
+	\BlankLine
+	\BlankLine
+	\tcp{2. Llamada al proceso de validación y carga}
+	\Fn{\text{CargarCartucho}($ficheros, tipoEsperado$)}{
+		$tipoReal \leftarrow \text{detectarTipoPorContenido}(ficheros)$\;
+		
+		\eIf{$tipoReal \neq tipoEsperado$}{
+			Mostrar \textbf{error bloqueante} con el motivo concreto\;
+			\Return{Error (cartucho no cargado)}\;
+		}{
+			Ejecutar carga del cartucho\;
+			Mostrar $tipoReal$ en pantalla\;
+			\Return{Éxito}\;
+		}
+	}
+\end{algorithm}
+
 
 Los mensajes de error se unifican en uno solo («Cartucho NO cargado:
 \dots»), con el motivo concreto detrás; desaparecen los mensajes

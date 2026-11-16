@@ -60,14 +60,25 @@
 	citecolor = cites
 }
 
-%%%%%%%%%%%%%%%%% AÑADIDO %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% PAQUETES AÑADIDOS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{ltablex} % Combina las características de tabularx y longtable
 \usepackage{booktabs} % Para líneas de tabla más limpias y profesional
 \usepackage{booktabs,xltabular}
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{textcomp}
- \usepackage{makecell}
+\usepackage{makecell}
+\usepackage{dirtree}
+\usepackage{needspace}
+\usepackage[spanish, onelanguage, ruled, vlined, linesnumbered]{algorithm2e}
+\IncMargin{1.5em} % Empuja todo el contenido (números incluidos) hacia la derecha
+% El primer valor es el espacio antes de la línea vertical, el segundo es la sangría del código
+\SetInd{1.5em}{1.5em}
+\SetNlSkip{0.8em} % <-- Separa los números de línea del código
+\SetKwProg{Fn}{Función}{:}{fin}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -94,15 +105,15 @@
 	deletekeywords={...},            % if you want to delete keywords from the given language
 	escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
 	extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
-	firstnumber=1,                % start line enumeration with line 1000
+	firstnumber=1,                   % start line enumeration with line 1000
 	frame=single,
 	%identifierstyle=\color{blue!50!black},
 	keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
-	%language=C,                 % the language of the code
-	%morekeywords={*,...},            % if you want to add more keywords to the set
+	%language=C,                     % the language of the code
+	%morekeywords={*,...},           % if you want to add more keywords to the set
 	numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
-	numbersep=10pt,                   % how far the line-numbers are from the code
-	numberstyle=\tiny\color{gray}, % the style that is used for the line-numbers
+	numbersep=10pt,                  % how far the line-numbers are from the code
+	numberstyle=\tiny\color{gray},   % the style that is used for the line-numbers
 	rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
 	morecomment=[n]{(*}{*)},
 	morecomment=[n][\color{magenta}]{\%I}{\ },
@@ -116,11 +127,6 @@
 	xleftmargin=1.5cm,
 }
 \lstset{style=mystyle}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROPIOS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{dirtree}
-\usepackage{needspace}
 
 % Definición de colores
 \definecolor{jsonpurple}{rgb}{0.5,0,0.5}
@@ -151,9 +157,6 @@
 	{[}{{{\color{jsongray}{[}}}}{1}
 	{]}{{{\color{jsongray}{]}}}}{1},
 }
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROPIOS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
 
 % Añadir ficheros externos
 \usepackage{subfiles}
@@ -291,12 +294,13 @@ This document is the journal of the iterations carried out for the development o
 
 \tableofcontents %% Índice general
 
-
-%%%%%%%%%%%%%%%%% AÑADIDO %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% AÑADIDO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Redifinimos el nombre que asigna babel spanish a las tablas (cuadro) a tabla
 \renewcommand{\lstlistingname}{Código}
 \renewcommand{\lstlistlistingname}{Índice de códigos}
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \lstlistoflistings % <-- Añade aquí el Índice de Códigos Fuentes
 \addcontentsline{toc}{section}{Índice de listados} % Queremos que aparezca en el índice

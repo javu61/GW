@@ -4594,10 +4594,10 @@ const BaseDescomponer = (() => {
     }
     // El mismo bloqueo que guardarGWI: el GWI copia estilo/pantalla/
     // botones del cartucho en edición y el GWC se genera del GWI.
-    if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.pantalla) {
+    if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.imagenes) {
       console.error('[generar] cartucho en edición perdido: estilo=' +
         (cartuchoActual ? cartuchoActual.estilo : 'null') +
-        ', pantalla=' + (cartuchoActual && cartuchoActual.pantalla ?
+        ', imagenes=' + (cartuchoActual && cartuchoActual.imagenes ?
           'ok' : 'null') + '.');
       BaseDirector.avisarError('El GWI copia estilo/pantalla/botones del cartucho ' +
         'cargado, pero no está en memoria: recarga el cartucho ' +
@@ -4760,11 +4760,11 @@ const BaseDescomponer = (() => {
       // generado; «Verificar y Guardar» guarda sin codigoGWC.
       ...(codigo !== undefined && codigo !== null ?
         { codigoGWC: codigo } : {}),
-      // Copia de pantalla y botones del GWB: el GWI es autónomo,
+      // Copia de imagenes y botones del GWB: el GWI es autónomo,
       // carga sin su GWB. img_s/img_f/img_m se copian TAL CUAL (cierre
       // de la F5-I9: el GWI declara todo lo que declara el GWB) y
       // guardarGWIEnDisco incluye en el ZIP cada una de las declaradas.
-      pantalla: orig.pantalla || null,
+      imagenes: orig.imagenes || null,
       botones: orig.botones || undefined,
       // Mecanismo de fin de partida (F3-I11, v12.5): PROPIEDAD DEL
       // CARTUCHO, al nivel superior — no un segmento tipo 7.
@@ -4786,7 +4786,7 @@ const BaseDescomponer = (() => {
       segmentos: segs,
       autoria: autoria
     };
-    if (!orig.pantalla || !orig.pantalla.img_s) {
+    if (!orig.imagenes || !orig.imagenes.img_s) {
       console.warn('[guardar] el GWB original no declaraba pantalla.img_s: ' +
         'el GWI no podrá re-editarse sin esa referencia.');
     }
@@ -4811,12 +4811,12 @@ const BaseDescomponer = (() => {
     // del cartucho en edición (cartuchoActual). Sin ese cartucho en
     // memoria saldría un GWI con estilo null que NO cargaría. Bloqueo
     // explícito (nunca en silencio): recargar el GWB lo repone.
-    if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.pantalla) {
+    if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.imagenes) {
       console.error('[guardar] cartucho en edición perdido: estilo=' +
         (cartuchoActual ? cartuchoActual.estilo : 'null') +
-        ', pantalla=' + (cartuchoActual && cartuchoActual.pantalla ?
+        ', imagenes=' + (cartuchoActual && cartuchoActual.imagenes ?
           'ok' : 'null') + '.');
-      BaseDirector.avisarError('El GWI copia estilo/pantalla/botones del cartucho ' +
+      BaseDirector.avisarError('El GWI copia estilo/imagenes/botones del cartucho ' +
         'cargado, pero no está en memoria: recarga el cartucho ' +
         '(GWB o GWI) y vuelve a guardar.');
       return;

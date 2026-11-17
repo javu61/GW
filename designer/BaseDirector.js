@@ -1054,7 +1054,8 @@ var BaseDirector = (function () {
       id => imagenes.get(id));
     tamGWC = fichero.size;        // el GWC cargado: su tamaño exacto
     pintarInfo();
-    console.info('[cartucho] GWC cargado: ' + leido.sprites.length +
+    console.info(
+      '[cartucho] GWC cargado: ' + leido.sprites.length +
       ' sprite(s), ' + leido.segmentos.length +
       ' segmento(s) en memoria, listos para el motor.');
     avisar('Cartucho cargado (GWC): ' + fichero.name);

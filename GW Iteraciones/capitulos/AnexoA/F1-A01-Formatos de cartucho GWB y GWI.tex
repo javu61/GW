@@ -140,6 +140,7 @@ Los campos del JSON asociado a un GWB:
 		\texttt{nombre} & cadena & Nombre del cartucho \\
 		\texttt{estilo} & cadena & Estilo de la máquina (debe coincidir con el setup) \\
 		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen \\
+		\texttt{resolucion} & objeto & OPCIONAL: \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Si este dato no se indica usará la definida en el GWS cargado. \\
 		\texttt{botones} & array & OPCIONAL: Los nombres que damos a los botones. \texttt{[\{numero, id\}]} por cada botón \\
 		\bottomrule
 	\end{tabular}
@@ -191,9 +192,10 @@ programa por el contenido, no el botón):
 
 \begin{itemize}
 	\item \texttt{cartucho\_gwi.json} en la raíz: el JSON del cartucho.
-	\item La imagen de fondo, en la raíz, con el nombre \texttt{imagenes.img\_f}. OPCIONAL, igual que en el GWB: los cartuchos sin arte de fondo no la llevan y el ZIP prescinde de ella; sin fondo, el simulador pinta la pantalla en blanco.
 	\item La imagen de segmentos, en la raíz, con el nombre 
-	\texttt{imagenes.img\_s}. OBLIGATORIA también en el GWI (mismo contrato que el GWB): si el ZIP no la lleva, el GWI no carga; al guardar se avisa en consola si no hay imagen de segmentos en memoria.
+	\texttt{img\_s}. OBLIGATORIA también en el GWI (mismo contrato que el GWB): si el ZIP no la lleva, el GWI no carga; al guardar se avisa en consola si no hay imagen de segmentos en memoria.
+	\item La imagen de fondo, en la raíz, con el nombre \texttt{img\_f}. OPCIONAL, igual que en el GWB: los cartuchos sin arte de fondo no la llevan y el ZIP prescinde de ella; sin fondo, el simulador pinta la pantalla en blanco.
+	\item La imagen del selector, en la raíz, con el nombre \texttt{img\_m}. OPCIONAL, igual que en el GWB: los cartuchos sin imagen para el selector no la llevan incluida.
 	\item Carpeta \texttt{segmentos/} con UN PNG por cada sprite, llamado
 	\texttt{img\_NNN.png} (y \texttt{img\_FNN.png} los de las piezas
 	ficticias); el campo \texttt{fichero} de cada sprite referencia su
@@ -205,37 +207,48 @@ El json es un formato que permite ignorar estacios y saltos de línea no signifi
 
 Los campos incluidos en el json son:
 
+% Si ya declaraste estos contadores antes, omite las dos líneas \newcounter
+\newcounter{fnGWIuno}
+\newcounter{fnGWIdos}
+
 \begin{table}[H]
 	\centering
-	\begin{tabular}{llp{10cm}}
+	\small
+	\begin{tabularx}{\textwidth}{@{} l l X @{}}
 		\toprule
-		Campo & Tipo & Significado \\
+		\textbf{Campo} & \textbf{Tipo} & \textbf{Significado} \\
 		\midrule
 		\texttt{tipo} & cadena & \texttt{"GWI"} \\
 		\texttt{version} & número & Versión del formato (1) \\
 		\texttt{nombre} & cadena & Nombre del cartucho \\
 		\texttt{estilo} & cadena & Estilo de la máquina \\
-		\texttt{codigoGWC}\footnotemark & cadena &  OPCIONAL: El Código GWC del par, un texto con formato \texttt{"\#HHHH\#"}. Se guarda al generar el GWC y GWI a la vez, si solo se guarda el GWI se genera sin este campo\\
+		\texttt{resolucion}\footnotemark\setcounter{fnGWIuno}{\value{footnote}} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Este dato es necesario para escalar, por lo que es obligatorio incluirlo siempre.\\
+		\texttt{botones} & array & \texttt{[\{numero, id\}]} por botón \\
+		\texttt{codigoGWC}\footnotemark\setcounter{fnGWIdos}{\value{footnote}} & cadena & OPCIONAL: El Código GWC del par, un texto con formato \texttt{"\#HHHH\#"}. Se guarda al generar el GWC y GWI a la vez; si solo se guarda el GWI, se genera sin este campo \\
 		\texttt{imagenes} & objeto & \texttt{\{img\_m, img\_f, img\_s\}} (igual que el GWB) \\
 		\texttt{fin} & objeto & OPCIONAL: \texttt{\{mecanismo, contador\}} con \texttt{mecanismo} en \texttt{vida}, \texttt{muerte} o \texttt{contador} (contador solo con el tercero, 1--4). Propiedad del cartucho, no un segmento \\
 		\texttt{secuencia} & objeto & OPCIONAL: \texttt{\{ticks, segmentos\}}: animación periódica, hasta 5 segmentos lanzados en orden, uno por tick \\
 		\texttt{pausas} & objeto & OPCIONAL: \texttt{\{simulador, externo\}} en ms; ausente o sin pausa: 500 ms \\
 		\texttt{aceleracion} & objeto & OPCIONAL: \texttt{\{cada, resta, minimo\}}: cada \texttt{cada} ticks la pausa vigente baja \texttt{resta} ms sin pasar de \texttt{minimo} \\
 		\texttt{rutas} & objeto & OPCIONAL: \texttt{\{aumentarCada\}}: cada N rutas lanzadas el máximo de rutas simultáneas sube en 1 (ausente: máximo 1) \\
-		\texttt{botones} & array & \texttt{[\{numero, id\}]} por botón \\
 		\texttt{sprites} & array & Los sprites, ver más abajo \\
 		\texttt{segmentos} & array & Los segmentos, ver más abajo \\
 		\texttt{autoria} & objeto & El historial de la autoría, ver más abajo \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Campos del GWI}
 	\label{tab:F1A01GWI}
 \end{table}
-\footnotetext{Este campo se incluyó en la Fase 5 para tener emparejados GWI y GWC.}
+
+\footnotetext[\value{fnGWIuno}]{Este campo se incluyó en la Fase 5 para tener emparejados GWI y GWC.}
+\footnotetext[\value{fnGWIdos}]{Este campo se incluyó en la Fase 5 para tener todos los datos necesarios para poder generar el GWC completo tras cargar el GWI sin necesidad de informar nada manualmente.}
 
 
-Los campos opcionales usan los valores por defecto del motor cuando no
-viajan: el GWI no lleva sobras (los defaults no se escriben).
+
+Viajan en este json \underline{todos los datos necesarios para diseñar y montar el
+cartucho}, incluyendo el setup de la máquina para el que se ha diseñado. Los campos opcionales usan los valores
+por defecto del motor cuando no viajan: el GWI no lleva sobras (los defaults pueden 
+no escribirse, aunque en este momento se rellenan todos para poder verificarlos).
 
 \subsubsection*{Los segmentos}
 \label{sec:F1A01Segmentos}

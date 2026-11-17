@@ -14,9 +14,10 @@ Dado que el proyecto abarca varios programas y plataformas diferentes, se ha opt
 Los tres puntos clave del prototipado evolutivo son:
 \begin{itemize}
 	\item Los prototipos no se descartan: A diferencia del prototipado desechable, el código y las estructuras desarrolladas se reutilizan y evolucionan para formar parte del sistema definitivo.
+
 	\item Crecimiento iterativo: Cada ciclo añade nuevas características o mejora las existentes según el objetivo fijado en el ciclo.
+
 	\item Visibilidad temprana: Se puede probar una versión funcional desde el inicio del proyecto, por lo que es sencillo efectuar cambios en el alcance no considerados antes de comenzar el proceso, pero detectados interactuando con el sistema desarrollado.
-	\item 
 \end{itemize}
 
 El desarrollo evolutivo e incremental resulta especialmente adecuado para evitar definir de antemano elementos que, conforme avanza el proyecto, requieren ajustes continuos. Por ello, se ha considerado más adecuado definir bien el sistema general y dejar que cada parte sea lo más independiente posible, en lugar de cerrar todos los detalles desde el principio.
@@ -41,21 +42,22 @@ El ciclo de vida del proyecto se ha estructurado de forma deliberada en tres fas
 \begin{table}[H]
 	\centering
 	\small
-	\caption{Fases estratégicas del ciclo de desarrollo incremental.}
-	\label{tab:fases_proyecto}
-	\begin{tabular}{@{} p{2.5cm} p{5.0cm} p{5.5cm} @{}}
+	\begin{tabular}{@{} p{3.0cm} p{6.0cm} p{6.0cm} @{}}
 		\toprule
 		\textbf{Fase} & \textbf{Objetivo Principal} & \textbf{Alcance y Hitos Clave} \\ 
 		\midrule
-		\textbf{Fase 1:} \newline \textbf{Entorno de} \newline \textbf{Autoría} & Diseño del conjunto de segmentos, sus propiedades y relaciones. & El objetivo es disponer de un Diseñador Gráfico de los segmentos y un test funcional de movimiento aislado para probar los gráficos extraidos. \\ 
+		\textbf{A: Autoría} & Diseño del conjunto de segmentos, sus propiedades y relaciones. & El objetivo es disponer de un Diseñador Gráfico de los segmentos y un test funcional de movimiento aislado para probar los gráficos extraidos. \\ 
 		\addlinespace
-		\textbf{Fase 2:} \newline \textbf{Simulador en el PC} & Implementación del bucle secuencial del Director del sistema, el Motor Gráfico y el Motor de Juego en JavaScript. & Simulación de un juego en el navegador, gestión de estados complejos, colisiones discretas y aceleración por reloj. \\ 
+		\textbf{B: Simulador} & Implementación del bucle secuencial del Director del sistema, el Motor Gráfico y el Motor de Juego en JavaScript. & Simulación de un juego en el navegador, gestión de estados complejos, colisiones discretas y aceleración por reloj. \\ 
 		\addlinespace
-		\textbf{Fase 3:} \newline \textbf{Sistemas} \newline \textbf{Embebidos} & Traslado arquitectónico (\textit{porting}) a la plataforma física basada en el microcontrolador ESP32. & Reescritura del simuladro en C++, lectura del formato binario compacto (\texttt{GWC}) y cableado físico de botones y pantalla SPI. \\ 
+		\textbf{C: ESP32} & Traslado arquitectónico (\textit{porting}) a la plataforma física basada en el microcontrolador ESP32. & Reescritura del simuladro en C++, lectura del formato binario compacto (\texttt{GWC}) y cableado físico de botones y pantalla SPI. \\ 
 		\bottomrule
 	\end{tabular}
+	\caption{Fases estratégicas del ciclo de desarrollo incremental.}
+	\label{tab:fases_proyecto}
 \end{table}
 
+Cada una de estas fases maestras se pueden subdividir en fases mas pequeñas para mejorar el tratamiento de cada parte, siempre pensando en poder finalziar cada fase con un artefacto funcional. 
 
 	\section{Entornos de desarrollo}
 	\label{sec:entornos-desarrollo}
@@ -72,6 +74,20 @@ El ciclo de vida del proyecto se ha estructurado de forma deliberada en tres fas
 
 	Se contempla además la posibilidad de establecer \textit{pipelines} de integración continua independientes en GitHub Actions: uno para el Diseñador (JavaScript, sin proceso de \textit{build} real) y otro para el firmware (compilación en modo \textit{headless}).
 
+
+\section{Arquitectura prevista}
+\label{sec:Arquitectura}
+
+El objetivo final es completar esta arquitectura general del sistema, donde se indican los formatos de cartucho a usar o generar y los procesos generales previstos:
+
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics[width=5.0cm]{../imagenes/Propias/c01-001}}
+	\caption[Arquitectura general]{Arquitectura general del sistema previsto}
+	\label{fig:c01-001}
+\end{figure}
+
+
 	\section{Formato del cartucho}
 	\label{sec:formato-cartucho}
 
@@ -86,46 +102,31 @@ El ciclo de vida del proyecto se ha estructurado de forma deliberada en tres fas
 		\item \textbf{Cartucho compilado}: un binario compacto, generado en un paso de exportación a partir del formato de autoría. El ESP32 no debe decodificar PNG ni analizar \texttt{JSON} en tiempo de ejecución, por requerir demasiados recursos; por ello, todo el procesamiento pesado se realiza en el exportador, en el PC. Este formato es candidato a cargarse desde la tarjeta microSD del propio módulo, siguiendo el símil de 'cartucho intercambiable'.
 	\end{itemize}
 
-En esta tabla defino las características de los tipos de formatos de cartucho que voy a utilizar:
-
-\subsection{Formato del cartucho}
-\label{sec:FormatoCartuchoDiseno}
-
-Conviene distinguir dos ejes independientes relacionados con el cartucho.
-
-En primer lugar, el origen del contenido: un cartucho puede generarse escribiendo directamente su fichero \texttt{JSON} de forma manual, o bien empleando el Diseñador Gráfico como herramienta asistida (véase la Sección~\ref{sec:Primera-Fase}). Ambas vías se mantienen  disponibles simultáneamente para dar flexibilidad al desarrollo, pero dada la cantidad de información a definir, se recomienda usar siempre el diseñador gráfico que evitará errores y generará siempre un cartucho validado funcionalmente.
-
-En segundo lugar, el formato de representación, que varía según la fase de uso:
-\begin{itemize}
-	\item \textbf{Formato de autoría (GWB / GWI):} Un fichero \texttt{JSON} junto con un conjunto de ficheros \texttt{PNG} con las imágenes correspondientes. Es amigable con Git (diferencias legibles en el \texttt{JSON}, imágenes como ficheros binarios normales, sin necesidad de codificación base64 embebida). Es el formato que se emplea tanto en la creación manual como en la asistida por el Diseñador.
-	\item \textbf{Cartucho compilado (GWC):} Un binario compacto, generado en un paso de exportación a partir del formato de autoría. El ESP32 no debe decodificar \texttt{PNG} ni analizar \texttt{JSON} en tiempo de ejecución por requerir demasiados recursos; por ello, todo el procesamiento pesado se realiza en el exportador, en el PC. Este formato es candidato a cargarse desde la tarjeta microSD del propio módulo, siguiendo el símil de «cartucho intercambiable».
-\end{itemize}
-
 A modo de resumen, en la Tabla~\ref{tab:comparativa_formatos} se presenta la estructura, el propósito y el componente encargado de procesar cada una de las variantes del formato de cartucho planteadas en la arquitectura:
 
 \begin{table}[H]
 	\centering
 	\small
-	\begin{tabular}{@{} p{2.2cm} p{2cm} p{5.5cm} p{3.5cm} @{}}
+	\begin{tabularx}{\textwidth}{@{} p{3.7cm} >{\centering\arraybackslash}p{3.5cm} X p{3.5cm} @{}}
 		\toprule
-		\textbf{Formato} & \textbf{Tipo de \newline Archivo} & \textbf{Rol} & \textbf{Consumidor \newline Principal} \\ 
+		\textbf{Formato} & \textbf{Archivos} & \textbf{Rol} & \textbf{Consumidores} \\ 
 		\midrule
 		
-		\textbf{GWB} \newline \textbf{(Base)} & \texttt{JSON} + \newline \texttt{PNG} & Definición básica del catucho y gráficos a utilizar. & Editor Visual \\ 
+		\textbf{GWS} \textbf{(Setup)} & \texttt{JSON} & Definición del aparato de destino final (ESP32). & Editor Visual \\ 
 		\addlinespace
 		
-		\textbf{GWI} \newline \textbf{(Intermedio)} & \texttt{JSON} + \newline \textit{sprites} & Definición de geometría y lógica acoplada. & Editor Visual / \newline Simulador PC \\ 
+		\textbf{GWB} \textbf{(Base)} & \texttt{JSON} + \texttt{PNG} & Definición básica del cartucho y gráficos a utilizar. & Editor Visual \\ 
 		\addlinespace
 		
-		\textbf{GWC} \newline \textbf{(Compilado)} & Binario & Datos optimizados para lectura directa. & Simulador PC \newline ESP32 \\ 
+		\textbf{GWI} \textbf{(Intermedio)} & \texttt{JSON} + \textit{sprites} & Definición de geometría y lógica acoplada. & Editor Visual\newline Simulador PC \\ 
+		\addlinespace
+		
+		\textbf{GWC} \textbf{(Compilado)} & Binario & Datos optimizados para lectura directa. & Simulador PC\newline ESP32 \\ 
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Formatos de cartucho en el sistema.}
 	\label{tab:comparativa_formatos}
 \end{table}
-
-
-
 
 \section{Modelo gráfico: fondo fijo y segmentos}
 	\label{sec:modelo-grafico}

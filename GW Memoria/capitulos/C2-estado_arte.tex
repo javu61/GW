@@ -77,6 +77,34 @@
 
 	Este enfoque permite conservar la filosofía de las Game \& Watch originales al mismo tiempo que facilita la creación de nuevos juegos y su adaptación a diferentes plataformas hardware.
 
+\section{Porque abordar este proyecto}
+\label{sec:Porque desarrollar}
+Hoy día existe MAME, que permite emular muchísimas máquinas, incluyendo los Game \& Watch, pero requiere disponer de las ROM de los juegos para su funcionamiento. Pero estas máquinas eran muy sencilla y sus mecanismos similares siempre. La propuesta de este proyecto es diseñar un sistema que permita diseñar los juegos sin necesidad de código, de forma visual.
+
+\begin{table}[H]
+	\centering
+	\small
+	\renewcommand{\arraystretch}{1.3}
+	
+	% El símbolo | dibuja las líneas verticales alrededor de cada columna
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{MAME} & \textbf{Proyecto} \\ 
+		\hline
+		Emula hardware & Define juegos \\ 
+		\hline
+		ROM real & Cartucho abstracto \\ 
+		\hline
+		Orientado a preservación & Orientado a creación \\ 
+		\hline
+		No diseña juegos & Incluye diseñador \\ 
+		\hline
+	\end{tabular}
+	
+	\caption{Diferencias respecto a MAME.}
+	\label{tab:diferencias_mame}
+\end{table}
+
 	\section{Conclusiones}
 	El análisis realizado muestra que existen soluciones maduras para la emulación de Game \& Watch y numerosos proyectos basados en hardware moderno inspirados en estas consolas. Sin embargo, no se ha identificado una herramienta que combine un motor genérico, un sistema de autoría y un mecanismo de despliegue orientado específicamente a juegos LCD segmentados.
 

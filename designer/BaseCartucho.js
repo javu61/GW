@@ -48,7 +48,7 @@
 //   montarSprites          Bloque 2: máscaras de 1 bit escaladas.
 //   montarSegmentos        Bloque 3: registros fijos de 32 bytes.
 //   montarSecuencias       Bloque 4: la Secuencia (opcional).
-//   montarDatosGenerales   Bloque 0: estilo, pantalla, conteos, direcciones.
+//   montarDatosGenerales   Bloque 0: estilo, imagenes, conteos, direcciones.
 //   montarCabecera         Cabecera con código «#HHHH#» y tamaño.
 //   validarTopes           Comprueba el tope de 255 elementos por índice.
 //   viajanEnGWC            Qué segmentos y sprites viajan al GWC.
@@ -302,30 +302,30 @@ var BaseCartucho = (function () {
     // img_s OBLIGATORIA (de ella se extrae la geometría) e img_f e
     // img_m OPCIONALES (punto 8 de la Fase 5: hay cartuchos sin arte
     // de fondo). Si una se declara, su fichero DEBE estar presente.
-    if (!json.pantalla || typeof json.pantalla !== 'object' || Array.isArray(json.pantalla)) {
-      return '1 el cartucho necesita "pantalla" con las imágenes ' +
+    if (!json.imagenes || typeof json.imagenes !== 'object' || Array.isArray(json.imagenes)) {
+      return '1 el cartucho necesita "imagenes" con las imágenes ' +
         '(img_s obligatoria; img_f e img_m opcionales).';
     }
-    if (!json.pantalla || typeof json.pantalla !== 'object' || Array.isArray(json.pantalla)) {
-      return '2 el cartucho necesita "pantalla" con las imágenes ' +
+    if (!json.imagenes || typeof json.imagenes !== 'object' || Array.isArray(json.imagenes)) {
+      return '2 el cartucho necesita "imagenes" con las imágenes ' +
         '(img_s obligatoria; img_f e img_m opcionales).';
     }
 
 
 
-    if (!json.pantalla || typeof json.pantalla !== 'object' || Array.isArray(json.pantalla)) {
-      return 'el cartucho necesita "pantalla" con las imágenes ' +
+    if (!json.imagenes || typeof json.imagenes !== 'object' || Array.isArray(json.imagenes)) {
+      return 'el cartucho necesita "imagenes" con las imágenes ' +
         '(img_s obligatoria; img_f e img_m opcionales).';
     }
-    if (typeof json.pantalla.img_s !== 'string') {
-      return 'el cartucho necesita "pantalla" con "img_s": la imagen de ' +
+    if (typeof json.imagenes.img_s !== 'string') {
+      return 'el cartucho necesita "imagenes" con "img_s": la imagen de ' +
         'segmentos es obligatoria (de ella se extrae la geometría).';
     }
-    if (!mapa.has(json.pantalla.img_s)) {
-      return 'no se encuentra en la carpeta: ' + json.pantalla.img_s;
+    if (!mapa.has(json.imagenes.img_s)) {
+      return 'no se encuentra en la carpeta: ' + json.imagenes.img_s;
     }
     for (const campo of ['img_f', 'img_m']) {
-      const referencia = json.pantalla[campo];
+      const referencia = json.imagenes[campo];
       if (referencia !== undefined && referencia !== null &&
         typeof referencia === 'string' && !mapa.has(referencia)) {
         return 'no se encuentra en la carpeta: ' + referencia;
@@ -450,8 +450,8 @@ var BaseCartucho = (function () {
 
     // img_f: OPCIONAL (punto 8 de la Fase 5). Sin fondo: imgF null y el
     // simulador pinta la pantalla en blanco.
-    const referenciaImgF = json.pantalla &&
-      typeof json.pantalla.img_f === 'string' ? json.pantalla.img_f : null;
+    const referenciaImgF = json.imagenes &&
+      typeof json.imagenes.img_f === 'string' ? json.imagenes.img_f : null;
     const imgF = referenciaImgF ? await cargarImagen(mapa.get(referenciaImgF)) : null;
     if (imgF) {
       console.log('[cartucho] img_f: ' + referenciaImgF + ' ' +
@@ -462,12 +462,12 @@ var BaseCartucho = (function () {
 
     // img_s: base de la geometría. En un GWI puede venir como fichero
     // propio (copiado al guardar); si no, la de pantalla.
-    const imgS = (await cargarImagenAux(mapa, json.pantalla.img_s)) ||
+    const imgS = (await cargarImagenAux(mapa, json.imagenes.img_s)) ||
       (await cargarImagenAux(mapa, json.img_s));
-    validarTamanoImgS(imgS, imgF, json.pantalla ? json.pantalla.img_s : '(gwi)');
+    validarTamanoImgS(imgS, imgF, json.imagenes ? json.imagenes.img_s : '(gwi)');
 
     // img_m (portada): se carga en paralelo, sin bloquear; aún no se muestra.
-    const imgM = cargarImagenAux(mapa, json.pantalla.img_m);
+    const imgM = cargarImagenAux(mapa, json.imagenes.img_m);
 
     return {
       nombre: elegido.nombre, json: json, mapa: mapa,
@@ -573,7 +573,7 @@ var BaseCartucho = (function () {
     // que el GWB declara, incluso redundante, y guardarGWIEnDisco incluye
     // en el ZIP cada imagen declarada (img_m incluida). Si se declarara
     // sin viajar, el GWI generado no cargaría: contrato de entrada.
-    const pantallaGWI = json.pantalla;
+    const imagenesGWI = json.imagenes;
 
     const lineas = [
       lineaDeCampo('tipo', json.tipo),
@@ -581,7 +581,7 @@ var BaseCartucho = (function () {
       lineaDeCampo('nombre', json.nombre),
       lineaDeCampo('estilo', json.estilo),
       ...lineaCodigo,
-      lineaDeCampo('pantalla', pantallaGWI),
+      lineaDeCampo('imegenes', imagenesGWI),
       ...lineasOpcionales(json),
       lineaDeLista('botones', json.botones),
       lineaDeLista('sprites', json.sprites),
@@ -657,8 +657,8 @@ var BaseCartucho = (function () {
       tamano += png.size;
     }
 
-    const referenciaImgS = (json.pantalla && json.pantalla.img_s) || json.img_s || null;
-    const referenciaImgF = (json.pantalla && json.pantalla.img_f) || null;
+    const referenciaImgS = (json.imagenes && json.imagenes.img_s) || json.img_s || null;
+    const referenciaImgF = (json.imagenes && json.imagenes.img_f) || null;
     if (imgF && referenciaImgF) {
       const png = await imagenBlob(imgF);
       zip.file(referenciaImgF, png);
@@ -682,7 +682,7 @@ var BaseCartucho = (function () {
     // img_m (portada): SÍ VIAJA si el GWI la declara (cierre de la
     // F5-I9: el GWI lleva siempre todo lo declarado). Declarada y sin
     // imagen en memoria → error: el GWI resultante no cargaría.
-    const referenciaImgM = (json.pantalla && json.pantalla.img_m) || null;
+    const referenciaImgM = (json.imagenes && json.imagenes.img_m) || null;
     if (referenciaImgM) {
       if (imgM) {
         const png = await imagenBlob(imgM);
@@ -737,9 +737,9 @@ var BaseCartucho = (function () {
       BaseDirector.avisar('Guardando GWB…');
       const zip = new JSZip();
       let tamano = 0;                     // JSON + PNG, sin comprimir
-      const referenciaImgS = (json.pantalla && json.pantalla.img_s) || null;
-      const referenciaImgF = (json.pantalla && json.pantalla.img_f) || null;
-      const referenciaImgM = (json.pantalla && json.pantalla.img_m) || null;
+      const referenciaImgS = (json.imagenes && json.imagenes.img_s) || null;
+      const referenciaImgF = (json.imagenes && json.imagenes.img_f) || null;
+      const referenciaImgM = (json.imagenes && json.imagenes.img_m) || null;
       if (referenciaImgS && imgS) {
         const png = await imagenBlob(imgS);
         zip.file(referenciaImgS, png);

@@ -3,7 +3,7 @@
   "version": "1",
   "nombre": "ESP32 GW 2 botones",
   "estilo": "2",
-  "pantalla": { "ancho": 320, "alto": 240 },
+  "resolucion": { "ancho": 320, "alto": 240 },
   "botones": [
     { "numero": "0", "puerto": 13, "tecla": "O" },
     { "numero": "1", "puerto": 14, "tecla": "P" },

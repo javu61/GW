@@ -1,5 +1,5 @@
 // ============================================================
-// JuegoDirector.js — el reloj del simulador (Fase 2/3/4)
+// JuegoDirector.js — el reloj del simulador (Fase 2/3/4/5)
 // Objeto global: JuegoDirector
 // F3-I4: añade el GENERADOR DE ALEATORIOS (LCG de 16 bits).
 //   - La semilla es del director: misma semilla = misma partida.
@@ -8,6 +8,11 @@
 // F3-I8: la barra de estado presenta, con GW_DEBUG activo, los
 //   contadores internos de la partida tras el contador de ticks
 //   ("Tick N · Vidas: V · Muertes: M", del JuegoMotorEstados).
+// F5-I10: PAUSA y STOP del emulador y TIPO de arranque (0, 1, 2
+//   según el botón A, B o R). El reloj NUNCA se corta: el tick se
+//   programa siempre y, con Pausa activa, solo se salta el trabajo;
+//   así el navegador atiende el teclado entre tick y tick y el Stop
+//   funciona también estando en pausa.
 // ============================================================
 
 var JuegoDirector = (function () {
@@ -23,6 +28,20 @@ var JuegoDirector = (function () {
   var pausaVig = 500;     // la que se aplica AHORA (acelera)
   var temporizador = null; // un solo reloj, siempre
   var ticks = 0;
+
+  // F5-I10: PAUSA y STOP del emulador (nada de esto existe en la
+  // máquina real). Son booleanos del módulo, false por defecto.
+  //   Pausa:     la alterna SetPausa (botón A en partida). Con ella
+  //              activa el tick no llama a los motores ni cuenta.
+  //   Finalizar: la activa SetStop (botón B en partida); el tick
+  //              siguiente llama a la función de fin y sale.
+  var Pausa = false;
+  var Finalizar = false;
+
+  // F5-I10: TIPO de arranque (0, 1 o 2 según el botón A, B o R).
+  // De momento los tres tipos hacen lo mismo; queda guardado para
+  // la futura diferencia Game A / Game B.
+  var tipoPartida = 0;
 
   // F4-I2: política de RUTAS del Director. El TOTAL de rutas
   // lanzadas sube con cada lanzamiento y NUNCA baja (es la
@@ -50,28 +69,15 @@ var JuegoDirector = (function () {
 
   // --- Reloj ---
 
-  function tick() {
-    JuegoMotorEstados.tick();   // (motor de juego: estados)
-    JuegoMotorGrafico.tick();    // (motor gráfico: presentación)
-    // FIN DE PARTIDA (F3-I11): el motor marca «terminada» cuando el
-    // mecanismo del cartucho se cumple; el reloj se DETIENE aquí
-    // (la pantalla queda congelada tal cual, como en las máquinas
-    // reales) y el aviso pide el Start — que ya reinicia semilla,
-    // cola, contadores e iniciar(): la nueva partida es el arranque
-    // de siempre, sin piezas nuevas.
-    if (typeof JuegoMotorEstados.terminada === 'function' &&
-        JuegoMotorEstados.terminada()) {
-      detener();
-      BaseDirector.finDePartida();   // F5-I7: vuelven pestañas y botones de carga
-      BaseDirector.avisar('Partida terminada — pulsa Start para jugar de nuevo.');
-      return;                    // sin programar el siguiente tick
-    }
-    ticks++;
-    // F4-I2 ACELERACIÓN: cada «cada» ticks de PARTIDA la pausa
-    // vigente baja «resta» ms, sin bajar de «minimo» ni subir
-    // JAMÁS de la base (un mínimo mal puesto no acelera al revés).
-    // Cuenta ticks de partida, no de reloj: el motor es
-    // determinista, la misma semilla atraviesa los mismos estados.
+  /**
+   * ACELERACIÓN (F4-I2): cada «cada» ticks de PARTIDA la pausa
+   * vigente baja «resta» ms, sin bajar de «minimo» ni subir JAMÁS
+   * de la base (un mínimo mal puesto no acelera al revés). Cuenta
+   * ticks de partida, no de reloj: el motor es determinista, la
+   * misma semilla atraviesa los mismos estados.
+   * @returns {void}
+   */
+  function acelerar() {
     var acc = (typeof ComunListas !== 'undefined' &&
                typeof ComunListas.aceleracionDeCartucho === 'function')
       ? ComunListas.aceleracionDeCartucho() : null;
@@ -80,35 +86,70 @@ var JuegoDirector = (function () {
                             pausaVig - (Number(acc.resta) || 0));
       pausaVig = Math.min(pausaBase, nuevaP);
     }
-    // Contadores de la partida (F3-I8): con el modo debug activo,
-    // la barra presenta vidas y muertes tras el contador de ticks;
-    // con él apagado, solo el tick (los contadores internos
-    // siguen su curso igual). Su presentación EN PANTALLA llegará
-    // con el fin de partida.
-    if (typeof BaseDirector !== 'undefined') {
-      if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG &&
-          typeof JuegoMotorEstados.contadores === 'function') {
-        var c = JuegoMotorEstados.contadores();
-        // Secuencia (23-10): diagnóstico del lanzamiento de las
-        // animaciones junto al contador de ticks — «Sec: n/m» son
-        // los ticks que faltan para lanzar; si ya corre, el id del
-        // segmento encendido; sin cartucho, se ve también.
-        var sec = '';
-        if (typeof JuegoMotorEstados.secuenciaInfo === 'function') {
-          var si = JuegoMotorEstados.secuenciaInfo();
-          sec = si.configurada
-            ? (si.animando
-                ? ' · Sec: ' + si.idActual + ' (' +
-                  (si.suspendida ? 'suspendida' : 'animando') + ')'
-                : ' · Sec: ' + si.contador + '/' + si.ticks)
-            : ' · Sec: sin cartucho';
-        }
-        BaseDirector.avisar('Tick ' + ticks + ' · Vidas: ' + c.vidas +
-                            ' · Muertes: ' + c.muertes + sec +
-                            ' · Pausa: ' + pausaVig + ' ms');
-      } else {
-        BaseDirector.avisar('Tick ' + ticks);
+  }
+
+  /**
+   * Barra de estado de la partida (F3-I8): con el modo debug activo
+   * presenta vidas, muertes, diagnóstico de la Secuencia y pausa
+   * vigente tras el contador de ticks; con él apagado, solo el tick
+   * (los contadores internos siguen su curso igual).
+   * @returns {void}
+   */
+  function avisarTick() {
+    if (typeof BaseDirector === 'undefined') return;
+    if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG &&
+        typeof JuegoMotorEstados.contadores === 'function') {
+      var c = JuegoMotorEstados.contadores();
+      // Secuencia (23-10): diagnóstico del lanzamiento de las
+      // animaciones junto al contador de ticks — «Sec: n/m» son
+      // los ticks que faltan para lanzar; si ya corre, el id del
+      // segmento encendido; sin cartucho, se ve también.
+      var sec = '';
+      if (typeof JuegoMotorEstados.secuenciaInfo === 'function') {
+        var si = JuegoMotorEstados.secuenciaInfo();
+        sec = si.configurada
+          ? (si.animando
+              ? ' · Sec: ' + si.idActual + ' (' +
+                (si.suspendida ? 'suspendida' : 'animando') + ')'
+              : ' · Sec: ' + si.contador + '/' + si.ticks)
+          : ' · Sec: sin cartucho';
       }
+      BaseDirector.avisar('Tick ' + ticks + ' · Vidas: ' + c.vidas +
+                          ' · Muertes: ' + c.muertes + sec +
+                          ' · Pausa: ' + pausaVig + ' ms');
+    } else {
+      BaseDirector.avisar('Tick ' + ticks);
+    }
+  }
+
+  /**
+   * El tick (F5-I10). Hace exactamente esto, ni más ni menos:
+   *   1. Finalizar activo (Stop) → función de fin y sale del bucle.
+   *      Va PRIMERO y no depende de la pausa: Stop funciona en pausa.
+   *   2. Pausa inactiva → motor de estados, motor gráfico y cuenta
+   *      de ticks. Si el motor marca la partida como terminada
+   *      (F3-I11) → función de fin y sale del bucle.
+   *   3. Programa el siguiente tick. SIEMPRE (también en pausa): el
+   *      reloj no se corta, el navegador atiende el teclado entre
+   *      tick y tick.
+   * @returns {void}
+   */
+  function tick() {
+    if (Finalizar) {
+      finJuego();
+      return;                    // sin programar el siguiente tick
+    }
+    if (!Pausa) {
+      JuegoMotorEstados.tick();  // (motor de juego: estados)
+      JuegoMotorGrafico.tick();  // (motor gráfico: presentación)
+      if (typeof JuegoMotorEstados.terminada === 'function' &&
+          JuegoMotorEstados.terminada()) {
+        finJuego();
+        return;                  // sin programar el siguiente tick
+      }
+      ticks++;
+      acelerar();
+      avisarTick();
     }
     programar();
   }
@@ -124,9 +165,66 @@ var JuegoDirector = (function () {
 
   function enMarcha() { return temporizador !== null; }
 
+  /**
+   * FUNCIÓN DE FIN DEL JUEGO (F5-I10): la ÚNICA salida de una
+   * partida, tanto si el motor la da por terminada (F3-I11) como si
+   * se pulsó Stop. Detiene el reloj (la pantalla queda congelada
+   * tal cual, como en las máquinas reales), deja Pausa y Finalizar
+   * a false y avisa al BaseDirector, que devuelve pestañas y botones
+   * de carga y presenta el aviso según el motivo. La nueva partida
+   * es el arranque de siempre: reinicia semilla, cola, contadores e
+   * iniciar().
+   * @returns {void}
+   */
+  function finJuego() {
+    var motivo = Finalizar ? 'stop' : 'fin';
+    detener();
+    Pausa = false;
+    Finalizar = false;
+    BaseDirector.finDePartida(motivo);   // F5-I7: vuelven pestañas y botones de carga
+  }
+
+  /**
+   * SetPausa (F5-I10): Pausa = NOT Pausa. Solo cambia la variable: el
+   * tick en curso termina entero y los siguientes se limitan a
+   * reprogramarse hasta reanudar (la partida continúa donde estaba).
+   * Sin partida en marcha no hace nada.
+   * @returns {void}
+   */
+  function setPausa() {
+    if (!enMarcha()) return;
+    Pausa = !Pausa;
+  }
+
+  /**
+   * SetStop (F5-I10): Finalizar = true (se ASIGNA, no se alterna: un
+   * Stop no se deshace con una segunda pulsación). El siguiente tick
+   * llama a la función de fin. Sin partida en marcha no hace nada.
+   * @returns {void}
+   */
+  function setStop() {
+    if (!enMarcha()) return;
+    Finalizar = true;
+  }
+
+  /**
+   * Estado de la pausa del emulador (F5-I10): lo consulta
+   * etiquetarSistema del BaseDirector para la etiqueta del A.
+   * @returns {boolean} true si la partida está pausada.
+   */
+  function estaPausada() {
+    return Pausa;
+  }
+
   // --- Arranque de la partida ---
 
-  function arrancar() {
+  /**
+   * Arranca la partida (F5-I10: con el TIPO según el botón pulsado).
+   * @param {number} [tipo=0] - 0, 1 o 2 (botón A, B o R). De momento
+   *        los tres hacen lo mismo.
+   * @returns {void}
+   */
+  function arrancar(tipo) {
     detener(); // nunca dos relojes
 
     // Guarda: sin motores, error visible y no arranca
@@ -135,7 +233,10 @@ var JuegoDirector = (function () {
       return;
     }
 
+    tipoPartida = Number(tipo) || 0;
     ticks = 0;
+    Pausa = false;       // F5-I10: una partida nueva nunca nace pausada
+    Finalizar = false;   // ni con el Stop pendiente
     // F4-I2: pausas del CARTUCHO (pausas.simulador; 500 ms si el
     // GWI no lo declara: el comportamiento histórico) y contado-
     // res de la política de rutas — partida nueva, todo a cero.
@@ -156,8 +257,8 @@ var JuegoDirector = (function () {
 
     // --- PRUEBA DEL GENERADOR (F3-I4; verificada en simulación con
     //     los ficheros reales: ambas pasadas idénticas, más las
-    //     regresiones de pulsaciones y secuencia). 
-//     //     SOLO PARA LAS PRUEBAS, comentar luego
+    //     regresiones de pulsaciones y secuencia).
+    //     SOLO PARA LAS PRUEBAS, comentar luego
 //     var pruebaA = JuegoMotorEstados.pruebaAleatorios();
 //     reiniciarAleatorios();                     // "vuelve a inicializar"
 //     var pruebaB = JuegoMotorEstados.pruebaAleatorios();
@@ -176,6 +277,10 @@ var JuegoDirector = (function () {
 
   function pulsar(numero) {
     if (!enMarcha()) return; // sin partida, la pulsación no existe
+    // F5-I10: en pausa o con Stop pendiente la pulsación tampoco
+    // existe (si no, la cola de 8 se llenaría y se procesaría de
+    // golpe al reanudar).
+    if (Pausa || Finalizar) return;
     if (typeof ComunListas === 'undefined' || !ComunListas.encolar) return;
     if (!ComunListas.encolar(String(numero))) {
       // tapa llena: avisa la aduana (el puente solo guarda datos, no habla)
@@ -225,12 +330,25 @@ var JuegoDirector = (function () {
     return pausaVig;
   }
 
+  /**
+   * El TIPO con el que se arrancó la partida en curso (F5-I10):
+   * 0, 1 o 2 según el botón A, B o R.
+   * @returns {number} Tipo de la partida.
+   */
+  function tipoDePartida() {
+    return tipoPartida;
+  }
+
   // API pública
   return {
-    arrancar: arrancar,
+    arrancar: arrancar,                 // F5-I10: arrancar(tipo)
     detener: detener,
     pulsar: pulsar,
     enMarcha: enMarcha,
+    setPausa: setPausa,                 // F5-I10: Pausa = NOT Pausa
+    setStop: setStop,                   // F5-I10: Finalizar = true
+    estaPausada: estaPausada,           // F5-I10
+    tipoDePartida: tipoDePartida,       // F5-I10
     aleatorio: aleatorio,   // F3-I4: la única puerta del generador
     rutaLanzada: rutaLanzada,           // F4-I2
     maxRutasSimultaneas: maxRutasSimultaneas, // F4-I2

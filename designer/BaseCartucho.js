@@ -302,8 +302,18 @@ var BaseCartucho = (function () {
     // img_s OBLIGATORIA (de ella se extrae la geometría) e img_f e
     // img_m OPCIONALES (punto 8 de la Fase 5: hay cartuchos sin arte
     // de fondo). Si una se declara, su fichero DEBE estar presente.
-    if (!json.pantalla || typeof json.pantalla !== 'object' ||
-      Array.isArray(json.pantalla)) {
+    if (!json.pantalla || typeof json.pantalla !== 'object' || Array.isArray(json.pantalla)) {
+      return '1 el cartucho necesita "pantalla" con las imágenes ' +
+        '(img_s obligatoria; img_f e img_m opcionales).';
+    }
+    if (!json.pantalla || typeof json.pantalla !== 'object' || Array.isArray(json.pantalla)) {
+      return '2 el cartucho necesita "pantalla" con las imágenes ' +
+        '(img_s obligatoria; img_f e img_m opcionales).';
+    }
+
+
+
+    if (!json.pantalla || typeof json.pantalla !== 'object' || Array.isArray(json.pantalla)) {
       return 'el cartucho necesita "pantalla" con las imágenes ' +
         '(img_s obligatoria; img_f e img_m opcionales).';
     }

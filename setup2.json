@@ -1,6 +1,6 @@
 {
-  "tipo": "GW",
-  "version": "1.1",
+  "tipo": "GWS", 
+  "version": "1",
   "nombre": "ESP32 GW 2 botones",
   "estilo": "2",
   "pantalla": { "ancho": 320, "alto": 240 },

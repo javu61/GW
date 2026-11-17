@@ -30,7 +30,7 @@ formatos de cartucho estos datos básicos:
 	\item \texttt{Tipo} presente y válido (GWB, GWI o GWC): sin tipo no se
 	asume nada.
 	\item \texttt{Version} para poder cargar datos correctamente según la versión del fichero (actualmente todos tienen versión 1).
-	\item \texttt{pantalla} con las tres imágenes: \texttt{img\_s} OBLIGATORIA (de ella se extrae la geometría) e \texttt{img\_f} e \texttt{img\_m} OPCIONALES. Si una imagen se declara, su fichero DEBE estar presente; sin fondo, el simulador pinta la pantalla en blanco. (El GWC es binario y se valida por su propio camino, en la lectura del fichero.)
+	\item \texttt{imagenes} con las tres posibles imágenes relacionadas con el juego: \texttt{img\_s} OBLIGATORIA (de ella se extrae la geometría) e \texttt{img\_f} e \texttt{img\_m} OPCIONALES. Si una imagen se declara, su fichero DEBE estar presente; sin fondo, el simulador pinta la pantalla en blanco. (El GWC es binario y se valida por su propio camino, en la lectura del fichero.)
 \end{itemize}
 
 \subsection*{El formato GWS: el setup de la máquina}
@@ -55,7 +55,7 @@ Los campos del JSON del setup:
 		\texttt{version} & cadena & Versión del formato (actualmente \texttt{"1.1"}) \\
 		\texttt{nombre} & cadena & Nombre de la máquina \\
 		\texttt{estilo} & cadena & Estilo de la máquina (\texttt{"2"}, \texttt{"4"} o \texttt{"5"}): elige el esqueleto físico del simulador \\
-		\texttt{pantalla} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD \\
+		\texttt{resolucion} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD \\
 		\texttt{botones} & array & Un \texttt{\{numero, puerto, alias?, tecla?\}} por botón físico \\
 		\bottomrule
 	\end{tabular}
@@ -94,7 +94,7 @@ Los campos de cada botón:
 		"version": "1.1",
 		"nombre": "Parachute",
 		"estilo": "2",
-		"pantalla": { "ancho": 156, "alto": 156 },
+		"resolucion": { "ancho": 156, "alto": 156 },
 		"botones": [
 		{"numero": "0", "puerto": 4, "tecla": "A"},
 		{"numero": "4", "puerto": 5, "tecla": "L"},
@@ -115,15 +115,15 @@ segmentos identificados. Se \emph{entrega como una CARPETA} (no un ZIP) con esto
 	\item Un \texttt{.json} con los datos del cartucho GWB (cualquier nombre; si hay
 	varios, la prioridad del apartado anterior).
 	
-	\item \texttt{pantalla.img\_f}: OPCIONAL. La imagen de fondo sin los segmentos. Hay 
+	\item \texttt{imagenes.img\_f}: OPCIONAL. La imagen de fondo sin los segmentos. Hay 
 	cartuchos sin arte de fondo. Si \texttt{img\_f} está declarada, el 	fichero referenciado
 	DEBE estar presente en la carpeta; sin fondo, el simulador pinta la pantalla en blanco.
 	
-	\item \texttt{pantalla.img\_s}: OBLIGATORIO. La imagen con todos los segmentos encendidos pero sin 
+	\item \texttt{imagenes.img\_s}: OBLIGATORIO. La imagen con todos los segmentos encendidos pero sin 
 	el fondo, OBLIGATORIA siempre (de ella se extrae la geometría): el fichero DEBE estar presente en la carpeta. Si existe \texttt{img\_f}
 	debe medir exactamente lo mismo; si no es así hay que dar un aviso por consola NO bloqueante.
 	
-	\item \texttt{pantalla.img\_m}: OPCIONAL. La portada de la máquina, que se usará en la
+	\item \texttt{imagenes.img\_m}: OPCIONAL. La portada de la máquina, que se usará en la
 	pantalla de selección de juegos como referencia gráfica del cartucho a cargar. Si se declara, el fichero referenciado DEBE estar presente.
 \end{itemize}
 
@@ -139,7 +139,7 @@ Los campos del JSON asociado a un GWB:
 		\texttt{version} & número & Versión del formato (actualmente 1) \\
 		\texttt{nombre} & cadena & Nombre del cartucho \\
 		\texttt{estilo} & cadena & Estilo de la máquina (debe coincidir con el setup) \\
-		\texttt{pantalla} & -- & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen \\
+		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen \\
 		\texttt{botones} & array & OPCIONAL: Los nombres que damos a los botones. \texttt{[\{numero, id\}]} por cada botón \\
 		\bottomrule
 	\end{tabular}
@@ -167,7 +167,7 @@ El campo \texttt{numero} de un botón es el número físico del hardware (los
 		"version": 1,
 		"nombre": "Parachute",
 		"estilo": "2",
-		"pantalla": {
+		"imagenes": {
 			"img_m": "parachute_m.png",
 			"img_f": "parachute_f.png",
 			"img_s": "parachute_s.png"
@@ -191,9 +191,9 @@ programa por el contenido, no el botón):
 
 \begin{itemize}
 	\item \texttt{cartucho\_gwi.json} en la raíz: el JSON del cartucho.
-	\item La imagen de fondo, en la raíz, con el nombre \texttt{pantalla.img\_f}. OPCIONAL, igual que en el GWB: los cartuchos sin arte de fondo no la llevan y el ZIP prescinde de ella; sin fondo, el simulador pinta la pantalla en blanco.
+	\item La imagen de fondo, en la raíz, con el nombre \texttt{imagenes.img\_f}. OPCIONAL, igual que en el GWB: los cartuchos sin arte de fondo no la llevan y el ZIP prescinde de ella; sin fondo, el simulador pinta la pantalla en blanco.
 	\item La imagen de segmentos, en la raíz, con el nombre 
-	\texttt{pantalla.img\_s}. OBLIGATORIA también en el GWI (mismo contrato que el GWB): si el ZIP no la lleva, el GWI no carga; al guardar se avisa en consola si no hay imagen de segmentos en memoria.
+	\texttt{imagenes.img\_s}. OBLIGATORIA también en el GWI (mismo contrato que el GWB): si el ZIP no la lleva, el GWI no carga; al guardar se avisa en consola si no hay imagen de segmentos en memoria.
 	\item Carpeta \texttt{segmentos/} con UN PNG por cada sprite, llamado
 	\texttt{img\_NNN.png} (y \texttt{img\_FNN.png} los de las piezas
 	ficticias); el campo \texttt{fichero} de cada sprite referencia su
@@ -216,7 +216,7 @@ Los campos incluidos en el json son:
 		\texttt{nombre} & cadena & Nombre del cartucho \\
 		\texttt{estilo} & cadena & Estilo de la máquina \\
 		\texttt{codigoGWC}\footnotemark & cadena &  OPCIONAL: El Código GWC del par, un texto con formato \texttt{"\#HHHH\#"}. Se guarda al generar el GWC y GWI a la vez, si solo se guarda el GWI se genera sin este campo\\
-		\texttt{pantalla} & objeto & \texttt{\{img\_m, img\_f, img\_s\}} (igual que el GWB) \\
+		\texttt{imagenes} & objeto & \texttt{\{img\_m, img\_f, img\_s\}} (igual que el GWB) \\
 		\texttt{fin} & objeto & OPCIONAL: \texttt{\{mecanismo, contador\}} con \texttt{mecanismo} en \texttt{vida}, \texttt{muerte} o \texttt{contador} (contador solo con el tercero, 1--4). Propiedad del cartucho, no un segmento \\
 		\texttt{secuencia} & objeto & OPCIONAL: \texttt{\{ticks, segmentos\}}: animación periódica, hasta 5 segmentos lanzados en orden, uno por tick \\
 		\texttt{pausas} & objeto & OPCIONAL: \texttt{\{simulador, externo\}} en ms; ausente o sin pausa: 500 ms \\

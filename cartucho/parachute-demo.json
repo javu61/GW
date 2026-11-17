@@ -3,7 +3,7 @@
     "version": 1,
     "nombre": "Parachute",
     "estilo": "2",
-    "pantalla": {
+    "imagenes": {
         "img_s": "parachute_s.png",
         "img_f": "parachute_f.png",
         "img_m": "parachute_m.png"

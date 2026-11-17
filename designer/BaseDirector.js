@@ -19,7 +19,8 @@
 // FUNCIONES
 //
 //  Utilidades y avisos
-//   $ / avisar / avisarError  Atajo de id y mensajes de la barra.
+//   $                        Atajo de getElementById
+//   avisar / avisarError     Mensajes de la barra.
 //   leerJSON                 Lee el setup (copia local mínima).
 //
 //  Setup
@@ -32,6 +33,14 @@
 //   construirBotonera        La botonera del estilo del setup.
 //   normalizarNumeroBoton    Número o alias → botón físico canónico.
 //   aplicarBotonesCartucho   Botones del cartucho sobre la botonera.
+//   montarBotonesSistema     Activa el trío A/B/R en modo sistema (GWI/GWC).
+//   etiquetarSistema         Etiquetas del trío según el estado: fuera de
+//                            partida A/B/R; en partida Pausa/Stop y R oculto.
+//   pulsarBoton              ÚNICO despacho de un botón (ratón y teclado).
+//   pulsarSistema / lanzarJuego
+//                            Trío: fuera de partida arranca con el TIPO
+//                            (0, 1, 2 = A, B, R); en partida A = SetPausa
+//                            y B = SetStop (R sin función).
 //
 //  Limpieza y dibujo
 //   limpiarCartucho          Vacía el cartucho en memoria (y la autoría).
@@ -55,6 +64,8 @@
 //   alSeleccionarGWC         Botón «Cargar GWC»: el .gwc viaja solo.
 //
 //  Presentación del GWC
+//   volcarAlPuente           Fondo, reglas y campos del Director al puente
+//                            (compartido por GWI/GWB y GWC).
 //   procesarGWC              Binario: leerGWC + puente + presentación.
 //   fabricarFondoColor       Canvas plano del color del Bloque 0.
 //   fabricarSprite           Imagen de una máscara de 1 bit.
@@ -69,7 +80,8 @@
 //  Pestañas y partida (F5-I7)
 //   mostrarPestanna          Cambia de vista; la barra y el panel la siguen.
 //   actualizarPestanas       Qué pestañas están disponibles.
-//   jugar / finDePartida     Entrar y salir del modo juego.
+//   jugar / finDePartida     Entrar y salir del modo juego (finDePartida
+//                            la llama el JuegoDirector: ÚNICA salida).
 //   comprobarSalud           Los id del index.html, todos presentes.
 //   inicializar              Cablea botones, inputs, mapa y teclado.
 //
@@ -79,39 +91,57 @@
 
 var BaseDirector = (function () {
 
+  // Trío de sistema (F5-I10): A/B/R como en las máquinas reales
+  // (GAME A / GAME B / TIME). Constantes para NO repetir valores.
+  const BOTON_A = '6';
+  const BOTON_B = '7';
+  const BOTON_R = '8';
+  // TIPO de arranque que recibe JuegoDirector.arrancar según el botón.
+  const TIPO_SISTEMA = { [BOTON_A]: 0, [BOTON_B]: 1, [BOTON_R]: 2 };
+  const TIPO_A = TIPO_SISTEMA[BOTON_A];
+
   // ---------------- Estado privado del BaseDirector ----------------
 
-  let setup = null;      // JSON del hardware leído
-  let cartucho = null;   // JSON del cartucho leído
-  let pestanaVista = 'vistaSimulador';   // vista activa (la fija mostrarPestanna)
-  let imgM = null;       // portada (img_m): cargada pero aún sin uso visual
-  let imgF = null;       // fondo (img_f): guardado en memoria para el motor gráfico
-  let imgS = null;       // imagen de segmentos (img_s): fuente de los sprites
-  let sprites = [];      // sprites ÚNICOS (img_NNN) extraídos de img_s
-  let segmentos = [];    // segmentos (seg_NNN) resueltos del mapa de objetos
-  let numeroStart = '8'; // botón que arranca el juego (id "Start" del cartucho)
-  let editable = false;  // hay autoría en marcha (GWB o GWI): pestaña Segmentos y Sprites
-  let enJuego = false;   // partida en marcha: solo el Simulador
-  let tamGWI = null;     // bytes del GWI generado o cargado (JSON + PNG, aproximado)
-  let tamGWC = null;     // bytes del GWC generado o cargado (exacto)
-  let deduplicacion = null; // línea de deduplicación del último «Generar GWI+GWC»
+  let setup = null;                       // JSON del hardware leído
+  let cartucho = null;                    // JSON del cartucho leído
+  let pestanaVista = 'vistaSimulador';    // vista activa (la fija mostrarPestanna)
+  let imgM = null;                        // portada (img_m): cargada pero aún sin uso visual
+  let imgF = null;                        // fondo (img_f): guardado en memoria para el motor gráfico
+  let imgS = null;                        // imagen de segmentos (img_s): fuente de los sprites
+  let numeroStart = BOTON_R;              // botón que arranca el juego (id "Start" del cartucho)
+  let editable = false;                   // hay autoría en marcha (GWB o GWI): pestaña Segmentos y Sprites
+  let enJuego = false;                    // partida en marcha: solo el Simulador
+  let botonesSistema = false;             // F5-I10: trío A/B/R en modo sistema (tras GWI/GWC)
+  let tamGWI = null;                      // bytes del GWI generado o cargado (JSON + PNG, aproximado)
+  let tamGWC = null;                      // bytes del GWC generado o cargado (exacto)
+  let deduplicacion = null;               // línea de deduplicación del último «Generar GWI+GWC»
 
-  // Botones de carga: se deshabilitan durante la partida
-  const BOTONES_CARGA = ['btnCargarSetup', 'btnCargarCartucho', 'btnCargarGWBZip',
-    'btnCargarGWIZip', 'btnCargarGWC'];
+  // Botones de carga de cartucho (los que aparecen al cargar el setup) y
+  // todos los de carga (el setup incluido): se deshabilitan durante la partida
+  const BOTONES_CARTUCHO = ['btnCargarCartucho', 'btnCargarGWBZip', 'btnCargarGWIZip', 'btnCargarGWC'];
+  const BOTONES_CARGA = ['btnCargarSetup'].concat(BOTONES_CARTUCHO);
+  // Botones de autoría: ocultos y deshabilitados mientras no hay cartucho editable
+  const BOTONES_AUTORIA = ['btnGuardar', 'btnGenerar', 'btnDeshacer', 'btnRehacer'];
 
   const COLOR_FONDO_NEUTRO = '#888888';
 
   // Identificación del formato del fichero de setup
-  const TIPO_SETUP = 'GW';       // campo "tipo" esperado en el setup.json
-  const VERSION_SETUP = '1.1';  // versión del formato que entiende este motor
+  const GWS_TIPO = 'GWS';               // campo "tipo" esperado en el setup.json (F5-I10: GWS como los demás JSON del proyecto)
+  const GWS_VERSION = '1';              // versión del formato que entiende este motor
 
   // Teclas del teclado PC asociadas a cada número de botón, para jugar
   // sin ratón. El setup puede reasignar cada botón con "tecla" (una
   // letra); si no la declara, se usa esta tabla por defecto.
   const TECLAS_POR_DEFECTO = {
-    '0': 'Q', '1': 'A', '2': 'W', '3': 'S',
-    '4': 'P', '5': 'L', '6': 'G', '7': 'B', '8': 'T'
+    '0': 'Q', 
+    '1': 'A', 
+    '2': 'W', 
+    '3': 'S',
+    '4': 'P', 
+    '5': 'L', 
+    '6': 'G', 
+    '7': 'B', 
+    '8': 'T'
   };
 
   // ---------------- Catálogo de estilos de máquina ----------------
@@ -228,14 +258,14 @@ var BaseDirector = (function () {
     if (!p) {
       return 'el setup no ha podido cargarse.';
     }
-    if (json.tipo !== TIPO_SETUP) {
-      return 'no es un fichero de setup GW: "tipo" es "' +
-        (json.tipo === undefined ? '(falta)' : json.tipo) + '", se espera "' + TIPO_SETUP + '".';
+    if (json.tipo !== GWS_TIPO) {
+      return 'no es un fichero de setup GWS: "tipo" es "' +
+        (json.tipo === undefined ? '(falta)' : json.tipo) + '", se espera "' + GWS_TIPO + '".';
     }
-    if (json.version !== VERSION_SETUP) {
+    if (json.version !== GWS_VERSION) {
       return 'versión de setup no soportada: "' +
         (json.version === undefined ? '(falta)' : json.version) +
-        '", este motor entiende la "' + VERSION_SETUP + '".';
+        '", este motor entiende la "' + GWS_VERSION + '".';
     }
     if (json.estilo === undefined || !ESTILOS[json.estilo]) {
       return 'el setup necesita un "estilo" de máquina válido: ' +
@@ -282,13 +312,12 @@ var BaseDirector = (function () {
   function limpiarCartucho() {
     cartucho = null;
     editable = false;
+    botonesSistema = false;   // F5-I10: fuera el modo sistema del trío
     tamGWI = null;
     tamGWC = null;
     imgM = null;
     imgF = null;
     imgS = null;
-    sprites = [];
-    segmentos = [];
     BaseDescomponer.reset();
     BaseGraficos.fijarFondo(null);
     BaseGraficos.fijarSegmentos([]);
@@ -371,19 +400,34 @@ var BaseDirector = (function () {
       if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) {
         console.log('[botón] numero=' + boton.numero + (boton.alias ? ' (' + boton.alias + ')' : ''));
       }
-      // El Start del sistema lanza el simulador (Fase 2): con él la
-      // máquina "se enciende" y empieza el juego. Qué botón ES el
-      // Start lo decide el cartucho (id "Start"); por defecto, el 8.
-      if (String(boton.numero) === numeroStart && typeof JuegoDirector !== 'undefined') {
-        JuegoDirector.arrancar();
-      } else if (typeof JuegoDirector !== 'undefined' &&
-        typeof JuegoDirector.pulsar === 'function') {
-        JuegoDirector.pulsar(String(boton.numero));   // F3-I2: la pulsación, al buffer
-      }
+      pulsarBoton(String(boton.numero));   // el despacho es único (ratón y teclado)
     });
     el.addEventListener('pointerup', () => el.classList.remove('pulsado'));
     el.addEventListener('pointerleave', () => el.classList.remove('pulsado'));
     return el;
+  }
+
+  /**
+   * ÚNICO despacho de la pulsación de un botón físico (F5-I10), venga
+   * del ratón (pointerdown) o del teclado (alPulsarTecla):
+   *  - Trío A/B/R en modo sistema (tras GWI/GWC): pulsarSistema.
+   *  - Si no, el Start del sistema (el botón que el cartucho llama
+   *    "Start"; por defecto el 8) lanza el simulador con el tipo A.
+   *  - Cualquier otro botón viaja al buffer del juego (F3-I2).
+   * @param {string} numero - Número del botón físico.
+   * @returns {void}
+   */
+  function pulsarBoton(numero) {
+    if (botonesSistema && TIPO_SISTEMA[numero] !== undefined) {
+      pulsarSistema(numero);
+      return;
+    }
+    if (typeof JuegoDirector === 'undefined') return;
+    if (numero === numeroStart) {
+      JuegoDirector.arrancar(TIPO_A);
+    } else if (typeof JuegoDirector.pulsar === 'function') {
+      JuegoDirector.pulsar(numero);
+    }
   }
 
   /**
@@ -449,7 +493,8 @@ var BaseDirector = (function () {
    */
   function aplicarBotonesCartucho(json) {
     construirBotonera();
-    numeroStart = '8';                 // por defecto; el cartucho puede cambiarlo
+    numeroStart = BOTON_R;             // por defecto; el cartucho puede cambiarlo
+    botonesSistema = false;            // régimen GWB/setup: el cartucho manda
     if (json.botones === undefined) {
       console.warn('El cartucho no declara botones; se dejan los del setup.');
       return true;
@@ -481,8 +526,12 @@ var BaseDirector = (function () {
         'los botones ' + inexistentes.join(', ') + ', que no existen') +
         ' en la máquina de estilo ' + setup.estilo + '.';
     }
+    // En un GWI el trío A/B/R es del SISTEMA (F5-I10): no lo toca el
+    // cartucho, se conserva aunque no lo use.
+    const conservaTrio = json.tipo === 'GWI';
     for (const el of document.querySelectorAll('.botonFisico')) {
-      if (!usados.has(el.dataset.numero)) el.remove();
+      const n = el.dataset.numero;
+      if (!usados.has(n) && !(conservaTrio && TIPO_SISTEMA[n] !== undefined)) el.remove();
     }
     return true;
   }
@@ -511,20 +560,17 @@ var BaseDirector = (function () {
     $('maquina').classList.remove('oculto');
     $('panelEstado').classList.remove('oculto');
     pintarInfo();
-    $('btnCargarCartucho').classList.remove('oculto');
-    $('btnCargarCartucho').disabled = false;
-    $('btnCargarGWIZip').classList.remove('oculto');   // carga de un GWI en ZIP
-    $('btnCargarGWIZip').disabled = false;
-    $('btnCargarGWC').classList.remove('oculto');     // y del GWC suelto (F5-I6)
-    $('btnCargarGWC').disabled = false;
-    $('btnGuardar').classList.add('oculto');   // sin cartucho no hay nada que guardar
-    $('btnGuardar').disabled = true;
-    $('btnGenerar').classList.add('oculto');   // ni nada que generar (F5-I6)
-    $('btnGenerar').disabled = true;
-    $('btnDeshacer').classList.add('oculto'); // ni historial que deshacer
-    $('btnDeshacer').disabled = true;
-    $('btnRehacer').classList.add('oculto');
-    $('btnRehacer').disabled = true;
+    // Con setup: ya se puede cargar el cartucho (GWB en carpeta o ZIP, GWI
+    // en ZIP y GWC suelto); sin cartucho no hay nada que guardar, generar
+    // ni deshacer.
+    for (const id of BOTONES_CARTUCHO) {
+      $(id).classList.remove('oculto');
+      $(id).disabled = false;
+    }
+    for (const id of BOTONES_AUTORIA) {
+      $(id).classList.add('oculto');
+      $(id).disabled = true;
+    }
     // El setup deja la vista de la MÁQUINA delante (la autoría aún no
     // existe): con las pestañas, cargar el setup es ver el aparato.
     // El Editor queda disponible: desde él se carga el GWB.
@@ -535,9 +581,9 @@ var BaseDirector = (function () {
   }
 
   /**
-   * Evento del input de setup: lee y valida el fichero; si es correcto
-   * limpia el cartucho anterior y aplica el nuevo. Si falla, se
-   * conserva la máquina anterior (si la había).
+   * Evento del input de setup: el fichero viaja solo hasta el núcleo
+   * unificado con el tipo esperado 'GWS' (F5-I10), que lo despacha a
+   * procesarSetup: un solo punto de entrada de cara al panel único.
    * @returns {Promise<void>}
    */
   async function alSeleccionarSetup() {
@@ -545,18 +591,26 @@ var BaseDirector = (function () {
     $('ficheroSetup').value = '';              // permite recargar el mismo fichero
     if (!fichero) return;
     console.log('[setup] fichero seleccionado: ' + fichero.name);
-    try {
-      const json = await leerJSON(fichero);
-      const error = validarSetup(json);
-      if (error) throw new Error(error);
-      limpiarCartucho();                       // recargar setup limpia el cartucho actual
-      BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
-      setup = json;
-      aplicarSetup();
-    } catch (e) {
-      // Setup incorrecto: se conserva la máquina anterior (si la había)
-      avisarError('Setup NO cargado: ' + e.message);
-    }
+    await cargarCartucho([fichero], 'GWS');
+  }
+
+  /**
+   * Proceso del setup GWS dentro del núcleo unificado (F5-I10): lee y
+   * valida el fichero; si es correcto limpia el cartucho anterior (y
+   * sus object URLs) y aplica el nuevo hardware. Si falla, se conserva
+   * la máquina anterior (si la había): el error sube al try/catch del
+   * núcleo, que lo presenta con el rótulo «Setup NO cargado».
+   * @param {File} fichero - El .json del setup.
+   * @returns {Promise<void>}
+   */
+  async function procesarSetup(fichero) {
+    const json = await leerJSON(fichero);
+    const error = validarSetup(json);
+    if (error) throw new Error(error);
+    limpiarCartucho();                       // recargar setup limpia el cartucho actual
+    BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
+    setup = json;
+    aplicarSetup();
   }
 
   // ---------------- Panel de información (F5-I7) ----------------
@@ -697,6 +751,16 @@ var BaseDirector = (function () {
    */
   async function cargarCartucho(ficheros, tipoEsperado) {
     try {
+      // GWS (F5-I10): el setup entra por el MISMO núcleo que los
+      // cartuchos (un solo punto de entrada de cara al panel único de
+      // carga). Un setup es SIEMPRE UN .json: otra forma no es un setup.
+      if (tipoEsperado === 'GWS') {
+        if (ficheros.length !== 1 || !/\.json$/i.test(ficheros[0].name || '')) {
+          throw new Error('un setup es un único fichero .json.');
+        }
+        await procesarSetup(ficheros[0]);
+        return 'GWS';
+      }
       if (ficheros.length === 1) {
         const nombre = ficheros[0].name || '';
         // UN .zip: carpeta empaquetada; se descomprime en memoria y el
@@ -721,8 +785,10 @@ var BaseDirector = (function () {
       return await procesarCartucho(ficheros, tipoEsperado);
     } catch (e) {
       // Mensaje de error ÚNICO de la carga (F5-I9): desaparecen los
-      // «ZIP GWI NO cargado» y «GWC NO cargado» por botón.
-      avisarError('Cartucho NO cargado: ' + e.message);
+      // «ZIP GWI NO cargado» y «GWC NO cargado» por botón. El setup
+      // conserva su propio rótulo (F5-I10).
+      avisarError((tipoEsperado === 'GWS' ? 'Setup NO cargado: ' :
+        'Cartucho NO cargado: ') + e.message);
       return null;
     }
   }
@@ -779,6 +845,9 @@ var BaseDirector = (function () {
       // aviso en consola como antes).
       const compat = aplicarBotonesCartucho(json);   // renombra usados, elimina el resto
       if (compat !== true) throw new Error(compat);
+      // GWI (F5-I10): trío de sistema en modo partida (A=Start, B, R),
+      // con los botones de juego respetando el renombrado del cartucho.
+      if (tipo === 'GWI') montarBotonesSistema();
 
       imgF = leido.imgF;
       pintarFondoCartucho(imgF);
@@ -790,27 +859,8 @@ var BaseDirector = (function () {
       // puede venir como fichero propio copiado al guardar).
       imgS = leido.imgS;
       BaseDescomponer.reset();                     // autoría anterior, fuera
-      // El puente se escribe DESPUÉS del reset: limpiar() vacía fondo y
-      // reglas, y lo que se fija antes lo borraría (bug F3-I2 pillado
-      // por la simulación: el reset de la autoría se comía el fondo).
-      ComunListas.fijarFondo(imgF);   // el fondo, para el juego
-      // Las reglas del juego (hoy: si combina dos teclas en un mismo
-      // tick, F3-I1) también viajan por el puente: la autoría escribe
-      // al cargar, el motor de estados lee en cada tick.
-      ComunListas.fijarReglas({ combinar: !!json.combinar });
-      // Mecanismo de fin de partida (F3-I11, v12.5): PROPIEDAD del
-      // cartucho — viaja en el campo «fin» del GWI al nivel superior
-      // (no como segmento tipo 7) y cruza el puente como las reglas.
-      ComunListas.fijarFin(json.fin || null);
-      ComunListas.fijarSecuencia(json.secuencia || null);   // la Secuencia, igual que el fin
-      // F4-I2: pausas, aceleración y política de rutas del cartucho
-      // al nivel superior del GWI — igual que el fin y la Secuencia.
-      // La regla «combinar» del teclado NO sube al GWI (decisión del
-      // usuario: queda como AMPLIACIÓN futura; hoy sigue viniendo
-      // del setup por reglas()).
-      ComunListas.fijarPausas(json.pausas || null);
-      ComunListas.fijarAceleracion(json.aceleracion || null);
-      ComunListas.fijarRutas(json.rutas || null);
+      // El puente se escribe DESPUÉS del reset (ver volcarAlPuente).
+      volcarAlPuente(imgF, !!json.combinar, json);
       // GWB: pantalla = solo fondo HASTA descomponer (entonces la
       // autoría pinta fondo + segmentos negros con refrescar).
 
@@ -832,15 +882,14 @@ var BaseDirector = (function () {
         console.info('[cartucho] GWI cargado: ' + (json.sprites ? json.sprites.length : 0) +
           ' sprite(s), ' + (json.segmentos ? json.segmentos.length : 0) +
           ' segmento(s) en memoria, listos para el motor.');
-        descomponerImagen();                   // editar autoría, automático
-      } else {
-        // GWB: flujo de creación — se descompone DIRECTAMENTE al cargar.
+      } else if (!imgS) {
         // (Un JSON etiquetado GWC ya no llega aquí: la validación
         // despachada por tipo lo bloquea dentro de leerCartucho, F5-I9.)
-        // GWB: flujo de creación — se descompone DIRECTAMENTE al cargar.
-        if (!imgS) console.warn('El cartucho no declara img_s: no hay nada que descomponer.');
-        descomponerImagen();                   // descomposición, automática
+        console.warn('El cartucho no declara img_s: no hay nada que descomponer.');
       }
+      // Autoría automática al cargar: GWI → editar (re-extrae + precarga
+      // la autoría); GWB → flujo de creación (descomponer directamente).
+      descomponerImagen();
 
       // img_m: portada para la futura pantalla de selección de juegos.
       // El módulo la carga en paralelo, sin bloquear, y de momento no
@@ -886,6 +935,32 @@ var BaseDirector = (function () {
     if (!fichero) return;
     console.log('[cartucho] GWC seleccionado: ' + fichero.name);
     await cargarCartucho([fichero], 'GWC');
+  }
+
+  /**
+   * Vuelca al puente (ComunListas) lo que el motor lee del cartucho:
+   * lo comparten el flujo GWB/GWI y el del GWC (antes, el mismo bloque
+   * escrito dos veces). Se llama DESPUÉS del reset de la autoría:
+   * limpiar() vacía fondo y reglas, y lo que se fija antes lo borraría
+   * (bug F3-I2: el reset de la autoría se comía el fondo).
+   *  - fondo: el fondo para el juego.
+   *  - reglas: hoy solo «combinar» (dos teclas en un mismo tick, F3-I1);
+   *    NO sube al GWI (queda como AMPLIACIÓN futura): viene del setup.
+   *  - fin (F3-I11): propiedad del cartucho, al nivel superior del GWI.
+   *  - secuencia y, F4-I2, pausas, aceleración y rutas: igual que el fin.
+   * @param {HTMLImageElement|HTMLCanvasElement} fondo - El fondo del cartucho.
+   * @param {boolean} combinar - Regla «combinar» del cartucho.
+   * @param {Object} datos - JSON del cartucho o GWC leído (mismos campos).
+   * @returns {void}
+   */
+  function volcarAlPuente(fondo, combinar, datos) {
+    ComunListas.fijarFondo(fondo);
+    ComunListas.fijarReglas({ combinar: combinar });
+    ComunListas.fijarFin(datos.fin || null);
+    ComunListas.fijarSecuencia(datos.secuencia || null);
+    ComunListas.fijarPausas(datos.pausas || null);
+    ComunListas.fijarAceleracion(datos.aceleracion || null);
+    ComunListas.fijarRutas(datos.rutas || null);
   }
 
   // ---------------- Carga del GWC (F5-I6) ----------------
@@ -955,20 +1030,14 @@ var BaseDirector = (function () {
       sprites: leido.sprites, segmentos: leido.segmentos
     };
     // Botonera: el GWC NO declara botones (son físicos del setup): se
-    // restaura la botonera COMPLETA de la máquina (por si un cartucho
-    // anterior eliminó alguna) y el Start vuelve a ser el de defecto.
+    // restaura la botonera COMPLETA de la máquina y el trío de sistema
+    // pasa a modo sistema (F5-I10: fuera de partida A/B/R, en partida
+    // Pausa/Stop).
     construirBotonera();
-    numeroStart = '8';
-    // Puente, como en el flujo del GWI: fondo, reglas, fin, Secuencia y
-    // los campos del Director; y las listas con la imagen colgada de
-    // cada segmento, listas para el motor.
-    ComunListas.fijarFondo(imgF);
-    ComunListas.fijarReglas({ combinar: false });
-    ComunListas.fijarFin(leido.fin || null);
-    ComunListas.fijarSecuencia(leido.secuencia || null);
-    ComunListas.fijarPausas(leido.pausas || null);
-    ComunListas.fijarAceleracion(leido.aceleracion || null);
-    ComunListas.fijarRutas(leido.rutas || null);
+    montarBotonesSistema();
+    // Puente, como en el flujo del GWI (volcarAlPuente), y las listas
+    // con la imagen colgada de cada segmento, listas para el motor.
+    volcarAlPuente(imgF, false, leido);
     BaseDescomponer.cargarListas(leido.sprites, leido.segmentos);
     // Presentación: fondo + segmentos visibles en el aparato. Se
     // reutiliza el pintado del GWI (visualmente carga lo mismo que un
@@ -1111,20 +1180,14 @@ var BaseDirector = (function () {
    */
   function alPulsarTecla(ev) {
     const el = buscarBotonPorTecla(ev.key);
-    if (el) el.classList.add('pulsado');
-    // La tecla del Start del sistema también lanza el simulador,
-    // igual que pulsar el botón físico (el mismo criterio: id
-    // "Start" del cartucho, por defecto el 8); cualquier OTRA
-    // tecla del juego viaja al buffer como una pulsación física
-    // (F3-I2): mismo número, misma vía.
     if (!el) return;
-    if (String(el.dataset.numero) === numeroStart &&
-      typeof JuegoDirector !== 'undefined') {
-      JuegoDirector.arrancar();
-    } else if (typeof JuegoDirector !== 'undefined' &&
-      typeof JuegoDirector.pulsar === 'function') {
-      JuegoDirector.pulsar(String(el.dataset.numero));
-    }
+    el.classList.add('pulsado');
+    // Misma vía que el clic (pulsarBoton). Las teclas del trío de
+    // sistema ignoran la repetición automática al mantener pulsado:
+    // si no, la Pausa parpadearía (se alterna en cada pulsación).
+    const numero = String(el.dataset.numero);
+    if (ev.repeat && botonesSistema && TIPO_SISTEMA[numero] !== undefined) return;
+    pulsarBoton(numero);
   }
 
   /**
@@ -1151,9 +1214,11 @@ var BaseDirector = (function () {
    */
   function mostrarPestanna(id) {
     pestanaVista = id;
-    const botones = { vistaSimulador: 'pesSimulador',
+    const botones = {
+      vistaSimulador: 'pesSimulador',
       vistaEditor: 'pesEditor', vistaSprites: 'pesSprites',
-      vistaCartucho: 'pesCartucho' };
+      vistaCartucho: 'pesCartucho'
+    };
     for (const v of Object.keys(botones)) {
       $(v).classList.toggle('oculto', v !== id);
       $(botones[v]).classList.toggle('pestActiva', v === id);
@@ -1198,20 +1263,113 @@ var BaseDirector = (function () {
     enJuego = true;
     for (const id of BOTONES_CARGA) $(id).disabled = true;
     actualizarPestanas();
+    etiquetarSistema();           // A=Pausa, B=Stop, R oculto (F5-I10)
     mostrarPestanna('vistaSimulador');
     pintarFondoNeutro();          // máquina recién encendida
   }
 
   /**
-   * Fin de la partida (lo llama el JuegoDirector al detenerse el
-   * reloj): vuelven las pestañas y los botones de carga. La pantalla
-   * queda congelada tal cual, como en las máquinas reales.
+   * Fin de la partida (F5-I10: ÚNICA salida, la llama la función de
+   * fin del JuegoDirector, tanto si el juego terminó solo como si se
+   * pulsó Stop): vuelven las pestañas y los botones de carga, el trío
+   * recupera sus etiquetas y se presenta el aviso según el motivo. La
+   * pantalla queda congelada tal cual, como en las máquinas reales.
+   * @param {string} [motivo] - 'stop' (botón Stop) o 'fin' (terminó el juego).
    * @returns {void}
    */
-  function finDePartida() {
+  function finDePartida(motivo) {
     enJuego = false;
     for (const id of BOTONES_CARGA) $(id).disabled = false;
     actualizarPestanas();
+    etiquetarSistema();           // A/B/R otra vez (F5-I10)
+    const arranque = botonesSistema ? 'A, B o R' : 'Start';
+    avisar((motivo === 'stop' ? 'Partida detenida con Stop' : 'Partida terminada') +
+      ' — pulsa ' + arranque + ' para jugar de nuevo.');
+  }
+
+  /**
+   * Activa el trío de sistema (F5-I10): lo llama la carga de un GWI o
+   * de un GWC, con la botonera ya montada (en el GWI, la de
+   * aplicarBotonesCartucho, que conserva el trío; en el GWC, la
+   * completa del setup). NO reconstruye nada: los botones de juego
+   * conservan el renombrado del cartucho y los del trío los manda el
+   * emulador (sus etiquetas, etiquetarSistema). Con el modo sistema
+   * los tres botones lanzan la partida (con su TIPO) y el Start del
+   * cartucho deja de contar.
+   * @returns {void}
+   */
+  function montarBotonesSistema() {
+    numeroStart = BOTON_A;
+    botonesSistema = true;
+    etiquetarSistema();
+  }
+
+  /**
+   * Etiquetas (y visibilidad) del trío de sistema según el estado
+   * (F5-I10), sin tocar la pista de tecla. Fuera de partida: A, B y R
+   * (los tres lanzan el juego). En partida: A = Pausa (Reanudar si
+   * está pausada), B = Stop y R desaparece. Solo actúa en el modo
+   * sistema (tras GWI/GWC): con un GWB los botones quedan como los
+   * defina el cartucho.
+   * @returns {void}
+   */
+  function etiquetarSistema() {
+    if (!botonesSistema) return;
+    const pausada = (typeof JuegoDirector !== 'undefined' &&
+      typeof JuegoDirector.estaPausada === 'function' &&
+      JuegoDirector.estaPausada());
+    for (const numero of [BOTON_A, BOTON_B, BOTON_R]) {
+      const el = document.querySelector('.botonFisico[data-numero="' + numero + '"]');
+      const et = el && el.querySelector('.etiqueta');
+      if (!et) continue;
+      if (numero === BOTON_A) {
+        et.textContent = !enJuego ? 'A' : pausada ? 'Reanudar' : 'Pausa';
+      } else if (numero === BOTON_B) {
+        et.textContent = enJuego ? 'Stop' : 'B';
+      } else {
+        el.classList.toggle('oculto', enJuego);   // en partida R desaparece
+        et.textContent = 'R';
+      }
+    }
+  }
+
+  /**
+   * Pulsación de un botón del trío en modo sistema (F5-I10). Fuera de
+   * partida, los tres lanzan el juego con su TIPO (0, 1, 2). En
+   * partida: A llama a SetPausa (y re-etiqueta), B llama a SetStop
+   * y R no hace nada (está oculto; la tecla se ignora).
+   * @param {string} numero - BOTON_A, BOTON_B o BOTON_R.
+   * @returns {void}
+   */
+  function pulsarSistema(numero) {
+    if (typeof JuegoDirector === 'undefined') return;
+    if (!enJuego) {
+      lanzarJuego(TIPO_SISTEMA[numero]);
+      return;
+    }
+    if (numero === BOTON_A) {
+      JuegoDirector.setPausa();
+      etiquetarSistema();
+      avisar(JuegoDirector.estaPausada()
+        ? 'Pausa — pulsa Reanudar (A) para continuar.'
+        : 'Continúa la partida.');
+    } else if (numero === BOTON_B) {
+      JuegoDirector.setStop();    // el siguiente tick llama a la función de fin
+      avisar('Stop — la partida se detiene al final del tick.');
+    }
+    // BOTON_R en partida: sin función.
+  }
+
+  /**
+   * Lanza la partida con el TIPO del botón pulsado (F5-I10): 0, 1 o 2
+   * (A, B o R). Preparado para la futura diferencia Game A / Game B;
+   * de momento los tres tipos arrancan la partida igual.
+   * @param {number} tipo - 0, 1 o 2.
+   * @returns {void}
+   */
+  function lanzarJuego(tipo) {
+    console.info('[juego] arranque de tipo ' + tipo);
+    JuegoDirector.arrancar(tipo);
   }
 
   // ---------------- Arranque ----------------

@@ -48,7 +48,7 @@
 //   montarSprites          Bloque 2: máscaras de 1 bit escaladas.
 //   montarSegmentos        Bloque 3: registros fijos de 32 bytes.
 //   montarSecuencias       Bloque 4: la Secuencia (opcional).
-//   montarDatosGenerales   Bloque 0: estilo, imagenes, conteos, direcciones.
+//   montarDatosGenerales   Bloque 0: estilo, pantalla (resolución), conteos, direcciones.
 //   montarCabecera         Cabecera con código «#HHHH#» y tamaño.
 //   validarTopes           Comprueba el tope de 255 elementos por índice.
 //   viajanEnGWC            Qué segmentos y sprites viajan al GWC.
@@ -291,28 +291,47 @@ var BaseCartucho = (function () {
     if (json.version === undefined || typeof json.version !== 'number') {
       return 'el cartucho necesita una "version" numérica (p.ej. 1).';
     }
-    if (json.estilo === undefined || typeof json.estilo !== 'string' || json.estilo === '') {
-      return 'el cartucho necesita un "estilo" de máquina válido.';
+    // estilo: OPCIONAL en el GWB (si falta se usa el del setup cargado);
+    // en el GWI viaja siempre (el GWI es autosuficiente). Si viene,
+    // debe coincidir con el del setup.
+    if (json.estilo === undefined || json.estilo === null) {
+      if (json.tipo === 'GWI') {
+        return 'el GWI necesita un "estilo" de máquina válido.';
+      }
+    } else {
+      if (typeof json.estilo !== 'string' || json.estilo === '') {
+        return 'el "estilo" del cartucho no es válido.';
+      }
+      if (json.estilo !== estiloMaquina) {
+        return 'el cartucho es para una máquina de estilo ' + json.estilo +
+          ' y el setup es de estilo ' + estiloMaquina + '.';
+      }
     }
-    if (json.estilo !== estiloMaquina) {
-      return 'el cartucho es para una máquina de estilo ' + json.estilo +
-        ' y el setup es de estilo ' + estiloMaquina + '.';
+    // resolucion {ancho, alto}: OPCIONAL en el GWB (si falta se usa la
+    // "pantalla" del GWS cargado); OBLIGATORIA en el GWI. Un GWI antiguo
+    // sin ella se rechaza con un mensaje claro. Si viene y difiere de la
+    // del setup, solo aviso por consola (no bloquea).
+    if (json.resolucion === undefined || json.resolucion === null) {
+      if (json.tipo === 'GWI') {
+        return 'el GWI necesita "resolucion" {ancho, alto}.';
+      }
+    } else {
+      const r = json.resolucion;
+      const entero = v => Number.isInteger(v) && v > 0;
+      if (typeof r !== 'object' || Array.isArray(r) || !entero(r.ancho) || !entero(r.alto)) {
+        return 'la "resolucion" del cartucho debe ser {ancho, alto} con enteros positivos.';
+      }
+      const ps = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
+        ? BaseDirector.pantallaDeSetup() : null;
+      if (ps && (ps.ancho !== r.ancho || ps.alto !== r.alto)) {
+        console.warn('[cartucho] la resolución del cartucho (' + r.ancho + 'x' +
+          r.alto + ') difiere de la del setup (' + ps.ancho + 'x' + ps.alto + ').');
+      }
     }
     // Las tres imágenes de pantalla (contrato común de GWB y GWI):
     // img_s OBLIGATORIA (de ella se extrae la geometría) e img_f e
     // img_m OPCIONALES (punto 8 de la Fase 5: hay cartuchos sin arte
     // de fondo). Si una se declara, su fichero DEBE estar presente.
-    if (!json.imagenes || typeof json.imagenes !== 'object' || Array.isArray(json.imagenes)) {
-      return '1 el cartucho necesita "imagenes" con las imágenes ' +
-        '(img_s obligatoria; img_f e img_m opcionales).';
-    }
-    if (!json.imagenes || typeof json.imagenes !== 'object' || Array.isArray(json.imagenes)) {
-      return '2 el cartucho necesita "imagenes" con las imágenes ' +
-        '(img_s obligatoria; img_f e img_m opcionales).';
-    }
-
-
-
     if (!json.imagenes || typeof json.imagenes !== 'object' || Array.isArray(json.imagenes)) {
       return 'el cartucho necesita "imagenes" con las imágenes ' +
         '(img_s obligatoria; img_f e img_m opcionales).';
@@ -565,10 +584,10 @@ var BaseCartucho = (function () {
    */
   function formatearGWI(json) {
     // El código del par (suma de verificación del GWC) solo si existe.
-    const lineaCodigo = (json.codigoGWC !== undefined && json.codigoGWC !== null)
+    const lineaCodigoGWC = (json.codigoGWC !== undefined && json.codigoGWC !== null)
       ? [lineaDeCampo('codigoGWC', json.codigoGWC)] : [];
 
-    // pantalla TAL CUAL (decisión del cierre de la F5-I9): el GWI es el
+    // imagenes TAL CUAL (decisión del cierre de la F5-I9): el GWI es el
     // contenedor intermedio y debe ser AUTOSUFICIENTE — declara todo lo
     // que el GWB declara, incluso redundante, y guardarGWIEnDisco incluye
     // en el ZIP cada imagen declarada (img_m incluida). Si se declarara
@@ -578,10 +597,11 @@ var BaseCartucho = (function () {
     const lineas = [
       lineaDeCampo('tipo', json.tipo),
       lineaDeCampo('version', json.version),
+      ...lineaCodigoGWC,
       lineaDeCampo('nombre', json.nombre),
       lineaDeCampo('estilo', json.estilo),
-      ...lineaCodigo,
-      lineaDeCampo('imegenes', imagenesGWI),
+      lineaDeCampo('resolucion', json.resolucion),
+      lineaDeCampo('imagenes', imagenesGWI),
       ...lineasOpcionales(json),
       lineaDeLista('botones', json.botones),
       lineaDeLista('sprites', json.sprites),
@@ -592,7 +612,29 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Guarda el GWI en un ZIP descargable (cartucho_gwi.zip). Avisa al
+   * Serializa el GWB: solo lo que un GWB declara (sin sprites, segmentos
+   * ni autoría). estilo y resolucion solo si el GWB los lleva.
+   * @param {Object} json - GWB a guardar.
+   * @returns {string} Texto JSON del GWB.
+   */
+  function formatearGWB(json) {
+    const lineas = [
+      lineaDeCampo('tipo', 'GWB'),
+      lineaDeCampo('version', json.version),
+      lineaDeCampo('nombre', json.nombre)
+    ];
+    if (json.estilo) lineas.push(lineaDeCampo('estilo', json.estilo));
+    if (json.resolucion) lineas.push(lineaDeCampo('resolucion', json.resolucion));
+    lineas.push(lineaDeCampo('imagenes', json.imagenes));
+    for (const campo of ['combinar', 'etiquetas']) {
+      if (json[campo]) lineas.push(lineaDeCampo(campo, json[campo]));
+    }
+    lineas.push(lineaDeLista('botones', json.botones || []));
+    return '{\n' + lineas.join(',\n') + '\n}';
+  }
+
+  /**
+   * Guarda el GWI en un ZIP descargable (cartucho_GWI.zip). Avisa al
    * empezar y bloquea el botón «Guardar» mientras dura: el guardado es
    * asíncrono y sin esto podría lanzarse un segundo guardado solapado.
    * @param {Object} json - GWI completo (montado por BaseDescomponer).
@@ -698,13 +740,13 @@ var BaseCartucho = (function () {
       console.info('[guardar] cartucho sin portada: el ZIP no incluye img_m.');
     }
     const texto = formatearGWI(json);
-    zip.file('cartucho_gwi.json', texto);
+    zip.file('cartucho_GWI.json', texto);
     tamano += new Blob([texto]).size;     // bytes UTF-8 del JSON
 
-    descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_gwi.zip');
+    descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_GWI.zip');
 
-    BaseDirector.avisar('GWI guardado en cartucho_gwi.zip: ' + sprites.length +
-      ' imagen(es) en segmentos/ + cartucho_gwi.json en la raíz' +
+    BaseDirector.avisar('GWI guardado en cartucho_GWI.zip: ' + sprites.length +
+      ' imagen(es) en segmentos/ + cartucho_GWI.json en la raíz' +
       (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.');
     return tamano;
   }
@@ -772,7 +814,7 @@ var BaseCartucho = (function () {
             referenciaImgM + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
-      const texto = formatearGWI(json);   // el serializador es común
+      const texto = formatearGWB(json);
       zip.file('cartucho_gwb.json', texto);
       tamano += new Blob([texto]).size;   // bytes UTF-8 del JSON
       descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_gwb.zip');

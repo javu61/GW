@@ -102,8 +102,8 @@ var BaseDirector = (function () {
 
   // ---------------- Estado privado del BaseDirector ----------------
 
-  let setup = null;                       // JSON del hardware leído
-  let cartucho = null;                    // JSON del cartucho leído
+  let GWS_setup = null;                   // JSON del hardware leído
+  let GWC_cartucho = null;                // JSON del cartucho leído
   let pestanaVista = 'vistaSimulador';    // vista activa (la fija mostrarPestanna)
   let imgM = null;                        // portada (img_m): cargada pero aún sin uso visual
   let imgF = null;                        // fondo (img_f): guardado en memoria para el motor gráfico
@@ -247,40 +247,40 @@ var BaseDirector = (function () {
    * Valida el JSON del setup: tipo GW, versión 1.1, estilo conocido,
    * pantalla con dimensiones enteras y botones bien declarados.
    * Avisa en consola (sin bloquear) de números fuera de 0-8 o duplicados.
-   * @param {Object} json - JSON del setup leído.
+   * @param {Object} GWS_json - JSON del setup leído.
    * @returns {?string} null si es válido, o el mensaje de error.
    */
-  function validarSetup(json) {
-    if (!json || typeof json !== 'object' || Array.isArray(json)) {
+  function validarSetup(GWS_json) {
+    if (!GWS_json || typeof GWS_json !== 'object' || Array.isArray(GWS_json)) {
       return 'el setup no es un objeto JSON.';
     }
-    const p = json.pantalla;
-    if (!p) {
+    const resolucion = GWS_json.resolucion;
+    if (!resolucion) {
       return 'el setup no ha podido cargarse.';
     }
-    if (json.tipo !== GWS_TIPO) {
+    if (GWS_json.tipo !== GWS_TIPO) {
       return 'no es un fichero de setup GWS: "tipo" es "' +
-        (json.tipo === undefined ? '(falta)' : json.tipo) + '", se espera "' + GWS_TIPO + '".';
+        (GWS_json.tipo === undefined ? '(falta)' : GWS_json.tipo) + '", se espera "' + GWS_TIPO + '".';
     }
-    if (json.version !== GWS_VERSION) {
+    if (GWS_json.version !== GWS_VERSION) {
       return 'versión de setup no soportada: "' +
-        (json.version === undefined ? '(falta)' : json.version) +
+        (GWS_json.version === undefined ? '(falta)' : GWS_json.version) +
         '", este motor entiende la "' + GWS_VERSION + '".';
     }
-    if (json.estilo === undefined || !ESTILOS[json.estilo]) {
+    if (GWS_json.estilo === undefined || !ESTILOS[GWS_json.estilo]) {
       return 'el setup necesita un "estilo" de máquina válido: ' +
         Object.keys(ESTILOS).join(', ') + '.';
     }
-    if (!Number.isInteger(p.ancho) || !Number.isInteger(p.alto) ||
-      p.ancho <= 0 || p.alto <= 0) {
-      return 'el setup necesita un elemento "pantalla" con "ancho" y "alto" enteros positivos.';
+    if (!Number.isInteger(resolucion.ancho) || !Number.isInteger(resolucion.alto) ||
+      resolucion.ancho <= 0 || resolucion.alto <= 0) {
+      return 'el setup necesita un elemento "resolucion" con "ancho" y "alto" enteros positivos.';
     }
-    if (!Array.isArray(json.botones)) {
+    if (!Array.isArray(GWS_json.botones)) {
       return 'el setup necesita un array "botones".';
     }
     const vistos = new Set();
     const teclasVistas = new Set();
-    for (const b of json.botones) {
+    for (const b of GWS_json.botones) {
       if (!b || b.numero === undefined) return 'cada botón necesita "numero".';
       if (typeof b.numero !== 'string') {
         console.warn('numero sin comillas en el setup, se convierte a texto: ' + b.numero);
@@ -310,7 +310,7 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function limpiarCartucho() {
-    cartucho = null;
+    GWC_cartucho = null;
     editable = false;
     botonesSistema = false;   // F5-I10: fuera el modo sistema del trío
     tamGWI = null;
@@ -445,13 +445,13 @@ var BaseDirector = (function () {
       for (const pos of Object.values(e.botones)) contenedores.add(pos.contenedor);
     }
     for (const id of contenedores) $(id).replaceChildren();
-    const estilo = ESTILOS[setup.estilo];
-    const declarados = new Map(setup.botones.map(b => [b.numero, b]));
+    const estilo = ESTILOS[GWS_setup.estilo];
+    const declarados = new Map(GWS_setup.botones.map(b => [b.numero, b]));
     for (const numero of Object.keys(estilo.botones)) {
       const pos = estilo.botones[numero];
       const decl = declarados.get(numero);
       if (!decl) {
-        console.warn('El estilo ' + setup.estilo + ' usa el botón ' + numero +
+        console.warn('El estilo ' + GWS_setup.estilo + ' usa el botón ' + numero +
           ', que no está declarado en el setup; se crea sin puerto.');
       }
       $(pos.contenedor).appendChild(crearBotonFisico(decl || { numero: numero }, pos));
@@ -459,7 +459,7 @@ var BaseDirector = (function () {
     for (const numero of declarados.keys()) {
       if (!estilo.botones[numero]) {
         console.warn('Botón declarado que no existe en el estilo ' +
-          setup.estilo + ', se ignora: ' + numero);
+          GWS_setup.estilo + ', se ignora: ' + numero);
       }
     }
   }
@@ -473,7 +473,7 @@ var BaseDirector = (function () {
    */
   function normalizarNumeroBoton(numero) {
     const n = String(numero);
-    for (const b of setup.botones) {
+    for (const b of GWS_setup.botones) {
       if (b.alias === n) return b.numero;
     }
     return n;
@@ -524,7 +524,7 @@ var BaseDirector = (function () {
       return 'el cartucho usa ' + (inexistentes.length === 1 ?
         'el botón ' + inexistentes[0] + ', que no existe' :
         'los botones ' + inexistentes.join(', ') + ', que no existen') +
-        ' en la máquina de estilo ' + setup.estilo + '.';
+        ' en la máquina de estilo ' + GWS_setup.estilo + '.';
     }
     // En un GWI el trío A/B/R es del SISTEMA (F5-I10): no lo toca el
     // cartucho, se conserva aunque no lo use.
@@ -546,15 +546,15 @@ var BaseDirector = (function () {
   function aplicarSetup() {
     // Cada estilo es un DISEÑO INDEPENDIENTE: se muestra solo su
     // esqueleto y la pantalla se cuelga en el hueco de ese diseño.
-    const estilo = ESTILOS[setup.estilo];
+    const estilo = ESTILOS[GWS_setup.estilo];
     for (const e of Object.values(ESTILOS)) $(e.esqueleto).classList.add('oculto');
     const esqueleto = $(estilo.esqueleto);
     esqueleto.classList.remove('oculto');
     esqueleto.querySelector('.huecoPantalla').appendChild($('pantalla'));
 
     const canvas = $('pantalla');
-    canvas.width = setup.pantalla.ancho;
-    canvas.height = setup.pantalla.alto;
+    canvas.width = GWS_setup.resolucion.ancho;
+    canvas.height = GWS_setup.resolucion.alto;
     pintarFondoNeutro();
     construirBotonera();
     $('maquina').classList.remove('oculto');
@@ -577,7 +577,7 @@ var BaseDirector = (function () {
     actualizarPestanas();
     mostrarPestanna('vistaSimulador');
     // Arriba indica la última operación realizada
-    avisar('Setup cargado: ' + (setup.nombre || '(sin nombre)'));
+    avisar('Setup cargado: ' + (GWS_setup.nombre || '(sin nombre)'));
   }
 
   /**
@@ -609,7 +609,7 @@ var BaseDirector = (function () {
     if (error) throw new Error(error);
     limpiarCartucho();                       // recargar setup limpia el cartucho actual
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
-    setup = json;
+    GWS_setup = json;
     aplicarSetup();
   }
 
@@ -632,11 +632,11 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function pintarInfo() {
-    if (!setup) return;
+    if (!GWS_setup) return;
     $('infoMaquina').textContent =
-      'Cartucho: ' + (cartucho ? cartucho.nombre || '(sin nombre)' : '(ninguno)') +
-      ' · Pantalla: ' + setup.pantalla.ancho + '×' + setup.pantalla.alto +
-      ' · Botones: ' + setup.estilo;
+      'Cartucho: ' + (GWC_cartucho ? GWC_cartucho.nombre || '(sin nombre)' : '(ninguno)') +
+      ' · Pantalla: ' + GWS_setup.resolucion.ancho + '×' + GWS_setup.resolucion.alto +
+      ' · Botones: ' + GWS_setup.estilo;
     const diseno = editable ? BaseDescomponer.resumen() : null;
     $('infoDiseno').textContent =
       'Segmentos: ' + (diseno ? diseno.segmentos : '—') +
@@ -830,13 +830,13 @@ var BaseDirector = (function () {
       // Lectura completa en el módulo: JSON prioritario, validación
       // despachada por tipo con el tipo esperado del botón (F5-I9)
       // contra la máquina (estilo del setup) e imágenes img_f/img_s.
-      const leido = await BaseCartucho.leerCartucho(ficheros, setup.estilo,
+      const leido = await BaseCartucho.leerCartucho(ficheros, GWS_setup.estilo,
         tipoEsperado);
       const json = leido.json;
       const mapa = leido.mapa;
 
       limpiarCartucho();                       // fuera el cartucho anterior
-      cartucho = json;
+      GWC_cartucho = json;
       const tipo = json.tipo;                  // obligatorio: sin tipo no se carga
       // Tamaño del GWI cargado (aproximado: JSON + PNG); un GWB no tiene
       tamGWI = tipo === 'GWI' ? sumarGWI(ficheros) : null;
@@ -989,9 +989,9 @@ var BaseDirector = (function () {
       leido = BaseCartucho.leerGWC(new Uint8Array(await fichero.arrayBuffer()));
       // La máquina manda, como con el JSON: el estilo del Bloque 0
       // debe ser el del setup cargado.
-      if (setup && String(leido.estilo) !== String(setup.estilo)) {
+      if (GWS_setup && String(leido.estilo) !== String(GWS_setup.estilo)) {
         throw new Error('el GWC es de estilo ' + leido.estilo +
-          ' y la máquina cargada es de estilo ' + setup.estilo + '.');
+          ' y la máquina cargada es de estilo ' + GWS_setup.estilo + '.');
       }
     } catch (e) {
       avisarError('Cartucho NO cargado: ' + e.message +
@@ -1019,7 +1019,7 @@ var BaseDirector = (function () {
     // El cartucho equivalente en memoria (para el info del panel; el
     // Código GWC del par = el código «#HHHH#» leído). No es editable:
     // el editor conserva su estado previo.
-    cartucho = {
+    GWC_cartucho = {
       tipo: 'GWC', version: 1, nombre: fichero.name,
       estilo: leido.estilo, pantalla: leido.pantalla,
       codigoGWC: leido.codigo,
@@ -1129,8 +1129,8 @@ var BaseDirector = (function () {
       avisarError('No hay imagen de segmentos (img_s) para descomponer.');
       return;
     }
-    const autoria = (cartucho && cartucho.tipo === 'GWI') ? cartucho.autoria : null;
-    editable = BaseDescomponer.arrancar(imgS, cartucho, autoria);
+    const autoria = (GWC_cartucho && GWC_cartucho.tipo === 'GWI') ? GWC_cartucho.autoria : null;
+    editable = BaseDescomponer.arrancar(imgS, GWC_cartucho, autoria);
     actualizarPestanas();         // Segmentos y Sprites: solo con autoría
     pintarInfo();
     if (!editable) return;        // el error ya lo ha avisado arrancar
@@ -1150,7 +1150,7 @@ var BaseDirector = (function () {
     // pestaña). EXCEPCIÓN: un GWI cargado desde la pestaña Simulador
     // NO salta — el jugador carga el GWI para JUGAR, el editor no le
     // importa; el GWB (solo autoría) siempre salta.
-    if (!cartucho || cartucho.tipo !== 'GWI' || pestanaVista === 'vistaEditor') {
+    if (!GWC_cartucho || GWC_cartucho.tipo !== 'GWI' || pestanaVista === 'vistaEditor') {
       mostrarPestanna('vistaEditor');
     }
   }
@@ -1244,11 +1244,11 @@ var BaseDirector = (function () {
     // El GWC no trae la parte PC del cartucho (sin img_s no hay
     // geometría ni autoría): su edición queda como AMPLIACIÓN futura.
     // Con un GWC cargado, solo la pestaña Simulador está activa.
-    const soloSimulador = cartucho !== null && cartucho.tipo === 'GWC';
-    $('pesEditor').disabled = enJuego || !setup || soloSimulador;
+    const soloSimulador = GWC_cartucho !== null && GWC_cartucho.tipo === 'GWC';
+    $('pesEditor').disabled = enJuego || !GWS_setup || soloSimulador;
     $('pesSprites').disabled = enJuego || !editable || soloSimulador;
     // F5-I10: la ficha del cartucho, con GWB o GWI en memoria.
-    $('pesCartucho').disabled = enJuego || !cartucho || soloSimulador;
+    $('pesCartucho').disabled = enJuego || !GWC_cartucho || soloSimulador;
   }
 
   /**
@@ -1471,8 +1471,8 @@ var BaseDirector = (function () {
     jugar: jugar, finDePartida: finDePartida,
     pestanna: mostrarPestanna,            // abrir el Editor desde la lista de segmentos
     pintarInfo: pintarInfo, informarTamanos: informarTamanos,
-    pantallaDeSetup: () => (setup && setup.pantalla)
-      ? { ancho: setup.pantalla.ancho, alto: setup.pantalla.alto } : null,
+    pantallaDeSetup: () => (GWS_setup && GWS_setup.resolucion)
+      ? { ancho: GWS_setup.resolucion.ancho, alto: GWS_setup.resolucion.alto } : null,
     imagenFondo: () => imgF, imagenSegmentos: () => imgS,
     imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
     imagenBlob: (img) => BaseCartucho.imagenBlob(img)

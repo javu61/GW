@@ -4565,7 +4565,7 @@ const BaseDescomponer = (() => {
     const a = document.createElement('a');
     const url = URL.createObjectURL(blob);
     a.href = url;
-    a.download = 'cartucho_gwc.gwc';
+    a.download = 'cartucho.GWC';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -4592,14 +4592,14 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
       return;
     }
-    // El mismo bloqueo que guardarGWI: el GWI copia estilo/pantalla/
+    // El mismo bloqueo que guardarGWI: el GWI copia estilo/imagenes/
     // botones del cartucho en edición y el GWC se genera del GWI.
     if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.imagenes) {
       console.error('[generar] cartucho en edición perdido: estilo=' +
         (cartuchoActual ? cartuchoActual.estilo : 'null') +
         ', imagenes=' + (cartuchoActual && cartuchoActual.imagenes ?
           'ok' : 'null') + '.');
-      BaseDirector.avisarError('El GWI copia estilo/pantalla/botones del cartucho ' +
+      BaseDirector.avisarError('El GWI copia estilo/imagenes/botones del cartucho ' +
         'cargado, pero no está en memoria: recarga el cartucho ' +
         '(GWB o GWI) y vuelve a generar.');
       return;
@@ -4697,6 +4697,12 @@ const BaseDescomponer = (() => {
     }
   }
 
+  /** Resolución {ancho, alto} del setup en uso (o null sin setup). */
+  function resolucionDeSetup() {
+    const p = BaseDirector.pantallaDeSetup();
+    return p ? { ancho: p.ancho, alto: p.alto } : null;
+  }
+
   /**
    * Monta el GWI completo con el estado vigente de la autoría: el
    * JSON del cartucho con sus sprites, segmentos e historial legible
@@ -4754,6 +4760,9 @@ const BaseDescomponer = (() => {
       version: 1,
       nombre: orig.nombre || null,
       estilo: orig.estilo || null,
+      // Resolución de la máquina con la que se genera el GWC (obligatoria
+      // en el GWI, autosuficiente): la «pantalla» del GWS en uso.
+      resolucion: resolucionDeSetup(),
       // Código GWC del par (F5-I6): el código «#HHHH#» del GWC,
       // AUSENTE cuando no lo hay (el GWI no lleva sobras). Solo lo
       // estampa «Generar GWI+GWC», con el código del GWC recién
@@ -4787,7 +4796,7 @@ const BaseDescomponer = (() => {
       autoria: autoria
     };
     if (!orig.imagenes || !orig.imagenes.img_s) {
-      console.warn('[guardar] el GWB original no declaraba pantalla.img_s: ' +
+      console.warn('[guardar] el GWB original no declaraba imagenes.img_s: ' +
         'el GWI no podrá re-editarse sin esa referencia.');
     }
     return json;
@@ -4797,7 +4806,7 @@ const BaseDescomponer = (() => {
    * Guarda el GWI en el DIRECTORIO PRINCIPAL del cartucho (el que
    * elige el usuario, donde ya viven img_f, img_s y el GWB): los
    * sprites se escriben junto a las imágenes de base en segmentos/ y
-   * cartucho_gwi.json es un cartucho COMPLETO — copia pantalla y
+   * cartucho_gwi.json es un cartucho COMPLETO — copia imagenes y
    * botones del cartucho original (cartuchoActual) — por lo que carga
    * de forma autónoma sin depender de su GWB. El fichero ZIP lo
    * escribe BaseCartucho.guardarGWI (F5-I4); aquí queda la

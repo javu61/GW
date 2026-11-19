@@ -27,6 +27,7 @@
 //   reset                  Limpia el estado (recargar cartucho/setup).
 //   cargarListas           Listas del GWI al puente (ComunListas).
 //   segmentosEnMemoria     Referencia viva a los segmentos (puente).
+//   repintarAparato        Repinta el aparato (F5-I12: tras cambiar img_f en la ficha).
 //   inicializar            Cablea los eventos del mapa (una vez).
 //
 //  Identificación de grupos
@@ -4592,18 +4593,19 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
       return;
     }
-    // El mismo bloqueo que guardarGWI: el GWI copia estilo/imagenes/
-    // botones del cartucho en edición y el GWC se genera del GWI.
-    if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.imagenes) {
-      console.error('[generar] cartucho en edición perdido: estilo=' +
-        (cartuchoActual ? cartuchoActual.estilo : 'null') +
-        ', imagenes=' + (cartuchoActual && cartuchoActual.imagenes ?
-          'ok' : 'null') + '.');
-      BaseDirector.avisarError('El GWI copia estilo/imagenes/botones del cartucho ' +
-        'cargado, pero no está en memoria: recarga el cartucho ' +
-        '(GWB o GWI) y vuelve a generar.');
+    // F5-I12: los datos propios del cartucho (nombre, estilo,
+    // resolución, imágenes y botones) salen de la FICHA de la pestaña
+    // Cartucho: se verifican antes de generar NADA (los tres ficheros
+    // salen de la misma foto de memoria).
+    const ficha = BaseFicha.verificar({ generar: true, mostrar: true });
+    for (const a of ficha.avisos) console.warn('[ficha] ' + a);
+    if (ficha.errores.length > 0) {
+      for (const e of ficha.errores) console.error('[ficha] ' + e);
+      BaseDirector.avisarError('La ficha del cartucho tiene ' + ficha.errores.length +
+        ' error(es): ' + ficha.errores[0] + ' (pestaña Cartucho).');
       return;
     }
+    const imagenesFicha = BaseFicha.imagenesEnMemoria();
     // 1. La verificación del diseñador, BLOQUEANTE (misma llamada y
     // misma presentación que «Verificar y Guardar»).
     const hallazgos = BaseCartucho.verificarCartucho(ctxVerificacion());
@@ -4677,8 +4679,14 @@ const BaseDescomponer = (() => {
     json.codigoGWC = gwc.codigo;
     BaseDirector.avisar('Guardando GWI…');
     const tamGWI = await BaseCartucho.guardarGWI(json, sprites,
-      BaseDirector.imagenFondo(), BaseDirector.imagenSegmentos(),
-      BaseDirector.imagenPortada(), hallazgos.avisos.length);
+      imagenesFicha.img_f, imagenesFicha.img_s,
+      imagenesFicha.img_m, hallazgos.avisos.length);
+    // El GWB después (F5-I12): los tres ficheros de la misma ficha, ya
+    // verificada arriba, para que vayan de la mano.
+    if (tamGWI) {
+      const gwbOk = await BaseFicha.guardar();
+      if (gwbOk) BaseDirector.avisar('Generados GWC, GWI y GWB (' + json.nombre + ').');
+    }
     // F5-I7: los dos tamaños del par, a la vista en el Editor
     // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del
     // panel (informarTamanos la reparte; sin deduplicación, la línea
@@ -4695,12 +4703,6 @@ const BaseDescomponer = (() => {
       componerPantalla = true;
       pintarPantallaAutoria();
     }
-  }
-
-  /** Resolución {ancho, alto} del setup en uso (o null sin setup). */
-  function resolucionDeSetup() {
-    const p = BaseDirector.pantallaDeSetup();
-    return p ? { ancho: p.ancho, alto: p.alto } : null;
   }
 
   /**
@@ -4753,16 +4755,18 @@ const BaseDescomponer = (() => {
       ultimoOp: ultimoOp
     };
 
-    const orig = cartuchoActual || {};
+    // F5-I12: nombre, estilo, resolución, imágenes y botones son los de
+    // la FICHA de la pestaña Cartucho (completados con el setup).
+    const ficha = BaseFicha.datosCartucho();
     const segs = segmentos();
     const json = {
       tipo: 'GWI',
       version: 1,
-      nombre: orig.nombre || null,
-      estilo: orig.estilo || null,
-      // Resolución de la máquina con la que se genera el GWC (obligatoria
-      // en el GWI, autosuficiente): la «pantalla» del GWS en uso.
-      resolucion: resolucionDeSetup(),
+      nombre: ficha.nombre || null,
+      estilo: ficha.estilo || null,
+      // Resolución (obligatoria en el GWI, autosuficiente): la de la
+      // ficha o, si está vacía, la del GWS en uso.
+      resolucion: ficha.resolucion || null,
       // Código GWC del par (F5-I6): el código «#HHHH#» del GWC,
       // AUSENTE cuando no lo hay (el GWI no lleva sobras). Solo lo
       // estampa «Generar GWI+GWC», con el código del GWC recién
@@ -4773,8 +4777,8 @@ const BaseDescomponer = (() => {
       // carga sin su GWB. img_s/img_f/img_m se copian TAL CUAL (cierre
       // de la F5-I9: el GWI declara todo lo que declara el GWB) y
       // guardarGWIEnDisco incluye en el ZIP cada una de las declaradas.
-      imagenes: orig.imagenes || null,
-      botones: orig.botones || undefined,
+      imagenes: ficha.imagenes,
+      botones: ficha.botones.length > 0 ? ficha.botones : undefined,
       // Mecanismo de fin de partida (F3-I11, v12.5): PROPIEDAD DEL
       // CARTUCHO, al nivel superior — no un segmento tipo 7.
       fin: finDelCartucho() || undefined,
@@ -4795,8 +4799,8 @@ const BaseDescomponer = (() => {
       segmentos: segs,
       autoria: autoria
     };
-    if (!orig.imagenes || !orig.imagenes.img_s) {
-      console.warn('[guardar] el GWB original no declaraba imagenes.img_s: ' +
+    if (!ficha.imagenes.img_s) {
+      console.warn('[guardar] la ficha no tiene img_s: ' +
         'el GWI no podrá re-editarse sin esa referencia.');
     }
     return json;
@@ -4807,7 +4811,7 @@ const BaseDescomponer = (() => {
    * elige el usuario, donde ya viven img_f, img_s y el GWB): los
    * sprites se escriben junto a las imágenes de base en segmentos/ y
    * cartucho_gwi.json es un cartucho COMPLETO — copia imagenes y
-   * botones del cartucho original (cartuchoActual) — por lo que carga
+   * botones de la FICHA del cartucho (F5-I12) — por lo que carga
    * de forma autónoma sin depender de su GWB. El fichero ZIP lo
    * escribe BaseCartucho.guardarGWI (F5-I4); aquí queda la
    * verificación previa, el montaje del GWI y el repintado del
@@ -4820,21 +4824,22 @@ const BaseDescomponer = (() => {
     // del cartucho en edición (cartuchoActual). Sin ese cartucho en
     // memoria saldría un GWI con estilo null que NO cargaría. Bloqueo
     // explícito (nunca en silencio): recargar el GWB lo repone.
-    if (!cartuchoActual || !cartuchoActual.estilo || !cartuchoActual.imagenes) {
-      console.error('[guardar] cartucho en edición perdido: estilo=' +
-        (cartuchoActual ? cartuchoActual.estilo : 'null') +
-        ', imagenes=' + (cartuchoActual && cartuchoActual.imagenes ?
-          'ok' : 'null') + '.');
-      BaseDirector.avisarError('El GWI copia estilo/imagenes/botones del cartucho ' +
-        'cargado, pero no está en memoria: recarga el cartucho ' +
-        '(GWB o GWI) y vuelve a guardar.');
+    // F5-I12: esos datos salen de la FICHA de la pestaña Cartucho, que
+    // se verifica antes de escribir nada.
+    const ficha = BaseFicha.verificar({ generar: true, mostrar: true });
+    for (const a of ficha.avisos) console.warn('[ficha] ' + a);
+    if (ficha.errores.length > 0) {
+      for (const e of ficha.errores) console.error('[ficha] ' + e);
+      BaseDirector.avisarError('La ficha del cartucho tiene ' + ficha.errores.length +
+        ' error(es): ' + ficha.errores[0] + ' (pestaña Cartucho).');
       return;
     }
+    const imagenesFicha = BaseFicha.imagenesEnMemoria();
     // El módulo de cartuchos gestiona JSZip, los avisos de inicio y
     // fin, y el bloqueo del botón mientras el ZIP se escribe.
     const tamGWI = await BaseCartucho.guardarGWI(montarGWI(), sprites,
-      BaseDirector.imagenFondo(), BaseDirector.imagenSegmentos(),
-      BaseDirector.imagenPortada(), nAvisos);
+      imagenesFicha.img_f, imagenesFicha.img_s,
+      imagenesFicha.img_m, nAvisos);
     if (tamGWI) {
       // F5-I7: el tamaño del GWI nuevo; el GWC anterior ya no es su
       // pareja, así que su tamaño deja de mostrarse.
@@ -5056,6 +5061,7 @@ const BaseDescomponer = (() => {
     pintarFondoAparato: pintarFondoAparato,
     pintarSegmentoAparato: pintarSegmentoAparato,
     pintarGWI: pintarGWI,
+    repintarAparato: pintarPantallaAutoria,       // F5-I12: tras cambiar img_f en la ficha
     pintarListaSegmentos: pintarListaSegmentos,   // F5-I7
     resumen: resumen,                             // F5-I7: panel del Editor
     segmentos: segmentos,

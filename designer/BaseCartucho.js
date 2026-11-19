@@ -285,9 +285,11 @@ var BaseCartucho = (function () {
       if (typeof json.estilo !== 'string' || json.estilo === '') {
         return 'el "estilo" del cartucho no es válido.';
       }
-      if (json.estilo !== estiloMaquina) {
+      // Un cartucho de MENOS botones se juega en una máquina con más
+      // (un juego de 2 botones en una máquina de 4); al revés, no.
+      if (Number(json.estilo) > Number(estiloMaquina)) {
         return 'el cartucho es para una máquina de estilo ' + json.estilo +
-          ' y el setup es de estilo ' + estiloMaquina + '.';
+          ' y el setup es de estilo ' + estiloMaquina + ' (menos botones).';
       }
     }
     // resolucion {ancho, alto}: OPCIONAL en el GWB (si falta se usa la
@@ -2203,7 +2205,7 @@ var BaseCartucho = (function () {
 
     return {
       estilo: String(generales.estilo),
-      pantalla: { ancho: generales.ancho, alto: generales.alto },
+      resolucion: { ancho: generales.ancho, alto: generales.alto },
       fondo: generales.fondo,
       pausas: configuracion.pausas,
       aceleracion: configuracion.aceleracion,

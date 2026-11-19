@@ -4,36 +4,51 @@
 // ==================================================
 //
 // PROPÓSITO
-//   La pestaña «Cartucho» (F5-I10): la ficha del cartucho con sus
-//   datos editables. PRIMERA FASE: la ficha nace EN BLANCO y se edita
-//   a mano; todavía no se rellena desde el GWS/GWB/GWI cargados ni se
-//   guarda (segunda fase: poblar() y el botón «Guardar GWB»).
+//   La pestaña «Cartucho» (F5-I10/F5-I12): la ficha del cartucho, FUENTE
+//   ÚNICA de sus datos (nombre, estilo, resolución, imágenes y botones).
+//   Todo lo que se carga la rellena (poblar) y todo lo que se guarda
+//   sale de ella: el GWB directamente y el GWI/GWC a través de
+//   datosCartucho. Con segmentos en memoria la imagen img_s se bloquea
+//   (los segmentos salen de ella).
 //
 // QUÉ MUESTRA
-//   - Datos del GWB: nombre, estilo y resolución (ancho × alto). En un
-//     GWB estilo y resolución son OPCIONALES (si faltan, manda el GWS).
+//   - Datos del cartucho: nombre, estilo y resolución (ancho × alto). En
+//     un GWB estilo y resolución son OPCIONALES (si faltan, manda el
+//     GWS); en el GWI/GWC se completan con los del setup cargado.
 //   - Imágenes: una tarjeta por img_s (obligatoria), img_f e img_m
 //     (opcionales) con miniatura, nombre, tamaño y los botones
-//     «Cargar…» y «Borrar». Cualquier imagen puede borrarse para
-//     volver a cargarla.
+//     «Cargar…» y «Borrar».
 //   - Botones: la tabla de los botones posibles según el estilo
 //     elegido (incluido el trío de sistema A/B/R, 6-7-8), con «Usado» e «id».
 //
 // SEPARACIÓN
-//   No conoce al director ni al descomponedor: solo pinta y guarda el
-//   estado de la ficha en el DOM y en variables propias. El director
-//   llama a pintar() al entrar en la pestaña (la ficha se construye
-//   UNA vez y conserva lo escrito entre visitas).
+//   No conoce al descomponedor: solo pinta y guarda el estado de la
+//   ficha en el DOM y en variables propias. El director la rellena
+//   (poblar, ponerImagen), le dice cuándo bloquear img_s
+//   (bloquearImgS) y se suscribe a los cambios de imagen
+//   (alCambiarImagen). La ficha se construye UNA vez y conserva lo
+//   escrito entre visitas.
 //
 // FUNCIONES
-//   pintar            Construye la ficha (la primera vez) en el contenedor.
-//   estado            Lee los datos de la ficha como un objeto GWB parcial.
-//   verificar         Comprueba que la ficha esté completa y correcta.
-//   guardar           Verifica y, si todo está bien, genera cartucho_gwb.zip.
-//   reiniciar         Deja la ficha en blanco.
-//   botonesDelEstilo  Números de botón posibles de un estilo.
-//   (internas)        estiloEfectivo, montarGWB, pintarMensajes, crearTarjetaImagen, cargarImagen, borrarImagen,
-//                     pintarTablaBotones, campo.
+//  Pantalla
+//   pintar             Construye la ficha (la primera vez) en el contenedor.
+//   reiniciar          Deja la ficha en blanco.
+//   poblar             Rellena campos, botones e imágenes desde una carga.
+//   ponerImagen        Pone (o quita) una imagen sin avisar al director.
+//   bloquearImgS       Bloquea/desbloquea cargar y borrar img_s.
+//   alCambiarImagen    Registra quién se entera de los cambios del usuario.
+//  Lectura
+//   estado             Lee los datos de la ficha tal cual (sin completar).
+//   datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
+//   imagenesEnMemoria  Las tres imágenes {img_s, img_f, img_m}.
+//   botonesDelEstilo   Números de botón posibles de un estilo.
+//  Verificación y GWB
+//   verificar          Comprueba que la ficha esté completa y correcta.
+//   guardar            Verifica y, si todo está bien, genera cartucho_GWB.
+//  Internas
+//   asegurar, estiloEfectivo, montarGWB, pintarMensajes, pixelesNoBN,
+//   crearTarjetaImagen, cargarImagen, colocarImagen, vaciarImagen,
+//   refrescarBotonesImagen, miniaturaDe, pintarTablaBotones, campo.
 
 const BaseFicha = (function () {
 
@@ -70,6 +85,9 @@ const BaseFicha = (function () {
   let idsBoton = {};              // número → {usado, id} (sobrevive al cambio de estilo)
   let cuerpoBotones = null;
   let mensajes = null;            // zona de errores/avisos
+  let extras = {};                // combinar/etiquetas del GWB cargado (se conservan al guardar)
+  let imgSBloqueada = false;      // con segmentos en memoria no se cambia img_s
+  let alCambiar = null;           // (clave, imagen|null) tras un cambio del usuario
 
   /**
    * Números de botón de juego posibles de un estilo.
@@ -155,7 +173,7 @@ const BaseFicha = (function () {
 
     imagenes[def.clave] = {
       img: null, nombre: null, url: null,
-      ui: { miniatura, vacio, info, borrar, ayuda: def.ayuda }
+      ui: { miniatura, vacio, info, cargar, borrar, ayuda: def.ayuda }
     };
 
     cargar.addEventListener('click', () => fichero.click());
@@ -163,31 +181,78 @@ const BaseFicha = (function () {
       if (fichero.files && fichero.files[0]) cargarImagen(def.clave, fichero.files[0]);
       fichero.value = '';            // permite volver a elegir el mismo fichero
     });
-    borrar.addEventListener('click', () => borrarImagen(def.clave));
+    borrar.addEventListener('click', () => {
+      vaciarImagen(def.clave);
+      if (alCambiar) alCambiar(def.clave, null);
+    });
     return tarjeta;
   }
 
   /**
-   * Carga un fichero PNG en la tarjeta y lo muestra.
+   * Miniatura (data URL) de una imagen ya cargada: no depende de la
+   * object URL de origen, que el director puede revocar.
+   * @param {HTMLImageElement} img - Imagen cargada.
+   * @returns {string} Data URL PNG.
+   */
+  function miniaturaDe(img) {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return c.toDataURL('image/png');
+  }
+
+  /**
+   * Habilita/deshabilita Cargar y Borrar de una tarjeta: Borrar solo
+   * con imagen, y en img_s ambos se bloquean si hay segmentos.
+   * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
+   * @returns {void}
+   */
+  function refrescarBotonesImagen(clave) {
+    const d = imagenes[clave];
+    if (!d) return;
+    const bloqueada = clave === 'img_s' && imgSBloqueada;
+    d.ui.cargar.disabled = bloqueada;
+    d.ui.borrar.disabled = bloqueada || !d.img;
+    d.ui.cargar.title = bloqueada
+      ? 'Hay segmentos en memoria: img_s no se puede cambiar (carga otro GWB).' : '';
+    d.ui.borrar.title = d.ui.cargar.title;
+  }
+
+  /**
+   * Muestra una imagen ya cargada en su tarjeta.
+   * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
+   * @param {HTMLImageElement} img - Imagen cargada.
+   * @param {string} nombre - Nombre a mostrar.
+   * @param {?string} url - Object URL propia (se libera al sustituirla).
+   * @returns {void}
+   */
+  function colocarImagen(clave, img, nombre, url) {
+    const datos = imagenes[clave];
+    liberar(clave);
+    datos.img = img;
+    datos.nombre = nombre;
+    datos.url = url || null;
+    datos.ui.miniatura.src = miniaturaDe(img);
+    datos.ui.miniatura.classList.remove('oculto');
+    datos.ui.vacio.classList.add('oculto');
+    datos.ui.info.textContent = nombre + ' — ' +
+      img.naturalWidth + '×' + img.naturalHeight + ' px';
+    refrescarBotonesImagen(clave);
+  }
+
+  /**
+   * Carga un fichero PNG elegido por el usuario en la tarjeta, lo
+   * muestra y avisa del cambio.
    * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
    * @param {File} fichero - El PNG elegido.
    * @returns {void}
    */
   function cargarImagen(clave, fichero) {
-    const datos = imagenes[clave];
     const url = URL.createObjectURL(fichero);
     const img = new Image();
     img.onload = () => {
-      liberar(clave);
-      datos.img = img;
-      datos.nombre = fichero.name;
-      datos.url = url;
-      datos.ui.miniatura.src = url;
-      datos.ui.miniatura.classList.remove('oculto');
-      datos.ui.vacio.classList.add('oculto');
-      datos.ui.info.textContent = fichero.name + ' — ' +
-        img.naturalWidth + '×' + img.naturalHeight + ' px';
-      datos.ui.borrar.disabled = false;
+      colocarImagen(clave, img, fichero.name, url);
+      if (alCambiar) alCambiar(clave, img);
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
@@ -206,12 +271,12 @@ const BaseFicha = (function () {
   }
 
   /**
-   * Borra la imagen de una tarjeta para poder cargar otra. (Guardar un
-   * GWB sin img_s será un error, pero se avisa al guardar, no aquí.)
+   * Quita la imagen de una tarjeta (sin avisar al director). Guardar un
+   * GWB sin img_s es un error, pero se avisa al guardar, no aquí.
    * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
    * @returns {void}
    */
-  function borrarImagen(clave) {
+  function vaciarImagen(clave) {
     const datos = imagenes[clave];
     liberar(clave);
     datos.img = null;
@@ -220,7 +285,7 @@ const BaseFicha = (function () {
     datos.ui.miniatura.classList.add('oculto');
     datos.ui.vacio.classList.remove('oculto');
     datos.ui.info.textContent = datos.ui.ayuda;
-    datos.ui.borrar.disabled = true;
+    refrescarBotonesImagen(clave);
   }
 
   // ---------------- Botones ----------------
@@ -344,7 +409,7 @@ const BaseFicha = (function () {
   function pintarMensajes(errores, avisos) {
     mensajes.textContent = '';
     if (errores.length > 0) {
-      mensajes.appendChild(el('strong', 'fichaError', 'El GWB no se guarda:'));
+      mensajes.appendChild(el('strong', 'fichaError', 'La ficha tiene errores:'));
     }
     const lista = el('ul');
     for (const t of errores) lista.appendChild(el('li', 'fichaError', t));
@@ -375,10 +440,16 @@ const BaseFicha = (function () {
 
   /**
    * Comprueba que la ficha esté completa y sea correcta.
+   * @param {{generar:boolean, mostrar:boolean}} [opciones] - generar:
+   *        comprobaciones de GWI/GWC (el estilo del cartucho no puede
+   *        pedir más botones que la máquina); mostrar: pinta los
+   *        hallazgos en la ficha.
    * @returns {{errores:string[], avisos:string[]}} Los hallazgos.
    */
-  function verificar() {
+  function verificar(opciones) {
+    const opt = opciones || {};
     const errores = [], avisos = [];
+    asegurar();
     const e = estado();
     const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
       ? BaseDirector.estiloDeSetup() : null;
@@ -391,9 +462,12 @@ const BaseFicha = (function () {
     const estilo = e.estilo || delSetup;
     if (!estilo) {
       errores.push('No hay estilo: elígelo en la ficha o carga un setup.');
-    } else if (e.estilo && delSetup && e.estilo !== delSetup) {
-      avisos.push('El estilo de la ficha (' + e.estilo + ') difiere del setup cargado (' +
-        delSetup + ').');
+    } else if (e.estilo && delSetup && Number(e.estilo) > Number(delSetup)) {
+      // Un cartucho de MENOS botones se juega en una máquina con más; al
+      // revés no. Para generar GWI/GWC es un error; para el GWB, un aviso.
+      const msg = 'El cartucho es de estilo ' + e.estilo + ' y el setup cargado de estilo ' +
+        delSetup + ' (menos botones): no se podría jugar.';
+      if (opt.generar) errores.push(msg); else avisos.push(msg);
     }
 
     // Resolución (opcional): las dos medidas o ninguna.
@@ -405,7 +479,9 @@ const BaseFicha = (function () {
     } else if (e.resolucion && pantalla &&
       (pantalla.ancho !== e.resolucion.ancho || pantalla.alto !== e.resolucion.alto)) {
       avisos.push('La resolución de la ficha (' + e.resolucion.ancho + '×' + e.resolucion.alto +
-        ') difiere de la del setup (' + pantalla.ancho + '×' + pantalla.alto + ').');
+        ') difiere de la del setup (' + pantalla.ancho + '×' + pantalla.alto + ')' +
+        (opt.generar ? ': el GWC se genera a la pantalla del setup (escalar a la ' +
+          'resolución de la ficha queda pendiente).' : '.'));
     }
 
     // Imágenes: img_s obligatoria. Los tamaños pueden diferir (img_s
@@ -441,6 +517,15 @@ const BaseFicha = (function () {
       vistos.add(clave);
     }
     if (e.botones.length === 0) avisos.push('El cartucho no declara botones: se usarán los del setup.');
+    // Validación del contrato del GWB (la misma que al cargarlo). El
+    // mapa de ficheros se monta aquí con las imágenes en memoria.
+    if (errores.length === 0) {
+      const json = montarGWB();
+      const mapa = new Map(Object.values(json.imagenes).map(n => [n, true]));
+      const fallo = BaseCartucho.validarGWB(json, mapa, json.estilo || delSetup);
+      if (fallo) errores.push('Validación del GWB: ' + fallo);
+    }
+    if (opt.mostrar) pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos };
   }
 
@@ -457,6 +542,9 @@ const BaseFicha = (function () {
     if (e.imagenes.img_f) json.imagenes.img_f = 'img_f.png';
     if (e.imagenes.img_m) json.imagenes.img_m = 'img_m.png';
     json.botones = e.botones;
+    for (const k of ['combinar', 'etiquetas']) {
+      if (extras[k] !== undefined) json[k] = extras[k];
+    }
     return json;
   }
 
@@ -467,16 +555,8 @@ const BaseFicha = (function () {
    * @returns {Promise<boolean>} true si se guardó.
    */
   async function guardar() {
-    if (!raiz) return false;
-    const { errores, avisos } = verificar();
-    if (errores.length === 0) {
-      const json = montarGWB();
-      const mapa = new Map(Object.values(json.imagenes).map(n => [n, true]));
-      const delSetup = BaseDirector.estiloDeSetup();
-      const fallo = BaseCartucho.validarGWB(json, mapa, json.estilo || delSetup);
-      if (fallo) errores.push('Validación del GWB: ' + fallo);
-    }
-    pintarMensajes(errores, avisos);
+    asegurar();
+    const { errores } = verificar({ mostrar: true });
     if (errores.length > 0) {
       BaseDirector.avisarError('El GWB no se guarda: ' + errores.length +
         (errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
@@ -501,18 +581,28 @@ const BaseFicha = (function () {
       raiz = contenedor;
       campos = {}; imagenes = {}; idsBoton = {};
       construir(contenedor);
+      refrescarBotonesImagen('img_s');
     } else {
       pintarTablaBotones();           // el setup pudo cambiar desde la última visita
     }
   }
 
   /**
-   * Lee la ficha como un GWB parcial (sin validar).
+   * Construye la ficha si aún no existe (el director puede poblarla
+   * antes de que el usuario abra la pestaña).
+   * @returns {void}
+   */
+  function asegurar() {
+    if (!raiz) pintar(document.getElementById('fichaCartucho'));
+  }
+
+  /**
+   * Lee la ficha tal cual está (sin completar con el setup).
    * @returns {{nombre:string, estilo:?string, resolucion:?Object,
    *   imagenes:Object, botones:Array}} Datos de la ficha.
    */
   function estado() {
-    if (!raiz) return null;
+    asegurar();
     pintarTablaBotones();             // vuelca lo escrito en idsBoton
     const ancho = parseInt(campos.ancho.value, 10);
     const alto = parseInt(campos.alto.value, 10);
@@ -533,23 +623,150 @@ const BaseFicha = (function () {
     };
   }
 
-  /** Deja la ficha en blanco. */
+  /**
+   * Datos de la ficha para guardar el GWI/GWC: lo de la ficha,
+   * completado con el setup cuando falta (estilo y resolución son
+   * obligatorios en el GWI). Los nombres de imagen son los del fichero
+   * que se escribe (img_s.png, img_f.png, img_m.png).
+   * @returns {{nombre:string, estilo:string, resolucion:?Object,
+   *   imagenes:Object, imgs:Object, botones:Array, extras:Object}}
+   */
+  function datosCartucho() {
+    const e = estado();
+    const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
+      ? BaseDirector.estiloDeSetup() : null;
+    const pantalla = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
+      ? BaseDirector.pantallaDeSetup() : null;
+    const nombres = {};
+    for (const d of IMAGENES) if (e.imagenes[d.clave]) nombres[d.clave] = d.clave + '.png';
+    return {
+      nombre: e.nombre,
+      estilo: e.estilo || delSetup,
+      resolucion: e.resolucion || pantalla,
+      imagenes: nombres,
+      imgs: imagenesEnMemoria(),
+      botones: e.botones,
+      extras: Object.assign({}, extras)
+    };
+  }
+
+  /**
+   * Las tres imágenes de la ficha (null si no hay).
+   * @returns {{img_s:?HTMLImageElement, img_f:?HTMLImageElement,
+   *   img_m:?HTMLImageElement}} Imágenes en memoria.
+   */
+  function imagenesEnMemoria() {
+    asegurar();
+    const o = {};
+    for (const d of IMAGENES) o[d.clave] = imagenes[d.clave].img;
+    return o;
+  }
+
+  /**
+   * Deja la ficha en blanco (el director lo llama antes de poblar una
+   * carga nueva).
+   * @returns {void}
+   */
   function reiniciar() {
-    if (!raiz) return;
-    for (const d of IMAGENES) { borrarImagen(d.clave); }
+    asegurar();
+    for (const d of IMAGENES) vaciarImagen(d.clave);
     idsBoton = {};
+    extras = {};
     campos.nombre.value = '';
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
+    cuerpoBotones.textContent = '';
     pintarTablaBotones();
     if (mensajes) mensajes.textContent = '';
   }
 
+  /**
+   * Rellena la ficha desde una carga (GWS, GWB o GWI). Solo toca lo que
+   * viene definido; el director llama antes a reiniciar().
+   * @param {{nombre:?string, estilo:?(string|number), resolucion:?Object,
+   *   botones:?Array<{numero:(string|number), id:?string}>,
+   *   imagenes:?Object, extras:?Object}} d - Datos a mostrar.
+   * @returns {void}
+   */
+  function poblar(d) {
+    asegurar();
+    if (d.nombre !== undefined) campos.nombre.value = d.nombre || '';
+    if (d.estilo !== undefined) {
+      const v = d.estilo === null ? '' : String(d.estilo);
+      campos.estilo.value = v;
+      if (campos.estilo.value !== v) campos.estilo.value = '';   // valor no listado
+    }
+    if (d.resolucion !== undefined) {
+      const r = d.resolucion;
+      campos.ancho.value = r && r.ancho ? r.ancho : '';
+      campos.alto.value = r && r.alto ? r.alto : '';
+    }
+    if (d.botones !== undefined) {
+      idsBoton = {};
+      for (const b of d.botones || []) {
+        idsBoton[String(b.numero)] = { usado: true, id: b.id ? String(b.id) : '' };
+      }
+      cuerpoBotones.textContent = '';   // que no pise lo recién cargado
+    }
+    pintarTablaBotones();
+    if (d.imagenes) {
+      for (const [clave, img] of Object.entries(d.imagenes)) {
+        if (img && imagenes[clave]) ponerImagen(clave, img, clave + '.png');
+      }
+    }
+    if (d.extras) extras = Object.assign({}, d.extras);
+    if (mensajes) mensajes.textContent = '';
+  }
+
+  /**
+   * Pone (o quita, con null) una imagen en su tarjeta desde el
+   * director (p. ej. la portada, que carga después, sin bloquear).
+   * No avisa de cambio: es la ficha reflejando lo cargado.
+   * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
+   * @param {?HTMLImageElement} img - Imagen o null.
+   * @param {string} [nombre] - Nombre a mostrar (por defecto clave.png).
+   * @returns {void}
+   */
+  function ponerImagen(clave, img, nombre) {
+    asegurar();
+    if (!imagenes[clave]) return;
+    if (img) colocarImagen(clave, img, nombre || clave + '.png', null);
+    else vaciarImagen(clave);
+  }
+
+  /**
+   * Bloquea o desbloquea Cargar y Borrar de img_s (con segmentos en
+   * memoria, los segmentos salen de ella).
+   * @param {boolean} bloquear - true para bloquear.
+   * @returns {void}
+   */
+  function bloquearImgS(bloquear) {
+    imgSBloqueada = !!bloquear;
+    if (raiz) refrescarBotonesImagen('img_s');
+  }
+
+  /**
+   * Registra quién se entera de los cambios de imagen hechos por el
+   * usuario (Cargar o Borrar).
+   * @param {function(string, ?HTMLImageElement):void} fn - Recibe la
+   *        clave y la imagen nueva (null si se borró).
+   * @returns {void}
+   */
+  function alCambiarImagen(fn) {
+    alCambiar = fn;
+  }
+
   return {
     pintar: pintar,
-    estado: estado,
     reiniciar: reiniciar,
+    poblar: poblar,
+    ponerImagen: ponerImagen,
+    bloquearImgS: bloquearImgS,
+    alCambiarImagen: alCambiarImagen,
+    estado: estado,
+    datosCartucho: datosCartucho,
+    imagenesEnMemoria: imagenesEnMemoria,
     verificar: verificar,
     guardar: guardar,
     botonesDelEstilo: botonesDelEstilo

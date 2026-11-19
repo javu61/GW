@@ -611,6 +611,11 @@ var BaseDirector = (function () {
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
     aplicarSetup();
+    // F5-I12: la ficha del cartucho recibe del GWS el estilo, la
+    // resolución (su «resolucion») y, con el estilo, los botones
+    // posibles de la tabla (los ids son del cartucho: quedan vacíos).
+    BaseFicha.reiniciar();
+    BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion });
   }
 
   // ---------------- Panel de información (F5-I7) ----------------
@@ -894,7 +899,24 @@ var BaseDirector = (function () {
       // img_m: portada para la futura pantalla de selección de juegos.
       // El módulo la carga en paralelo, sin bloquear, y de momento no
       // se muestra.
-      leido.imgM.then(img => { imgM = img; });
+      // F5-I12: la ficha del cartucho se rellena con TODO lo que trae
+      // el GWB/GWI (la portada, cuando termine de cargar).
+      BaseFicha.reiniciar();
+      BaseFicha.poblar({
+        nombre: json.nombre,
+        estilo: json.estilo,
+        resolucion: json.resolucion,
+        botones: (json.botones || []).map(b => ({
+          numero: normalizarNumeroBoton(b.numero), id: b.id
+        })),
+        imagenes: { img_s: imgS, img_f: imgF },
+        extras: Object.fromEntries(['combinar', 'etiquetas']
+          .filter(k => json[k] !== undefined).map(k => [k, json[k]]))
+      });
+      leido.imgM.then(img => {
+        imgM = img;
+        BaseFicha.ponerImagen('img_m', img);
+      });
 
       pintarInfo();
       // Arriba indica la última operación realizada (con el tipo de
@@ -989,9 +1011,10 @@ var BaseDirector = (function () {
       leido = BaseCartucho.leerGWC(new Uint8Array(await fichero.arrayBuffer()));
       // La máquina manda, como con el JSON: el estilo del Bloque 0
       // debe ser el del setup cargado.
-      if (setupGWS && String(leido.estilo) !== String(setupGWS.estilo)) {
+      // (Un GWC de menos botones se juega en una máquina con más.)
+      if (setupGWS && Number(leido.estilo) > Number(setupGWS.estilo)) {
         throw new Error('el GWC es de estilo ' + leido.estilo +
-          ' y la máquina cargada es de estilo ' + setupGWS.estilo + '.');
+          ' y la máquina cargada es de estilo ' + setupGWS.estilo + ' (menos botones).');
       }
     } catch (e) {
       avisarError('Cartucho NO cargado: ' + e.message +
@@ -1231,7 +1254,34 @@ var BaseDirector = (function () {
     if (id === 'vistaSprites') BaseDescomponer.pintarListaSegmentos($('listaSegmentos'));
     // F5-I10: la ficha del cartucho se repinta al ENTRAR en la pestaña
     // (así siempre refleja el estado vigente del cartucho en memoria).
-    if (id === 'vistaCartucho') BaseFicha.pintar($('fichaCartucho'));
+    if (id === 'vistaCartucho') {
+      // Con segmentos en memoria, img_s no se cambia (salen de ella).
+      BaseFicha.bloquearImgS(BaseDescomponer.resumen().segmentos > 0 ||
+        BaseDescomponer.segmentosEnMemoria().length > 0);
+      BaseFicha.pintar($('fichaCartucho'));
+    }
+  }
+
+  /**
+   * Un cambio de imagen hecho por el usuario en la ficha (Cargar o
+   * Borrar): el director actualiza su copia y lo que se pinta. img_s
+   * solo llega aquí sin segmentos en memoria (con ellos, bloqueada).
+   * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
+   * @param {?HTMLImageElement} img - Imagen nueva (null si se borró).
+   * @returns {void}
+   */
+  function alCambiarImagenFicha(clave, img) {
+    if (clave === 'img_s') {
+      imgS = img;
+    } else if (clave === 'img_m') {
+      imgM = img;
+    } else if (clave === 'img_f') {
+      imgF = img;
+      BaseGraficos.fijarFondo(img);
+      ComunListas.fijarFondo(img);
+      if (editable) BaseDescomponer.repintarAparato();
+      else if (cartucho) pintarFondoCartucho(img);
+    }
   }
 
   /**
@@ -1454,6 +1504,7 @@ var BaseDirector = (function () {
     $('btnDeshacer').addEventListener('click', () => BaseDescomponer.deshacer());
     $('btnRehacer').addEventListener('click', () => BaseDescomponer.rehacer());
     BaseDescomponer.inicializar();                 // el clic del mapa, cableado por BaseDescomponer.js
+    BaseFicha.alCambiarImagen(alCambiarImagenFicha);   // F5-I12
     $('ficheroSetup').addEventListener('change', alSeleccionarSetup);
     $('carpetaCartucho').addEventListener('change', alSeleccionarCartucho);
     $('ficheroGWBZip').addEventListener('change', alSeleccionarGWBZip);

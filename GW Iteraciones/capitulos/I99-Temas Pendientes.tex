@@ -78,9 +78,71 @@ como posibles ampliaciones:
 \section*{Temas pendientes}
 \begin{itemize}
 
+	\item P10 : Rellenar la pestaña Cartucho: Vamos a cargar en la pestaña "cartucho", al cargar GWS resolución y botones, GWB todo lo posible, GWI todo lo posible, y al guardar el GWI/GWC debe usar la información de esa pestaña, que para eso está entre otras cosas. Quizá el botón GWI+GWC debe guardar GWB/GWI/GWC siempre para que vayan de la mano sin problemas. Y poder crear también un GWS
+	\begin{itemize}
+		\item a. Al cargar un GWB o GWI: la ficha recibe nombre, estilo, resolución, las tres imágenes (ya están en memoria en el director) y los botones declarados. Antes de rellenar se reinicia, para que no queden restos del cartucho anterior.
+		
+		\item b. Al cargar un GWS: la ficha sigue en blanco, para que estilo y resolución del GWB sigan siendo opcionales. El estilo y la pantalla del setup se muestran solo como texto de ayuda (“si se deja vacío: 4 botones, 320×240”). La tabla de botones ya usa el estilo del setup.
+		
+		\item c. Guardar GWB desde la ficha: ya existe. Al venir de un GWI cargado, guarda solo lo propio del GWB, sin sprites ni segmentos.
+		
+		\item d. P03 (resolución): se cierra aquí. Con img\_f opcional, los tamaños solo avisan, el GWC escala, y la resolución del GWI sale del setup. Falta dejarlo escrito.
+	\end{itemize}
+	
+		\item Tres riesgos que conviene decidir ya
+	
+		\begin{itemize}
+			\item img\_s y la autoría. Los segmentos y sus propiedades salen de img\_s. Si cambias o borras img\_s en la ficha con un GWI cargado en el editor, los segmentos quedan incoherentes. Propongo bloquear img\_s mientras haya un cartucho en el editor (“para cambiarla, carga otro GWB”), y dejar img\_f e img\_m libres. Sin cartucho cargado, img\_s se puede cambiar o borrar como ahora.
+			\item Estilo de la ficha distinto al del setup. Con otro estilo, el GWC no se podría probar en el simulador. Propongo error bloqueante al generar, y para el GWB solo aviso, como hasta ahora.
+			\item Resolución del GWC. Si la ficha declara una resolución distinta de la pantalla del setup, ¿el GWC se escala a la de la ficha o a la del setup? Yo usaría la de la ficha y avisaría de la diferencia.
+		\end{itemize}
+
+
+	\item Orden de trabajo:
+		\begin{itemize}
+			\item poblar() en la ficha y las llamadas desde el director al cargar GWS, GWB y GWI.
+			\item Que montarGWI y el GWC lean de la ficha, con la verificación previa.
+			\item Que “Generar” guarde también el GWB.
+			\item Bloqueo de img\_s con cartucho en el editor.
+		\end{itemize}
+	
+	\item P11. Comprobar REVISION\_CODIGO.md contra el código actual 
+	\begin{itemize}
+		\item Es del 06-11 y desde entonces hemos tocado las teclas, Pausa/Stop y la carga de cartuchos. Algunos puntos ya estarán resueltos, por ejemplo el \#1 (salir de partida) y buena parte del \#2.
+		
+		\item Haría una pasada rápida para marcar cuáles siguen vivos y dejar solo los que cuentan, con prioridad a los críticos (\#3 azar, \#4 rangos del GWC y \#5 el GWC huérfano).
+	\end{itemize}
+	
+	\item P12. Actualizar la documentación
+	\begin{itemize}
+		\item F5-I10 con las correcciones del LaTeX que apunté (A/B/R, resolución opcional u obligatoria, tests).
+		
+		\item F5-I11, que ya tienes en borrador.
+		
+		\item I99, que tiene líneas que ya no son ciertas: el trío A/B/R sí aparece en la pestaña Cartucho, y “el generador gráfico que pueda definir los cartuchos GWB” es justo lo que hemos hecho.
+		
+		\item P02 de “Temas pendientes” está hecho (F5-I9).
+	\end{itemize}
+
+
+
+
+
+
+	
+	\item P13. Cabeceras de Juego*.js (P05) y anexo de formatos (P04) 
+	
+	
+	\item P14. Fase 6 (ESP32, P06 y P07): Va después de cerrar el editor. El selector de cartuchos (P07) es donde la portada img\_m encuentra uso.
+	
+	
+
+	
+	
+	
 	\item P02 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
 	
-	\item P03 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
+	\item P03 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img\_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img\_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
 	
 	\item P04 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
 	
@@ -88,9 +150,9 @@ como posibles ampliaciones:
 	
 	\item P06 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
 	
-	\item P07 — Selector de cartuchos: la portada img_m ya carga sin usar; aquí encuentra su sitio.
+	\item P07 — Selector de cartuchos: la portada img\_m ya carga sin usar; aquí encuentra su sitio.
 	
-	\item P08 y siguientes — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
+	\item P08 — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
 
 
 \end{itemize}

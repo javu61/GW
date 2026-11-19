@@ -102,8 +102,8 @@ var BaseDirector = (function () {
 
   // ---------------- Estado privado del BaseDirector ----------------
 
-  let GWS_setup = null;                   // JSON del hardware leído
-  let GWC_cartucho = null;                // JSON del cartucho leído
+  let setupGWS = null;                       // JSON del hardware leído
+  let cartucho = null;                    // JSON del cartucho leído
   let pestanaVista = 'vistaSimulador';    // vista activa (la fija mostrarPestanna)
   let imgM = null;                        // portada (img_m): cargada pero aún sin uso visual
   let imgF = null;                        // fondo (img_f): guardado en memoria para el motor gráfico
@@ -247,40 +247,40 @@ var BaseDirector = (function () {
    * Valida el JSON del setup: tipo GW, versión 1.1, estilo conocido,
    * pantalla con dimensiones enteras y botones bien declarados.
    * Avisa en consola (sin bloquear) de números fuera de 0-8 o duplicados.
-   * @param {Object} GWS_json - JSON del setup leído.
+   * @param {Object} jsonGWS - JSON del setup leído.
    * @returns {?string} null si es válido, o el mensaje de error.
    */
-  function validarSetup(GWS_json) {
-    if (!GWS_json || typeof GWS_json !== 'object' || Array.isArray(GWS_json)) {
+  function validarSetup(jsonGWS) {
+    if (!jsonGWS || typeof jsonGWS !== 'object' || Array.isArray(jsonGWS)) {
       return 'el setup no es un objeto JSON.';
     }
-    const resolucion = GWS_json.resolucion;
-    if (!resolucion) {
-      return 'el setup no ha podido cargarse.';
+    const res = jsonGWS.resolucion;
+    if (!res) {
+      return 'el setup no ha podido cargarse, no tiene informada la "resolución".';
     }
-    if (GWS_json.tipo !== GWS_TIPO) {
+    if (jsonGWS.tipo !== GWS_TIPO) {
       return 'no es un fichero de setup GWS: "tipo" es "' +
-        (GWS_json.tipo === undefined ? '(falta)' : GWS_json.tipo) + '", se espera "' + GWS_TIPO + '".';
+        (jsonGWS.tipo === undefined ? '(falta)' : jsonGWS.tipo) + '", se espera "' + GWS_TIPO + '".';
     }
-    if (GWS_json.version !== GWS_VERSION) {
+    if (jsonGWS.version !== GWS_VERSION) {
       return 'versión de setup no soportada: "' +
-        (GWS_json.version === undefined ? '(falta)' : GWS_json.version) +
+        (jsonGWS.version === undefined ? '(falta)' : jsonGWS.version) +
         '", este motor entiende la "' + GWS_VERSION + '".';
     }
-    if (GWS_json.estilo === undefined || !ESTILOS[GWS_json.estilo]) {
+    if (jsonGWS.estilo === undefined || !ESTILOS[jsonGWS.estilo]) {
       return 'el setup necesita un "estilo" de máquina válido: ' +
         Object.keys(ESTILOS).join(', ') + '.';
     }
-    if (!Number.isInteger(resolucion.ancho) || !Number.isInteger(resolucion.alto) ||
-      resolucion.ancho <= 0 || resolucion.alto <= 0) {
-      return 'el setup necesita un elemento "resolucion" con "ancho" y "alto" enteros positivos.';
+    if (!Number.isInteger(res.ancho) || !Number.isInteger(res.alto) ||
+      res.ancho <= 0 || res.alto <= 0) {
+      return 'el setup necesita un elemento "pantalla" con "ancho" y "alto" enteros positivos.';
     }
-    if (!Array.isArray(GWS_json.botones)) {
+    if (!Array.isArray(jsonGWS.botones)) {
       return 'el setup necesita un array "botones".';
     }
     const vistos = new Set();
     const teclasVistas = new Set();
-    for (const b of GWS_json.botones) {
+    for (const b of jsonGWS.botones) {
       if (!b || b.numero === undefined) return 'cada botón necesita "numero".';
       if (typeof b.numero !== 'string') {
         console.warn('numero sin comillas en el setup, se convierte a texto: ' + b.numero);
@@ -310,7 +310,7 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function limpiarCartucho() {
-    GWC_cartucho = null;
+    cartucho = null;
     editable = false;
     botonesSistema = false;   // F5-I10: fuera el modo sistema del trío
     tamGWI = null;
@@ -445,13 +445,13 @@ var BaseDirector = (function () {
       for (const pos of Object.values(e.botones)) contenedores.add(pos.contenedor);
     }
     for (const id of contenedores) $(id).replaceChildren();
-    const estilo = ESTILOS[GWS_setup.estilo];
-    const declarados = new Map(GWS_setup.botones.map(b => [b.numero, b]));
+    const estilo = ESTILOS[setupGWS.estilo];
+    const declarados = new Map(setupGWS.botones.map(b => [b.numero, b]));
     for (const numero of Object.keys(estilo.botones)) {
       const pos = estilo.botones[numero];
       const decl = declarados.get(numero);
       if (!decl) {
-        console.warn('El estilo ' + GWS_setup.estilo + ' usa el botón ' + numero +
+        console.warn('El estilo ' + setupGWS.estilo + ' usa el botón ' + numero +
           ', que no está declarado en el setup; se crea sin puerto.');
       }
       $(pos.contenedor).appendChild(crearBotonFisico(decl || { numero: numero }, pos));
@@ -459,7 +459,7 @@ var BaseDirector = (function () {
     for (const numero of declarados.keys()) {
       if (!estilo.botones[numero]) {
         console.warn('Botón declarado que no existe en el estilo ' +
-          GWS_setup.estilo + ', se ignora: ' + numero);
+          setupGWS.estilo + ', se ignora: ' + numero);
       }
     }
   }
@@ -473,7 +473,7 @@ var BaseDirector = (function () {
    */
   function normalizarNumeroBoton(numero) {
     const n = String(numero);
-    for (const b of GWS_setup.botones) {
+    for (const b of setupGWS.botones) {
       if (b.alias === n) return b.numero;
     }
     return n;
@@ -524,7 +524,7 @@ var BaseDirector = (function () {
       return 'el cartucho usa ' + (inexistentes.length === 1 ?
         'el botón ' + inexistentes[0] + ', que no existe' :
         'los botones ' + inexistentes.join(', ') + ', que no existen') +
-        ' en la máquina de estilo ' + GWS_setup.estilo + '.';
+        ' en la máquina de estilo ' + setupGWS.estilo + '.';
     }
     // En un GWI el trío A/B/R es del SISTEMA (F5-I10): no lo toca el
     // cartucho, se conserva aunque no lo use.
@@ -546,15 +546,15 @@ var BaseDirector = (function () {
   function aplicarSetup() {
     // Cada estilo es un DISEÑO INDEPENDIENTE: se muestra solo su
     // esqueleto y la pantalla se cuelga en el hueco de ese diseño.
-    const estilo = ESTILOS[GWS_setup.estilo];
+    const estilo = ESTILOS[setupGWS.estilo];
     for (const e of Object.values(ESTILOS)) $(e.esqueleto).classList.add('oculto');
     const esqueleto = $(estilo.esqueleto);
     esqueleto.classList.remove('oculto');
     esqueleto.querySelector('.huecoPantalla').appendChild($('pantalla'));
 
     const canvas = $('pantalla');
-    canvas.width = GWS_setup.resolucion.ancho;
-    canvas.height = GWS_setup.resolucion.alto;
+    canvas.width = setupGWS.resolucion.ancho;
+    canvas.height = setupGWS.resolucion.alto;
     pintarFondoNeutro();
     construirBotonera();
     $('maquina').classList.remove('oculto');
@@ -577,7 +577,7 @@ var BaseDirector = (function () {
     actualizarPestanas();
     mostrarPestanna('vistaSimulador');
     // Arriba indica la última operación realizada
-    avisar('Setup cargado: ' + (GWS_setup.nombre || '(sin nombre)'));
+    avisar('Setup cargado: ' + (setupGWS.nombre || '(sin nombre)'));
   }
 
   /**
@@ -609,7 +609,7 @@ var BaseDirector = (function () {
     if (error) throw new Error(error);
     limpiarCartucho();                       // recargar setup limpia el cartucho actual
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
-    GWS_setup = json;
+    setupGWS = json;
     aplicarSetup();
   }
 
@@ -632,11 +632,11 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function pintarInfo() {
-    if (!GWS_setup) return;
+    if (!setupGWS) return;
     $('infoMaquina').textContent =
-      'Cartucho: ' + (GWC_cartucho ? GWC_cartucho.nombre || '(sin nombre)' : '(ninguno)') +
-      ' · Pantalla: ' + GWS_setup.resolucion.ancho + '×' + GWS_setup.resolucion.alto +
-      ' · Botones: ' + GWS_setup.estilo;
+      'Cartucho: ' + (cartucho ? cartucho.nombre || '(sin nombre)' : '(ninguno)') +
+      ' · Pantalla: ' + setupGWS.resolucion.ancho + '×' + setupGWS.resolucion.alto +
+      ' · Botones: ' + setupGWS.estilo;
     const diseno = editable ? BaseDescomponer.resumen() : null;
     $('infoDiseno').textContent =
       'Segmentos: ' + (diseno ? diseno.segmentos : '—') +
@@ -830,13 +830,13 @@ var BaseDirector = (function () {
       // Lectura completa en el módulo: JSON prioritario, validación
       // despachada por tipo con el tipo esperado del botón (F5-I9)
       // contra la máquina (estilo del setup) e imágenes img_f/img_s.
-      const leido = await BaseCartucho.leerCartucho(ficheros, GWS_setup.estilo,
+      const leido = await BaseCartucho.leerCartucho(ficheros, setupGWS.estilo,
         tipoEsperado);
       const json = leido.json;
       const mapa = leido.mapa;
 
       limpiarCartucho();                       // fuera el cartucho anterior
-      GWC_cartucho = json;
+      cartucho = json;
       const tipo = json.tipo;                  // obligatorio: sin tipo no se carga
       // Tamaño del GWI cargado (aproximado: JSON + PNG); un GWB no tiene
       tamGWI = tipo === 'GWI' ? sumarGWI(ficheros) : null;
@@ -989,9 +989,9 @@ var BaseDirector = (function () {
       leido = BaseCartucho.leerGWC(new Uint8Array(await fichero.arrayBuffer()));
       // La máquina manda, como con el JSON: el estilo del Bloque 0
       // debe ser el del setup cargado.
-      if (GWS_setup && String(leido.estilo) !== String(GWS_setup.estilo)) {
+      if (setupGWS && String(leido.estilo) !== String(setupGWS.estilo)) {
         throw new Error('el GWC es de estilo ' + leido.estilo +
-          ' y la máquina cargada es de estilo ' + GWS_setup.estilo + '.');
+          ' y la máquina cargada es de estilo ' + setupGWS.estilo + '.');
       }
     } catch (e) {
       avisarError('Cartucho NO cargado: ' + e.message +
@@ -1002,8 +1002,8 @@ var BaseDirector = (function () {
     // El fondo del GWC es un COLOR (v1: sin bloque de fondo): se
     // fabrica un canvas plano del color del Bloque 0 — el mismo
     // camino que img_f (pintado, motor gráfico y puente).
-    imgF = fabricarFondoColor(leido.fondo, leido.pantalla.ancho,
-      leido.pantalla.alto);
+    imgF = fabricarFondoColor(leido.fondo, leido.resolucion.ancho,
+      leido.resolucion.alto);
     imgS = null;                   // el GWC no lleva img_s: sin geometría
     imgM = null;                   // ni portada
     pintarFondoCartucho(imgF);
@@ -1019,9 +1019,9 @@ var BaseDirector = (function () {
     // El cartucho equivalente en memoria (para el info del panel; el
     // Código GWC del par = el código «#HHHH#» leído). No es editable:
     // el editor conserva su estado previo.
-    GWC_cartucho = {
+    cartucho = {
       tipo: 'GWC', version: 1, nombre: fichero.name,
-      estilo: leido.estilo, pantalla: leido.pantalla,
+      estilo: leido.estilo, pantalla: leido.resolucion,
       codigoGWC: leido.codigo,
       fin: leido.fin || undefined,
       secuencia: leido.secuencia || undefined,
@@ -1045,7 +1045,7 @@ var BaseDirector = (function () {
     // declarada como referencia de escala (1: las listas del GWC ya
     // viven en coordenadas de pantalla).
     await BaseDescomponer.pintarGWI(
-      { naturalWidth: leido.pantalla.ancho, naturalHeight: leido.pantalla.alto },
+      { naturalWidth: leido.resolucion.ancho, naturalHeight: leido.resolucion.alto },
       leido.sprites.map(s => ({
         id: s.id, ancho: s.ancho, alto: s.alto,
         fichero: s.id
@@ -1054,8 +1054,7 @@ var BaseDirector = (function () {
       id => imagenes.get(id));
     tamGWC = fichero.size;        // el GWC cargado: su tamaño exacto
     pintarInfo();
-    console.info(
-      '[cartucho] GWC cargado: ' + leido.sprites.length +
+    console.info('[cartucho] GWC cargado: ' + leido.sprites.length +
       ' sprite(s), ' + leido.segmentos.length +
       ' segmento(s) en memoria, listos para el motor.');
     avisar('Cartucho cargado (GWC): ' + fichero.name);
@@ -1129,8 +1128,8 @@ var BaseDirector = (function () {
       avisarError('No hay imagen de segmentos (img_s) para descomponer.');
       return;
     }
-    const autoria = (GWC_cartucho && GWC_cartucho.tipo === 'GWI') ? GWC_cartucho.autoria : null;
-    editable = BaseDescomponer.arrancar(imgS, GWC_cartucho, autoria);
+    const autoria = (cartucho && cartucho.tipo === 'GWI') ? cartucho.autoria : null;
+    editable = BaseDescomponer.arrancar(imgS, cartucho, autoria);
     actualizarPestanas();         // Segmentos y Sprites: solo con autoría
     pintarInfo();
     if (!editable) return;        // el error ya lo ha avisado arrancar
@@ -1150,7 +1149,7 @@ var BaseDirector = (function () {
     // pestaña). EXCEPCIÓN: un GWI cargado desde la pestaña Simulador
     // NO salta — el jugador carga el GWI para JUGAR, el editor no le
     // importa; el GWB (solo autoría) siempre salta.
-    if (!GWC_cartucho || GWC_cartucho.tipo !== 'GWI' || pestanaVista === 'vistaEditor') {
+    if (!cartucho || cartucho.tipo !== 'GWI' || pestanaVista === 'vistaEditor') {
       mostrarPestanna('vistaEditor');
     }
   }
@@ -1180,6 +1179,10 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function alPulsarTecla(ev) {
+    // Las teclas de los botones solo valen en la pestaña Simulador: en
+    // las demás se está escribiendo (nombre, ids…) y no deben jugar.
+    if (pestanaVista !== 'vistaSimulador') return;
+    
     const el = buscarBotonPorTecla(ev.key);
     if (!el) return;
     el.classList.add('pulsado');
@@ -1228,15 +1231,15 @@ var BaseDirector = (function () {
     if (id === 'vistaSprites') BaseDescomponer.pintarListaSegmentos($('listaSegmentos'));
     // F5-I10: la ficha del cartucho se repinta al ENTRAR en la pestaña
     // (así siempre refleja el estado vigente del cartucho en memoria).
-    if (id === 'vistaCartucho') BaseDescomponer.pintarFichaCartucho($('fichaCartucho'));
+    if (id === 'vistaCartucho') BaseFicha.pintar($('fichaCartucho'));
   }
 
   /**
    * Habilita las pestañas que tienen algo que mostrar: el Simulador
    * siempre; el Editor con el setup cargado (desde él se carga el
    * GWB); Segmentos y Sprites con autoría en marcha; Cartucho (F5-I10)
-   * con un GWB o un GWI cargado (la ficha es manipulable con ambos;
-   * el GWC, ejecución pura, no la activa). Durante la
+   * con el setup cargado (la ficha nace en blanco; el GWC, ejecución
+   * pura, no la activa). Durante la
    * partida, solo el Simulador.
    * @returns {void}
    */
@@ -1244,11 +1247,12 @@ var BaseDirector = (function () {
     // El GWC no trae la parte PC del cartucho (sin img_s no hay
     // geometría ni autoría): su edición queda como AMPLIACIÓN futura.
     // Con un GWC cargado, solo la pestaña Simulador está activa.
-    const soloSimulador = GWC_cartucho !== null && GWC_cartucho.tipo === 'GWC';
-    $('pesEditor').disabled = enJuego || !GWS_setup || soloSimulador;
+    const soloSimulador = cartucho !== null && cartucho.tipo === 'GWC';
+    $('pesEditor').disabled = enJuego || !setupGWS || soloSimulador;
     $('pesSprites').disabled = enJuego || !editable || soloSimulador;
-    // F5-I10: la ficha del cartucho, con GWB o GWI en memoria.
-    $('pesCartucho').disabled = enJuego || !GWC_cartucho || soloSimulador;
+    // F5-I10: la ficha del cartucho, con el setup cargado (nace en
+    // blanco: sirve también para crear un cartucho desde cero).
+    $('pesCartucho').disabled = enJuego || !setupGWS || soloSimulador;
   }
 
   /**
@@ -1471,8 +1475,9 @@ var BaseDirector = (function () {
     jugar: jugar, finDePartida: finDePartida,
     pestanna: mostrarPestanna,            // abrir el Editor desde la lista de segmentos
     pintarInfo: pintarInfo, informarTamanos: informarTamanos,
-    pantallaDeSetup: () => (GWS_setup && GWS_setup.resolucion)
-      ? { ancho: GWS_setup.resolucion.ancho, alto: GWS_setup.resolucion.alto } : null,
+    estiloDeSetup: () => (setupGWS ? String(setupGWS.estilo) : null),
+    pantallaDeSetup: () => (setupGWS && setupGWS.resolucion)
+      ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto } : null,
     imagenFondo: () => imgF, imagenSegmentos: () => imgS,
     imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
     imagenBlob: (img) => BaseCartucho.imagenBlob(img)

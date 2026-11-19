@@ -308,7 +308,7 @@ var BaseCartucho = (function () {
       }
     }
     // resolucion {ancho, alto}: OPCIONAL en el GWB (si falta se usa la
-    // "pantalla" del GWS cargado); OBLIGATORIA en el GWI. Un GWI antiguo
+    // "pantalla" del GWS cargado); OBLIGATORIA en el GWI. Un GWI antiguo 
     // sin ella se rechaza con un mensaje claro. Si viene y difiere de la
     // del setup, solo aviso por consola (no bloquea).
     if (json.resolucion === undefined || json.resolucion === null) {
@@ -753,9 +753,9 @@ var BaseCartucho = (function () {
 
   /**
    * Guarda el cartucho de autoría GWB como ZIP descargable
-   * (cartucho_gwb.zip), F5-I10: la misma vía del GWI, porque un
+   * (cartucho_GWB.zip), F5-I10: la misma vía del GWI, porque un
    * navegador no puede escribir una carpeta de disco. El ZIP lleva el
-   * JSON en la raíz (cartucho_gwb.json) y las imágenes de pantalla
+   * JSON en la raíz (cartucho_GWB.json) y las imágenes de pantalla
    * declaradas con el nombre que el JSON referencia: img_s
    * OBLIGATORIA (sin ella el GWB no es un cartucho), img_f e img_m si
    * están declaradas (cierre de la F5-I9: el cartucho lleva SIEMPRE
@@ -815,10 +815,10 @@ var BaseCartucho = (function () {
         }
       }
       const texto = formatearGWB(json);
-      zip.file('cartucho_gwb.json', texto);
+      zip.file('cartucho_GWB.json', texto);
       tamano += new Blob([texto]).size;   // bytes UTF-8 del JSON
-      descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_gwb.zip');
-      BaseDirector.avisar('GWB guardado en cartucho_gwb.zip (JSON + ' +
+      descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_GWB.zip');
+      BaseDirector.avisar('GWB guardado en cartucho_GWB.zip (JSON + ' +
         'imágenes de pantalla). Cárgalo con «Cargar GWB (ZIP)».');
       return tamano;
     } catch (e) {

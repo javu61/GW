@@ -254,3 +254,39 @@ body[data-vista="vistaSprites"] #controles button { display: none !important; }
 #infoDiseno { font-family: ui-monospace, Consolas, monospace; color: #9fd89f; white-space: pre-line; }
 body[data-vista="vistaSprites"] #panelEstado,
 body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
+/* ---------- Pestaña Cartucho (F5-I10): la ficha ---------- */
+#fichaCartucho { max-width: 980px; }
+.fichaSeccion { border: 1px solid #555; border-radius: 6px; padding: 10px 14px; margin: 0 0 14px 0; }
+.fichaSeccion h3 { margin: 0 0 10px 0; font-size: 1rem; }
+.fichaRejilla { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; align-items: center; }
+.fichaCaption { font-weight: 600; font-size: 0.9rem; }
+.fichaCampo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fichaNota { font-size: 0.8rem; color: #a8a8a8; margin: 0; }
+.fichaPar { display: flex; align-items: center; gap: 6px; }
+#fichaCartucho input[type=text], #fichaCartucho input[type=number], #fichaCartucho select {
+  font-size: 0.95rem; padding: 5px 8px; border: 1px solid #555; border-radius: 6px;
+  background: #1f2226; color: #e8e8e8;
+}
+#fichaCartucho input[type=text] { min-width: 260px; }
+#fichaCartucho input[type=number] { width: 90px; }
+#fichaCartucho input:disabled { opacity: 0.4; }
+#fichaCartucho button {
+  font-size: 0.95rem; padding: 6px 12px; border: 1px solid #555; border-radius: 8px;
+  background: #3a3f47; color: #e8e8e8; cursor: pointer;
+}
+#fichaCartucho button:hover:not(:disabled) { background: #4a5059; }
+#fichaCartucho button:disabled { opacity: 0.4; cursor: not-allowed; }
+.fichaImagenes { display: flex; gap: 14px; flex-wrap: wrap; }
+.fichaImagen { flex: 1 1 260px; max-width: 300px; border: 1px solid #444; border-radius: 6px; padding: 8px; }
+.fichaImagen h4 { margin: 0 0 6px 0; font-size: 0.9rem; }
+.fichaMarco { height: 170px; display: flex; align-items: center; justify-content: center;
+  background: #1f2226; border: 1px dashed #555; border-radius: 4px; margin-bottom: 6px; }
+.fichaMiniatura { max-width: 100%; max-height: 100%; image-rendering: pixelated; background: #fff; }
+.fichaVacio { color: #777; font-size: 0.85rem; }
+.fichaAcciones { display: flex; gap: 8px; margin-top: 8px; }
+.fichaTabla { border-collapse: collapse; }
+.fichaTabla th, .fichaTabla td { padding: 4px 14px 4px 0; text-align: left; font-size: 0.9rem; }
+.fichaMensajes { margin: 0 0 10px 0; font-size: 0.9rem; }
+.fichaMensajes ul { margin: 6px 0 0 0; padding-left: 20px; }
+.fichaError { color: #f0a0a0; }
+.fichaAviso { color: #e8c76a; }

@@ -4806,7 +4806,7 @@ const BaseDescomponer = (() => {
    * Guarda el GWI en el DIRECTORIO PRINCIPAL del cartucho (el que
    * elige el usuario, donde ya viven img_f, img_s y el GWB): los
    * sprites se escriben junto a las imágenes de base en segmentos/ y
-   * cartucho_gwi.json es un cartucho COMPLETO — copia imagenes y
+   * cartucho_GWI.json es un cartucho COMPLETO — copia imagenes y
    * botones del cartucho original (cartuchoActual) — por lo que carga
    * de forma autónoma sin depender de su GWB. El fichero ZIP lo
    * escribe BaseCartucho.guardarGWI (F5-I4); aquí queda la

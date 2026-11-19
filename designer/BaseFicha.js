@@ -50,12 +50,18 @@ const BaseFicha = (function () {
   };
 
   const IMAGENES = [
-    { clave: 'img_s', titulo: 'Segmentos (img_s)', obligatoria: true,
-      ayuda: 'Blanco y negro; de ella se extrae la geometría.' },
-    { clave: 'img_f', titulo: 'Fondo (img_f)', obligatoria: false,
-      ayuda: 'Fondo fijo de la pantalla.' },
-    { clave: 'img_m', titulo: 'Portada (img_m)', obligatoria: false,
-      ayuda: 'Imagen de portada del cartucho.' }
+    {
+      clave: 'img_s', titulo: 'Segmentos (img_s)', obligatoria: true,
+      ayuda: 'Blanco y negro; de ella se extrae la geometría.'
+    },
+    {
+      clave: 'img_f', titulo: 'Fondo (img_f)', obligatoria: false,
+      ayuda: 'Fondo fijo de la pantalla.'
+    },
+    {
+      clave: 'img_m', titulo: 'Portada (img_m)', obligatoria: false,
+      ayuda: 'Imagen de portada del cartucho.'
+    }
   ];
 
   let raiz = null;                // contenedor ya construido
@@ -147,8 +153,10 @@ const BaseFicha = (function () {
     acciones.append(cargar, borrar);
     tarjeta.append(marco, info, acciones, fichero);
 
-    imagenes[def.clave] = { img: null, nombre: null, url: null,
-      ui: { miniatura, vacio, info, borrar, ayuda: def.ayuda } };
+    imagenes[def.clave] = {
+      img: null, nombre: null, url: null,
+      ui: { miniatura, vacio, info, borrar, ayuda: def.ayuda }
+    };
 
     cargar.addEventListener('click', () => fichero.click());
     fichero.addEventListener('change', () => {
@@ -273,7 +281,7 @@ const BaseFicha = (function () {
     campos.nombre = campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre del cartucho' }));
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(sin definir)'], ['2', '2 botones'],
-      ['4', '4 botones'], ['5', '5 botones']]) {
+    ['4', '4 botones'], ['5', '5 botones']]) {
       const o = document.createElement('option');
       o.value = valor; o.textContent = texto;
       estilo.appendChild(o);
@@ -539,10 +547,10 @@ const BaseFicha = (function () {
   }
 
   return {
-    pintar: pintar, 
-    estado: estado, 
+    pintar: pintar,
+    estado: estado,
     reiniciar: reiniciar,
-    verificar: verificar, 
+    verificar: verificar,
     guardar: guardar,
     botonesDelEstilo: botonesDelEstilo
   };

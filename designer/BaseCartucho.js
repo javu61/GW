@@ -6,19 +6,19 @@
 // PROPÓSITO
 //   Lectura y grabación de los tres formatos de cartucho del proyecto
 //   (GWB, GWI y GWC) y verificación del cartucho antes de escribirlo.
+//   El manejo de paquetes (leer, construir, descargar) vive en BasePACK.
 //
 // FUNCIONES
 //
 //  Utilidades de ficheros
-//   leerJSON               Lee un File y lo parsea como JSON.
+//   leerJSON               Lee un fichero y lo parsea como JSON.
 //   crearURL / revocarURLs Crea object URLs de ficheros y las revoca todas.
-//   cargarImagen           Carga un File como imagen.
+//   cargarImagen           Carga un fichero como imagen.
 //   cargarImagenAux        Carga una imagen opcional (null si falta o falla).
 //   imagenBlob             Convierte una imagen en un PNG (Blob).
-//   descargarBlob          Fuerza la descarga de un Blob con un nombre.
 //
 //  Lectura de GWB / GWI
-//   construirMapaFicheros  Mapa nombre → File de la carpeta o del ZIP.
+//   construirMapaFicheros  Mapa nombre → fichero de la carpeta o del paquete.
 //   elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
 //   validarComunes         Contrato de ENTRADA común a GWB y GWI (img_s
 //                          obligatoria; img_f e img_m opcionales).
@@ -28,15 +28,16 @@
 //   validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
 //   leerCartucho           Lectura completa: JSON, validación despachada
 //                          por tipo, tipo esperado e imágenes.
-//   abrirZIP               Descomprime un GWI empaquetado en ZIP.
+//   abrirPACK              Abre un paquete de cartucho (delega en BasePACK.leerPACK).
 //   leerGWB / leerGWI      Lectura específica: delegan en leerCartucho
 //                          con el tipo esperado.
 //
 //  Grabación del GWI
 //   formatearGWI           Serializa el GWI en JSON compacto.
-//   guardarGWI             Guarda el GWI en ZIP (avisos y bloqueo del botón).
-//   guardarGWIEnDisco      Escribe realmente el ZIP y lo descarga.
-//   guardarGWB             Guarda el GWB en ZIP (F5-I10: JSON + imágenes).
+//   guardarGWI             Guarda el GWI en paquete (avisos y bloqueo del botón).
+//   guardarGWIEnDisco      Monta las entradas del GWI y las guarda (BasePACK.guardarPACK).
+//   formatearGWB           Serializa el GWB (solo lo que un GWB declara).
+//   guardarGWB             Guarda el GWB en paquete (F5-I10: JSON + imágenes).
 //
 //  Verificación del diseñador
 //   verificarCartucho      Recorre los grupos y devuelve errores y avisos
@@ -86,7 +87,7 @@ var BaseCartucho = (function () {
   // ---------------- Utilidades de ficheros ----------------
 
   /**
-   * Lee un File y lo parsea como JSON.
+   * Lee un fichero y lo parsea como JSON.
    * @param {File} fichero - Fichero .json a leer.
    * @returns {Promise<Object>} Objeto JSON parseado.
    */
@@ -96,7 +97,7 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Crea una object URL para un File y la anota para revocarla al limpiar.
+   * Crea una object URL para un fichero y la anota para revocarla al limpiar.
    * @param {File} fichero - Fichero del cartucho.
    * @returns {string} Object URL del fichero.
    */
@@ -117,7 +118,7 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Carga un File como imagen.
+   * Carga un fichero como imagen.
    * @param {File} fichero - Fichero de imagen.
    * @returns {Promise<HTMLImageElement>} Imagen cargada.
    */
@@ -148,7 +149,7 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Convierte una imagen en PNG (Blob) para empaquetarla en el ZIP: pasa
+   * Convierte una imagen en PNG (Blob) para empaquetarla en el paquete: pasa
    * por un canvas porque un HTMLImageElement no tiene toBlob.
    * @param {HTMLImageElement} imagen - Imagen en memoria (img_f o img_s).
    * @returns {Promise<Blob>} PNG de la imagen.
@@ -161,30 +162,12 @@ var BaseCartucho = (function () {
     return new Promise(resolver => lienzo.toBlob(resolver, 'image/png'));
   }
 
-  /**
-   * Fuerza la descarga de un Blob con un enlace efímero: la object URL se
-   * revoca a los 5 s (el navegador ya habrá iniciado la descarga).
-   * @param {Blob} blob - Contenido a descargar.
-   * @param {string} nombreFichero - Nombre con el que se descarga.
-   * @returns {void}
-   */
-  function descargarBlob(blob, nombreFichero) {
-    const enlace = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    enlace.href = url;
-    enlace.download = nombreFichero;
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-
   // ---------------- Lectura del cartucho (GWB / GWI) ----------------
 
   /**
    * Map nombreDeFichero → File, para resolver las imágenes que el JSON
    * referencia por nombre, sin depender de rutas reales en disco.
-   * @param {File[]} ficheros - Ficheros de la carpeta o del ZIP.
+   * @param {File[]} ficheros - Ficheros de la carpeta o del paquete.
    * @returns {Map<string,File>} Mapa nombre → File.
    */
   function construirMapaFicheros(ficheros) {
@@ -432,7 +415,7 @@ var BaseCartucho = (function () {
    * las imágenes (img_f OPCIONAL: null si el cartucho no la declara;
    * img_s e img_m si están). Cada fichero solo necesita
    * ".name" y comportarse como Blob.
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o ZIP).
+   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o paquete).
    * @param {string} estiloMaquina - Estilo del setup cargado.
    * @param {string} [tipoEsperado] - Tipo que espera el botón ('GWB' o
    *   'GWI', F5-I9): si el contenido detectado es otro, error BLOQUEANTE.
@@ -495,33 +478,21 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Descomprime un GWI empaquetado en ZIP: JSZip lo abre en memoria y cada
-   * entrada se convierte en un Blob con ".name" (nombre base, sin carpetas),
-   * reutilizable por leerCartucho con el MISMO flujo que la carpeta.
-   * @param {File} fichero - Fichero .zip seleccionado.
-   * @returns {Promise<Blob[]>} Ficheros del ZIP.
+   * Abre un cartucho empaquetado (GWB o GWI): delega en
+   * BasePACK.leerPACK; el resultado se lee con el MISMO flujo que una
+   * carpeta (leerCartucho).
+   * @param {File} fichero - Fichero de paquete seleccionado.
+   * @returns {Promise<Blob[]>} Ficheros del paquete (Blob con ".name" base).
    */
-  async function abrirZIP(fichero) {
-    if (typeof JSZip === 'undefined') {
-      throw new Error('Cargar un ZIP requiere la librería JSZip: coloca jszip.min.js junto a los demás scripts.');
-    }
-    const zip = await JSZip.loadAsync(await fichero.arrayBuffer());
-    const ficheros = [];
-    for (const entrada of Object.values(zip.files)) {
-      if (entrada.dir) continue;
-      const blob = await entrada.async('blob');
-      blob.name = entrada.name.split('/').pop();   // mapa plano por nombre base
-      ficheros.push(blob);
-    }
-    if (ficheros.length === 0) throw new Error('el ZIP no contiene ficheros.');
-    return ficheros;
+  async function abrirPACK(fichero) {
+    return BasePACK.leerPACK(fichero);
   }
 
   /**
    * Carga un cartucho GWB (base dibujada) exigiendo ese tipo (F5-I9):
    * delega en leerCartucho con el tipo esperado, que valida con la
    * específica validarGWB y bloquea si el contenido es otro tipo.
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o ZIP).
+   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o paquete).
    * @param {string} estiloMaquina - Estilo del setup cargado.
    * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
    */
@@ -533,7 +504,7 @@ var BaseCartucho = (function () {
    * Carga un cartucho GWI (autoría hecha) exigiendo ese tipo (F5-I9):
    * delega en leerCartucho con el tipo esperado, que valida con la
    * específica validarGWI y bloquea si el contenido es otro tipo.
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o ZIP).
+   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o paquete).
    * @param {string} estiloMaquina - Estilo del setup cargado.
    * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
    */
@@ -590,7 +561,7 @@ var BaseCartucho = (function () {
     // imagenes TAL CUAL (decisión del cierre de la F5-I9): el GWI es el
     // contenedor intermedio y debe ser AUTOSUFICIENTE — declara todo lo
     // que el GWB declara, incluso redundante, y guardarGWIEnDisco incluye
-    // en el ZIP cada imagen declarada (img_m incluida). Si se declarara
+    // en el paquete cada imagen declarada (img_m incluida). Si se declarara
     // sin viajar, el GWI generado no cargaría: contrato de entrada.
     const imagenesGWI = json.imagenes;
 
@@ -634,7 +605,7 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Guarda el GWI en un ZIP descargable (cartucho_GWI.zip). Avisa al
+   * Guarda el GWI en un paquete descargable (cartucho_GWI). Avisa al
    * empezar y bloquea el botón «Guardar» mientras dura: el guardado es
    * asíncrono y sin esto podría lanzarse un segundo guardado solapado.
    * @param {Object} json - GWI completo (montado por BaseDescomponer).
@@ -648,11 +619,6 @@ var BaseCartucho = (function () {
    *          guardarGWIEnDisco), o 0 si falló.
    */
   async function guardarGWI(json, sprites, imgF, imgS, imgM, nAvisos) {
-    if (typeof JSZip === 'undefined') {
-      BaseDirector.avisarError('Guardar en ZIP requiere la librería JSZip: ' +
-        'coloca jszip.min.js junto a los demás scripts.');
-      return 0;
-    }
     try {
       BaseDirector.avisar('Guardando GWI (' + sprites.length + ' imagen(es))…');
       const botonGuardar = document.getElementById('btnGuardar');
@@ -670,9 +636,9 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Escribe realmente el GWI en el ZIP: sprites en segmentos/, img_f,
+   * Escribe realmente el GWI en el paquete: sprites en segmentos/, img_f,
    * img_s e img_m con el nombre que el JSON referencia, y el JSON en la
-   * raíz. El ZIP carga solo, sin la carpeta del GWB. img_f es OPCIONAL:
+   * raíz. El paquete carga solo, sin la carpeta del GWB. img_f es OPCIONAL:
    * si el cartucho no tiene fondo no viaja (punto 8 de la Fase 5). img_m
    * (portada) SÍ VIAJA si está declarada (decisión del cierre de la
    * F5-I9): el GWI es el contenedor intermedio y debe llevar SIEMPRE
@@ -686,39 +652,32 @@ var BaseCartucho = (function () {
    * @param {?HTMLImageElement} imgM - Imagen de portada en memoria (img_m).
    * @param {number} nAvisos - Avisos de la verificación (informativo).
    * @returns {Promise<number>} Tamaño aproximado del GWI (F5-I7): la suma
-   *          de los bytes del JSON y de los PNG que contiene, no el ZIP.
+   *          de los bytes del JSON y de los PNG que contiene, no el paquete.
    */
   async function guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos) {
-    const zip = new JSZip();
-    const carpetaSprites = zip.folder('segmentos');
-    let tamano = 0;                       // JSON + PNG, sin comprimir
+    const entradas = [];                  // {nombre, contenido} del paquete
 
     for (const sprite of sprites) {
       const png = await new Promise(resolver => sprite.imagen.toBlob(resolver, 'image/png'));
-      carpetaSprites.file(sprite.id + '.png', png);
-      tamano += png.size;
+      entradas.push({ nombre: 'segmentos/' + sprite.id + '.png', contenido: png });
     }
 
     const referenciaImgS = (json.imagenes && json.imagenes.img_s) || json.img_s || null;
     const referenciaImgF = (json.imagenes && json.imagenes.img_f) || null;
     if (imgF && referenciaImgF) {
-      const png = await imagenBlob(imgF);
-      zip.file(referenciaImgF, png);
-      tamano += png ? png.size : 0;
+      entradas.push({ nombre: referenciaImgF, contenido: await imagenBlob(imgF) });
     } else if (referenciaImgF) {
-      BaseDirector.avisarError('El ZIP no incluye img_f: el GWI no podrá cargar solo.');
+      BaseDirector.avisarError('El paquete no incluye img_f: el GWI no podrá cargar solo.');
     } else {
       // Cartucho sin fondo (img_f opcional, punto 8 de la Fase 5):
       // legítimo, no es un error; solo se deja constancia en consola.
-      console.info('[guardar] cartucho sin fondo: el ZIP no incluye img_f ' +
+      console.info('[guardar] cartucho sin fondo: el paquete no incluye img_f ' +
         '(el GWI carga igual y el simulador pinta la pantalla en blanco).');
     }
     if (imgS && referenciaImgS) {
-      const png = await imagenBlob(imgS);
-      zip.file(referenciaImgS, png);
-      tamano += png ? png.size : 0;
+      entradas.push({ nombre: referenciaImgS, contenido: await imagenBlob(imgS) });
     } else {
-      console.warn('[guardar] img_s no incluida en el ZIP: ' +
+      console.warn('[guardar] img_s no incluida en el paquete: ' +
         'el GWI cargará pero no se podrá re-extraer la geometría.');
     }
     // img_m (portada): SÍ VIAJA si el GWI la declara (cierre de la
@@ -727,40 +686,36 @@ var BaseCartucho = (function () {
     const referenciaImgM = (json.imagenes && json.imagenes.img_m) || null;
     if (referenciaImgM) {
       if (imgM) {
-        const png = await imagenBlob(imgM);
-        zip.file(referenciaImgM, png);
-        tamano += png ? png.size : 0;
+        entradas.push({ nombre: referenciaImgM, contenido: await imagenBlob(imgM) });
       } else {
-        BaseDirector.avisarError('El ZIP no incluye img_m (' + referenciaImgM +
+        BaseDirector.avisarError('El paquete no incluye img_m (' + referenciaImgM +
           '), pero el GWI la declara: el GWI no podrá cargar solo.');
       }
     } else {
       // Cartucho sin portada: legítimo (img_m opcional), constancia en
       // consola.
-      console.info('[guardar] cartucho sin portada: el ZIP no incluye img_m.');
+      console.info('[guardar] cartucho sin portada: el paquete no incluye img_m.');
     }
-    const texto = formatearGWI(json);
-    zip.file('cartucho_GWI.json', texto);
-    tamano += new Blob([texto]).size;     // bytes UTF-8 del JSON
+    entradas.push({ nombre: 'cartucho_GWI.json', contenido: formatearGWI(json) });
 
-    descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_GWI.zip');
+    const tamano = await BasePACK.guardarPACK(entradas, 'cartucho_GWI');
 
-    BaseDirector.avisar('GWI guardado en cartucho_GWI.zip: ' + sprites.length +
+    BaseDirector.avisar('GWI guardado en ' + BasePACK.nombreFichero('cartucho_GWI') + ': ' + sprites.length +
       ' imagen(es) en segmentos/ + cartucho_GWI.json en la raíz' +
       (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.');
     return tamano;
   }
 
   /**
-   * Guarda el cartucho de autoría GWB como ZIP descargable
-   * (cartucho_GWB.zip), F5-I10: la misma vía del GWI, porque un
-   * navegador no puede escribir una carpeta de disco. El ZIP lleva el
+   * Guarda el cartucho de autoría GWB como paquete descargable
+   * (cartucho_GWB), F5-I10: la misma vía del GWI, porque un
+   * navegador no puede escribir una carpeta de disco. El paquete lleva el
    * JSON en la raíz (cartucho_GWB.json) y las imágenes de pantalla
    * declaradas con el nombre que el JSON referencia: img_s
    * OBLIGATORIA (sin ella el GWB no es un cartucho), img_f e img_m si
    * están declaradas (cierre de la F5-I9: el cartucho lleva SIEMPRE
    * todo lo declarado). El núcleo de carga del director (F5-I9) lee
-   * este ZIP por contenido: ZIP → abrirZIP → flujo de carpeta con el
+   * este paquete por contenido: paquete → abrirPACK (BasePACK.leerPACK) → flujo de carpeta con el
    * tipo esperado 'GWB'.
    * @param {Object} json - GWB completo (el cartucho en memoria).
    * @param {?HTMLImageElement} imgF - Imagen de fondo en memoria.
@@ -770,22 +725,14 @@ var BaseCartucho = (function () {
    *          sin comprimir), o 0 si falló.
    */
   async function guardarGWB(json, imgF, imgS, imgM) {
-    if (typeof JSZip === 'undefined') {
-      BaseDirector.avisarError('Guardar en ZIP requiere la librería JSZip: ' +
-        'coloca jszip.min.js junto a los demás scripts.');
-      return 0;
-    }
     try {
       BaseDirector.avisar('Guardando GWB…');
-      const zip = new JSZip();
-      let tamano = 0;                     // JSON + PNG, sin comprimir
+      const entradas = [];                // {nombre, contenido} del paquete
       const referenciaImgS = (json.imagenes && json.imagenes.img_s) || null;
       const referenciaImgF = (json.imagenes && json.imagenes.img_f) || null;
       const referenciaImgM = (json.imagenes && json.imagenes.img_m) || null;
       if (referenciaImgS && imgS) {
-        const png = await imagenBlob(imgS);
-        zip.file(referenciaImgS, png);
-        tamano += png ? png.size : 0;
+        entradas.push({ nombre: referenciaImgS, contenido: await imagenBlob(imgS) });
       } else {
         // img_s es OBLIGATORIA en el contrato de entrada: sin ella el
         // GWB guardado no cargaría, así que no se guarda a medias.
@@ -796,29 +743,23 @@ var BaseCartucho = (function () {
       }
       if (referenciaImgF) {
         if (imgF) {
-          const png = await imagenBlob(imgF);
-          zip.file(referenciaImgF, png);
-          tamano += png ? png.size : 0;
+          entradas.push({ nombre: referenciaImgF, contenido: await imagenBlob(imgF) });
         } else {
-          BaseDirector.avisarError('El ZIP no incluye img_f (' +
+          BaseDirector.avisarError('El paquete no incluye img_f (' +
             referenciaImgF + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
       if (referenciaImgM) {
         if (imgM) {
-          const png = await imagenBlob(imgM);
-          zip.file(referenciaImgM, png);
-          tamano += png ? png.size : 0;
+          entradas.push({ nombre: referenciaImgM, contenido: await imagenBlob(imgM) });
         } else {
-          BaseDirector.avisarError('El ZIP no incluye img_m (' +
+          BaseDirector.avisarError('El paquete no incluye img_m (' +
             referenciaImgM + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
-      const texto = formatearGWB(json);
-      zip.file('cartucho_GWB.json', texto);
-      tamano += new Blob([texto]).size;   // bytes UTF-8 del JSON
-      descargarBlob(await zip.generateAsync({ type: 'blob' }), 'cartucho_GWB.zip');
-      BaseDirector.avisar('GWB guardado en cartucho_GWB.zip (JSON + ' +
+      entradas.push({ nombre: 'cartucho_GWB.json', contenido: formatearGWB(json) });
+      const tamano = await BasePACK.guardarPACK(entradas, 'cartucho_GWB');
+      BaseDirector.avisar('GWB guardado en ' + BasePACK.nombreFichero('cartucho_GWB') + ' (JSON + ' +
         'imágenes de pantalla). Cárgalo con «Cargar GWB (ZIP)».');
       return tamano;
     } catch (e) {
@@ -1981,7 +1922,7 @@ var BaseCartucho = (function () {
   }
 
   // ---------------- Lectura del GWC ----------------
-  // SECCIÓN DELIMITADA Y AUTOCONTENIDA: no depende del GWB, del ZIP, de
+  // SECCIÓN DELIMITADA Y AUTOCONTENIDA: no depende del GWB, del paquete, de
   // las imágenes PNG ni del editor — solo de los bytes y de las
   // constantes del formato — para servir, con los cambios oportunos, como
   // lector del firmware del ESP32. Reconstruye las listas con las MISMAS
@@ -2287,7 +2228,7 @@ var BaseCartucho = (function () {
     validarGWI: validarGWI,
     leerGWB: leerGWB,
     leerGWI: leerGWI,
-    abrirZIP: abrirZIP,
+    abrirPACK: abrirPACK,
     // Grabación (GWI)
     guardarGWI: guardarGWI,
     guardarGWB: guardarGWB,

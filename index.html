@@ -32,7 +32,7 @@
       title="Carga la carpeta del cartucho de autoría (GWB)">Cargar GWB</button>
     <button id="btnCargarGWBZip" class="oculto soloEditor" disabled
       title="Carga el cartucho de autoría en ZIP (cartucho_GWB.zip)">Cargar GWB (ZIP)</button>
-    <button id="btnCargarGWIZip" class="oculto" disabled title="Carga un cartucho_GWI.zip">Cargar GWI</button>
+    <button id="btnCargarGWIZip" class="oculto" disabled title="Carga un cartucho_gwi.zip">Cargar GWI</button>
     <button id="btnCargarGWC" class="oculto" disabled
       title="Carga el cartucho de ejecución cartucho_gwc.gwc">Cargar GWC</button>
     <button id="btnGuardar" class="oculto soloEditor" disabled>Verificar y Guardar</button>
@@ -40,7 +40,7 @@
          verificación bloqueante, GWC primero y GWI con el Código GWC
          del par (la suma de verificación del GWC) después. -->
     <button id="btnGenerar" class="oculto soloEditor" disabled
-      title="Genera cartucho_gwc.gwc y guarda cartucho_GWI.zip con el Código GWC del par">Generar GWI+GWC</button>
+      title="Genera cartucho_gwc.gwc y guarda cartucho_gwi.zip con el Código GWC del par">Generar GWI+GWC</button>
     <button id="btnDeshacer" class="oculto soloEditor" disabled title="Ctrl+Z">Deshacer</button>
     <button id="btnRehacer" class="oculto soloEditor" disabled title="Ctrl+Y">Rehacer</button>
     <span id="estado">Sin setup cargado.</span>
@@ -157,12 +157,9 @@
   <script src="designer/BaseExtractor.js"></script>
   <script src="designer/BaseGraficos.js"></script>
   <script src="designer/BaseDescomponer.js"></script>
-  <!-- F5-I4: lectura y grabación de los cartuchos (GWB/GWI/GWC) en
-       su propio módulo, cargado tras el descomponedor (que delega en
-       él al guardar el GWI) y ANTES del director, que también lo usa. -->
-  <script src="designer/BaseCartucho.js"></script>
-  <!-- F5-I10: la ficha de la pestaña Cartucho (no depende de nadie). -->
-  <script src="designer/BaseFicha.js"></script>
+  <script src="designer/BasePACK.js"></script>            <!-- Manejo de ficheros comprimidos -->
+  <script src="designer/BaseCartucho.js"></script>        <!-- Manejo de Cartuchos -->
+  <script src="designer/BaseFicha.js"></script>           <!-- La ficha de la pestaña Cartucho (no depende de nadie). --> 
   <script src="designer/BaseDirector.js"></script>
   <script src="designer/JuegoMotorEstados.js"></script>
   <script src="designer/JuegoMotorGrafico.js"></script>

@@ -133,14 +133,14 @@ var BaseDirector = (function () {
   // sin ratón. El setup puede reasignar cada botón con "tecla" (una
   // letra); si no la declara, se usa esta tabla por defecto.
   const TECLAS_POR_DEFECTO = {
-    '0': 'Q', 
-    '1': 'A', 
-    '2': 'W', 
+    '0': 'Q',
+    '1': 'A',
+    '2': 'W',
     '3': 'S',
-    '4': 'P', 
-    '5': 'L', 
-    '6': 'G', 
-    '7': 'B', 
+    '4': 'P',
+    '5': 'L',
+    '6': 'G',
+    '7': 'B',
     '8': 'T'
   };
 
@@ -739,8 +739,8 @@ var BaseDirector = (function () {
    * no por el botón. El botón declara el tipo ESPERADO; el código
    * detecta el tipo real y, si no coincide, error BLOQUEANTE (el
    * cartucho no se carga). Detector de forma, en este orden:
-   *   1. UN fichero .zip → se descomprime (abrirZIP) y el resultado
-   *      vuelve a entrar aquí (un ZIP es una carpeta en memoria).
+   *   1. UN fichero de paquete → se descomprime (abrirPACK) y el resultado
+   *      vuelve a entrar aquí (un paquete es una carpeta en memoria).
    *   2. UN fichero .gwc → carga binaria (procesarGWC).
    *   3. Resto → flujo de carpeta (procesarCartucho), que resuelve el
    *      JSON prioritario por tipo (GWC > GWI > GWB).
@@ -766,9 +766,9 @@ var BaseDirector = (function () {
         // UN .zip: carpeta empaquetada; se descomprime en memoria y el
         // resultado vuelve a entrar en el detector, con el MISMO tipo
         // esperado (la forma no cambia al descomprimir).
-        if (/\.zip$/i.test(nombre)) {
+        if (BasePACK.esPACK(nombre)) {
           return await cargarCartucho(
-            await BaseCartucho.abrirZIP(ficheros[0]), tipoEsperado);
+            await BaseCartucho.abrirPACK(ficheros[0]), tipoEsperado);
         }
         // UN .gwc: el cartucho de ejecución binario viaja solo.
         if (/\.gwc$/i.test(nombre)) {
@@ -1182,7 +1182,7 @@ var BaseDirector = (function () {
     // Las teclas de los botones solo valen en la pestaña Simulador: en
     // las demás se está escribiendo (nombre, ids…) y no deben jugar.
     if (pestanaVista !== 'vistaSimulador') return;
-    
+
     const el = buscarBotonPorTecla(ev.key);
     if (!el) return;
     el.classList.add('pulsado');

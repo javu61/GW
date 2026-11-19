@@ -14,6 +14,7 @@ como posibles ampliaciones:
 	\item El trio de botones estándar A/B/R no aparecerán en la lista de botones definibles en la pestaña Cartucho.
 	
 	\item Poder cargar un GWI/GWB sin haber cargado un Setup antes.
+	
 	\item Al cargar imágenes \textbf{img\_s} poder cargar cualquier imagen y convertirla en Blanco y Negro.
 	
 	\item En la pestaña del cartucho, poder cambiar el estilo de la máquina, con las limitaciones necesarias.
@@ -73,23 +74,23 @@ como posibles ampliaciones:
 **********************************************************************************\\
 **********************************************************************************\\
 **********************************************************************************\\
-%
-%\section*{Temas pendientes}
-%\begin{itemize}
-%
-%	\item P02 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
-%	
-%	\item P03 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
-%	
-%	\item P04 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
-%	
-%	\item P05 — Ajustar los programas Juego*.js: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES y eliminar @since (era el punto 7 de la lista vieja).
-%	
-%	\item P06 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
-%	
-%	\item P07 — Selector de cartuchos: la portada img_m ya carga sin usar; aquí encuentra su sitio.
-%	
-%	\item P08 y siguientes — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
-%
-%
-%\end{itemize}
+
+\section*{Temas pendientes}
+\begin{itemize}
+
+	\item P02 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
+	
+	\item P03 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
+	
+	\item P04 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
+	
+	\item P05 — Ajustar los programas Juego*.js: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES y eliminar @since (era el punto 7 de la lista vieja).
+	
+	\item P06 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
+	
+	\item P07 — Selector de cartuchos: la portada img_m ya carga sin usar; aquí encuentra su sitio.
+	
+	\item P08 y siguientes — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
+
+
+\end{itemize}

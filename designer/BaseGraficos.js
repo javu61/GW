@@ -26,11 +26,12 @@
 //   fijarFondo        La imagen de fondo (img_f) para DibujarFondo.
 //   fijarSegmentos    La lista residente de segmentos.
 //   escalaDe          Escala por eje del canvas destino.
-//   pixelesDe         Píxeles de un sprite (canvas o PNG).
 //   DibujarFondo      El fondo estirado al canvas, sobre blanco
 //                     opaco (base siempre visible).
 //   DibujarSegmento   Un segmento estirado por eje (vecino más
 //                     cercano): negro puro o color del tipo.
+// LOCALES
+//   _pixelesDe        Píxeles de un sprite (canvas o PNG).
 //
 // Carga DESPUÉS de BaseExtractor.js y ANTES de BaseDescomponer.js y
 // BaseDirector.js.
@@ -111,7 +112,7 @@ var BaseGraficos = (function () {
    * @param {object} imagen - Canvas o Image del sprite.
    * @returns {ImageData} Pí­xeles del sprite.
    */
-  function pixelesDe(imagen) {
+  function _pixelesDe(imagen) {
     const ancho = imagen.naturalWidth || imagen.width;
     const alto = imagen.naturalHeight || imagen.height;
     if (imagen.getContext) {                  // ya es un canvas
@@ -207,7 +208,7 @@ var BaseGraficos = (function () {
       console.warn('[motor] escala no positiva (' + esc.x + 'x' + esc.y + '): no se pinta.');
       return;
     }
-    const pix = pixelesDe(seg.imagen);
+    const pix = _pixelesDe(seg.imagen);
     const p = pix.data;
     const sw = pix.width, sh = pix.height;
     // Caja destino en pí­xeles del canvas: posición estirada por eje,

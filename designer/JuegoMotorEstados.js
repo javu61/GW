@@ -133,7 +133,7 @@ var JuegoMotorEstados = (function () {
    * @returns {boolean} true si es ruta de juego.
    * @since 3.5
    */
-  function esDeRuta(seg) {
+  function _esDeRuta(seg) {
     if (seg.tipo !== tiposEnum.juego && seg.tipo !== tiposEnum.inicio) {
       return false;
     }
@@ -159,7 +159,7 @@ var JuegoMotorEstados = (function () {
    * @returns {boolean} true si el barrido lo avanza.
    * @since 3.6
    */
-  function esCadena(seg) {
+  function _esCadena(seg) {
     // Fuera del barrido: el jugador, los dígitos, los contadores y
     // el SEGMENTO DE CARTUCHO (F3-I11: la ficha de configuración,
     // nunca es arte). Las barras quedan fuera por idsBarras.
@@ -477,7 +477,7 @@ var JuegoMotorEstados = (function () {
    * @returns {Array<Object>} Segmentos en memoria.
    * @since 2.7
    */
-  function lista() {
+  function _lista() {
     return (typeof ComunListas !== 'undefined') ? ComunListas.segmentos() : [];
   }
 
@@ -489,7 +489,7 @@ var JuegoMotorEstados = (function () {
    * @returns {boolean} true si hay que reducir el buffer a ejes.
    * @since 3.2
    */
-  function combinar() {
+  function _combinar() {
     // La regla «combinar» vive en el SETUP (reglas, por el puente):
     // subir la combinación de pulsaciones por ejes al cartucho quedó
     // como AMPLIACIÓN futura (decisión del usuario, 24-10-2026:
@@ -512,7 +512,7 @@ var JuegoMotorEstados = (function () {
    * @returns {?number} Índice del jugador, o null si lista vacía.
    * @since 3.3 (marca del diseñador: 3.4)
    */
-  function buscarJugador(segs) {
+  function _buscarJugador(segs) {
     if (segs.length === 0) return null;
     for (var m = 0; m < segs.length; m++) {
       if (segs[m].primero) return m;         // la marca del diseñador
@@ -593,7 +593,7 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.2 (por enlaces: 3.3)
    */
-  function aplicarEntrada(segs) {
+  function _aplicarEntrada(segs) {
     var cola = (typeof ComunListas !== 'undefined') ?
       ComunListas.colaPulsaciones() : [];
     // CONGELACIÓN (duodécima iteración): con un desenlace en
@@ -605,7 +605,7 @@ var JuegoMotorEstados = (function () {
       return;
     }
     if (cola.length === 0) return;
-    if (combinar()) {
+    if (_combinar()) {
       var dx = 0, dy = 0;
       while (cola.length > 0) {
         var eje = EJES[MOVER[String(cola.shift())]];
@@ -645,7 +645,7 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.5
    */
-  function lanzarRuta(segs) {
+  function _lanzarRuta(segs) {
     // CONGELACIÓN (duodécima iteración): con un desenlace en curso
     // no se lanzan rutas nuevas (el barrido de vivos tampoco las
     // avanza: solo avanza la cadena del desenlace).
@@ -721,8 +721,8 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 4.2
    */
-  function muereRuta(seg) {
-    if (esDeRuta(seg) && !marcaDesenlace[seg.id]) nRutasVivas--;
+  function _muereRuta(seg) {
+    if (_esDeRuta(seg) && !marcaDesenlace[seg.id]) nRutasVivas--;
   }
 
   /**
@@ -732,7 +732,7 @@ var JuegoMotorEstados = (function () {
    * @returns {number} Índice en la lista, o -1 si no existe.
    * @since 3.6
    */
-  function indiceDe(segs, id) {
+  function _indiceDe(segs, id) {
     for (var i = 0; i < segs.length; i++) {
       if (segs[i].id === id) return i;
     }
@@ -750,7 +750,7 @@ var JuegoMotorEstados = (function () {
    * @returns {number} Índice 0..3, o -1 si no hay contador.
    * @since 3.7
    */
-  function numeroDeContador(valor) {
+  function _numeroDeContador(valor) {
     if (valor === null || valor === undefined) return -1;
     if (valor === 'vida') {           // legado F3-I8
       if (debug()) {
@@ -783,7 +783,7 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.7
    */
-  function ajustarContador(segs, n) {
+  function _ajustarContador(segs, n) {
     var direccion = null;
     for (var i = 0; i < segs.length; i++) {
       if (segs[i].tipo === tiposEnum.contador &&
@@ -827,7 +827,7 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.7
    */
-  function prepararContadores(segs) {
+  function _prepararContadores(segs) {
     /**
      * Levanta la fila de las SIETE barras de un DÍGITO (tipo 5):
      * todas por sus enlaces barra_a..barra_g (el dígito es un
@@ -840,7 +840,7 @@ var JuegoMotorEstados = (function () {
       var fila = {};
       for (var i = 0; i < LETRAS_BARRAS.length; i++) {
         var letra = LETRAS_BARRAS[i];
-        var j = indiceDe(segs, pos['barra_' + letra]);
+        var j = _indiceDe(segs, pos['barra_' + letra]);
         if (j < 0) return null;
         fila[letra] = segs[j];
       }
@@ -860,7 +860,7 @@ var JuegoMotorEstados = (function () {
         }
         return;
       }
-      var idxU = indiceDe(segs, contador.digito_1);
+      var idxU = _indiceDe(segs, contador.digito_1);
       if (idxU < 0 || segs[idxU].tipo !== tiposEnum.digito) {
         if (debug()) {
           console.warn('motor del juego: el digito_1 del contador ' +
@@ -873,7 +873,7 @@ var JuegoMotorEstados = (function () {
       for (var k = 0; k < ENLACES_CONTADOR.length; k++) {
         var campo = ENLACES_CONTADOR[k];
         if (!contador[campo]) break;             // sin más dígitos: fin
-        var idxDig = indiceDe(segs, contador[campo]);
+        var idxDig = _indiceDe(segs, contador[campo]);
         if (idxDig < 0 || segs[idxDig].tipo !== tiposEnum.digito) {
           if (debug()) {
             console.warn('motor del juego: el ' + campo + ' del contador ' +
@@ -978,7 +978,7 @@ var JuegoMotorEstados = (function () {
    * @returns {Array<Object>} La familia ordenada 1..N.
    * @since 3.8
    */
-  function familiaIconos(segs, tipo) {
+  function _familiaIconos(segs, tipo) {
     var fam = segs.filter(function (s) { return s.tipo === tipo; });
     fam.sort(function (a, b) { return (a.contador || 0) - (b.contador || 0); });
     return fam;
@@ -1000,7 +1000,7 @@ var JuegoMotorEstados = (function () {
    * @returns {Array<Object>} La familia ordenada (cabeza → último).
    * @since 3.10
    */
-  function ordenFamilia(segs, fam) {
+  function _ordenFamilia(segs, fam) {
     if (fam.length < 2) return fam;
     var porId = {};
     fam.forEach(function (s) { porId[s.id] = s; });
@@ -1047,26 +1047,26 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.8 (sin puerta + direccional: 3.9)
    */
-  function sincronizarIconos(segs) {
+  function _sincronizarIconos(segs) {
     /**
      * Enciende o apaga un icono si cambia (marca la suciedad).
      * @param {Object} seg - Icono.
      * @param {boolean} debe - Visible que le corresponde.
      */
-    function setVis(seg, debe) {
+    function _setVis(seg, debe) {
       if (seg.visible !== debe) {
         seg.visible = debe;
         seg.cambiar = true;
       }
     }
-    var famV = ordenFamilia(segs, familiaIconos(segs, tiposEnum.vida));
+    var famV = _ordenFamilia(segs, _familiaIconos(segs, tiposEnum.vida));
     if (famV.length > 0) {
       var nV = Math.max(0, Math.min(famV.length, contadoresInternos[0]));
       famV.forEach(function (s, i) {
-        setVis(s, (i + 1) <= nV);            // primeros n (cadena o nº)
+        _setVis(s, (i + 1) <= nV);            // primeros n (cadena o nº)
       });
     }
-    var famM = ordenFamilia(segs, familiaIconos(segs, tiposEnum.muerte));
+    var famM = _ordenFamilia(segs, _familiaIconos(segs, tiposEnum.muerte));
     if (famM.length > 0) {
       // Muertes según la dirección del interno 2: descendente =
       // lo restado desde el inicial (3→2 es UNA muerte);
@@ -1076,7 +1076,7 @@ var JuegoMotorEstados = (function () {
         : contadoresInternos[1];
       var nM = Math.max(0, Math.min(famM.length, muertes));
       famM.forEach(function (s, i) {
-        setVis(s, (i + 1) > famM.length - nM);  // últimos n, del final hacia atrás
+        _setVis(s, (i + 1) > famM.length - nM);  // últimos n, del final hacia atrás
       });
     }
   }
@@ -1096,7 +1096,7 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.11
    */
-  function avanzarAdicionales(segs) {
+  function _avanzarAdicionales(segs) {
     // FOTO de los visibles ANTES de mutar (criterio del barrido de
     // rutas): sin esto, al encender el siguiente del par el bucle lo
     // volvía a ver en la MISMA pasada y el ciclo oscilaba doble.
@@ -1111,7 +1111,7 @@ var JuegoMotorEstados = (function () {
     for (var p = 0; p < foto.length; p++) {
       var seg = foto[p];
       if (!seg.siguiente) continue;        // fijo: no hay bucle
-      var j = indiceDe(segs, seg.siguiente);
+      var j = _indiceDe(segs, seg.siguiente);
       if (j < 0) {
         if (debug()) {
           console.warn('motor del juego: el siguiente del adicional ' +
@@ -1156,7 +1156,7 @@ var JuegoMotorEstados = (function () {
     if (secIdx >= 0) {
       // Animando: apagar el actual y pasar al siguiente.
       var actual = configSec.segmentos[secIdx];
-      var iA = indiceDe(segs, actual);
+      var iA = _indiceDe(segs, actual);
       if (iA >= 0 && animados[actual]) {
         segs[iA].visible = false;
         segs[iA].cambiar = true;
@@ -1177,7 +1177,7 @@ var JuegoMotorEstados = (function () {
       secIdx = 0;                   // lanzamiento: nace el primero
     }
     var idS = configSec.segmentos[secIdx];
-    var iS = indiceDe(segs, idS);
+    var iS = _indiceDe(segs, idS);
     if (iS < 0) {
       secIdx = -1;
       secContador = 0;
@@ -1207,7 +1207,7 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.13
    */
-  function sincronizarAcompanantes() {
+  function _sincronizarAcompanantes() {
     for (var idP in mapaComp) {
       var par = mapaComp[idP];
       if (animados[par.comp.id] && par.comp.visible) continue;
@@ -1227,17 +1227,17 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.8
    */
-  function comprobarFin() {
+  function _comprobarFin() {
     if (terminada || configFin.mecanismo === null) return;
-    var segs = lista();
+    var segs = _lista();
     if (configFin.mecanismo === finEnum.vida) {
-      if (familiaIconos(segs, tiposEnum.vida).every(function (s) {
+      if (_familiaIconos(segs, tiposEnum.vida).every(function (s) {
         return !s.visible;
       })) {
         terminada = true;
       }
     } else if (configFin.mecanismo === finEnum.muerte) {
-      var fam = familiaIconos(segs, tiposEnum.muerte);
+      var fam = _familiaIconos(segs, tiposEnum.muerte);
       if (fam.length > 0 && fam.every(function (s) { return s.visible; })) {
         terminada = true;
       }
@@ -1262,8 +1262,8 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.9
    */
-  function contarAterrizaje(segs, icono) {
-    ajustarContador(segs, icono.tipo === tiposEnum.muerte ? 1 : 0);
+  function _contarAterrizaje(segs, icono) {
+    _ajustarContador(segs, icono.tipo === tiposEnum.muerte ? 1 : 0);
     contadoresSucios = true;
   }
 
@@ -1273,7 +1273,7 @@ var JuegoMotorEstados = (function () {
    * @returns {boolean} true si es vida o muerte.
    * @since 3.9
    */
-  function esIconoFamilia(seg) {
+  function _esIconoFamilia(seg) {
     return seg.tipo === tiposEnum.vida || seg.tipo === tiposEnum.muerte;
   }
 
@@ -1295,19 +1295,19 @@ var JuegoMotorEstados = (function () {
    * @returns {void}
    * @since 3.6 (aterrizaje en familia: 3.9)
    */
-  function decidirColision(segs, seg) {
+  function _decidirColision(segs, seg) {
     // SECUENCIA (corrección del 23-10-2026): la animación NO se
     // interrumpe en las colisiones — solo se SUSPENDE mientras
     // corre un CICLO DE MUERTE (bandera desenlaceMuerte, abajo).
-    var idxJugador = indiceDe(segs, seg.colision);
+    var idxJugador = _indiceDe(segs, seg.colision);
     var jugadorSeg = idxJugador >= 0 ? segs[idxJugador] : null;
     var positiva = !!(jugadorSeg && jugadorSeg.visible);
     var enlace = positiva ? seg.salvado : seg.muerte;
     var contador = positiva ? seg.salvadoContador : seg.muerteContador;
-    var nCont = numeroDeContador(contador);
-    var idxDestino = enlace ? indiceDe(segs, enlace) : -1;
+    var nCont = _numeroDeContador(contador);
+    var idxDestino = enlace ? _indiceDe(segs, enlace) : -1;
     var destino = idxDestino >= 0 ? segs[idxDestino] : null;
-    var aterriza = destino !== null && esIconoFamilia(destino);
+    var aterriza = destino !== null && _esIconoFamilia(destino);
     var nFamilia = aterriza
       ? (destino.tipo === tiposEnum.muerte ? 1 : 0) : -1;
     // El conteo del desenlace ocurre UNA sola vez: si la cadena
@@ -1316,10 +1316,10 @@ var JuegoMotorEstados = (function () {
     // el contador declarado por la decisión solo se ajusta si es
     // OTRO distinto del de la familia (contar los dos sería doble).
     if (nCont >= 0 && nCont !== nFamilia) {
-      ajustarContador(segs, nCont);           // sube o baja UNA vez, aquí
+      _ajustarContador(segs, nCont);           // sube o baja UNA vez, aquí
       contadoresSucios = true;
     }
-    if (aterriza) contarAterrizaje(segs, destino);
+    if (aterriza) _contarAterrizaje(segs, destino);
     seg.visible = false;                      // el punto decide y se apaga
     seg.cambiar = true;
     var sufijo = nCont >= 0 ? ' (contador ' + (nCont + 1) + ': ' +
@@ -1359,7 +1359,7 @@ var JuegoMotorEstados = (function () {
     // siguiente y la bandera cae al morir el último eslabón; un
     // ATERRIZAJE directo en la familia (muerte instantánea, sin
     // eslabones) NO congela nada.
-    if (esCadena(segs[idxDestino])) {
+    if (_esCadena(segs[idxDestino])) {
       congelada = true;
       marcaDesenlace[destino.id] = true;
       desenlaceMuerte = !positiva;  // 23-10: SOLO el ciclo de muerte
@@ -1374,7 +1374,7 @@ var JuegoMotorEstados = (function () {
       // NUEVO desde su primer segmento.
       if (desenlaceMuerte && secIdx >= 0) {
         var idSec = configSec.segmentos[secIdx];
-        var iSec = indiceDe(segs, idSec);
+        var iSec = _indiceDe(segs, idSec);
         if (iSec >= 0 && animados[idSec]) {
           segs[iSec].visible = false;
           segs[iSec].cambiar = true;
@@ -1421,8 +1421,8 @@ var JuegoMotorEstados = (function () {
     configSec = (typeof ComunListas !== 'undefined' &&
       typeof ComunListas.secuenciaDeCartucho === 'function')
       ? ComunListas.secuenciaDeCartucho() : null;
-    var segs = lista();
-    jugador = buscarJugador(segs);
+    var segs = _lista();
+    jugador = _buscarJugador(segs);
     // Fusionados (F4-I9 v4): los segmentos absorbidos por una unión
     // viajan en el GWI marcados con fusionadoPor (la pieza F01 que
     // los absorbió lleva su imagen dentro de su fusión). El motor
@@ -1439,7 +1439,7 @@ var JuegoMotorEstados = (function () {
     for (var c3 = 0; c3 < segs.length; c3++) {
       var idComp = segs[c3].mostrarJunto;
       if (!idComp) continue;
-      var iComp = indiceDe(segs, idComp);
+      var iComp = _indiceDe(segs, idComp);
       if (iComp < 0) continue;
       mapaComp[segs[c3].id] = { principal: segs[c3], comp: segs[iComp] };
     }
@@ -1501,11 +1501,11 @@ var JuegoMotorEstados = (function () {
     // hay que definirlas ni almacenarlas); con muerte, la familia
     // nace apagada y el contador 2 en cero.
     if (configFin.mecanismo === finEnum.vida) {
-      contadoresInternos[0] = familiaIconos(segs, tiposEnum.vida).length;
+      contadoresInternos[0] = _familiaIconos(segs, tiposEnum.vida).length;
     }
-    prepararContadores(segs);              // las presentaciones jerárquicas nacen
+    _prepararContadores(segs);              // las presentaciones jerárquicas nacen
     presentaContadores();                  // el valor inicial, en pantalla
-    sincronizarIconos(segs);               // las familias de iconos, en pantalla
+    _sincronizarIconos(segs);               // las familias de iconos, en pantalla
     contadoresSucios = false;
     var j = jugador === null ? null : segs[jugador];
     if (j) { j.visible = true; j.cambiar = true; }
@@ -1534,7 +1534,7 @@ var JuegoMotorEstados = (function () {
     // director detiene el reloj en cuanto lo ve; esto es la doble
     // seguridad si algo más llama al tick).
     if (terminada) return;
-    var segs = lista();
+    var segs = _lista();
     // Foto PREVIA del contador de fin (F3-I11): la partida termina
     // en la TRANSICIÓN de >0 a 0, no estando en 0 (empezar en cero
     // significa que nunca termina — la verificación lo bloquea).
@@ -1543,7 +1543,7 @@ var JuegoMotorEstados = (function () {
       prevFin = contadoresInternos[configFin.contador - 1];
     }
     // 0. ENTRADA: el buffer de pulsaciones, consumido.
-    aplicarEntrada(segs);
+    _aplicarEntrada(segs);
     // 1. Apagar banderas de cambiado (estado ya presentado).
     var cambiadas = 0;
     segs.forEach(function (seg) {
@@ -1579,7 +1579,7 @@ var JuegoMotorEstados = (function () {
       // Secuencia (la cadena lo toma: apaga y sigue) — si no, el
       // ciclo encontraba el segmento ya encendido y no pasaba de
       // él: nunca aterrizaba y no se producían muertes.
-      if (seg.visible && esCadena(seg) &&
+      if (seg.visible && _esCadena(seg) &&
         (!animados[seg.id] || marcaDesenlace[seg.id]) &&
         (!congelada || marcaDesenlace[seg.id])) vivos.push(seg);
     });
@@ -1590,15 +1590,15 @@ var JuegoMotorEstados = (function () {
       // su cadena de desenlace). La decisión ocurre el mismo tick
       // en que el punto se enciende: sin un tick de espera.
       if (seg.colision) {
-        muereRuta(seg);                      // F4-I2: la ruta acaba aquí
-        decidirColision(segs, seg);
+        _muereRuta(seg);                      // F4-I2: la ruta acaba aquí
+        _decidirColision(segs, seg);
         return;
       }
       var idSiguiente = seg.siguiente;
       if (!idSiguiente) {
         seg.visible = false;                  // el final sin colisión: la ruta muere
         seg.cambiar = true;
-        muereRuta(seg);                      // F4-I2
+        _muereRuta(seg);                      // F4-I2
         if (debug()) {
           console.log('motor del juego: ' + (seg.id || '?') +
             ' murió al final de la ruta');
@@ -1617,7 +1617,7 @@ var JuegoMotorEstados = (function () {
         }
         seg.visible = false;
         seg.cambiar = true;
-        muereRuta(seg);                      // F4-I2
+        _muereRuta(seg);                      // F4-I2
         return;
       }
       // ¿El destino es un ICONO de familia? (corrección del
@@ -1625,11 +1625,11 @@ var JuegoMotorEstados = (function () {
       // ni la cadena lo recorre; cuenta el desenlace UNA vez en el
       // contador de su familia y la sincronización enciende el que
       // toque (en muerte, acumulativo desde el último).
-      if (esIconoFamilia(segs[idxSiguiente])) {
+      if (_esIconoFamilia(segs[idxSiguiente])) {
         seg.visible = false;
         seg.cambiar = true;
-        muereRuta(seg);                      // F4-I2
-        contarAterrizaje(segs, segs[idxSiguiente]);
+        _muereRuta(seg);                      // F4-I2
+        _contarAterrizaje(segs, segs[idxSiguiente]);
         if (debug()) {
           console.log('motor del juego: ruta aterriza en ' +
             (segs[idxSiguiente].id || '?') +
@@ -1657,17 +1657,17 @@ var JuegoMotorEstados = (function () {
       // tick de espera (el barrido siguiente no volvería a verlo:
       // el punto ya está decidido y apagado).
       if (segs[idxSiguiente].colision) {
-        muereRuta(segs[idxSiguiente]);     // F4-I2: la ruta acaba aquí
-        decidirColision(segs, segs[idxSiguiente]);
+        _muereRuta(segs[idxSiguiente]);     // F4-I2: la ruta acaba aquí
+        _decidirColision(segs, segs[idxSiguiente]);
       }
     });
     // 3. ¿Queda alguna ruta viva? Si no, nace una nueva (F3-I5).
-    lanzarRuta(segs);
+    _lanzarRuta(segs);
     // 3b. ADICIONALES (duodécima iteración): los elementos fuera
     //     del juego avanzan SIEMPRE en su bucle propio (helicóptero,
     //     aspas): la congelación no los para — solo se para el
     //     juego, no la decoración.
-    avanzarAdicionales(segs);
+    _avanzarAdicionales(segs);
     // 3c. FIN DEL DESENLACE: muerto el último eslabón marcado, la
     //     bandera de congelación cae; la Secuencia, ya INTERRUMPIDA
     //     al nacer del ciclo de muerte (23-10: apagado y contador a
@@ -1698,20 +1698,20 @@ var JuegoMotorEstados = (function () {
     //     secundario copia SIEMPRE el visible de su principal,
     //     salvo cuando la SECUENCIA lo tiene encendido sola (la
     //     Secuencia manda entonces; ver sincronizarAcompanantes).
-    sincronizarAcompanantes();
+    _sincronizarAcompanantes();
     // 4. CONTADORES EN PANTALLA (F4-I9): solo si una decisión tocó
     //    algún contador (nada periódico); el refresco enciende y
     //    apaga las barras de los dígitos según su valor.
     if (contadoresSucios) {
       presentaContadores();
-      sincronizarIconos(segs);   // las familias de iconos, con sus contadores
+      _sincronizarIconos(segs);   // las familias de iconos, con sus contadores
       contadoresSucios = false;
     }
     // 5. FIN DE PARTIDA (F3-I11): por iconos, con la familia en su
     //    estado final; por contador, en la transición >0→0 del
     //    interno elegido. Al cumplirse, el estado «terminada»
     //    congela el juego y el director detiene el reloj.
-    comprobarFin();
+    _comprobarFin();
     if (!terminada && prevFin > 0 && configFin.contador >= 1 &&
       contadoresInternos[configFin.contador - 1] === 0) {
       terminada = true;
@@ -1733,8 +1733,8 @@ var JuegoMotorEstados = (function () {
    */
   function rutasVivas() {
     var n = 0;
-    lista().forEach(function (seg) {
-      if (seg.visible && esDeRuta(seg)) n++;
+    _lista().forEach(function (seg) {
+      if (seg.visible && _esDeRuta(seg)) n++;
     });
     return n;
   }
@@ -1832,7 +1832,8 @@ var JuegoMotorEstados = (function () {
   }
   return {
     iniciar: iniciar, tick: tick,
-    jugadorActual: jugadorActual, rutasVivas: rutasVivas,
+    jugadorActual: jugadorActual, 
+    rutasVivas: rutasVivas,
     contadores: contadores,
     terminada: function () { return terminada; },
     congelada: function () { return congelada; },

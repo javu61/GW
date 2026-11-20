@@ -42,7 +42,7 @@ var JuegoMotorGrafico = (function () {
    * @returns {boolean} true si hay que escribir diagnóstico.
    * @since 2.6
    */
-  function debug() {
+  function _debug() {
     return typeof GW_DEBUG !== 'undefined' && GW_DEBUG;
   }
 
@@ -52,7 +52,7 @@ var JuegoMotorGrafico = (function () {
    * @returns {ImageData} Píxeles de la imagen.
    * @since 2.7
    */
-  function pixelesDe(imagen) {
+  function _pixelesDe(imagen) {
     const ancho = imagen.naturalWidth || imagen.width;
     const alto = imagen.naturalHeight || imagen.height;
     if (imagen.getContext) {                  // ya es un canvas
@@ -72,7 +72,7 @@ var JuegoMotorGrafico = (function () {
    * @returns {void}
    * @since 2.7
    */
-  function pintarFondo() {
+  function _pintarFondo() {
     const canvas = document.getElementById('pantalla');
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
@@ -99,10 +99,10 @@ var JuegoMotorGrafico = (function () {
   function pintarSegmento(canvas, x, y, imagen) {
     const escX = canvas.escalaX, escY = canvas.escalaY;
     if (!(escX > 0) || !(escY > 0)) {
-      if (debug()) console.warn('motor gráfico: escala sin fijar, no se pinta el segmento.');
+      if (_debug()) console.warn('motor gráfico: escala sin fijar, no se pinta el segmento.');
       return;
     }
-    const pix = pixelesDe(imagen);                  //La imagen
+    const pix = _pixelesDe(imagen);                  //La imagen
     const p = pix.data;                             //Imagen en sí
     const sw = pix.width, sh = pix.height;          //Tamaño de la imagen
     const xf = x * escX, yf = y * escY;             //Tamaño de la imagen escalada
@@ -140,8 +140,8 @@ var JuegoMotorGrafico = (function () {
    * @since 2.6
    */
   function inicializar() {
-    pintarFondo();
-    if (debug()) {
+    _pintarFondo();
+    if (_debug()) {
       const imgF = (typeof ComunListas !== 'undefined') ? ComunListas.fondo() : null;
       if (!imgF) {
         console.warn('motor gráfico: sin cartucho cargado, pantalla en blanco (LCD apagado)');
@@ -161,7 +161,7 @@ var JuegoMotorGrafico = (function () {
   function tick() {
     const canvas = document.getElementById('pantalla');
     const segs = (typeof ComunListas !== 'undefined') ? ComunListas.segmentos() : [];
-    pintarFondo();
+    _pintarFondo();
     let presentados = 0;
     let sinImagen = 0;
     for (const seg of segs) {
@@ -170,11 +170,14 @@ var JuegoMotorGrafico = (function () {
       pintarSegmento(canvas, seg.x, seg.y, seg.imagen);
       presentados++;
     }
-    if (debug()) {
+    if (_debug()) {
       console.log('motor gráfico: ' + presentados + ' segmento(s) presentado(s)' +
         (sinImagen ? ' — ¡ojo! ' + sinImagen + ' visible(s) sin imagen' : ''));
     }
   }
 
-  return { inicializar: inicializar, tick: tick };
+  return { 
+    inicializar: inicializar, 
+    tick: tick 
+  };
 })();

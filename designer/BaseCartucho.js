@@ -106,7 +106,7 @@ var BaseCartucho = (function () {
    * @param {File} fichero - Fichero del cartucho.
    * @returns {string} Object URL del fichero.
    */
-  function crearURL(fichero) {
+  function _crearURL(fichero) {
     const url = URL.createObjectURL(fichero);
     urlsCreadas.push(url);
     return url;
@@ -132,7 +132,7 @@ var BaseCartucho = (function () {
       const imagen = new Image();
       imagen.onload = () => resolver(imagen);
       imagen.onerror = () => rechazar(new Error('No se pudo cargar la imagen: ' + fichero.name));
-      imagen.src = crearURL(fichero);
+      imagen.src = _crearURL(fichero);
     });
   }
 
@@ -799,26 +799,26 @@ var BaseCartucho = (function () {
   function verificarCartucho(ctx) {
     const hallazgos = { errores: [], avisos: [] };
 
-    verificarReferenciasColgantes(ctx, hallazgos);
-    verificarInversosDeDirecciones(ctx, hallazgos);
-    verificarInversosDeColision(ctx, hallazgos);
+    _verificarReferenciasColgantes(ctx, hallazgos);
+    _verificarInversosDeDirecciones(ctx, hallazgos);
+    _verificarInversosDeColision(ctx, hallazgos);
     ctx.reconstruir();                       // los inversos calculados ya cuentan
 
-    verificarSegmentosUnoAUno(ctx, hallazgos);
-    verificarAcompanantes(ctx, hallazgos);
-    verificarBarrasDeDigitos(ctx, hallazgos);
-    verificarDigitosDeContadores(ctx, hallazgos);
+    _verificarSegmentosUnoAUno(ctx, hallazgos);
+    _verificarAcompanantes(ctx, hallazgos);
+    _verificarBarrasDeDigitos(ctx, hallazgos);
+    _verificarDigitosDeContadores(ctx, hallazgos);
 
     const fichas = ctx.grupos.filter(g => g.prop.tipo === 'cartucho');
-    verificarFichaDeCartucho(ctx, hallazgos, fichas);
+    _verificarFichaDeCartucho(ctx, hallazgos, fichas);
     // Secuencia y Director viven en la ficha: solo se revisan si hay UNA.
     const ficha = (fichas.length === 1) ? fichas[0] : null;
     if (ficha) {
-      verificarSecuenciaDeCartucho(ctx, hallazgos, ficha.prop);
-      verificarDirectorDeCartucho(hallazgos, ficha.prop);
+      _verificarSecuenciaDeCartucho(ctx, hallazgos, ficha.prop);
+      _verificarDirectorDeCartucho(hallazgos, ficha.prop);
     }
 
-    verificarJugadoresYRutas(ctx, hallazgos);
+    _verificarJugadoresYRutas(ctx, hallazgos);
     return hallazgos;
   }
 
@@ -828,7 +828,7 @@ var BaseCartucho = (function () {
    * Un enlace que no resuelve a NINGÚN grupo existente es un ERROR
    * bloqueante (referencia colgante): nunca en silencio.
    */
-  function verificarReferenciasColgantes(ctx, hallazgos) {
+  function _verificarReferenciasColgantes(ctx, hallazgos) {
     const camposConEnlace = [...ctx.ENLACES_JUGADOR, ...ctx.ENLACES_JUEGO,
     ...ctx.ENLACES_COLISION, 'mostradoJunto', 'colisionDe'];
     for (const grupo of ctx.grupos) {
@@ -849,16 +849,16 @@ var BaseCartucho = (function () {
    * coinciden, aviso (no error). El inverso se guarda en el GWI
    * (redundancia deliberada: menos cálculos al generar el GWC).
    */
-  function verificarInversosDeDirecciones(ctx, hallazgos) {
+  function _verificarInversosDeDirecciones(ctx, hallazgos) {
     for (const grupo of ctx.grupos) {
       for (const direccion of ctx.ENLACES_JUGADOR) {
-        verificarInversoDeUnaDireccion(ctx, hallazgos, grupo, direccion);
+        _verificarInversoDeUnaDireccion(ctx, hallazgos, grupo, direccion);
       }
     }
   }
 
   /** Comprueba (y completa si falta) el inverso de UNA dirección de un jugador. */
-  function verificarInversoDeUnaDireccion(ctx, hallazgos, origen, direccion) {
+  function _verificarInversoDeUnaDireccion(ctx, hallazgos, origen, direccion) {
     const propsOrigen = ctx.propsDe(origen.raiz);
     if (propsOrigen[direccion] === null) return;
 
@@ -894,7 +894,7 @@ var BaseCartucho = (function () {
    * (colisionDe). La unicidad (un jugador, un punto de colisión) lo
    * mantiene univaluado; una incoherencia solo puede venir de un GWI raro.
    */
-  function verificarInversosDeColision(ctx, hallazgos) {
+  function _verificarInversosDeColision(ctx, hallazgos) {
     for (const grupo of ctx.grupos) {
       const props = ctx.propsDe(grupo.raiz);
       if (props.colision === null) continue;
@@ -926,21 +926,21 @@ var BaseCartucho = (function () {
    * inertes (sus props viven en la pieza que los absorbió): se saltan, sus
    * comprobaciones serían ruido.
    */
-  function verificarSegmentosUnoAUno(ctx, hallazgos) {
+  function _verificarSegmentosUnoAUno(ctx, hallazgos) {
     for (const grupo of ctx.grupos) {
       if (grupo.absorbido) continue;
-      verificarEnlacesPropios(ctx, hallazgos, grupo);
-      verificarCadenaDeRuta(ctx, hallazgos, grupo);
-      verificarJugador(ctx, hallazgos, grupo);
-      verificarColisionDeclarada(ctx, hallazgos, grupo);
-      verificarDigito(ctx, hallazgos, grupo);
-      verificarContador(ctx, hallazgos, grupo);
-      verificarAdicional(ctx, hallazgos, grupo);
+      _verificarEnlacesPropios(ctx, hallazgos, grupo);
+      _verificarCadenaDeRuta(ctx, hallazgos, grupo);
+      _verificarJugador(ctx, hallazgos, grupo);
+      _verificarColisionDeclarada(ctx, hallazgos, grupo);
+      _verificarDigito(ctx, hallazgos, grupo);
+      _verificarContador(ctx, hallazgos, grupo);
+      _verificarAdicional(ctx, hallazgos, grupo);
     }
   }
 
   /** Los enlaces del tipo deben apuntar a un segmento que exista y que no sea él mismo. */
-  function verificarEnlacesPropios(ctx, hallazgos, grupo) {
+  function _verificarEnlacesPropios(ctx, hallazgos, grupo) {
     const id = ctx.segId(grupo);
     const props = grupo.prop;
     for (const campo of ctx.camposDe(props.tipo)) {
@@ -955,7 +955,7 @@ var BaseCartucho = (function () {
   }
 
   /** Avisos sobre cadenas: inicios que no llevan a ningún sitio, contadores sin cadena, mezcla de siguiente y bifurcación. */
-  function verificarCadenaDeRuta(ctx, hallazgos, grupo) {
+  function _verificarCadenaDeRuta(ctx, hallazgos, grupo) {
     const id = ctx.segId(grupo);
     const props = grupo.prop;
     if (props.tipo === 'inicio' && props.siguiente === null &&
@@ -975,7 +975,7 @@ var BaseCartucho = (function () {
    * mover: bloqueante) y algún punto que choque contra él (aviso: sin eso
    * no se puede perder la partida).
    */
-  function verificarJugador(ctx, hallazgos, grupo) {
+  function _verificarJugador(ctx, hallazgos, grupo) {
     const props = grupo.prop;
     if (props.tipo !== 'jugador') return;
     const id = ctx.segId(grupo);
@@ -994,7 +994,7 @@ var BaseCartucho = (function () {
    * cadenas de desenlace no pueden enlazar con un jugador; los contadores
    * de desenlace son uno de los cuatro internos, o ninguno.
    */
-  function verificarColisionDeclarada(ctx, hallazgos, grupo) {
+  function _verificarColisionDeclarada(ctx, hallazgos, grupo) {
     const props = grupo.prop;
     if (props.colision === null) return;
     const id = ctx.segId(grupo);
@@ -1027,7 +1027,7 @@ var BaseCartucho = (function () {
   }
 
   /** Dígito: las SIETE barras (barra_a..g) puestas y de tipo juego. */
-  function verificarDigito(ctx, hallazgos, grupo) {
+  function _verificarDigito(ctx, hallazgos, grupo) {
     const props = grupo.prop;
     if (props.tipo !== 'dígito') return;
     const id = ctx.segId(grupo);
@@ -1048,7 +1048,7 @@ var BaseCartucho = (function () {
    * Contador: digito_1 (unidades) obligatorio; cada dígito existe y es de
    * tipo dígito; contador interno 1-4; valor inicial >= 0.
    */
-  function verificarContador(ctx, hallazgos, grupo) {
+  function _verificarContador(ctx, hallazgos, grupo) {
     const props = grupo.prop;
     if (props.tipo !== 'contador') return;
     const id = ctx.segId(grupo);
@@ -1079,7 +1079,7 @@ var BaseCartucho = (function () {
    * adicional/inicioAdicional; un inicioAdicional EXIGE siguiente (nace
    * encendido y avanza en su bucle); y no declaran colisión.
    */
-  function verificarAdicional(ctx, hallazgos, grupo) {
+  function _verificarAdicional(ctx, hallazgos, grupo) {
     const props = grupo.prop;
     if (props.tipo !== 'adicional' && props.tipo !== 'inicioAdicional') return;
     const id = ctx.segId(grupo);
@@ -1121,7 +1121,7 @@ var BaseCartucho = (function () {
    * NINGUNA red de enlaces; puede salir SOLO en la Secuencia del cartucho
    * (eso no es una red de enlaces y no se toca).
    */
-  function verificarAcompanantes(ctx, hallazgos) {
+  function _verificarAcompanantes(ctx, hallazgos) {
     const apuntadosPorCadena = recogerApuntadosPorCadena(ctx);
     const principalDeSecundario = new Map();   // raíz del secundario → su principal
 
@@ -1138,7 +1138,7 @@ var BaseCartucho = (function () {
         principalDeSecundario.set(secundario.raiz, principal);
       }
       completarInversoDeAcompanante(ctx, hallazgos, principal, secundario);
-      verificarReglasDeSecundario(ctx, hallazgos, secundario, apuntadosPorCadena);
+      _verificarReglasDeSecundario(ctx, hallazgos, secundario, apuntadosPorCadena);
     }
     retirarAcompanantesHuerfanos(ctx, principalDeSecundario);
   }
@@ -1159,7 +1159,7 @@ var BaseCartucho = (function () {
   }
 
   /** Solo tipo juego, sin cadena ni colisión, que nadie lo apunte y que no sea principal a la vez. */
-  function verificarReglasDeSecundario(ctx, hallazgos, secundario, apuntadosPorCadena) {
+  function _verificarReglasDeSecundario(ctx, hallazgos, secundario, apuntadosPorCadena) {
     const id = ctx.segId(secundario);
     const props = secundario.prop;
     if (props.tipo !== 'juego') {
@@ -1199,7 +1199,7 @@ var BaseCartucho = (function () {
    * Las barras no se comparten entre dígitos (error) y no participan en
    * rutas ni colisiones (aviso: solo aportan su gráfico al contador).
    */
-  function verificarBarrasDeDigitos(ctx, hallazgos) {
+  function _verificarBarrasDeDigitos(ctx, hallazgos) {
     const digitoDeBarra = new Map();         // raíz de barra → su dígito
     for (const grupo of ctx.grupos) {
       if (grupo.prop.tipo !== 'dígito') continue;
@@ -1227,7 +1227,7 @@ var BaseCartucho = (function () {
   }
 
   /** Un dígito solo puede ser posición de UN contador (si no, dos contadores escribirían las mismas barras). */
-  function verificarDigitosDeContadores(ctx, hallazgos) {
+  function _verificarDigitosDeContadores(ctx, hallazgos) {
     const contadorDeDigito = new Map();      // raíz de dígito → su contador
     for (const grupo of ctx.grupos) {
       if (grupo.prop.tipo !== 'contador') continue;
@@ -1253,7 +1253,7 @@ var BaseCartucho = (function () {
    * declarado. Los mecanismos son excluyentes: con segmentos de vida/muerte
    * el fin por contador es un error.
    */
-  function verificarFichaDeCartucho(ctx, hallazgos, fichas) {
+  function _verificarFichaDeCartucho(ctx, hallazgos, fichas) {
     if (fichas.length === 0) {
       hallazgos.errores.push('Falta el segmento de cartucho: un cartucho sin su ficha no puede ejecutarse.');
       return;
@@ -1262,11 +1262,11 @@ var BaseCartucho = (function () {
       hallazgos.errores.push('Hay ' + fichas.length + ' segmentos de cartucho: debe haber exactamente uno.');
       return;
     }
-    verificarMecanismoDeFin(ctx, hallazgos, fichas[0].prop);
+    _verificarMecanismoDeFin(ctx, hallazgos, fichas[0].prop);
   }
 
   /** Coherencia del mecanismo de fin con lo que el cartucho tiene en pantalla. */
-  function verificarMecanismoDeFin(ctx, hallazgos, propsFicha) {
+  function _verificarMecanismoDeFin(ctx, hallazgos, propsFicha) {
     const hayVida = ctx.grupos.some(g => g.prop.tipo === 'vida');
     const hayMuerte = ctx.grupos.some(g => g.prop.tipo === 'muerte');
     const fin = propsFicha.finJuego;
@@ -1279,7 +1279,7 @@ var BaseCartucho = (function () {
     } else if (fin === 'muerte' && !hayMuerte) {
       hallazgos.errores.push('El fin es por iconos de muerte pero no hay ningún segmento de tipo muerte.');
     } else if (fin === 'contador') {
-      verificarFinPorContador(ctx, hallazgos, propsFicha, hayVida || hayMuerte);
+      _verificarFinPorContador(ctx, hallazgos, propsFicha, hayVida || hayMuerte);
     }
   }
 
@@ -1288,7 +1288,7 @@ var BaseCartucho = (function () {
    * existir en pantalla, ser descendente y no empezar en cero (empezar en
    * 0 = la partida nunca termina).
    */
-  function verificarFinPorContador(ctx, hallazgos, propsFicha, hayIconos) {
+  function _verificarFinPorContador(ctx, hallazgos, propsFicha, hayIconos) {
     if (hayIconos) {
       hallazgos.errores.push('El fin por contador es excluyente con los iconos de vida/muerte ' +
         '(el cartucho tiene segmentos de esos tipos).');
@@ -1317,7 +1317,7 @@ var BaseCartucho = (function () {
   }
 
   /** Secuencia: cada segmento existe y es juego/inicio/adicional; con segmentos, los ticks deben ser >= 1. */
-  function verificarSecuenciaDeCartucho(ctx, hallazgos, propsFicha) {
+  function _verificarSecuenciaDeCartucho(ctx, hallazgos, propsFicha) {
     let haySecuencia = false;
     for (const campo of ctx.CAMPOS_SECUENCIA) {
       if (propsFicha[campo] === null) continue;
@@ -1342,7 +1342,7 @@ var BaseCartucho = (function () {
    * mínimo por encima de la pausa del simulador es un AVISO (no tendría
    * efecto en PC); el resto de números, si están, deben ser >= 1.
    */
-  function verificarDirectorDeCartucho(hallazgos, propsFicha) {
+  function _verificarDirectorDeCartucho(hallazgos, propsFicha) {
     const camposAceleracion = ['accCada', 'accResta', 'accMinimo'];
     const declarados = camposAceleracion.filter(c => propsFicha[c] !== null).length;
 
@@ -1375,7 +1375,7 @@ var BaseCartucho = (function () {
   }
 
   /** Al menos UN jugador (sin él no hay partida: bloqueante) y al menos un inicio de ruta (aviso). */
-  function verificarJugadoresYRutas(ctx, hallazgos) {
+  function _verificarJugadoresYRutas(ctx, hallazgos) {
     const hayJugador = ctx.grupos.some(g => !g.absorbido && g.prop.tipo === 'jugador');
     if (!hayJugador) {
       hallazgos.errores.push('No hay ningún segmento de tipo jugador: no se puede jugar.');
@@ -2112,13 +2112,13 @@ var BaseCartucho = (function () {
     }
     const segmentos = [];
     for (let i = 0; i < nSegmentos; i++) {
-      segmentos.push(leerRegistroDeSegmentoGWC(lector, bloqueSegmentos.inicio + i * TAM_REGISTRO_SEGMENTO_GWC, i, sprites));
+      segmentos.push(_leerRegistroDeSegmentoGWC(lector, bloqueSegmentos.inicio + i * TAM_REGISTRO_SEGMENTO_GWC, i, sprites));
     }
     return segmentos;
   }
 
   /** Un registro de segmento del Bloque 3 como objeto con la forma del editor. */
-  function leerRegistroDeSegmentoGWC(lector, inicioRegistro, indice, sprites) {
+  function _leerRegistroDeSegmentoGWC(lector, inicioRegistro, indice, sprites) {
     const indiceSprite = lector.u8(inicioRegistro + 5);
     const segmento = {
       id: idDeSegmentoGWC(indice),

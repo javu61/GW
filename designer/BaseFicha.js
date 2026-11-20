@@ -54,6 +54,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _pintarTablaBotones     _campo
+//    _entrada            _liberar                _construir
 // ====================================================================================================
 
 const BaseFicha = (function () {
@@ -149,7 +150,7 @@ const BaseFicha = (function () {
     return control;
   }
 
-  function entrada(tipo, extra) {
+  function _entrada(tipo, extra) {
     const i = document.createElement('input');
     i.type = tipo;
     if (extra) Object.assign(i, extra);
@@ -173,7 +174,7 @@ const BaseFicha = (function () {
     const vacio = _crearElemento('span', 'fichaVacio', 'Sin imagen');
     marco.append(miniatura, vacio);
     const info = _crearElemento('div', 'fichaNota', def.ayuda);
-    const fichero = entrada('file', { accept: 'image/png' });
+    const fichero = _entrada('file', { accept: 'image/png' });
     fichero.className = 'oculto';
     const cargar = _crearElemento('button', null, 'Cargar…');
     cargar.type = 'button';
@@ -242,7 +243,7 @@ const BaseFicha = (function () {
    */
   function _colocarImagen(clave, img, nombre, url) {
     const datos = imagenes[clave];
-    liberar(clave);
+    _liberar(clave);
     datos.img = img;
     datos.nombre = nombre;
     datos.url = url || null;
@@ -278,7 +279,7 @@ const BaseFicha = (function () {
   }
 
   /** Libera la URL de objeto de una imagen cargada (si la hay). */
-  function liberar(clave) {
+  function _liberar(clave) {
     const datos = imagenes[clave];
     if (datos.url) URL.revokeObjectURL(datos.url);
     datos.url = null;
@@ -292,7 +293,7 @@ const BaseFicha = (function () {
    */
   function _vaciarImagen(clave) {
     const datos = imagenes[clave];
-    liberar(clave);
+    _liberar(clave);
     datos.img = null;
     datos.nombre = null;
     datos.ui.miniatura.removeAttribute('src');
@@ -332,13 +333,13 @@ const BaseFicha = (function () {
       const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
       const tdUsado = _crearElemento('td');
-      const usado = entrada('checkbox');
+      const usado = _entrada('checkbox');
       usado.checked = previo.usado;
       tdUsado.appendChild(usado);
       const tdNumero = _crearElemento('td', null, String(n) +
         (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
       const tdId = _crearElemento('td');
-      const id = entrada('text', { value: previo.id, placeholder: 'id lógico (IZQ, DER, Start…)' });
+      const id = _entrada('text', { value: previo.id, placeholder: 'id lógico (IZQ, DER, Start…)' });
       id.disabled = !usado.checked;
       usado.addEventListener('change', () => { id.disabled = !usado.checked; });
       tdId.appendChild(id);
@@ -350,14 +351,14 @@ const BaseFicha = (function () {
   // ---------------- Construcción ----------------
 
   /** Construye toda la ficha dentro de `contenedor`. */
-  function construir(contenedor) {
+  function _construir(contenedor) {
     contenedor.textContent = '';
 
     // Datos del GWB
     const datos = _crearElemento('section', 'fichaSeccion');
     datos.appendChild(_crearElemento('h3', null, 'Datos del GWB'));
     const rejilla = _crearElemento('div', 'fichaRejilla');
-    campos.nombre = _campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre del cartucho' }));
+    campos.nombre = _campo(rejilla, 'Nombre', _entrada('text', { placeholder: 'Nombre del cartucho' }));
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(sin definir)'], ['2', '2 botones'],
     ['4', '4 botones'], ['5', '5 botones']]) {
@@ -368,8 +369,8 @@ const BaseFicha = (function () {
     campos.estilo = _campo(rejilla, 'Estilo', estilo,
       'Opcional: si falta, se usa el del setup cargado.');
     const par = _crearElemento('div', 'fichaPar');
-    campos.ancho = entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
-    campos.alto = entrada('number', { min: 1, step: 1, placeholder: 'alto' });
+    campos.ancho = _entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
+    campos.alto = _entrada('number', { min: 1, step: 1, placeholder: 'alto' });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par,
       'Opcional: si falta, se usa la pantalla del setup cargado.');
@@ -639,7 +640,7 @@ const BaseFicha = (function () {
     if (raiz !== contenedor) {
       raiz = contenedor;
       campos = {}; imagenes = {}; idsBoton = {};
-      construir(contenedor);
+      _construir(contenedor);
       _refrescarBotonesImagen('img_s');
     } else {
       _pintarTablaBotones();           // el setup pudo cambiar desde la última visita

@@ -52,13 +52,13 @@ const BaseExtractor = (() => {
 
   /* ---------------- Utilidades ---------------- */
 
-  function hex(r, g, b) {
+  function _hex(r, g, b) {
     const h = (v) => v.toString(16).padStart(2, '0').toUpperCase();
     return '#' + h(r) + h(g) + h(b);
   }
 
   /* Lee la imagen a un canvas y devuelve {datos, ancho, alto}. */
-  function leerImagen(img) {
+  function _leerImagen(img) {
     const c = document.createElement('canvas');
     c.width = img.naturalWidth;
     c.height = img.naturalHeight;
@@ -72,7 +72,7 @@ const BaseExtractor = (() => {
   }
 
   /* Componentes conexas de una máscara (conectividad 8). */
-  function componentes(mascara, ancho, alto) {
+  function _componentes(mascara, ancho, alto) {
     const etiquetas = new Int32Array(mascara.length);
     const lista = [];
     for (let i = 0; i < mascara.length; i++) {
@@ -110,17 +110,17 @@ const BaseExtractor = (() => {
     return lista;
   }
 
-  function crearUnionFind(n) {
+  function _crearUnionFind(n) {
     const padre = new Int32Array(n);
     for (let i = 0; i < n; i++) padre[i] = i;
-    function buscar(i) {
+    function _buscar(i) {
       while (padre[i] !== i) { padre[i] = padre[padre[i]]; i = padre[i]; }
       return i;
     }
     return {
-      buscar: buscar,
+      buscar: _buscar,
       unir: function (a, b) {
-        a = buscar(a); b = buscar(b);
+        a = _buscar(a); b = _buscar(b);
         if (a !== b) { if (b < a) { const t = a; a = b; b = t; } padre[b] = a; }
       }
     };
@@ -131,14 +131,14 @@ const BaseExtractor = (() => {
   /* Devuelve null si TODOS los píxeles son blanco o negro puros, o un
    * mensaje con los colores intrusos encontrados (bloqueante). */
   function verificarBN(img) {
-    const { datos, ancho, alto } = leerImagen(img);
+    const { datos, ancho, alto } = _leerImagen(img);
     const d = datos.data;
     const intrusos = new Map();      // color -> píxeles
     for (let i = 0; i < ancho * alto; i++) {
       const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
       if ((r === 255 && g === 255 && b === 255) ||
         (r === 0 && g === 0 && b === 0)) continue;
-      const color = hex(r, g, b);
+      const color = _hex(r, g, b);
       intrusos.set(color, (intrusos.get(color) || 0) + 1);
     }
     if (intrusos.size === 0) return null;
@@ -154,7 +154,7 @@ const BaseExtractor = (() => {
   /* Extrae las componentes negras elementales y el mapa píxel→compo-
    * nente. No aplica ninguna unión: la reagrupación es aparte. */
   function extraerBN(img) {
-    const { datos, ancho, alto } = leerImagen(img);
+    const { datos, ancho, alto } = _leerImagen(img);
     const n = ancho * alto;
     const d = datos.data;
     const mascara = new Uint8Array(n);
@@ -165,7 +165,7 @@ const BaseExtractor = (() => {
     const indicePixel = new Int32Array(n).fill(-1);
     const comps = [];
     let ruido = 0;
-    for (const comp of componentes(mascara, ancho, alto)) {
+    for (const comp of _componentes(mascara, ancho, alto)) {
       if (comp.superficie < UMBRAL_RUIDO) {
         ruido++;
         continue;
@@ -184,7 +184,7 @@ const BaseExtractor = (() => {
    * forma determinista. Las uniones con índices inexistentes avisan
    * y se ignoran. */
   function reagrupar(base, uniones) {
-    const uf = crearUnionFind(base.comps.length);
+    const uf = _crearUnionFind(base.comps.length);
     for (const [a, b] of (uniones || [])) {
       if (a < 0 || b < 0 || a >= base.comps.length || b >= base.comps.length) {
         console.warn('[extractor] unión con un segmento que no existe: ' + a + ' - ' + b);

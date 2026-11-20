@@ -59,7 +59,7 @@ var JuegoDirector = (function () {
   var LCG_A = 25173, LCG_C = 13849;   // constantes clásicas de 16 bits
   var estadoLCG = SEMILLA;
 
-  function reiniciarAleatorios() { estadoLCG = SEMILLA; }
+  function _reiniciarAleatorios() { estadoLCG = SEMILLA; }
 
   function aleatorio(max) {
     // x = (a·x + c) mod 2^16 — el AND 0xFFFF ES el módulo del uint16
@@ -78,7 +78,7 @@ var JuegoDirector = (function () {
    * misma semilla atraviesa los mismos estados.
    * @returns {void}
    */
-  function acelerar() {
+  function _acelerar() {
     var acc = (typeof ComunListas !== 'undefined' &&
       typeof ComunListas.aceleracionDeCartucho === 'function')
       ? ComunListas.aceleracionDeCartucho() : null;
@@ -96,7 +96,7 @@ var JuegoDirector = (function () {
    * (los contadores internos siguen su curso igual).
    * @returns {void}
    */
-  function avisarTick() {
+  function _avisarTick() {
     if (typeof BaseDirector === 'undefined') return;
     if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG &&
       typeof JuegoMotorEstados.contadores === 'function') {
@@ -137,7 +137,7 @@ var JuegoDirector = (function () {
    */
   function tick() {
     if (Finalizar) {
-      finJuego();
+      _finJuego();
       return;                    // sin programar el siguiente tick
     }
     if (!Pausa) {
@@ -145,26 +145,26 @@ var JuegoDirector = (function () {
       JuegoMotorGrafico.tick();  // (motor gráfico: presentación)
       if (typeof JuegoMotorEstados.terminada === 'function' &&
         JuegoMotorEstados.terminada()) {
-        finJuego();
+        _finJuego();
         return;                  // sin programar el siguiente tick
       }
       ticks++;
-      acelerar();
-      avisarTick();
+      _acelerar();
+      _avisarTick();
     }
-    programar();
+    _programar();
   }
 
-  function programar() {
+  function _programar() {
     temporizador = setTimeout(tick, pausaVig); // encadenado, nunca setInterval; F4-I2: la VIGENTE
   }
 
-  function detener() {
+  function _detener() {
     if (temporizador !== null) clearTimeout(temporizador);
     temporizador = null;
   }
 
-  function enMarcha() { return temporizador !== null; }
+  function _enMarcha() { return temporizador !== null; }
 
   /**
    * FUNCIÓN DE FIN DEL JUEGO (F5-I10): la ÚNICA salida de una
@@ -177,9 +177,9 @@ var JuegoDirector = (function () {
    * iniciar().
    * @returns {void}
    */
-  function finJuego() {
+  function _finJuego() {
     var motivo = Finalizar ? 'stop' : 'fin';
-    detener();
+    _detener();
     Pausa = false;
     Finalizar = false;
     BaseDirector.finDePartida(motivo);   // F5-I7: vuelven pestañas y botones de carga
@@ -192,8 +192,8 @@ var JuegoDirector = (function () {
    * Sin partida en marcha no hace nada.
    * @returns {void}
    */
-  function setPausa() {
-    if (!enMarcha()) return;
+  function _setPausa() {
+    if (!_enMarcha()) return;
     Pausa = !Pausa;
   }
 
@@ -203,8 +203,8 @@ var JuegoDirector = (function () {
    * llama a la función de fin. Sin partida en marcha no hace nada.
    * @returns {void}
    */
-  function setStop() {
-    if (!enMarcha()) return;
+  function _setStop() {
+    if (!_enMarcha()) return;
     Finalizar = true;
   }
 
@@ -213,7 +213,7 @@ var JuegoDirector = (function () {
    * etiquetarSistema del BaseDirector para la etiqueta del A.
    * @returns {boolean} true si la partida está pausada.
    */
-  function estaPausada() {
+  function _estaPausada() {
     return Pausa;
   }
 
@@ -225,8 +225,8 @@ var JuegoDirector = (function () {
    *        los tres hacen lo mismo.
    * @returns {void}
    */
-  function arrancar(tipo) {
-    detener(); // nunca dos relojes
+  function _arrancar(tipo) {
+    _detener(); // nunca dos relojes
 
     // Guarda: sin motores, error visible y no arranca
     if (typeof JuegoMotorEstados === 'undefined' || typeof JuegoMotorGrafico === 'undefined') {
@@ -249,35 +249,19 @@ var JuegoDirector = (function () {
     pausaVig = pausaBase;
     rutasLanzadas = 0;
     maxSimultaneas = 1;
-    reiniciarAleatorios();                     // la partida arranca con la semilla
+    _reiniciarAleatorios();                     // la partida arranca con la semilla
     ComunListas.colaPulsaciones().length = 0;  // cola de pulsaciones limpia
 
     BaseDirector.jugar();                     // modo juego (solo el Simulador)
     JuegoMotorEstados.iniciar();              // estado inicial del juego
     JuegoMotorGrafico.inicializar();          // fondo fijo en pantalla
-
-    // --- PRUEBA DEL GENERADOR (F3-I4; verificada en simulación con
-    //     los ficheros reales: ambas pasadas idénticas, más las
-    //     regresiones de pulsaciones y secuencia).
-    //     SOLO PARA LAS PRUEBAS, comentar luego
-    //     var pruebaA = JuegoMotorEstados.pruebaAleatorios();
-    //     reiniciarAleatorios();                     // "vuelve a inicializar"
-    //     var pruebaB = JuegoMotorEstados.pruebaAleatorios();
-    //     var iguales = pruebaA.length === pruebaB.length &&
-    //       pruebaA.every(function (v, i) { return v === pruebaB[i]; });
-    //     if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) {
-    //       console.info('A1: ' + pruebaA.join(', '));
-    //       console.info('A2: ' + pruebaB.join(', '));
-    //       console.info('JuegoDirector: prueba de aleatorios ' + (iguales ? 'OK' : 'FALLO'));
-    //     }
-
     tick(); // tick inmediato y de ahí el bucle encadenado
   }
 
   // --- Aduana de entrada (F3-I2) ---
 
-  function pulsar(numero) {
-    if (!enMarcha()) return; // sin partida, la pulsación no existe
+  function _pulsar(numero) {
+    if (!_enMarcha()) return; // sin partida, la pulsación no existe
     // F5-I10: en pausa o con Stop pendiente la pulsación tampoco
     // existe (si no, la cola de 8 se llenaría y se procesaría de
     // golpe al reanudar).
@@ -300,7 +284,7 @@ var JuegoDirector = (function () {
    * @returns {number} El máximo de simultáneas vigente.
    * @since 4.2
    */
-  function rutaLanzada() {
+  function _rutaLanzada() {
     rutasLanzadas++;
     var cfgR = (typeof ComunListas !== 'undefined' &&
       typeof ComunListas.rutasDeCartucho === 'function')
@@ -317,7 +301,7 @@ var JuegoDirector = (function () {
    * @returns {number} Máximo de rutas simultáneas.
    * @since 4.2
    */
-  function maxRutasSimultaneas() {
+  function _maxRutasSimultaneas() {
     return maxSimultaneas;
   }
 
@@ -327,7 +311,7 @@ var JuegoDirector = (function () {
    * @returns {number} Pausa vigente en milisegundos.
    * @since 4.2
    */
-  function pausaVigente() {
+  function _pausaVigente() {
     return pausaVig;
   }
 
@@ -336,23 +320,23 @@ var JuegoDirector = (function () {
    * 0, 1 o 2 según el botón A, B o R.
    * @returns {number} Tipo de la partida.
    */
-  function tipoDePartida() {
+  function _tipoDePartida() {
     return tipoPartida;
   }
 
   // API pública
   return {
-    arrancar: arrancar,                 // F5-I10: arrancar(tipo)
-    detener: detener,
-    pulsar: pulsar,
-    enMarcha: enMarcha,
-    setPausa: setPausa,                 // F5-I10: Pausa = NOT Pausa
-    setStop: setStop,                   // F5-I10: Finalizar = true
-    estaPausada: estaPausada,           // F5-I10
-    tipoDePartida: tipoDePartida,       // F5-I10
-    aleatorio: aleatorio,   // F3-I4: la única puerta del generador
-    rutaLanzada: rutaLanzada,           // F4-I2
-    maxRutasSimultaneas: maxRutasSimultaneas, // F4-I2
-    pausaVigente: pausaVigente          // F4-I2
+    arrancar: _arrancar,                       // F5-I10: arrancar(tipo)
+    detener: _detener,
+    pulsar: _pulsar,
+    enMarcha: _enMarcha,
+    setPausa: _setPausa,                       // F5-I10: Pausa = NOT Pausa
+    setStop: _setStop,                         // F5-I10: Finalizar = true
+    estaPausada: _estaPausada,                 // F5-I10
+    tipoDePartida: _tipoDePartida,             // F5-I10
+    aleatorio: aleatorio,                     // F3-I4: la única puerta del generador
+    rutaLanzada: _rutaLanzada,                 // F4-I2
+    maxRutasSimultaneas: _maxRutasSimultaneas, // F4-I2
+    pausaVigente: _pausaVigente                // F4-I2
   };
 })();

@@ -37,7 +37,8 @@
 //   Internas
 //     _asegurar              _crearElemento      _campo
 //     _descargar             _marcarCambios      _nombreFichero    
-//     _pintarTablaBotones    _pintarMensajes
+//     _pintarTablaBotones    _pintarMensajes     _entrada
+//     _construir
 // ====================================================================================================
 
 const BaseSetup = (function () {
@@ -119,7 +120,7 @@ const BaseSetup = (function () {
    * @param {Object} extra - Atributos adicionales para el input.
    * @returns {HTMLInputElement} El elemento input creado.
   */
-  function entrada(tipo, extra) {
+  function _entrada(tipo, extra) {
     const i = document.createElement('input');
     i.type = tipo;
     Object.assign(i, extra || {});
@@ -169,10 +170,10 @@ const BaseSetup = (function () {
       const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
       const tdN = _crearElemento('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
-      const puerto = entrada('number', { className: 'colPuerto', min: 0, step: 1, value: d.puerto });
-      const tecla = entrada('text', { className: 'colTecla', maxLength: 1, value: d.tecla });
+      const puerto = _entrada('number', { className: 'colPuerto', min: 0, step: 1, value: d.puerto });
+      const tecla = _entrada('text', { className: 'colTecla', maxLength: 1, value: d.tecla });
       tecla.style.width = '3em';
-      const alias = entrada('text', { className: 'colAlias', value: d.alias });
+      const alias = _entrada('text', { className: 'colAlias', value: d.alias });
       alias.style.minWidth = '8em';
       for (const c of [puerto, tecla, alias]) {
         const td = _crearElemento('td');
@@ -189,7 +190,7 @@ const BaseSetup = (function () {
    * @param {HTMLElement} contenedor - Elemento donde se construye.
    * @returns {void}
    */
-  function construir(contenedor) {
+  function _construir(contenedor) {
     contenedor.textContent = '';
     avisoCambios = _crearElemento('p', 'fichaAviso oculto', 'Hay cambios sin aplicar: pulsa Aplicar o Guardar GWS para ponerlos en marcha.');
     contenedor.appendChild(avisoCambios);
@@ -197,8 +198,8 @@ const BaseSetup = (function () {
     const datos = _crearElemento('section', 'fichaSeccion');
     datos.appendChild(_crearElemento('h3', null, 'Datos del GWS'));
     const rejilla = _crearElemento('div', 'fichaRejilla');
-    campos.nombre = _campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
-    campos.descripcion = _campo(rejilla, 'Descripción', entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }), 'Informativa', true);
+    campos.nombre = _campo(rejilla, 'Nombre', _entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
+    campos.descripcion = _campo(rejilla, 'Descripción', _entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }), 'Informativa', true);
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(elige estilo)'], ['2', '2 botones'], ['4', '4 botones'], ['5', '5 botones']]) {
       const o = document.createElement('option');
@@ -207,8 +208,8 @@ const BaseSetup = (function () {
     }
     campos.estilo = _campo(rejilla, 'Estilo', estilo);
     const par = _crearElemento('div', 'fichaPar');
-    campos.ancho = entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
-    campos.alto = entrada('number', { min: 1, step: 1, placeholder: 'alto' });
+    campos.ancho = _entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
+    campos.alto = _entrada('number', { min: 1, step: 1, placeholder: 'alto' });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par, 'Píxeles de la pantalla.');
     datos.appendChild(rejilla);
@@ -248,7 +249,7 @@ const BaseSetup = (function () {
     if (raiz !== c) {
       raiz = c;
       campos = {}; datosBoton = {};
-      construir(c);
+      _construir(c);
     }
   }
 

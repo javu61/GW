@@ -4,7 +4,7 @@
 // ==================================================
 //
 // PROPÓSITO
-//   La pestaña «Cartucho» (F5-I10/F5-I12): la ficha del cartucho, FUENTE
+//   La pestaña «Cartucho» (F5-I10): la ficha del cartucho, FUENTE
 //   ÚNICA de sus datos (nombre, estilo, resolución, imágenes y botones).
 //   Todo lo que se carga la rellena (poblar) y todo lo que se guarda
 //   sale de ella: el GWB directamente y el GWI/GWC a través de
@@ -42,11 +42,15 @@
 //   datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
 //   imagenesEnMemoria  Las tres imágenes {img_s, img_f, img_m}.
 //   botonesDelEstilo   Números de botón posibles de un estilo.
+//  Aplicar (F5-I12)
+//   hayCambios         ¿Hay cambios sin aplicar (borrador)?
+//   marcarAplicado     Da la ficha por aplicada (apaga el aviso).
+//   ficherosGWB        Los ficheros del GWB de la ficha, en memoria.
 //  Verificación y GWB
 //   verificar          Comprueba que la ficha esté completa y correcta.
 //   guardar            Verifica y, si todo está bien, genera cartucho_GWB.
 //  Internas
-//   asegurar, estiloEfectivo, montarGWB, pintarMensajes, pixelesNoBN,
+//   marcarCambios, asegurar, estiloEfectivo, montarGWB, pintarMensajes, pixelesNoBN,
 //   crearTarjetaImagen, cargarImagen, colocarImagen, vaciarImagen,
 //   refrescarBotonesImagen, miniaturaDe, pintarTablaBotones, campo.
 
@@ -88,6 +92,8 @@ const BaseFicha = (function () {
   let extras = {};                // combinar/etiquetas del GWB cargado (se conservan al guardar)
   let imgSBloqueada = false;      // con segmentos en memoria no se cambia img_s
   let alCambiar = null;           // (clave, imagen|null) tras un cambio del usuario
+  let sucio = false;              // F5-I12: hay cambios sin aplicar (la ficha es un borrador)
+  let avisoCambios = null;        // línea «cambios sin aplicar»
 
   /**
    * Números de botón de juego posibles de un estilo.
@@ -183,6 +189,7 @@ const BaseFicha = (function () {
     });
     borrar.addEventListener('click', () => {
       vaciarImagen(def.clave);
+      marcarCambios(true);
       if (alCambiar) alCambiar(def.clave, null);
     });
     return tarjeta;
@@ -386,18 +393,18 @@ const BaseFicha = (function () {
       'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
     contenedor.appendChild(seccionBot);
 
-    // Guardado: mensajes de verificación y botón
+    // Mensajes de verificación (los botones Aplicar y Guardar GWB están
+    // en la pestaña, F5-I12) y el aviso de cambios sin aplicar.
     mensajes = el('div', 'fichaMensajes');
-    const guardarBtn = el('button', null, 'Verificar y guardar GWB');
-    guardarBtn.type = 'button';
-    guardarBtn.title = 'Comprueba la ficha y genera cartucho_gwb.zip';
-    guardarBtn.addEventListener('click', async () => {
-      guardarBtn.disabled = true;           // evita guardados solapados
-      try { await guardar(); } finally { guardarBtn.disabled = false; }
-    });
-    const pie = el('div', 'fichaAcciones');
-    pie.appendChild(guardarBtn);
-    contenedor.append(mensajes, pie);
+    avisoCambios = el('p', 'fichaAviso oculto',
+      'Hay cambios sin aplicar: pulsa Aplicar para que pasen al editor y al simulador.');
+    contenedor.insertBefore(avisoCambios, contenedor.firstChild);
+    contenedor.appendChild(mensajes);
+    // Toda edición del usuario (escribir, elegir, marcar, cargar o borrar
+    // una imagen) deja la ficha como borrador hasta el siguiente Aplicar.
+    const marcar = () => marcarCambios(true);
+    contenedor.addEventListener('input', marcar);
+    contenedor.addEventListener('change', marcar);
 
     campos.estilo.addEventListener('change', pintarTablaBotones);
     pintarTablaBotones();
@@ -456,6 +463,11 @@ const BaseFicha = (function () {
     const pantalla = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
       ? BaseDirector.pantallaDeSetup() : null;
 
+    // F5-I12: el GWI/GWC salen de lo APLICADO; con la ficha en borrador
+    // se pide aplicar antes (así lo generado es lo que hay en memoria).
+    if (opt.generar && sucio) {
+      errores.push('La ficha del cartucho tiene cambios sin aplicar: pulsa Aplicar en la pestaña Cartucho antes de generar.');
+    }
     if (e.nombre === '') errores.push('Falta el nombre del cartucho.');
 
     // Estilo (opcional): si no está, tiene que haber setup que lo dé.
@@ -527,6 +539,46 @@ const BaseFicha = (function () {
     }
     if (opt.mostrar) pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos };
+  }
+
+  /**
+   * Marca (o desmarca) la ficha como borrador con cambios sin aplicar
+   * y muestra u oculta el aviso (F5-I12).
+   * @param {boolean} hay - true si hay cambios sin aplicar.
+   * @returns {void}
+   */
+  function marcarCambios(hay) {
+    sucio = !!hay;
+    if (avisoCambios) avisoCambios.classList.toggle('oculto', !sucio);
+  }
+
+  /**
+   * Indica si la ficha tiene cambios sin aplicar (F5-I12).
+   * @returns {boolean} true si el borrador difiere de lo aplicado.
+   */
+  function hayCambios() {
+    return sucio;
+  }
+
+  /**
+   * Los ficheros de un GWB en memoria a partir de lo que hay en la
+   * ficha (F5-I12): cartucho_GWB.json y las imágenes img_s/img_f/img_m
+   * .png. Es lo que Aplicar entrega al núcleo de carga, de modo que un
+   * cartucho creado en la ficha y uno cargado de disco son
+   * indistinguibles. No verifica: antes hay que llamar a verificar().
+   * @returns {Promise<File[]>} Los ficheros del GWB.
+   */
+  async function ficherosGWB() {
+    asegurar();
+    const json = montarGWB();
+    const ficheros = [new File([JSON.stringify(json, null, 2)], 'cartucho_GWB.json',
+      { type: 'application/json' })];
+    const imgs = imagenesEnMemoria();
+    for (const clave of Object.keys(json.imagenes)) {
+      const blob = await BaseCartucho.imagenBlob(imgs[clave]);
+      ficheros.push(new File([blob], json.imagenes[clave], { type: 'image/png' }));
+    }
+    return ficheros;
   }
 
   /**
@@ -679,6 +731,7 @@ const BaseFicha = (function () {
     cuerpoBotones.textContent = '';
     pintarTablaBotones();
     if (mensajes) mensajes.textContent = '';
+    marcarCambios(false);
   }
 
   /**
@@ -717,6 +770,7 @@ const BaseFicha = (function () {
     }
     if (d.extras) extras = Object.assign({}, d.extras);
     if (mensajes) mensajes.textContent = '';
+    marcarCambios(false);        // lo cargado es lo aplicado
   }
 
   /**
@@ -769,6 +823,9 @@ const BaseFicha = (function () {
     imagenesEnMemoria: imagenesEnMemoria,
     verificar: verificar,
     guardar: guardar,
+    hayCambios: hayCambios,
+    marcarAplicado: () => marcarCambios(false),
+    ficherosGWB: ficherosGWB,
     botonesDelEstilo: botonesDelEstilo
   };
 

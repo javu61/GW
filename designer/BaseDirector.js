@@ -104,7 +104,7 @@ var BaseDirector = (function () {
 
   let setupGWS = null;                       // JSON del hardware leído
   let cartucho = null;                    // JSON del cartucho leído
-  let pestanaVista = 'vistaSimulador';    // vista activa (la fija mostrarPestanna)
+  let pestanaVista = 'vistaSetup';        // vista activa (la fija mostrarPestanna; F5-I12: arranca en Setup)
   let imgM = null;                        // portada (img_m): cargada pero aún sin uso visual
   let imgF = null;                        // fondo (img_f): guardado en memoria para el motor gráfico
   let imgS = null;                        // imagen de segmentos (img_s): fuente de los sprites
@@ -118,10 +118,27 @@ var BaseDirector = (function () {
 
   // Botones de carga de cartucho (los que aparecen al cargar el setup) y
   // todos los de carga (el setup incluido): se deshabilitan durante la partida
-  const BOTONES_CARTUCHO = ['btnCargarCartucho', 'btnCargarGWBZip', 'btnCargarGWIZip', 'btnCargarGWC'];
-  const BOTONES_CARGA = ['btnCargarSetup'].concat(BOTONES_CARTUCHO);
-  // Botones de autoría: ocultos y deshabilitados mientras no hay cartucho editable
+  // F5-I12: los botones viven dentro de su pestaña y un mismo botón puede
+  // estar en varias (un id HTML no se repite: cada ejemplar tiene el suyo
+  // y comparten manejador). Setup: btnCargarSetup, btnAplicarSetup,
+  // btnGuardarSetup. Cartucho: btnCargarCartucho (GWB carpeta),
+  // btnCargarGWBZip, btnCargarGWIZip, btnAplicarCartucho, btnGuardarGWB.
+  // Editor: btnEdGWB, btnEdGWBZip, btnEdGWI + los de autoría. Simulador:
+  // btnSimGWI, btnSimGWC.
+  const BOTONES_SETUP = ['btnCargarSetup', 'btnAplicarSetup', 'btnGuardarSetup'];
+  // Botones que necesitan un setup aplicado (se deshabilitan en la partida)
+  const BOTONES_CARTUCHO = ['btnCargarCartucho', 'btnCargarGWBZip', 'btnCargarGWIZip',
+    'btnAplicarCartucho', 'btnGuardarGWB', 'btnEdGWB', 'btnEdGWBZip', 'btnEdGWI',
+    'btnSimGWI', 'btnSimGWC'];
+  // Botones de autoría: deshabilitados mientras no hay cartucho editable
   const BOTONES_AUTORIA = ['btnGuardar', 'btnGenerar', 'btnDeshacer', 'btnRehacer'];
+  // Cada acción de carga, con TODOS sus ejemplares (uno por pestaña)
+  const BOTONES_ACCION = {
+    gwbCarpeta: ['btnCargarCartucho', 'btnEdGWB'],
+    gwbZip: ['btnCargarGWBZip', 'btnEdGWBZip'],
+    gwi: ['btnCargarGWIZip', 'btnEdGWI', 'btnSimGWI'],
+    gwc: ['btnSimGWC']
+  };
 
   const COLOR_FONDO_NEUTRO = '#888888';
 
@@ -273,7 +290,7 @@ var BaseDirector = (function () {
     }
     if (!Number.isInteger(res.ancho) || !Number.isInteger(res.alto) ||
       res.ancho <= 0 || res.alto <= 0) {
-      return 'el setup necesita un elemento "pantalla" con "ancho" y "alto" enteros positivos.';
+      return 'el setup necesita una "resolucion" con "ancho" y "alto" enteros positivos.';
     }
     if (!Array.isArray(jsonGWS.botones)) {
       return 'el setup necesita un array "botones".';
@@ -560,22 +577,10 @@ var BaseDirector = (function () {
     $('maquina').classList.remove('oculto');
     $('panelEstado').classList.remove('oculto');
     pintarInfo();
-    // Con setup: ya se puede cargar el cartucho (GWB en carpeta o ZIP, GWI
-    // en ZIP y GWC suelto); sin cartucho no hay nada que guardar, generar
-    // ni deshacer.
-    for (const id of BOTONES_CARTUCHO) {
-      $(id).classList.remove('oculto');
-      $(id).disabled = false;
-    }
-    for (const id of BOTONES_AUTORIA) {
-      $(id).classList.add('oculto');
-      $(id).disabled = true;
-    }
-    // El setup deja la vista de la MÁQUINA delante (la autoría aún no
-    // existe): con las pestañas, cargar el setup es ver el aparato.
-    // El Editor queda disponible: desde él se carga el GWB.
+    // El setup aplicado deja delante la pestaña Cartucho (F5-I12): es
+    // el siguiente paso. Las demás se habilitan según haya cartucho.
     actualizarPestanas();
-    mostrarPestanna('vistaSimulador');
+    mostrarPestanna('vistaCartucho');
     // Arriba indica la última operación realizada
     avisar('Setup cargado: ' + (setupGWS.nombre || '(sin nombre)'));
   }
@@ -605,17 +610,81 @@ var BaseDirector = (function () {
    */
   async function procesarSetup(fichero) {
     const json = await leerJSON(fichero);
+    aplicarJSONSetup(json);
+  }
+
+  /**
+   * Valida y APLICA un setup ya leído (de fichero o de la ficha de la
+   * pestaña Setup, F5-I12): limpia en cascada el cartucho y todo lo que
+   * de él depende, aplica la máquina y rellena las dos fichas. Si no es
+   * válido lanza un error y se conserva la máquina anterior.
+   * @param {Object} json - El GWS.
+   * @returns {void}
+   */
+  function aplicarJSONSetup(json) {
     const error = validarSetup(json);
     if (error) throw new Error(error);
-    limpiarCartucho();                       // recargar setup limpia el cartucho actual
+    limpiarCartucho();                       // aplicar un setup limpia el cartucho actual
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
-    aplicarSetup();
-    // F5-I12: la ficha del cartucho recibe del GWS el estilo, la
-    // resolución (su «resolucion») y, con el estilo, los botones
-    // posibles de la tabla (los ids son del cartucho: quedan vacíos).
+    // La ficha del cartucho recibe del GWS el estilo y la resolución
+    // (los ids de botón son del cartucho: quedan vacíos); la del setup,
+    // todos sus datos.
     BaseFicha.reiniciar();
     BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion });
+    BaseSetup.poblar(json);
+    aplicarSetup();
+  }
+
+  /**
+   * Botón «Aplicar» de la pestaña Setup (F5-I12): verifica la ficha y
+   * aplica el setup (limpia lo posterior, como cargar un setup nuevo).
+   * @param {boolean} guardar - true en «Guardar GWS»: además lo descarga.
+   * @returns {void}
+   */
+  function aplicarDesdeFichaSetup(guardar) {
+    try {
+      let json;
+      if (guardar) {
+        json = BaseSetup.guardar();         // verifica, muestra y descarga
+        if (!json) {
+          avisarError('El GWS no se guarda ni se aplica: hay errores en la ficha.');
+          return;
+        }
+      } else {
+        const r = BaseSetup.verificar({ mostrar: true });
+        if (r.errores.length > 0) {
+          avisarError('Setup NO aplicado: hay ' + r.errores.length +
+            (r.errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
+          return;
+        }
+        json = r.json;
+      }
+      aplicarJSONSetup(json);
+      avisar((guardar ? 'Setup guardado y aplicado: ' : 'Setup aplicado: ') + json.nombre);
+    } catch (e) {
+      avisarError('Setup NO aplicado: ' + e.message);
+    }
+  }
+
+  /**
+   * Botón «Aplicar» de la pestaña Cartucho (F5-I12): verifica la ficha
+   * y entrega al núcleo de carga el GWB que describe (en memoria), de
+   * modo que un cartucho creado en la ficha y uno cargado de disco son
+   * indistinguibles: se descartan los datos del Editor y de Sprites y
+   * se extraen de nuevo.
+   * @returns {Promise<void>}
+   */
+  async function aplicarDesdeFichaCartucho() {
+    if (!setupGWS) { avisarError('Aplica antes un setup.'); return; }
+    const r = BaseFicha.verificar({ mostrar: true });
+    if (r.errores.length > 0) {
+      avisarError('Cartucho NO aplicado: hay ' + r.errores.length +
+        (r.errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
+      return;
+    }
+    const ficheros = await BaseFicha.ficherosGWB();
+    await cargarCartucho(ficheros, 'GWB');
   }
 
   // ---------------- Panel de información (F5-I7) ----------------
@@ -899,7 +968,7 @@ var BaseDirector = (function () {
       // img_m: portada para la futura pantalla de selección de juegos.
       // El módulo la carga en paralelo, sin bloquear, y de momento no
       // se muestra.
-      // F5-I12: la ficha del cartucho se rellena con TODO lo que trae
+      // F5-I10: la ficha del cartucho se rellena con TODO lo que trae
       // el GWB/GWI (la portada, cuando termine de cargar).
       BaseFicha.reiniciar();
       BaseFicha.poblar({
@@ -1242,6 +1311,7 @@ var BaseDirector = (function () {
   function mostrarPestanna(id) {
     pestanaVista = id;
     const botones = {
+      vistaSetup: 'pesSetup',
       vistaSimulador: 'pesSimulador',
       vistaEditor: 'pesEditor', vistaSprites: 'pesSprites',
       vistaCartucho: 'pesCartucho'
@@ -1254,55 +1324,31 @@ var BaseDirector = (function () {
     if (id === 'vistaSprites') BaseDescomponer.pintarListaSegmentos($('listaSegmentos'));
     // F5-I10: la ficha del cartucho se repinta al ENTRAR en la pestaña
     // (así siempre refleja el estado vigente del cartucho en memoria).
-    if (id === 'vistaCartucho') {
-      // Con segmentos en memoria, img_s no se cambia (salen de ella).
-      BaseFicha.bloquearImgS(BaseDescomponer.resumen().segmentos > 0 ||
-        BaseDescomponer.segmentosEnMemoria().length > 0);
-      BaseFicha.pintar($('fichaCartucho'));
-    }
+    // F5-I12: img_s ya no se bloquea: cambiarla solo tiene efecto al
+    // Aplicar, que descarta y recalcula segmentos y sprites.
+    if (id === 'vistaCartucho') BaseFicha.pintar($('fichaCartucho'));
+    if (id === 'vistaSetup') BaseSetup.pintar($('fichaSetup'));
   }
 
   /**
-   * Un cambio de imagen hecho por el usuario en la ficha (Cargar o
-   * Borrar): el director actualiza su copia y lo que se pinta. img_s
-   * solo llega aquí sin segmentos en memoria (con ellos, bloqueada).
-   * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
-   * @param {?HTMLImageElement} img - Imagen nueva (null si se borró).
-   * @returns {void}
-   */
-  function alCambiarImagenFicha(clave, img) {
-    if (clave === 'img_s') {
-      imgS = img;
-    } else if (clave === 'img_m') {
-      imgM = img;
-    } else if (clave === 'img_f') {
-      imgF = img;
-      BaseGraficos.fijarFondo(img);
-      ComunListas.fijarFondo(img);
-      if (editable) BaseDescomponer.repintarAparato();
-      else if (cartucho) pintarFondoCartucho(img);
-    }
-  }
-
-  /**
-   * Habilita las pestañas que tienen algo que mostrar: el Simulador
-   * siempre; el Editor con el setup cargado (desde él se carga el
-   * GWB); Segmentos y Sprites con autoría en marcha; Cartucho (F5-I10)
-   * con el setup cargado (la ficha nace en blanco; el GWC, ejecución
-   * pura, no la activa). Durante la
-   * partida, solo el Simulador.
+   * Habilita las pestañas y los botones según los datos que hay (F5-I12):
+   * Setup siempre (menos en partida); Cartucho y Simulador con un setup
+   * aplicado; Editor y Sprites con un cartucho editable (GWB o GWI) y
+   * sin GWC cargado (el GWC, ejecución pura, no se edita). Durante la
+   * partida, solo el Simulador. Los botones de carga y de aplicar
+   * siguen la misma regla; los de autoría los habilita la autoría.
    * @returns {void}
    */
   function actualizarPestanas() {
-    // El GWC no trae la parte PC del cartucho (sin img_s no hay
-    // geometría ni autoría): su edición queda como AMPLIACIÓN futura.
-    // Con un GWC cargado, solo la pestaña Simulador está activa.
     const soloSimulador = cartucho !== null && cartucho.tipo === 'GWC';
-    $('pesEditor').disabled = enJuego || !setupGWS || soloSimulador;
-    $('pesSprites').disabled = enJuego || !editable || soloSimulador;
-    // F5-I10: la ficha del cartucho, con el setup cargado (nace en
-    // blanco: sirve también para crear un cartucho desde cero).
-    $('pesCartucho').disabled = enJuego || !setupGWS || soloSimulador;
+    $('pesSetup').disabled = enJuego;
+    $('pesCartucho').disabled = enJuego || !setupGWS;
+    $('pesEditor').disabled = enJuego || !setupGWS || !editable || soloSimulador;
+    $('pesSprites').disabled = enJuego || !setupGWS || !editable || soloSimulador;
+    $('pesSimulador').disabled = !setupGWS;
+    for (const id of BOTONES_SETUP) $(id).disabled = enJuego;
+    for (const id of BOTONES_CARTUCHO) $(id).disabled = enJuego || !setupGWS;
+    if (!editable) for (const id of BOTONES_AUTORIA) $(id).disabled = true;
   }
 
   /**
@@ -1316,7 +1362,6 @@ var BaseDirector = (function () {
    */
   function jugar() {
     enJuego = true;
-    for (const id of BOTONES_CARGA) $(id).disabled = true;
     actualizarPestanas();
     etiquetarSistema();           // A=Pausa, B=Stop, R oculto (F5-I10)
     mostrarPestanna('vistaSimulador');
@@ -1334,7 +1379,6 @@ var BaseDirector = (function () {
    */
   function finDePartida(motivo) {
     enJuego = false;
-    for (const id of BOTONES_CARGA) $(id).disabled = false;
     actualizarPestanas();
     etiquetarSistema();           // A/B/R otra vez (F5-I10)
     const arranque = botonesSistema ? 'A, B o R' : 'Start';
@@ -1441,12 +1485,11 @@ var BaseDirector = (function () {
       'listaSegmentos', 'zonaMapa', 'mapaSegmentos',
       'panelSegmento', 'ficheroSetup', 'carpetaCartucho',
       'ficheroGWIZip', 'ficheroGWC',
-      'ficheroGWBZip', 'btnCargarGWBZip',
-      'pesSimulador', 'pesEditor', 'pesSprites', 'pesCartucho',
-      'vistaSimulador', 'vistaEditor', 'vistaSprites', 'vistaCartucho',
-      'fichaCartucho', 'lienzoEditor',
-      'btnCargarSetup', 'btnCargarCartucho', 'btnCargarGWIZip', 'btnCargarGWC',
-      'btnGuardar', 'btnGenerar', 'btnDeshacer', 'btnRehacer'];
+      'ficheroGWBZip',
+      'pesSetup', 'pesSimulador', 'pesEditor', 'pesSprites', 'pesCartucho',
+      'vistaSetup', 'vistaSimulador', 'vistaEditor', 'vistaSprites', 'vistaCartucho',
+      'fichaSetup', 'fichaCartucho', 'lienzoEditor']
+      .concat(BOTONES_SETUP, BOTONES_CARTUCHO, BOTONES_AUTORIA);
     const faltan = necesarios.filter(id => $(id) === null);
     if (faltan.length > 0) {
       const msg = 'index.html desactualizado: faltan los elementos con id ' +
@@ -1485,13 +1528,21 @@ var BaseDirector = (function () {
   function inicializar() {
     if (!comprobarSalud()) return;            // sin index correcto no hay nada que cablear
     $('btnCargarSetup').addEventListener('click', () => $('ficheroSetup').click());
-    $('btnCargarCartucho').addEventListener('click', () => $('carpetaCartucho').click());
-    // F5-I10: la doble vía del GWB (carpeta o ZIP).
-    $('btnCargarGWBZip').addEventListener('click', () => $('ficheroGWBZip').click());
-    $('btnCargarGWIZip').addEventListener('click', () => $('ficheroGWIZip').click());
-    $('btnCargarGWC').addEventListener('click', () => $('ficheroGWC').click());
-    // Las TRES pestañas: máquina, autoría y segmentos con sus imágenes
-    document.body.dataset.vista = 'vistaSimulador';
+    $('btnAplicarSetup').addEventListener('click', () => aplicarDesdeFichaSetup(false));
+    $('btnGuardarSetup').addEventListener('click', () => aplicarDesdeFichaSetup(true));
+    // F5-I12: cada carga tiene un ejemplar por pestaña; todos hacen lo mismo.
+    const entradas = { gwbCarpeta: 'carpetaCartucho', gwbZip: 'ficheroGWBZip',
+      gwi: 'ficheroGWIZip', gwc: 'ficheroGWC' };
+    for (const [accion, ids] of Object.entries(BOTONES_ACCION)) {
+      for (const id of ids) $(id).addEventListener('click', () => $(entradas[accion]).click());
+    }
+    $('btnAplicarCartucho').addEventListener('click', aplicarDesdeFichaCartucho);
+    $('btnGuardarGWB').addEventListener('click', async () => {
+      $('btnGuardarGWB').disabled = true;           // evita guardados solapados
+      try { await BaseFicha.guardar(); } finally { actualizarPestanas(); }
+    });
+    document.body.dataset.vista = 'vistaSetup';
+    $('pesSetup').addEventListener('click', () => mostrarPestanna('vistaSetup'));
     $('pesSimulador').addEventListener('click', () => mostrarPestanna('vistaSimulador'));
     $('pesEditor').addEventListener('click', () => mostrarPestanna('vistaEditor'));
     $('pesSprites').addEventListener('click', () => mostrarPestanna('vistaSprites'));
@@ -1504,7 +1555,8 @@ var BaseDirector = (function () {
     $('btnDeshacer').addEventListener('click', () => BaseDescomponer.deshacer());
     $('btnRehacer').addEventListener('click', () => BaseDescomponer.rehacer());
     BaseDescomponer.inicializar();                 // el clic del mapa, cableado por BaseDescomponer.js
-    BaseFicha.alCambiarImagen(alCambiarImagenFicha);   // F5-I12
+    BaseSetup.pintar($('fichaSetup'));                  // F5-I12: la ficha del setup, desde el arranque
+    actualizarPestanas();                               // al inicio solo Setup
     $('ficheroSetup').addEventListener('change', alSeleccionarSetup);
     $('carpetaCartucho').addEventListener('change', alSeleccionarCartucho);
     $('ficheroGWBZip').addEventListener('change', alSeleccionarGWBZip);
@@ -1523,6 +1575,7 @@ var BaseDirector = (function () {
   // img_m), que BaseDescomponer pasa a BaseCartucho.guardarGWI.
   return {
     inicializar: inicializar, avisar: avisar, avisarError: avisarError,
+    validarSetup: validarSetup,           // F5-I12: la verifica también la ficha del Setup
     jugar: jugar, finDePartida: finDePartida,
     pestanna: mostrarPestanna,            // abrir el Editor desde la lista de segmentos
     pintarInfo: pintarInfo, informarTamanos: informarTamanos,

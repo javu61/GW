@@ -27,7 +27,7 @@
 //   reset                  Limpia el estado (recargar cartucho/setup).
 //   cargarListas           Listas del GWI al puente (ComunListas).
 //   segmentosEnMemoria     Referencia viva a los segmentos (puente).
-//   repintarAparato        Repinta el aparato (F5-I12: tras cambiar img_f en la ficha).
+//   repintarAparato        Repinta el aparato (F5-I10: tras cambiar img_f en la ficha).
 //   inicializar            Cablea los eventos del mapa (una vez).
 //
 //  Identificación de grupos
@@ -4593,7 +4593,7 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
       return;
     }
-    // F5-I12: los datos propios del cartucho (nombre, estilo,
+    // F5-I10: los datos propios del cartucho (nombre, estilo,
     // resolución, imágenes y botones) salen de la FICHA de la pestaña
     // Cartucho: se verifican antes de generar NADA (los tres ficheros
     // salen de la misma foto de memoria).
@@ -4681,7 +4681,7 @@ const BaseDescomponer = (() => {
     const tamGWI = await BaseCartucho.guardarGWI(json, sprites,
       imagenesFicha.img_f, imagenesFicha.img_s,
       imagenesFicha.img_m, hallazgos.avisos.length);
-    // El GWB después (F5-I12): los tres ficheros de la misma ficha, ya
+    // El GWB después (F5-I10): los tres ficheros de la misma ficha, ya
     // verificada arriba, para que vayan de la mano.
     if (tamGWI) {
       const gwbOk = await BaseFicha.guardar();
@@ -4755,7 +4755,7 @@ const BaseDescomponer = (() => {
       ultimoOp: ultimoOp
     };
 
-    // F5-I12: nombre, estilo, resolución, imágenes y botones son los de
+    // F5-I10: nombre, estilo, resolución, imágenes y botones son los de
     // la FICHA de la pestaña Cartucho (completados con el setup).
     const ficha = BaseFicha.datosCartucho();
     const segs = segmentos();
@@ -4811,7 +4811,7 @@ const BaseDescomponer = (() => {
    * elige el usuario, donde ya viven img_f, img_s y el GWB): los
    * sprites se escriben junto a las imágenes de base en segmentos/ y
    * cartucho_gwi.json es un cartucho COMPLETO — copia imagenes y
-   * botones de la FICHA del cartucho (F5-I12) — por lo que carga
+   * botones de la FICHA del cartucho (F5-I10) — por lo que carga
    * de forma autónoma sin depender de su GWB. El fichero ZIP lo
    * escribe BaseCartucho.guardarGWI (F5-I4); aquí queda la
    * verificación previa, el montaje del GWI y el repintado del
@@ -4824,7 +4824,7 @@ const BaseDescomponer = (() => {
     // del cartucho en edición (cartuchoActual). Sin ese cartucho en
     // memoria saldría un GWI con estilo null que NO cargaría. Bloqueo
     // explícito (nunca en silencio): recargar el GWB lo repone.
-    // F5-I12: esos datos salen de la FICHA de la pestaña Cartucho, que
+    // F5-I10: esos datos salen de la FICHA de la pestaña Cartucho, que
     // se verifica antes de escribir nada.
     const ficha = BaseFicha.verificar({ generar: true, mostrar: true });
     for (const a of ficha.avisos) console.warn('[ficha] ' + a);
@@ -5061,7 +5061,7 @@ const BaseDescomponer = (() => {
     pintarFondoAparato: pintarFondoAparato,
     pintarSegmentoAparato: pintarSegmentoAparato,
     pintarGWI: pintarGWI,
-    repintarAparato: pintarPantallaAutoria,       // F5-I12: tras cambiar img_f en la ficha
+    repintarAparato: pintarPantallaAutoria,       // F5-I10: tras cambiar img_f en la ficha
     pintarListaSegmentos: pintarListaSegmentos,   // F5-I7
     resumen: resumen,                             // F5-I7: panel del Editor
     segmentos: segmentos,

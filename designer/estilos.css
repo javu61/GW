@@ -19,9 +19,12 @@ body {
 h1 { font-size: 1.2rem; margin: 0 0 14px 0; }
 .oculto { display: none !important; }
 
-/* ---------- Barra de carga ---------- */
+/* ---------- Línea de estado y barras de botones (F5-I12) ----------
+ * #controles solo guarda los inputs de fichero (ocultos) y la línea de
+ * estado, siempre visible; los botones están dentro de cada pestaña. */
 #controles { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
-#controles button {
+.barraBotones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 16px 0; }
+.barraBotones button {
   font-size: 1rem;
   padding: 8px 14px;
   border: 1px solid #555;
@@ -30,19 +33,10 @@ h1 { font-size: 1.2rem; margin: 0 0 14px 0; }
   color: #e8e8e8;
   cursor: pointer;
 }
-#controles button:hover:not(:disabled) { background: #4a5059; }
-#controles button:disabled { opacity: 0.4; cursor: not-allowed; }
+.barraBotones button:hover:not(:disabled) { background: #4a5059; }
+.barraBotones button:disabled { opacity: 0.4; cursor: not-allowed; }
 #estado { font-size: 0.9rem; font-weight: 700; color: #9fd89f; }
 #estado.error { color: #f0a0a0; }
-
-/* Botones por pestaña (F5-I7, tabla de la iteración): mostrarPestanna
- * pone la vista activa en body[data-vista]. Simulador: Setup, GWI y
- * GWC (los .soloEditor fuera); Editor: todos; Segmentos y Sprites:
- * ninguno. La línea de estado (#estado) se ve siempre. */
-body:not([data-vista="vistaEditor"]) #controles .soloEditor,
-body[data-vista="vistaSprites"] #controles button { display: none !important; }
-/* Separador visual entre la carga de ficheros y la autoría */
-#controles .soloEditor#btnGuardar { margin-left: 18px; }
 
 /* ---------- Pestañas (Simulador / Editor / Segmentos y Sprites) ----------
  * La pestaña activa se marca con .pestActiva. */
@@ -252,10 +246,11 @@ body[data-vista="vistaSprites"] #controles button { display: none !important; }
 #panelEstado { margin-top: 16px; max-width: 640px; font-size: 0.9rem; color: #bcbcbc; }
 #panelEstado .infoLinea { margin: 2px 0; }
 #infoDiseno { font-family: ui-monospace, Consolas, monospace; color: #9fd89f; white-space: pre-line; }
+body[data-vista="vistaSetup"] #panelEstado,
 body[data-vista="vistaSprites"] #panelEstado,
 body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 /* ---------- Pestaña Cartucho (F5-I10): la ficha ---------- */
-#fichaCartucho { max-width: 980px; }
+#fichaCartucho, #fichaSetup { max-width: 980px; }
 .fichaSeccion { border: 1px solid #555; border-radius: 6px; padding: 10px 14px; margin: 0 0 14px 0; }
 .fichaSeccion h3 { margin: 0 0 10px 0; font-size: 1rem; }
 .fichaRejilla { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; align-items: center; }
@@ -263,12 +258,13 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 .fichaCampo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .fichaNota { font-size: 0.8rem; color: #a8a8a8; margin: 0; }
 .fichaPar { display: flex; align-items: center; gap: 6px; }
-#fichaCartucho input[type=text], #fichaCartucho input[type=number], #fichaCartucho select {
+#fichaCartucho input[type=text], #fichaCartucho input[type=number], #fichaCartucho select,
+#fichaSetup input[type=text], #fichaSetup input[type=number], #fichaSetup select {
   font-size: 0.95rem; padding: 5px 8px; border: 1px solid #555; border-radius: 6px;
   background: #1f2226; color: #e8e8e8;
 }
-#fichaCartucho input[type=text] { min-width: 260px; }
-#fichaCartucho input[type=number] { width: 90px; }
+#fichaCartucho input[type=text], #fichaSetup input[type=text] { min-width: 260px; }
+#fichaCartucho input[type=number], #fichaSetup input[type=number] { width: 90px; }
 #fichaCartucho input:disabled { opacity: 0.4; }
 #fichaCartucho button {
   font-size: 0.95rem; padding: 6px 12px; border: 1px solid #555; border-radius: 8px;
@@ -290,3 +286,6 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 .fichaMensajes ul { margin: 6px 0 0 0; padding-left: 20px; }
 .fichaError { color: #f0a0a0; }
 .fichaAviso { color: #e8c76a; }
+/* Tabla de botones de la ficha del Setup (F5-I12): columnas estrechas */
+#fichaSetup input.colTecla { min-width: 0; width: 3em; text-align: center; text-transform: uppercase; }
+#fichaSetup input.colAlias { min-width: 0; width: 8em; }

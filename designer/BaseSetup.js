@@ -77,15 +77,40 @@ const BaseSetup = (function () {
     return e;
   }
 
-  /** Añade una fila «caption + control (+ nota)» a la rejilla. */
-  function campo(padre, caption, control, nota) {
-    padre.appendChild(el('div', 'fichaCaption', caption));
-    const celda = el('div', 'fichaCampo');
-    celda.appendChild(control);
-    if (nota) celda.appendChild(el('span', 'fichaNota', nota));
-    padre.appendChild(celda);
-    return control;
+  //++
+  // /** Añade una fila «caption + control (+ nota)» a la rejilla. */
+  // function campo(padre, caption, control, nota) {
+  //   padre.appendChild(el('div', 'fichaCaption', caption));
+  //   const celda = el('div', 'fichaCampo');
+  //   celda.appendChild(control);
+  //   if (nota) celda.appendChild(el('span', 'fichaNota', nota));
+  //   padre.appendChild(celda);
+  //   return control;
+  // }
+
+/** Añade una fila «caption + control (+ nota)» a la rejilla. */
+function campo(padre, caption, control, nota, multilinea = false) {
+  const lbl = el('div', 'fichaCaption', caption);
+  const celda = el('div', 'fichaCampo');
+
+  if (multilinea) {
+    // Si no pasas un control o pasas un input normal, creamos un textarea
+    if (!control || control.tagName !== 'TEXTAREA') {
+      control = el('textarea');
+    }
+    control.rows = 3;
+    lbl.classList.add('multilinea');   // Clase extra por si quieres alinear arriba
+    celda.classList.add('multilinea'); // Clase extra para que ocupe más ancho si quieres
   }
+
+  celda.appendChild(control);
+  if (nota) celda.appendChild(el('span', 'fichaNota', nota));
+
+  padre.appendChild(lbl);
+  padre.appendChild(celda);
+  return control;
+}
+
 
   /** Crea un input con atributos. */
   function entrada(tipo, extra) {
@@ -161,20 +186,16 @@ const BaseSetup = (function () {
    */
   function construir(contenedor) {
     contenedor.textContent = '';
-    avisoCambios = el('p', 'fichaAviso oculto',
-      'Hay cambios sin aplicar: pulsa Aplicar o Guardar GWS para ponerlos en marcha.');
+    avisoCambios = el('p', 'fichaAviso oculto', 'Hay cambios sin aplicar: pulsa Aplicar o Guardar GWS para ponerlos en marcha.');
     contenedor.appendChild(avisoCambios);
 
     const datos = el('section', 'fichaSeccion');
     datos.appendChild(el('h3', null, 'Datos del GWS'));
     const rejilla = el('div', 'fichaRejilla');
-    campos.nombre = campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre de la máquina' }),
-      'También da nombre al fichero .json.');
-    campos.descripcion = campo(rejilla, 'Descripción',
-      entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }));
+    campos.nombre = campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
+    campos.descripcion = campo(rejilla, 'Descripción', entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }),'Informativa', true);
     const estilo = document.createElement('select');
-    for (const [valor, texto] of [['', '(elige estilo)'], ['2', '2 botones'],
-    ['4', '4 botones'], ['5', '5 botones']]) {
+    for (const [valor, texto] of [['', '(elige estilo)'], ['2', '2 botones'], ['4', '4 botones'], ['5', '5 botones']]) {
       const o = document.createElement('option');
       o.value = valor; o.textContent = texto;
       estilo.appendChild(o);

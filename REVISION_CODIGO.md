@@ -19,6 +19,8 @@ Solo se marcan los puntos comprobados contra el código actual. Lo no citado aqu
 | 15 | Resuelto | `tick()` captura la excepción, termina la partida y avisa. |
 | 16 | Resuelto | `setup2.json` ya usa los botones 0 y 4; en `setup5.json` el botón 3 pasa a la tecla S. |
 | 19 | Resuelto | `fijados.add(campo)` va después de descartar los enlaces internos. |
+| 31 | Resuelto (F5-I13) | El GWC no se comportaba como el GWI: rutas, pausas, orden de iconos y `combinar`. Ahora lo no declarado viaja como nulo y hay una prueba de equivalencia (`pruebas/equivalenciaGWC.js`). |
+| 29 | Resuelto (F5-I13) | El `contador` de vida y muerte viaja en el byte «valor inicial u orden» del registro de segmento. |
 | 28 | Pendiente | La suma de verificación sigue siendo aditiva. Cambiarla a CRC-16/CCITT altera el formato del GWC (y el «Código GWC» de los GWI existentes): hacerlo junto con la revisión de formatos (P03/P04). |
 
 **Código muerto eliminado:** `avisarEtiquetas`, `BLOQUE_FONDO_GWC`, `cartuchoActual`, `segmentosEnMemoria`, y el bloqueo de img_s de la ficha (`bloquearImgS`, `alCambiarImagen`), que F5-I12 sustituye por el botón Aplicar.
@@ -78,8 +80,9 @@ Solo se marcan los puntos comprobados contra el código actual. Lo no citado aqu
 | # | Dónde | Problema |
 |---|---|---|
 | 28 | `BaseCartucho.js:1671` | **[C]** La suma de verificación es aditiva mod 65536: no detecta bytes o registros intercambiados. La cabecera (l. 52) dice «CRC» y F5-I06 promete probabilidad de error despreciable. Propuesta: CRC-16/CCITT. |
-| 29 | registro de segmento | **[S]** El campo `contador` de los segmentos vida/muerte no viaja en el GWC; el motor ordena la familia por él (`JuegoMotorEstados.js:980`). Comprobar que tras un GWC el orden de iconos sigue bien. |
+| 29 | registro de segmento | **[RESUELTO en F5-I13]** **[S]** El campo `contador` de los segmentos vida/muerte no viaja en el GWC; el motor ordena la familia por él (`JuegoMotorEstados.js:980`). Comprobar que tras un GWC el orden de iconos sigue bien. |
 | 30 | lector GWC (1838-1951) | **[P]** No valida índices de sprite/segmento ni tamaños de tabla (TypeError en vez de error claro); `FIN_GWC_INV[x] \|\| 'contador'` disfraza códigos corruptos. |
+| 31 | `BaseCartucho.js` (`_montarConfiguracion` y `_leerConfiguracionGWC`) | **[RESUELTO en F5-I13]** **[C]** El GWC y el GWI no juegan igual: un GWI sin `rutas` no aumenta nunca el máximo de rutas simultáneas (1, la regla histórica), pero el generador escribe `aumentarCada = 1` cuando falta, y el lector lo devuelve como `rutas: {aumentarCada: 1}`. Con el GWC el máximo sube en cada lanzamiento y salen varias rutas a la vez. Comprobado: tras cargar el GWC `ComunListas.rutasDeCartucho()` da `{aumentarCada: 1}`; tras cargar el GWI, `null`. | Escribir 0xFFFF (nulo) cuando el GWI no declara `rutas.aumentarCada` y devolver `rutas: null` al leerlo (como ya se hace con la aceleración). Los GWC generados hasta ahora hay que regenerarlos. Revisar a la vez `pausas.externo` (el GWC escribe 500 si falta). **Principio:** un GWC cargado debe dar exactamente la misma partida que el GWI del que sale; añadir una prueba que compare los dos. |
 
 ---
 

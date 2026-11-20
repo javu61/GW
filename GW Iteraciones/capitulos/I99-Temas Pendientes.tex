@@ -78,16 +78,9 @@ como posibles ampliaciones:
 \section*{Temas pendientes}
 \begin{itemize}
 
-
+	\item P00. al cargar un GWI funciona el juego bien, pero si cargas el GWC no funciona como debe, salen varias rutas a la vez, como si no se hubiese cargado bien los datos de base del cartucho.
 	
-	\item P11. Comprobar REVISION\_CODIGO.md contra el código actual 
-	\begin{itemize}
-		\item Es del 06-11 y desde entonces hemos tocado las teclas, Pausa/Stop y la carga de cartuchos. Algunos puntos ya estarán resueltos, por ejemplo el \#1 (salir de partida) y buena parte del \#2.
-		
-		\item Haría una pasada rápida para marcar cuáles siguen vivos y dejar solo los que cuentan, con prioridad a los críticos (\#3 azar, \#4 rangos del GWC y \#5 el GWC huérfano).
-	\end{itemize}
-	
-	\item P12. Actualizar la documentación
+	\item P02. Actualizar la documentación
 	\begin{itemize}
 		\item F5-I10 con las correcciones del LaTeX que apunté (A/B/R, resolución opcional u obligatoria, tests).
 		
@@ -98,35 +91,34 @@ como posibles ampliaciones:
 		\item P02 de “Temas pendientes” está hecho (F5-I9).
 	\end{itemize}
 
+	\item P03. Cabeceras de Juego*.js (P05) y anexo de formatos (P04) 
+	
+	
+	\item P04. Fase 6 (ESP32, P06 y P07): Va después de cerrar el editor. El selector de cartuchos (P07) es donde la portada img\_m encuentra uso.
+		
+	\item P05 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
+	
+	\item P06 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img\_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img\_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
+	
+	\item P07 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
+	
+	\item P08 — Ajustar los programas Juego*.js: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES y eliminar @since (era el punto 7 de la lista vieja).
+	
+	\item P09 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
+	
+	\item P10 — Selector de cartuchos: la portada img\_m ya carga sin usar; aquí encuentra su sitio.
+	
+	\item P11 — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
 
 
+\end{itemize}
 
 
+Resueltos 
+\begin{itemize}
+	\item P01. Comprobar REVISION\_CODIGO.md contra el código actual 
 
+	\item Es del 06-11 y desde entonces hemos tocado las teclas, Pausa/Stop y la carga de cartuchos. Algunos puntos ya estarán resueltos, por ejemplo el \#1 (salir de partida) y buena parte del \#2.
 	
-	\item P13. Cabeceras de Juego*.js (P05) y anexo de formatos (P04) 
-	
-	
-	\item P14. Fase 6 (ESP32, P06 y P07): Va después de cerrar el editor. El selector de cartuchos (P07) es donde la portada img\_m encuentra uso.
-	
-	
-
-	
-	
-	
-	\item P02 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
-	
-	\item P03 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img\_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img\_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
-	
-	\item P04 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
-	
-	\item P05 — Ajustar los programas Juego*.js: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES y eliminar @since (era el punto 7 de la lista vieja).
-	
-	\item P06 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
-	
-	\item P07 — Selector de cartuchos: la portada img\_m ya carga sin usar; aquí encuentra su sitio.
-	
-	\item P08 — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
-
-
+	\item Haría una pasada rápida para marcar cuáles siguen vivos y dejar solo los que cuentan, con prioridad a los críticos (\#3 azar, \#4 rangos del GWC y \#5 el GWC huérfano).
 \end{itemize}

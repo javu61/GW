@@ -1113,7 +1113,7 @@ var BaseDirector = (function () {
     _montarBotonesSistema();
     // Puente, como en el flujo del GWI (volcarAlPuente), y las listas
     // con la imagen colgada de cada segmento, listas para el motor.
-    _volcarAlPuente(imgF, false, leido);
+    _volcarAlPuente(imgF, !!leido.combinar, leido);
     BaseDescomponer.cargarListas(leido.sprites, leido.segmentos);
     // Presentación: fondo + segmentos visibles en el aparato. Se
     // reutiliza el pintado del GWI (visualmente carga lo mismo que un

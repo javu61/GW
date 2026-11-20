@@ -164,7 +164,9 @@ Si no hay secuencias o imagen de fondo, los punteros a dichos bloques tendrán e
 \subsection{Bloque 1: Configuración general del juego}
 \label{sec:F5I2ConfGen}
 
-Es necesario disponer de varios datos generales sobre el juego, velocidades, aceleraciones, lanzamientos, etc. Para guardar estos datos usaremos una tabla de 8 valores numéricos de 16 bits, de esta manera se reservan estos 16 bytes que estarán siempre presentes, y serán leídos por el firmware en una sola pasada como un array de \texttt{uint16\_t}.
+\textbf{NOTA:} Inicialmente eran 8 valores, pero se amplían a 9 al detectar un error, ver \ref{sec:F5I13}
+
+Es necesario disponer de varios datos generales sobre el juego, velocidades, aceleraciones, lanzamientos, etc. Para guardar estos datos usaremos una tabla de \textbf{nueve} valores numéricos de 16 bits, de esta manera se reservan estos 18 bytes que estarán siempre presentes, y serán leídos por el firmware en una sola pasada como un array de \texttt{uint16\_t}.
 
 \begin{table}[htbp]
 	\centering
@@ -175,20 +177,20 @@ Es necesario disponer de varios datos generales sobre el juego, velocidades, ace
 		Tipo del bloque & Num & 1 & Número fijo: 1\\
 		\hline
 		
-		Tamaño & Num & 4 & Tamaño del bloque. 16 fijo \\
+		Tamaño & Num & 4 & Tamaño del bloque. \sout{16} 20 fijo \\
 		\hline
 		
-		Contenido & Num & 16 & Contenido del bloque, 8 valores numéricos \\
+		Contenido & Num & 18 & Contenido del bloque, 9 valores numéricos \\
 		
 		\hline\hline
-		\multicolumn{4}{c}{\textbf{Tamaño: 21 Bytes}} \\ \hline
+		\multicolumn{4}{c}{\textbf{Tamaño: 23 Bytes}} \\ \hline
 	\end{tabular}
 	\caption{Bloque de Configuración general del juego.}
 \end{table}
 
 Cada campo contiene
-el valor que se definió en el diseñador y, si no se hizo, el valor por
-defecto ya definido en el GWI. De esta manera el campo viaja siempre, sea cual
+el valor que se definió en el diseñador y, si no se hizo, el valor \sout{por
+defecto ya definido en el GWI} nulo\footnote{ver \ref{sec:F5I13}}. De esta manera el campo viaja siempre, sea cual
 sea su origen:
 
 \begin{table}[H]
@@ -214,6 +216,8 @@ sea su origen:
 		
 		07 & Contador de fin & El contador elegido cuando el mecanismo es por contador; \textbf{nulo} si no aplica \\ \hline
 		
+		08 & Valor inicial u Orden &  \\ \hline
+			
 	\end{tabular}
 	\caption{Datos en la tabla de configuración general del juego.}
 	\label{tab:configuracionGeneral}

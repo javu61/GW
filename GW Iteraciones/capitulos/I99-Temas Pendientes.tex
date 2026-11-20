@@ -78,33 +78,7 @@ como posibles ampliaciones:
 \section*{Temas pendientes}
 \begin{itemize}
 
-	\item P10 : Rellenar la pestaña Cartucho: Vamos a cargar en la pestaña "cartucho", al cargar GWS resolución y botones, GWB todo lo posible, GWI todo lo posible, y al guardar el GWI/GWC debe usar la información de esa pestaña, que para eso está entre otras cosas. Quizá el botón GWI+GWC debe guardar GWB/GWI/GWC siempre para que vayan de la mano sin problemas. Y poder crear también un GWS
-	\begin{itemize}
-		\item a. Al cargar un GWB o GWI: la ficha recibe nombre, estilo, resolución, las tres imágenes (ya están en memoria en el director) y los botones declarados. Antes de rellenar se reinicia, para que no queden restos del cartucho anterior.
-		
-		\item b. Al cargar un GWS: la ficha sigue en blanco, para que estilo y resolución del GWB sigan siendo opcionales. El estilo y la pantalla del setup se muestran solo como texto de ayuda (“si se deja vacío: 4 botones, 320×240”). La tabla de botones ya usa el estilo del setup.
-		
-		\item c. Guardar GWB desde la ficha: ya existe. Al venir de un GWI cargado, guarda solo lo propio del GWB, sin sprites ni segmentos.
-		
-		\item d. P03 (resolución): se cierra aquí. Con img\_f opcional, los tamaños solo avisan, el GWC escala, y la resolución del GWI sale del setup. Falta dejarlo escrito.
-	\end{itemize}
-	
-		\item Tres riesgos que conviene decidir ya
-	
-		\begin{itemize}
-			\item img\_s y la autoría. Los segmentos y sus propiedades salen de img\_s. Si cambias o borras img\_s en la ficha con un GWI cargado en el editor, los segmentos quedan incoherentes. Propongo bloquear img\_s mientras haya un cartucho en el editor (“para cambiarla, carga otro GWB”), y dejar img\_f e img\_m libres. Sin cartucho cargado, img\_s se puede cambiar o borrar como ahora.
-			\item Estilo de la ficha distinto al del setup. Con otro estilo, el GWC no se podría probar en el simulador. Propongo error bloqueante al generar, y para el GWB solo aviso, como hasta ahora.
-			\item Resolución del GWC. Si la ficha declara una resolución distinta de la pantalla del setup, ¿el GWC se escala a la de la ficha o a la del setup? Yo usaría la de la ficha y avisaría de la diferencia.
-		\end{itemize}
 
-
-	\item Orden de trabajo:
-		\begin{itemize}
-			\item poblar() en la ficha y las llamadas desde el director al cargar GWS, GWB y GWI.
-			\item Que montarGWI y el GWC lean de la ficha, con la verificación previa.
-			\item Que “Generar” guarde también el GWB.
-			\item Bloqueo de img\_s con cartucho en el editor.
-		\end{itemize}
 	
 	\item P11. Comprobar REVISION\_CODIGO.md contra el código actual 
 	\begin{itemize}

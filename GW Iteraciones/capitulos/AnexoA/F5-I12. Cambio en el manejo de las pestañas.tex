@@ -1,0 +1,52 @@
+\section{Duodécima iteración de la Fase 5: Cambio en el manejo de las pestañas}
+\label{sec:F5I12}
+
+Antes de seguir, otra pausa para mejorar el manejo, tras poner la pestaña de cartucho, no era lógico tenerla como la última pestaña, cuando el proceso necesario es cargar el setup y luego cargar el cartucho, cambio el sistema para poner las pestañas en el orden adecuado.
+
+\subsection{Nueva pestaña y nuevo orden}
+\label{sec:F5I12Orden}
+
+La idea inicial fue poner en la pestaña cartucho los datos separados en dos grupos, GWS y GWB, pero he visto mejor dividirlo en dos pestañas, añadir una nueva pestaña para los datos del setup, y dejar en la del cartucho solo los propios.
+
+Esto me lleva a reordenar las pestañas en un orden mas natural, de forma que aparezcan en el orden adecuado si creamos todo desde cero, lo que no solo es mas lógico, sino que permite visualizar que cuando un dato cambia en una pestaña, afectará a todas las posteriores, y eso se ve de forma visual por el nuevo orden:\\
+
+\centerline{\textbf{Setup - Cartucho - Editor - Sprites - Simulador}}
+
+Las pestañas no estarán activas si faltan los datos necesarios para su manejo, de forma que quede claro el orden adecuado de manejo.
+
+\subsection{Cambios en los botones}
+\label{sec:F5I12Botones}
+
+Para mejorar más el manejo, cambio de lugar los botones ubicándolos dentro de cada pestaña, así se ve mas claro lo que se puede manejar dentro de cada pestaña:
+
+\begin{itemize}
+	\item \textbf{Setup}: Botones para Cargar, Aplicar, Guardar GWS (guarda y aplica). No hay mas pestañas activas hasta que se aplica o guarda, momento en que se activa la segunda estaña. Si se cambia algo no hacemos nada hasta que se pulse aplicar o guardar, que revisa si es necesario limpia datos, como hace ahora el cargar un setup nuevo.
+
+	\item \textbf{Cartucho}: Botones para Cargar GWB, Cargar GWI, Cargar GWB, Aplicar, Guardar GWB. Cuando se aplique activamos las otras pestañas. Los cambios en la imagen de segmentos obligan a eliminan los datos de los pestañas del editor, como si hubiésemos cargado un nuevo Setup, lo que es importante para el tema de los sprites que sacamos de esa imagen.
+
+	\item \textbf{Editor}: Botones para Cargar GWI, cargar GWB, Guardar GWB+GWI+GWC. Aquí añadimos que el generar los cartuchos también lo hará con el GWB, de forma que los tres vayan de la mano.
+
+	\item \textbf{Sprites}: Ningun botón en su interior, es una pestaña meramente informativa.
+
+	\item \textbf{Simulador}: Botón para Cargar GWI y Cargar GWC, lo necesario para ejecutar.
+\end{itemize}
+
+Los botones realmente son comunes, el proceso que los muestra sigue usándose, solo cambia el lugar en que se muestran estos.
+
+\subsection{La ficha de Setup}
+\label{sec:F5I12Ficha}
+
+La nueva pestaña muestra la ficha con los datos del setup, que permite crear y manipular los cartuchos de setup, con estos datos:
+
+\begin{itemize}
+	\item \texttt{Nombre}: el que se desea dar al cartucho, sirve para dar nombre al fichero GWS que se va a generar.
+	
+	\item \textbf{Descripción}: Una pequeña descripción del manejo del cartucho.
+
+	\item \texttt{Estilo}: El de los botones (2, 4, 5). 
+
+	\item \texttt{Resolucion}: ancho y alto de la pantalla.
+	
+	\item Los botones: tabla con los botones posibles según el estilo, con su definición en el sistema externo (que pin se usará para manejar el botón).
+\end{itemize}
+

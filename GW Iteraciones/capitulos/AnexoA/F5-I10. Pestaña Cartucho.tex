@@ -1,19 +1,21 @@
 \section{Décima iteración de la Fase 5: La pestaña Cartucho}\label{sec:F5I10}
 
-El cartucho de base GWB se maneja pero no tiene hoy un 
+El cartucho de base GWB se maneja pero no tenía un 
 sitio propio en la interfaz:
-sus datos se ven (el panel de información, los mensajes de
-la consola), pero crear uno exige generar manualmente 
+sus datos se veían (el panel de información, los mensajes de
+la consola), pero crear uno exigía generar manualmente 
 un fichero json con los datos necesarios. 
 
 Esta iteración le da su propio lugar en el editor: una pestaña
-«Cartucho» que hace dos cosas: ver y editar los datos del cartucho
-cargado, y fabricar uno de cero. Y como mejora adicional, permite generarlo  
-sin necesidad de manipular un json, lo que no solo añade comodidad, sino que
-permite a usuarios sin conocimientos generar el cartucho base.
+«Cartucho» que hace tres cosas: ver y editar los datos del cartucho
+cargado, fabricar uno de cero y ser la \textbf{fuente única} de los datos 
+propios del cartucho (nombre, estilo, resolución, imágenes y botones) 
+tanto al guardar el GWB como al generar el GWI y el GWC. Como mejora adicional, 
+permite generar el cartucho sin necesidad de manipular un json, lo que no solo añade 
+comodidad, sino que permite a usuarios sin conocimientos generar el cartucho base.
 
 El principio que la gobierna es que la pestaña NO es un segundo 
-editor: construye y ajusta el objeto cartucho, y todo lo demás 
+editor: construye y ajusta los datos del cartucho, y todo lo demás 
 (extracción, verificación, guardado, botonera) sigue siendo el 
 editor gráfico que ya existe.
 
@@ -26,28 +28,19 @@ activación replica el mecanismo que ya usa la función
 \texttt{actualizarPestanas}, con los cambios pertinentes:
 
 \begin{itemize}
-	\item \textbf{Sin cartucho:} habilitada para poder crear un cartucho base nuevo (véase la sección~\ref{sec:F5I10Crear}).
+	\item \textbf{Con el setup cargado:} habilitada, aunque no haya cartucho, para poder crear un cartucho base nuevo (véase la sección~\ref{sec:F5I10Crear}). Sin setup no hay máquina a la que referir los botones y la pestaña no se activa.
 	
-	% Primera marca: avanza el contador y guarda el número automáticamente
-	\item \textbf{Tras cargar un GWB:} activa y manipulable
-	\footnotemark\newcounter{notaSegmentos}\setcounter{notaSegmentos}{\value{footnote}},
-	dado que los datos están contenidos precisamente en el GWB.
-	
-	% Segunda marca: reutiliza exactamente el número guardado
-	\item \textbf{Tras cargar un GWI:} activa y manipulable
-	\footnotemark[\value{notaSegmentos}], 
-	puesto que los datos del GWI se cargan íntegros en memoria tras ejecutar \texttt{leerCartucho} y ya residen en \texttt{cartucho.json}.
+	\item \textbf{Tras cargar un GWB o un GWI:} sigue activa y manipulable, y se rellena con todos los datos del cartucho (véase la sección~\ref{sec:F5I10Carga}).
 	
 	\item \textbf{Tras cargar un GWC:} deshabilitada. El formato GWC es de ejecución pura (\ref{sec:F5I8}) y no incluye los datos del cartucho base.
+	
+	\item \textbf{Durante una partida:} deshabilitada, como el resto de pestañas salvo el Simulador.
 \end{itemize}
-
-% Texto de la nota al pie (se coloca fuera de la lista)
-\footnotetext[\value{notaSegmentos}]{Siempre considerando que, si se cambia la imagen de los segmentos, hay que redefinir estos por completo (véase más adelante), ya que dichos datos residen precisamente en el GWB.}
 
 \subsection{La ficha de datos}
 \label{sec:F5I10Ficha}
 
-La pestaña muestra la ficha del cartucho cargado, con los datos que se incluyen en el cartucho Base:
+La pestaña muestra la ficha del cartucho, con los datos que se incluyen en el cartucho Base:
 
 \begin{figure}[H]
 	\centering
@@ -57,72 +50,98 @@ La pestaña muestra la ficha del cartucho cargado, con los datos que se incluyen
 \end{figure}
 
 \begin{itemize}
-	\item Identidad: Con los campos para
+	\item Identidad: con los campos para
 	\begin{itemize}
-		\item \texttt{nombre}: El que se desea dar al cartucho.
-		\item \texttt{estilo}: El de los botones (2,4,5). 
-		\item \texttt{resolucion}: La resolución que se usará en la pantalla.
-		\item \texttt{codigoGWC}: Si existe el código del par (solo informativo y no editable).
+		\item \texttt{nombre}: el que se desea dar al cartucho.
+		\item \texttt{estilo}: el de los botones (2, 4, 5). Opcional en el GWB: si falta se usa el del setup cargado.
+		\item \texttt{resolucion}: ancho y alto de la pantalla. Opcional en el GWB (si falta, la \texttt{pantalla} del setup cargado) y obligatoria en el GWI, donde se completa con la del setup si la ficha la deja vacía.
 	\end{itemize}
 	
-	\item Las tres imágenes del apartado \texttt{imagenes}, mostranso solo una miniatura, delante de cada uno el nombre img\_f, img\_s, img\_m como referencia rápida de cual es (redundante por que de arriba a abajo son siempre s f y m): 
+	\item Las tres imágenes del apartado \texttt{imagenes}, mostrando una miniatura de cada una con su título (img\_s, img\_f, img\_m), el nombre y el tamaño del fichero, y los botones \textbf{Cargar} y \textbf{Borrar}:
 	\begin{itemize}
-		\item \textbf{img\_s}: Obligatoria. Imagen con todos los segmentos en blanco y negro. Cuando se cargue una imagen, se debe verificar explícitamente que solo se use blanco y negro puros\footnote{Se deja como ampliación poder cargar cualquier imagen y convertirla en Blanco y Negro}.
-		\item \textbf{img\_f}: Opcional. La imagen del fondo, si no se define será fondo blanco.
+		\item \textbf{img\_s}: Obligatoria. Imagen con todos los segmentos en blanco y negro. Al guardar, si la imagen no es blanco y negro puro se avisa de ello\footnote{Se deja como ampliación poder cargar cualquier imagen y convertirla en Blanco y Negro.}.
+		\item \textbf{img\_f}: Opcional. La imagen del fondo; si no se define será fondo blanco.
 		\item \textbf{img\_m}: Opcional. La miniatura que se usará en el selector de cartuchos.
 	\end{itemize}
-	\item Los botones declarados: tabla con \texttt{numero} e \texttt{id} de cada uno.
+	\item Los botones: tabla con los botones posibles según el estilo (los de juego y el trío de sistema A/B/R, números 6, 7 y 8), con una casilla \textbf{Usado} y el \texttt{id} lógico de cada uno (IZQ, DER, Start\ldots).
 \end{itemize}
+
+\subsection{La ficha como fuente única de datos}
+\label{sec:F5I10Fuente}
+
+Hasta esta iteración los datos propios del cartucho (nombre, estilo, imágenes y botones) viajaban 
+del GWB cargado al GWI por una copia en memoria. Ahora la ficha es el único lugar donde residen: 
+todo lo que se carga la rellena, y todo lo que se guarda sale de ella.
+
+\subsubsection{Qué rellena cada carga}
+\label{sec:F5I10Carga}
+
+Antes de rellenar, la ficha se reinicia, para que no queden restos del cartucho anterior.
+
+\begin{itemize}
+	\item \textbf{GWS (setup):} el \texttt{estilo} y la resolución (la \texttt{pantalla} del setup), y con el estilo la tabla de los botones posibles. Los \texttt{id} quedan vacíos: son del cartucho, no de la máquina.
+	\item \textbf{GWB:} nombre, estilo y resolución (si el GWB los trae; si no, quedan en blanco), las tres imágenes y los botones con sus \texttt{id}. La portada (img\_m) se muestra cuando termina de cargar, sin bloquear. Los campos \texttt{combinar} y \texttt{etiquetas}, si existen, no se editan, pero se conservan al volver a guardar.
+	\item \textbf{GWI:} lo mismo que el GWB, con estilo y resolución siempre, pues son obligatorios en el GWI.
+\end{itemize}
+
+\subsubsection{Qué se guarda desde la ficha}
+
+\begin{itemize}
+	\item \textbf{GWB} (\textbf{Verificar y guardar GWB}, en la propia ficha): genera \texttt{cartucho\_GWB.zip} con el JSON y las imágenes.
+	
+	\item \textbf{GWI y GWC} (\textbf{Verificar y Guardar} y \textbf{Generar}): \texttt{montarGWI} toma nombre, estilo, resolución, imágenes y botones de la ficha, completando con el setup el estilo y la resolución cuando están vacíos, y las imágenes que se escriben en el ZIP son las de la ficha. Antes de escribir nada se verifica la ficha con las mismas comprobaciones que el GWB.
+	
+	\item \textbf{Generar GWB+GWI+GWC:} el botón \textbf{Generar} produce ahora los tres ficheros de la misma foto de memoria, para que vayan de la mano: primero el GWC, después el GWI con el código del par (\texttt{codigoGWC}) y por último el GWB. La verificación de la ficha se hace antes de generar ninguno de los tres.
+\end{itemize}
+
+Los nombres de las imágenes al guardar son siempre \texttt{img\_s.png}, \texttt{img\_f.png} e \texttt{img\_m.png}, por lo que no hace falta mostrar los nombres originales en la pantalla.
 
 \subsection{La edición del cartucho cargado}
 \label{sec:F5I10Edicion}
 
-Con un GWB o un GWI cargado, la ficha pasa a ser manipulable: renombrar el cartucho,
-cambiar los \texttt{id} de los botones y sustituir las imágenes por otro fichero 
-local. Para ello se incluirán botones junto a cada imagen que permitan eliminarla 
-y seleccionar un fichero png para cargarlo\footnote{al guardar los datos, los nombres 
-de las imágenes serán siempre img\_f.png, img\_s.png, img\_m.png, por tanto no hace falta
-incluir los nombres reales en la pantalla}, con estos límites:
+Con un GWB o un GWI cargado, la ficha es manipulable: renombrar el cartucho,
+cambiar el estilo y la resolución, marcar y renombrar los botones y sustituir las imágenes 
+por otro fichero local PNG, con estos límites:
 
 \begin{itemize}
-	\item \textbf{Sustituir img\_f o img\_m}: Directamente sin problemas.
-	\item \textbf{Sustituir img\_s}: Ya que los sprites, segmentos y mapa proceden de esta imagen, se debe limitar el cambio:
-	\begin{itemize}
-		\item Si no hay segmentos en memoria: permitir el cambio sin más\footnote{Este caso solo se puede dar si no se ha cargado nada nunca, en cuanto se defina una imagen de segmentos o se cargue un cartucho ya se habrán creado los segmentos}.
-		\item Si hay segmentos en memoria: se pide confirmar pues se eliminarán estos previamente a la carga, si se confirma se limpia la memoria completa en cuanto a  segmentos, imágenes, datos de base y la autoría. Solo permanecen los datos del cartucho que figuran en esta pestaña, así no hay posibilidad de mezclas de datos erróneas.
-		\item Tras cargar la imagen, hay que forzar la re-extracción siempre (la pestaña Sprites y el mapa se recalculan).
-	\end{itemize}
-	
+	\item \textbf{Sustituir o borrar img\_f o img\_m:} directamente. Un cambio de img\_f actualiza al instante el fondo del aparato; img\_m se guarda con el cartucho.
+	\item \textbf{Sustituir o borrar img\_s:} los sprites, segmentos y el mapa proceden de esta imagen, por lo que, si hay segmentos en memoria, los botones Cargar y Borrar de img\_s se \textbf{bloquean} (con una indicación de que hay que cargar otro GWB para cambiarla). Sin segmentos en memoria, se puede cambiar o borrar libremente. Borrarla y guardar es un error de verificación (falta img\_s).
 \end{itemize}
 
-No serán editables ni \textbf{el estilo} ni \textbf{la resolución}: si difieren del setup de la máquina cargada, \texttt{validarGWB} ya lo bloquea al entrar; cambiarlo en caliente rompería la geometría de la pantalla, pero se deja como posible ampliación poder alterar estos valores, de forma que ya no sea necesario cargar un Setup previo a definir el cartucho.
+\textbf{Estilo.} Un cartucho de menos botones se puede jugar en una máquina con más (un juego de 2 botones en una máquina de 4), pero no al revés. La regla se aplica así:
+\begin{itemize}
+	\item Al \textbf{cargar} un GWB, GWI o GWC con un estilo menor que el del setup: se acepta. Con un estilo mayor: se rechaza. Antes se exigía que fueran iguales.
+	\item Al \textbf{guardar un GWB} con un estilo de la ficha mayor que el del setup: aviso, no bloqueo.
+	\item Al \textbf{generar GWI/GWC} con un estilo mayor que el del setup: error bloqueante, pues no se podría jugar en la máquina cargada.
+\end{itemize}
 
-El trío de botones estándar A/B/R no aparecerán en la lista de botones definibles en este momento, aunque será posible ampliar el sistema para su tratamiento.
+\textbf{Resolución.} Si la resolución de la ficha difiere de la pantalla del setup, solo se avisa. Hoy el GWC se genera siempre a la pantalla del setup; escalarlo a la resolución de la ficha queda pendiente. Tampoco bloquea que las imágenes img\_s e img\_f midan distinto: img\_s puede ser grande para trabajar con comodidad y el GWC las escala al generarse (solo se avisa).
 
-Para editar los botones, al no ser crítico su modificación, se presenta la lista de los posibles según el estilo definido al cargar el setup, y se permite modificar los datos asociados.
+El trío de botones A/B/R aparece en la tabla de botones como los demás (números 6, 7 y 8, en todos los estilos), de modo que se puede definir, por ejemplo, cuál es el botón \texttt{Start}.
 
 \subsection{Crear un cartucho de cero}
 \label{sec:F5I10Crear}
 
-Cuando no hay cartucho cargado, la pestaña ofrece el asistente de
-creación. No es un editor paralelo: es un generador del objeto
-cartucho que termina entregándolo al flujo que ya existe, de modo que
-un GWB creado de cero y uno cargado de disco son indistinguibles para
-el resto del programa.
+Con el setup cargado y sin cartucho, la ficha está lista para usarse como generador del cartucho base, sin escribir un json a mano:
 
 \begin{enumerate}
-	\item Requiere el setup cargado: de él salen el \texttt{estilo} y
-	los botones físicos entre los que se elige.
-	\item El estilo no será editable, pues sale del setup cargado (se deja como ampliación poder hacerlo).
-	\item Se seleccionan las imágenes desde ficheros locales: img\_s
-	obligatoria, img\_f e img\_m opcionales.
-	\item Se declaran los botones: se eligen entre los físicos del
-	setup y se les da su \texttt{id} (A/B/R incluidos).
-	\item Se construye el JSON en memoria, se valida con
-	\texttt{validarGWB} (el mismo contrato de entrada) y se entrega al
-	editor como cartucho en edición: extracción de sprites, mapa y
-	botonera se comportan como tras una carga.
+	\item Requiere el setup cargado: de él salen el estilo y la resolución propuestos y los botones posibles.
+	\item Se escribe el nombre y se seleccionan las imágenes desde ficheros locales: img\_s obligatoria, img\_f e img\_m opcionales.
+	\item Se marcan los botones usados y se les da su \texttt{id} (el trío A/B/R incluido).
+	\item \textbf{Verificar y guardar GWB} comprueba la ficha y valida el GWB resultante con \texttt{validarGWB} (el mismo contrato de entrada que al cargarlo), con las imágenes en memoria, y genera \texttt{cartucho\_GWB.zip}.
 \end{enumerate}
+
+El GWB generado se carga después con el botón de carga de GWB, y entra en el flujo habitual (extracción de sprites, mapa y botonera). El paso directo de la ficha al editor, sin pasar por el fichero, queda como mejora futura.
+
+\subsection{Verificación de la ficha}
+\label{sec:F5I10Verificacion}
+
+La verificación es una función única, usada por el guardado del GWB, el del GWI y la generación. Los hallazgos se muestran en la propia ficha. 
+
+\begin{itemize}
+	\item \textbf{Errores (bloquean):} falta el nombre; no hay estilo (ni en la ficha ni en el setup); resolución con solo ancho o solo alto, o no entera positiva; falta img\_s; botón usado sin \texttt{id} o \texttt{id} repetido; fallo de \texttt{validarGWB}; y, al generar, estilo mayor que el del setup.
+	\item \textbf{Avisos (no bloquean):} estilo mayor que el del setup al guardar un GWB; resolución distinta de la del setup o de la de img\_s; img\_s e img\_f de distinto tamaño; img\_s que no es blanco y negro puro; cartucho sin botones declarados (se usarán los del setup).
+\end{itemize}
 
 \subsection{El guardado del GWB}
 \label{sec:F5I10Guardado}
@@ -130,17 +149,19 @@ el resto del programa.
 Guardar un cartucho en una carpeta de disco no es cosa que un
 navegador sepa hacer sin más: no puede crear un directorio y escribir
 ficheros dentro de forma general. La solución es usar el mismo sistema 
-que utilizamos al guardar el GWI: un botón \textbf{Guardar GWB} en la 
-ficha que genera \texttt{cartucho\_gwb.zip} con el JSON y las tres 
-imágenes, con el mismo empaquetado (JSZip + \texttt{imagenBlob}) que ya existe.
+que utilizamos al guardar el GWI: un botón \textbf{Verificar y guardar GWB} en la 
+ficha que genera \texttt{cartucho\_GWB.zip} con el JSON y las imágenes que el cartucho declara, 
+con el mismo empaquetado que ya existe (iteración~\ref{sec:F5I11}). Se escribe con un serializador propio, 
+\texttt{formatearGWB}, que incluye solo lo que un GWB declara (sin sprites, segmentos ni autoría). 
+Mientras guarda, el botón queda deshabilitado.
 
 La carga de ficheros ZIP ya está resuelta por la iteración anterior: el
 núcleo de carga detecta la forma por el CONTENIDO
 (\ref{sec:F5I9}), de modo que un GWB dentro de un fichero comprimido
-sigue el camino ZIP → abrirZIP → recursión con el tipo esperado y 
+sigue el camino de apertura del paquete y recursión con el tipo esperado y 
 carga como si fuera la carpeta. 
 
-El único hueco es de entrada: el botón «Cargar GWB» usa hoy un selector 
+El único hueco era de entrada: el botón «Cargar GWB» usa un selector 
 de directorio (\texttt{webkitdirectory}), que no admite soltar un ZIP. 
 \underline{En esta iteración} se añade pues la doble vía de entrada del 
 GWB, carpeta o ZIP, desdoblando en dos botones, uno carga un directorio 
@@ -153,51 +174,59 @@ directorios o los ZIP comprimidos.
 En cuanto a necesidad, el guardado del GWB no es imprescindible: el
 GWB en memoria es la copia de trabajo y su salida natural es el GWI,
 que ya es autónomo. Se incluye por completitud con el resto de
-cartuchos: los tres formatos se pueden guardar, y así el cartucho
-de base generado en el asistente sale del editor como fichero único,
-sin depender de que el usuario monte la carpeta a mano.
+cartuchos y porque, al generar, los tres formatos salen juntos.
+
+\subsection{Cambios en otras partes del código}
+\label{sec:F5I10Codigo}
+
+\begin{itemize}
+	\item \textbf{Módulo BaseFicha.js (nuevo):} contiene toda la ficha. No conoce al descomponedor: el director la rellena y la consulta, le indica cuándo bloquear img\_s y se suscribe a los cambios de imagen. Sus funciones principales son \texttt{pintar}, \texttt{poblar}, \texttt{reiniciar}, \texttt{estado}, \texttt{datosCartucho}, \texttt{verificar} y \texttt{guardar}.
+	\item \textbf{BaseDirector.js:} rellena la ficha al cargar el setup y el GWB/GWI; bloquea img\_s con segmentos; actualiza fondo y portada cuando cambian en la ficha; las teclas de los botones solo actúan en la pestaña Simulador (para poder escribir en la ficha sin arrancar el juego); y se admite un cartucho o un GWC de menos botones que el setup.
+	\item \textbf{BaseDescomponer.js:} \texttt{montarGWI} y la generación leen de la ficha; \texttt{Generar} guarda también el GWB.
+	\item \textbf{BaseCartucho.js:} \texttt{formatearGWB}, \texttt{resolucion} en el GWI (y opcional en el GWB), y la regla de estilo. Se corrige además \texttt{formatearGWI}, que escribía mal el campo de las imágenes, y se elimina la comprobación del bloque de imágenes que estaba triplicada.
+	\item \textbf{Cambio de nombres:} en el GWB y el GWI el bloque de imágenes se llama \texttt{imagenes} (antes \texttt{pantalla}); en el GWS, \texttt{resolucion}. El GWC binario no cambia, y \texttt{leerGWC} devuelve ahora \texttt{resolucion}, que es lo que esperaba el director.
+\end{itemize}
 
 \subsection{Qué cambia para el usuario}
 \label{sec:F5I10Usuario}
 
-Una pestaña nueva y dos capacidades que antes no existían: retocar
-los datos de un cartucho (GWB o GWI) sin volver a su origen, y crear
-un cartucho sin partir de una extracción. El GWC no cambia: se carga,
-se juega y nada más.
+Una pestaña nueva y varias capacidades que antes no existían: retocar
+los datos de un cartucho (GWB o GWI) sin volver a su origen, crear
+un cartucho sin escribir un json, y generar de una vez los tres ficheros 
+GWB, GWI y GWC. El GWC no cambia: se carga, se juega y nada más.
 
-\subsection{Mejora al guardar GWI/GWC}
-\label{sec:F5I10Adicional}
-Aunque no es del GWB, en esta iteración incluyo una pequeña mejora, 
-la del par GWI+GWC: si se edita un GWI que lleva \texttt{codigoGWC} y 
-se guarda, el GWC guardado deja de corresponderle. 
+\subsection{Mejoras futuras}
+\label{sec:F5I10Mejoras}
 
-No es problemático, pero vamos a dar un aviso de forma explícita de que el par está
-desequilibrado y conviene regenerar el GWC.
-
-Además, añado en el GWI la resolución, de manera que tengamos toda la información necesaria en el cartucho intermedio siempre. De esta manera es posible diseñar una utilidad externa que convierta GWI en GWC sin tener que cargarlo en memoria (aunque esto no está previsto en este momento, puede ser una mejora).
+\begin{itemize}
+	\item \textbf{Aviso de par desequilibrado:} si se edita un GWI que lleva \texttt{codigoGWC} y se guarda, el GWC guardado deja de corresponderle. Todavía no se avisa de forma explícita de que conviene regenerar el GWC.
+	
+	\item \textbf{Resolución del GWC:} escalar a la resolución definida en la ficha, hoy solo avisa. 
+	
+	\item \textbf{Mostrar el \texttt{codigoGWC}} del par en la ficha, de forma informativa. 
+	
+	\item Entrega directa de la ficha al editor, sin pasar por el fichero GWB.
+\end{itemize}
 
 \subsection{Pruebas de la iteración}
 \label{sec:F5I10Pruebas}
 
+Las pruebas se hicieron en el navegador con los cartuchos de ejemplo (Parachute) y los setups de 2 y 4 botones:
+
 \begin{itemize}
-	\item La ficha refleja el cartucho cargado: nombre, estilo,
-	tres miniaturas y tabla de botones, con GWB y con GWI.
+	\item Cargar un setup rellena estilo, resolución y la tabla de botones (7 filas con el estilo 4: cuatro de juego y el trío A/B/R).
 	
-	\item Editar nombre e ids y guardar produce un GWI cuyo JSON
-	lleva los cambios; al recargarlo, la ficha los muestra.
+	\item Cargar un GWB o un GWI rellena la ficha: nombre, estilo, tres miniaturas y botones con sus \texttt{id}. Un cartucho de estilo 2 se carga en un setup de estilo 4.
 	
-	\item Sustituir img\_m y guardar: la imagen nueva viaja en el ZIP
-	(cierre de la F5-I9) y el GWI recargado la muestra.
+	\item Con segmentos en memoria, los botones de img\_s quedan bloqueados; los de img\_f e img\_m, no. Cambiar img\_f en la ficha actualiza el fondo del aparato y borrarla lo deja sin fondo.
 	
-	\item Sustituir img\_s dispara el aviso y la re-extracción.
+	\item Editar el nombre en la ficha y pulsar Generar produce los tres ficheros (GWC, GWI y GWB) con el nombre nuevo, la resolución y las imágenes \texttt{img\_s.png}, \texttt{img\_f.png} e \texttt{img\_m.png}; los tres se vuelven a cargar sin error.
 	
-	\item El asistente produce un GWB válido: La función 
-	\texttt{validarGWB} bloquea los casos malos (sin img\_s, 
-	 sin estilo, etc.).
+	\item Guardar GWB desde la ficha genera el ZIP; recargado por la vía ZIP produce el mismo cartucho.
+	
+	\item La verificación bloquea los casos malos (sin nombre, sin img\_s, \texttt{id} repetido, estilo mayor que el del setup al generar) y avisa sin bloquear en los demás.
+	
+	\item Escribir en los campos de la ficha, con teclas que son botones del simulador, no arranca el juego.
 	
 	\item Con un GWC cargado, la pestaña queda deshabilitada.
-	
-	\item Guardar GWB genera un ZIP que, recargado por la nueva vía
-	(zip o carpeta), produce el mismo cartucho: misma ficha, mismos
-	sprites, mismo juego.
 \end{itemize}

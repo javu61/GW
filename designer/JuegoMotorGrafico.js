@@ -96,7 +96,7 @@ var JuegoMotorGrafico = (function () {
    * @returns {void}
    * @since 2.7
    */
-  function pintarSegmento(canvas, x, y, imagen) {
+  function _pintarSegmento(canvas, x, y, imagen) {
     const escX = canvas.escalaX, escY = canvas.escalaY;
     if (!(escX > 0) || !(escY > 0)) {
       if (_debug()) console.warn('motor gráfico: escala sin fijar, no se pinta el segmento.');
@@ -167,7 +167,7 @@ var JuegoMotorGrafico = (function () {
     for (const seg of segs) {
       if (!seg.visible) continue;            // lector puro: solo los encendidos
       if (!seg.imagen) { sinImagen++; continue; }
-      pintarSegmento(canvas, seg.x, seg.y, seg.imagen);
+      _pintarSegmento(canvas, seg.x, seg.y, seg.imagen);
       presentados++;
     }
     if (_debug()) {

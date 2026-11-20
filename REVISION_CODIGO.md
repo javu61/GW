@@ -3,6 +3,30 @@
 Revisión solo de lectura: no se ha modificado ningún fichero. Leyenda: **[C]** confirmado leyendo el código; **[S]** seguro según el revisor; **[P]** posible / a comprobar ejecutando.
 Las pestañas de `index.html` no se marcan como discrepancia documental (aún no están en el LaTeX).
 
+## Estado a 20-11-2026 (tras F5-I10, F5-I11 y F5-I12)
+
+Solo se marcan los puntos comprobados contra el código actual. Lo no citado aquí sigue **pendiente** tal como se describe más abajo.
+
+| # | Estado | Cómo |
+|---|---|---|
+| 1 | Resuelto | La función de fin de partida (F5-I10) vuelve a habilitar pestañas y botones (`actualizarPestanas`); los botones de carga se deshabilitan solo durante la partida. |
+| 2 | Resuelto | `alPulsarTecla` solo actúa en la pestaña Simulador, ignora Ctrl/Alt/Meta y los campos de texto. |
+| 3 | Resuelto | `aleatorio` usa los bits altos del LCG: `(estadoLCG >>> 8) % max`. **Actualizar F3-I04.** |
+| 4 | Resuelto en la verificación | Error bloqueante si `valorInicial` o los ticks de la Secuencia pasan de 255, o si pausas y aceleración pasan de 65534. Pendiente: ajustar el `max` de los `input` de la UI. |
+| 5 | Resuelto | `generarGWIyGWC` tiene `try/catch` y el GWC se descarga solo cuando el GWI se ha guardado. |
+| 7 | Resuelto | `desenlaceMuerte = desenlaceMuerte \|\| !positiva`. |
+| 14 | Resuelto | `buscarBotonPorTecla` recorre los botones y ya no usa un selector CSS. |
+| 15 | Resuelto | `tick()` captura la excepción, termina la partida y avisa. |
+| 16 | Resuelto | `setup2.json` ya usa los botones 0 y 4; en `setup5.json` el botón 3 pasa a la tecla S. |
+| 19 | Resuelto | `fijados.add(campo)` va después de descartar los enlaces internos. |
+| 28 | Pendiente | La suma de verificación sigue siendo aditiva. Cambiarla a CRC-16/CCITT altera el formato del GWC (y el «Código GWC» de los GWI existentes): hacerlo junto con la revisión de formatos (P03/P04). |
+
+**Código muerto eliminado:** `avisarEtiquetas`, `BLOQUE_FONDO_GWC`, `cartuchoActual`, `segmentosEnMemoria`, y el bloqueo de img_s de la ficha (`bloquearImgS`, `alCambiarImagen`), que F5-I12 sustituye por el botón Aplicar.
+
+**Convención de nombres (F5-I12):** las funciones locales de cada módulo llevan `_` delante; solo las exportadas por el `return` del módulo no. Los motores y la ficha no exportan nada con `_`.
+
+**Siguen pendientes, por prioridad:** 6, 8, 9 y 10 (motor de estados); 11-13, 17; 18, 20-27 (editor); 29-30 (GWC); las erratas y discrepancias de la sección 2; las funciones gigantes y los patrones repetidos de la sección 3. Las exportaciones sin uso (p. ej. `JuegoMotorEstados.estadoRutas`, `BasePACK.verificarPACK`) se han dejado porque forman parte de la API documentada en el Anexo A.
+
 ---
 
 ## 1. Errores (prioridad de arreglo)

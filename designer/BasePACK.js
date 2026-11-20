@@ -38,12 +38,12 @@
 //   guardarPACK     Construye el paquete y lo descarga; devuelve el tamaño.
 //   descargarBlob   Fuerza la descarga de un Blob con un nombre.
 //  Formato ZIP (JSZip)
-//   verificarZIP    Comprueba que JSZip está cargado (lanza error si no).
-//   leerZIP         Abre un ZIP y devuelve sus ficheros como Blob.
-//   construirZIP    Construye el ZIP (Blob) desde una lista de entradas.
+//   _verificarZIP    Comprueba que JSZip está cargado (lanza error si no).
+//   _leerZIP         Abre un ZIP y devuelve sus ficheros como Blob.
+//   _construirZIP    Construye el ZIP (Blob) desde una lista de entradas.
 //  Internas
-//   formatoEnUso    Devuelve el formato activo, comprobando que está implementado.
-//   tamanoDe        Bytes de una entrada (Blob o texto UTF-8).
+//   _formatoEnUso    Devuelve el formato activo, comprobando que está implementado.
+//   _tamanoDe        Bytes de una entrada (Blob o texto UTF-8).
 //
 // ENTRADAS
 //   Cada entrada es {nombre, contenido}: nombre con su ruta dentro del
@@ -59,7 +59,7 @@ var BasePACK = (function () {
    * @returns {void}
    * @throws {Error} Si JSZip no está cargado.
    */
-  function verificarZIP() {
+  function _verificarZIP() {
     if (typeof JSZip === 'undefined') {
       throw new Error('Manejar paquetes ZIP requiere la librería JSZip: ' +
         'coloca jszip.min.js junto a los demás scripts.');
@@ -74,8 +74,8 @@ var BasePACK = (function () {
    * @returns {Promise<Blob[]>} Ficheros del ZIP (puede estar vacío).
    * @throws {Error} Si falta JSZip o el ZIP no es válido.
    */
-  async function leerZIP(fichero) {
-    verificarZIP();
+  async function _leerZIP(fichero) {
+    _verificarZIP();
     const zip = await JSZip.loadAsync(await fichero.arrayBuffer());
     const ficheros = [];
     for (const entrada of Object.values(zip.files)) {
@@ -94,8 +94,8 @@ var BasePACK = (function () {
    * @returns {Promise<Blob>} El ZIP.
    * @throws {Error} Si falta JSZip.
    */
-  async function construirZIP(entradas) {
-    verificarZIP();
+  async function _construirZIP(entradas) {
+    _verificarZIP();
     const zip = new JSZip();
     for (const e of entradas) zip.file(e.nombre, e.contenido);
     return zip.generateAsync({ type: 'blob' });
@@ -111,7 +111,7 @@ var BasePACK = (function () {
   const FORMATOS_COMPRESION = Object.freeze({
     ZIP: {
       nombre: 'ZIP', extension: '.zip', modulo: 'JSZip', fichero: 'jszip.min.js',
-      verificar: verificarZIP, leer: leerZIP, construir: construirZIP
+      verificar: _verificarZIP, leer: _leerZIP, construir: _construirZIP
     },
     TAR: {
       nombre: 'TAR', extension: '.tar', modulo: 'libarchive', fichero: 'libarchive.min.js',
@@ -141,7 +141,7 @@ var BasePACK = (function () {
    * @returns {Object} Entrada de FORMATOS_COMPRESION en uso.
    * @throws {Error} Si el formato no tiene funciones implementadas.
    */
-  function formatoEnUso() {
+  function _formatoEnUso() {
     const f = TIPO_COMPRESION;
     if (!f || typeof f.verificar !== 'function' ||
       typeof f.leer !== 'function' || typeof f.construir !== 'function') {
@@ -156,7 +156,7 @@ var BasePACK = (function () {
    * @throws {Error} Si el formato no está soportado o falta su librería.
    */
   function verificarPACK() {
-    formatoEnUso().verificar();
+    _formatoEnUso().verificar();
   }
 
   /**
@@ -187,7 +187,7 @@ var BasePACK = (function () {
    *         no es válido o está vacío.
    */
   async function leerPACK(fichero) {
-    const f = formatoEnUso();
+    const f = _formatoEnUso();
     const ficheros = await f.leer(fichero);
     if (ficheros.length === 0) throw new Error('el paquete no contiene ficheros.');
     return ficheros;
@@ -198,7 +198,7 @@ var BasePACK = (function () {
    * @param {Blob|string} contenido - Blob o texto (UTF-8).
    * @returns {number} Tamaño en bytes.
    */
-  function tamanoDe(contenido) {
+  function _tamanoDe(contenido) {
     return (contenido instanceof Blob) ? contenido.size : new Blob([contenido]).size;
   }
 
@@ -214,7 +214,7 @@ var BasePACK = (function () {
    *         entradas o alguna no tiene nombre o contenido.
    */
   async function construirPACK(entradas) {
-    const f = formatoEnUso();
+    const f = _formatoEnUso();
     if (!Array.isArray(entradas) || entradas.length === 0) {
       throw new Error('no hay ficheros que guardar en el paquete.');
     }
@@ -226,7 +226,7 @@ var BasePACK = (function () {
       if (e.contenido === undefined || e.contenido === null) {
         throw new Error('la entrada «' + e.nombre + '» del paquete no tiene contenido.');
       }
-      tamano += tamanoDe(e.contenido);
+      tamano += _tamanoDe(e.contenido);
     }
     return { blob: await f.construir(entradas), tamano: tamano };
   }

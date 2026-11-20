@@ -23,10 +23,9 @@
 // SEPARACIÓN
 //   No conoce al descomponedor: solo pinta y guarda el estado de la
 //   ficha en el DOM y en variables propias. El director la rellena
-//   (poblar, ponerImagen), le dice cuándo bloquear img_s
-//   (bloquearImgS) y se suscribe a los cambios de imagen
-//   (alCambiarImagen). La ficha se construye UNA vez y conserva lo
-//   escrito entre visitas.
+//   (poblar, ponerImagen) y consulta si hay cambios sin aplicar
+//   (hayCambios); la ficha es un BORRADOR hasta que se pulsa Aplicar.
+//   Se construye UNA vez y conserva lo escrito entre visitas.
 //
 // FUNCIONES
 //  Pantalla
@@ -34,8 +33,6 @@
 //    reiniciar          Deja la ficha en blanco.
 //    poblar             Rellena campos, botones e imágenes desde una carga.
 //    ponerImagen        Pone (o quita) una imagen sin avisar al director.
-//    bloquearImgS       Bloquea/desbloquea cargar y borrar img_s.
-//    alCambiarImagen    Registra quién se entera de los cambios del usuario.
 //  Lectura
 //    estado             Lee los datos de la ficha tal cual (sin completar).
 //    datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
@@ -93,8 +90,6 @@ const BaseFicha = (function () {
   let cuerpoBotones = null;
   let mensajes = null;            // zona de errores/avisos
   let extras = {};                // combinar/etiquetas del GWB cargado (se conservan al guardar)
-  let imgSBloqueada = false;      // con segmentos en memoria no se cambia img_s
-  let alCambiar = null;           // (clave, imagen|null) tras un cambio del usuario
   let sucio = false;              // F5-I12: hay cambios sin aplicar (la ficha es un borrador)
   let avisoCambios = null;        // línea «cambios sin aplicar»
 
@@ -198,7 +193,6 @@ const BaseFicha = (function () {
     borrar.addEventListener('click', () => {
       _vaciarImagen(def.clave);
       _marcarCambios(true);
-      if (alCambiar) alCambiar(def.clave, null);
     });
     return tarjeta;
   }
@@ -225,12 +219,7 @@ const BaseFicha = (function () {
   function _refrescarBotonesImagen(clave) {
     const d = imagenes[clave];
     if (!d) return;
-    const bloqueada = clave === 'img_s' && imgSBloqueada;
-    d.ui.cargar.disabled = bloqueada;
-    d.ui.borrar.disabled = bloqueada || !d.img;
-    d.ui.cargar.title = bloqueada
-      ? 'Hay segmentos en memoria: img_s no se puede cambiar (carga otro GWB).' : '';
-    d.ui.borrar.title = d.ui.cargar.title;
+    d.ui.borrar.disabled = !d.img;
   }
 
   /**
@@ -267,7 +256,6 @@ const BaseFicha = (function () {
     const img = new Image();
     img.onload = () => {
       _colocarImagen(clave, img, fichero.name, url);
-      if (alCambiar) alCambiar(clave, img);
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
@@ -797,35 +785,11 @@ const BaseFicha = (function () {
     else _vaciarImagen(clave);
   }
 
-  /**
-   * Bloquea o desbloquea Cargar y Borrar de img_s (con segmentos en
-   * memoria, los segmentos salen de ella).
-   * @param {boolean} bloquear - true para bloquear.
-   * @returns {void}
-   */
-  function bloquearImgS(bloquear) {
-    imgSBloqueada = !!bloquear;
-    if (raiz) _refrescarBotonesImagen('img_s');
-  }
-
-  /**
-   * Registra quién se entera de los cambios de imagen hechos por el
-   * usuario (Cargar o Borrar).
-   * @param {function(string, ?HTMLImageElement):void} fn - Recibe la
-   *        clave y la imagen nueva (null si se borró).
-   * @returns {void}
-   */
-  function alCambiarImagen(fn) {
-    alCambiar = fn;
-  }
-
   return {
     pintar: pintar,
     reiniciar: reiniciar,
     poblar: poblar,
     ponerImagen: ponerImagen,
-    bloquearImgS: bloquearImgS,
-    alCambiarImagen: alCambiarImagen,
     estado: estado,
     datosCartucho: datosCartucho,
     imagenesEnMemoria: imagenesEnMemoria,

@@ -8,7 +8,7 @@
     { "numero": "0", "puerto": 13, "tecla": "A"  },
     { "numero": "1", "puerto": 14, "tecla": "D"  },
     { "numero": "2", "puerto": 25, "tecla": "W"  },
-    { "numero": "3", "puerto": 26, "tecla": "X"  },
+    { "numero": "3", "puerto": 26, "tecla": "S"  },
     { "numero": "4", "puerto": 27, "tecla": "P"  },
     { "numero": "6", "puerto": 33, "tecla": "Z" , "alias": "A" },
     { "numero": "7", "puerto": 16, "tecla": "X" , "alias": "B" },

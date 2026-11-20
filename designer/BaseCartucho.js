@@ -191,7 +191,7 @@ var BaseCartucho = (function () {
    * @param {string[]} nombres - Nombres de los .json a leer.
    * @returns {Promise<Array<{nombre:string, json:Object}>>} Los leídos.
    */
-  async function leerJSONsLegibles(mapa, nombres) {
+  async function _leerJSONsLegibles(mapa, nombres) {
     const leidos = [];
     for (const nombre of nombres) {
       try {
@@ -209,7 +209,7 @@ var BaseCartucho = (function () {
    * @returns {?{nombre:string, json:Object}} El elegido, o undefined si
    *   ninguno declara un tipo válido.
    */
-  function elegirPorPrioridad(leidos) {
+  function _elegirPorPrioridad(leidos) {
     for (const tipo of PRIORIDAD_TIPOS) {
       const encontrado = leidos.find(o => o.json && o.json.tipo === tipo);
       if (encontrado) return encontrado;
@@ -223,7 +223,7 @@ var BaseCartucho = (function () {
    * @param {Array<{nombre:string, json:Object}>} leidos - JSONs leídos.
    * @returns {string} Lista «fichero (tipo: X), ...».
    */
-  function describirTiposEncontrados(leidos) {
+  function _describirTiposEncontrados(leidos) {
     return leidos.map(o =>
       o.nombre + ' (tipo: ' + (o.json && o.json.tipo !== undefined ?
         JSON.stringify(o.json.tipo) : 'falta') + ')').join(', ');
@@ -240,13 +240,13 @@ var BaseCartucho = (function () {
     const nombres = Array.from(mapa.keys()).filter(n => n.toLowerCase().endsWith('.json'));
     if (nombres.length === 0) throw new Error('la carpeta no contiene ningún .json.');
 
-    const leidos = await leerJSONsLegibles(mapa, nombres);
+    const leidos = await _leerJSONsLegibles(mapa, nombres);
     if (leidos.length === 0) throw new Error('ningún .json de la carpeta se ha podido leer.');
 
-    const elegido = elegirPorPrioridad(leidos);
+    const elegido = _elegirPorPrioridad(leidos);
     if (!elegido) {
       throw new Error('ningún .json de la carpeta declara un "tipo" válido ' +
-        '(GWB, GWI o GWC). Encontrados: ' + describirTiposEncontrados(leidos) + '.');
+        '(GWB, GWI o GWC). Encontrados: ' + _describirTiposEncontrados(leidos) + '.');
     }
     if (leidos.length > 1) {
       console.info('[cartucho] había ' + leidos.length + ' .json en la carpeta: se carga ' +
@@ -526,12 +526,12 @@ var BaseCartucho = (function () {
   const CAMPOS_OPCIONALES_GWI = ['fin', 'secuencia', 'pausas', 'aceleracion', 'rutas'];
 
   /** Línea JSON de un campo simple: `  "clave": valor`. */
-  function lineaDeCampo(clave, valor) {
+  function _lineaDeCampo(clave, valor) {
     return '  "' + clave + '": ' + JSON.stringify(valor);
   }
 
   /** Lista con UNA línea por elemento (sprites, segmentos, botones...). */
-  function lineaDeLista(clave, lista) {
+  function _lineaDeLista(clave, lista) {
     if (!lista || lista.length === 0) return '  "' + clave + '": []';
     return '  "' + clave + '": [\n' +
       lista.map(elemento => '    ' + JSON.stringify(elemento)).join(',\n') +
@@ -539,18 +539,18 @@ var BaseCartucho = (function () {
   }
 
   /** Sección de autoría: historial a una línea por acción + contador. */
-  function lineaDeAutoria(autoria) {
+  function _lineaDeAutoria(autoria) {
     return '  "autoria": {\n' +
-      lineaDeLista('cambios', autoria.cambios).replace('  ', '    ') + ',\n' +
+      _lineaDeLista('cambios', autoria.cambios).replace('  ', '    ') + ',\n' +
       '    "ultimoOp": ' + JSON.stringify(autoria.ultimoOp) + '\n' +
       '  }';
   }
 
   /** Líneas de los campos opcionales que el GWI sí trae. */
-  function lineasOpcionales(json) {
+  function _lineasOpcionales(json) {
     return CAMPOS_OPCIONALES_GWI
       .filter(campo => json[campo])
-      .map(campo => lineaDeCampo(campo, json[campo]));
+      .map(campo => _lineaDeCampo(campo, json[campo]));
   }
 
   /**
@@ -563,7 +563,7 @@ var BaseCartucho = (function () {
   function _formatearGWI(json) {
     // El código del par (suma de verificación del GWC) solo si existe.
     const lineaCodigoGWC = (json.codigoGWC !== undefined && json.codigoGWC !== null)
-      ? [lineaDeCampo('codigoGWC', json.codigoGWC)] : [];
+      ? [_lineaDeCampo('codigoGWC', json.codigoGWC)] : [];
 
     // imagenes TAL CUAL (decisión del cierre de la F5-I9): el GWI es el
     // contenedor intermedio y debe ser AUTOSUFICIENTE — declara todo lo
@@ -573,18 +573,18 @@ var BaseCartucho = (function () {
     const imagenesGWI = json.imagenes;
 
     const lineas = [
-      lineaDeCampo('tipo', json.tipo),
-      lineaDeCampo('version', json.version),
+      _lineaDeCampo('tipo', json.tipo),
+      _lineaDeCampo('version', json.version),
       ...lineaCodigoGWC,
-      lineaDeCampo('nombre', json.nombre),
-      lineaDeCampo('estilo', json.estilo),
-      lineaDeCampo('resolucion', json.resolucion),
-      lineaDeCampo('imagenes', imagenesGWI),
-      ...lineasOpcionales(json),
-      lineaDeLista('botones', json.botones),
-      lineaDeLista('sprites', json.sprites),
-      lineaDeLista('segmentos', json.segmentos),
-      lineaDeAutoria(json.autoria)
+      _lineaDeCampo('nombre', json.nombre),
+      _lineaDeCampo('estilo', json.estilo),
+      _lineaDeCampo('resolucion', json.resolucion),
+      _lineaDeCampo('imagenes', imagenesGWI),
+      ..._lineasOpcionales(json),
+      _lineaDeLista('botones', json.botones),
+      _lineaDeLista('sprites', json.sprites),
+      _lineaDeLista('segmentos', json.segmentos),
+      _lineaDeAutoria(json.autoria)
     ];
     return '{\n' + lineas.join(',\n') + '\n}';
   }
@@ -597,17 +597,17 @@ var BaseCartucho = (function () {
    */
   function _formatearGWB(json) {
     const lineas = [
-      lineaDeCampo('tipo', 'GWB'),
-      lineaDeCampo('version', json.version),
-      lineaDeCampo('nombre', json.nombre)
+      _lineaDeCampo('tipo', 'GWB'),
+      _lineaDeCampo('version', json.version),
+      _lineaDeCampo('nombre', json.nombre)
     ];
-    if (json.estilo) lineas.push(lineaDeCampo('estilo', json.estilo));
-    if (json.resolucion) lineas.push(lineaDeCampo('resolucion', json.resolucion));
-    lineas.push(lineaDeCampo('imagenes', json.imagenes));
+    if (json.estilo) lineas.push(_lineaDeCampo('estilo', json.estilo));
+    if (json.resolucion) lineas.push(_lineaDeCampo('resolucion', json.resolucion));
+    lineas.push(_lineaDeCampo('imagenes', json.imagenes));
     for (const campo of ['combinar', 'etiquetas']) {
-      if (json[campo]) lineas.push(lineaDeCampo(campo, json[campo]));
+      if (json[campo]) lineas.push(_lineaDeCampo(campo, json[campo]));
     }
-    lineas.push(lineaDeLista('botones', json.botones || []));
+    lineas.push(_lineaDeLista('botones', json.botones || []));
     return '{\n' + lineas.join(',\n') + '\n}';
   }
 
@@ -1072,6 +1072,9 @@ var BaseCartucho = (function () {
     if (Number(props.valorInicial) < 0) {
       hallazgos.errores.push(id + ': el valor inicial no puede ser negativo.');
     }
+    if (Number(props.valorInicial) > 255) {
+      hallazgos.errores.push(id + ': el valor inicial (' + props.valorInicial + ') no cabe en 1 byte del GWC (máximo 255).');
+    }
   }
 
   /**
@@ -1104,7 +1107,7 @@ var BaseCartucho = (function () {
   // ----- Acompañantes («mostrar junto a») -----
 
   /** Raíces de todos los grupos a los que alguna cadena (siguiente/salvado/muerte) apunta. */
-  function recogerApuntadosPorCadena(ctx) {
+  function _recogerApuntadosPorCadena(ctx) {
     const apuntados = new Set();
     for (const grupo of ctx.grupos) {
       for (const campo of ['siguiente', 'salvado', 'muerte']) {
@@ -1122,7 +1125,7 @@ var BaseCartucho = (function () {
    * (eso no es una red de enlaces y no se toca).
    */
   function _verificarAcompanantes(ctx, hallazgos) {
-    const apuntadosPorCadena = recogerApuntadosPorCadena(ctx);
+    const apuntadosPorCadena = _recogerApuntadosPorCadena(ctx);
     const principalDeSecundario = new Map();   // raíz del secundario → su principal
 
     for (const principal of ctx.grupos) {
@@ -1137,14 +1140,14 @@ var BaseCartucho = (function () {
       } else {
         principalDeSecundario.set(secundario.raiz, principal);
       }
-      completarInversoDeAcompanante(ctx, hallazgos, principal, secundario);
+      _completarInversoDeAcompanante(ctx, hallazgos, principal, secundario);
       _verificarReglasDeSecundario(ctx, hallazgos, secundario, apuntadosPorCadena);
     }
-    retirarAcompanantesHuerfanos(ctx, principalDeSecundario);
+    _retirarAcompanantesHuerfanos(ctx, principalDeSecundario);
   }
 
   /** Calcula B.mostradoJunto = A si falta; avisa si apunta a otro. */
-  function completarInversoDeAcompanante(ctx, hallazgos, principal, secundario) {
+  function _completarInversoDeAcompanante(ctx, hallazgos, principal, secundario) {
     const propsSecundario = ctx.propsDe(secundario.raiz);
     if (propsSecundario.mostradoJunto === null) {
       propsSecundario.mostradoJunto = principal.raiz;
@@ -1179,7 +1182,7 @@ var BaseCartucho = (function () {
   }
 
   /** Un «mostrado junto a» cuyo principal ya no lo apunta se retira (como los inversos al deshacer enlaces). */
-  function retirarAcompanantesHuerfanos(ctx, principalDeSecundario) {
+  function _retirarAcompanantesHuerfanos(ctx, principalDeSecundario) {
     for (const grupo of ctx.grupos) {
       if (grupo.prop.mostradoJunto === null) continue;
       if (principalDeSecundario.has(grupo.raiz)) continue;
@@ -1335,6 +1338,10 @@ var BaseCartucho = (function () {
       hallazgos.errores.push('La Secuencia tiene segmentos pero no declara sus ticks ' +
         '(cada cuánto se relanza).');
     }
+    if (haySecuencia && Number(propsFicha.secTicks) > 255) {
+      hallazgos.errores.push('Los ticks de la Secuencia (' + propsFicha.secTicks +
+        ') no caben en 1 byte del GWC (máximo 255).');
+    }
   }
 
   /**
@@ -1371,6 +1378,16 @@ var BaseCartucho = (function () {
     }
     if (propsFicha.aumentarCada !== null && !(Number(propsFicha.aumentarCada) >= 1)) {
       hallazgos.errores.push('El Nº para aumentar rutas debe ser 1 o más.');
+    }
+    // El GWC guarda estos campos en 2 bytes (0xFFFF es «sin valor»): un
+    // valor mayor se recortaría sin avisar.
+    const campos16 = { pausaSim: 'La pausa del simulador', pausaEsp: 'La pausa del sistema externo',
+      accCada: 'Los ticks entre reducciones', accResta: 'La reducción de la aceleración',
+      accMinimo: 'La pausa mínima', aumentarCada: 'El Nº para aumentar rutas' };
+    for (const [campo, texto] of Object.entries(campos16)) {
+      if (propsFicha[campo] !== null && Number(propsFicha[campo]) > 65534) {
+        hallazgos.errores.push(texto + ' (' + propsFicha[campo] + ') no cabe en 2 bytes del GWC (máximo 65534).');
+      }
     }
   }
 
@@ -1419,7 +1436,7 @@ var BaseCartucho = (function () {
   const BLOQUE_SPRITES_GWC = 2;      // tabla de direcciones + máscaras 1 bit
   const BLOQUE_SEGMENTOS_GWC = 3;    // registros fijos de 32 bytes
   const BLOQUE_SECUENCIAS_GWC = 4;   // registros de 6 bytes (opcional)
-  const BLOQUE_FONDO_GWC = 5;        // RESERVADO (v1 no lo escribe)
+  // El bloque 5 (fondo) está RESERVADO: la v1 no lo escribe.
 
   // Los 20 enlaces del registro de segmento, en el ORDEN FIJO del formato.
   // Los inversos calculados (colisionDe, mostradoJunto) NO viajan: el
@@ -1443,25 +1460,25 @@ var BaseCartucho = (function () {
   // ESP32 lee el fichero con casts directos a uint16_t.
 
   /** Un byte como array. */
-  function byteDe(valor) { return [valor & 0xFF]; }
+  function _byteDe(valor) { return [valor & 0xFF]; }
 
   /** uint16 little-endian como array de 2 bytes. */
-  function u16LE(valor) { return [valor & 0xFF, (valor >>> 8) & 0xFF]; }
+  function _u16LE(valor) { return [valor & 0xFF, (valor >>> 8) & 0xFF]; }
 
   /** uint32 little-endian como array de 4 bytes. */
-  function u32LE(valor) {
+  function _u32LE(valor) {
     return [valor & 0xFF, (valor >>> 8) & 0xFF, (valor >>> 16) & 0xFF, (valor >>> 24) & 0xFF];
   }
 
   /** Texto ASCII como array de bytes. */
-  function textoGWC(texto) {
+  function _textoGWC(texto) {
     const bytes = [];
     for (let i = 0; i < texto.length; i++) bytes.push(texto.charCodeAt(i) & 0xFF);
     return bytes;
   }
 
   /** Concatena varios arrays/Uint8Array en un único Uint8Array. */
-  function concatenar(listas) {
+  function _concatenar(listas) {
     let total = 0;
     for (const lista of listas) total += lista.length;
     const resultado = new Uint8Array(total);
@@ -1479,7 +1496,7 @@ var BaseCartucho = (function () {
    * @param {number} porDefecto - Valor si no está declarado.
    * @returns {number} El número resultante.
    */
-  function numeroODefecto(valor, porDefecto) {
+  function _numeroODefecto(valor, porDefecto) {
     return (valor === undefined || valor === null) ? porDefecto : Number(valor);
   }
 
@@ -1487,7 +1504,7 @@ var BaseCartucho = (function () {
    * Un campo opcional del GWI como byte: el valor (módulo 256) o el que
    * se indique si no está declarado.
    */
-  function byteOpcional(valor, valorSiAusente) {
+  function _byteOpcional(valor, valorSiAusente) {
     return (valor === undefined || valor === null) ? valorSiAusente : Number(valor) & 0xFF;
   }
 
@@ -1517,8 +1534,8 @@ var BaseCartucho = (function () {
    * @returns {Uint8Array} El bloque completo.
    */
   function bloque(tipo, contenido) {
-    return concatenar([new Uint8Array(byteDe(tipo)),
-    new Uint8Array(u32LE(contenido.length)), contenido]);
+    return _concatenar([new Uint8Array(_byteDe(tipo)),
+    new Uint8Array(_u32LE(contenido.length)), contenido]);
   }
 
   /**
@@ -1560,7 +1577,7 @@ var BaseCartucho = (function () {
   }
 
   /** Escala por eje de la imagen fuente a la pantalla declarada. */
-  function escalasDePantalla(pantalla) {
+  function _escalasDePantalla(pantalla) {
     return {
       x: pantalla.ancho / pantalla.fuente.ancho,
       y: pantalla.alto / pantalla.fuente.alto
@@ -1568,7 +1585,7 @@ var BaseCartucho = (function () {
   }
 
   /** Píxeles RGBA de un sprite (canvas del editor, o Image pasada por un canvas efímero). */
-  function pixelesDeSprite(sprite) {
+  function _pixelesDeSprite(sprite) {
     let lienzo = sprite.imagen;
     if (!lienzo.getContext) {
       lienzo = document.createElement('canvas');
@@ -1593,10 +1610,10 @@ var BaseCartucho = (function () {
    *        escalada (filas apiladas, ⌈ancho/8⌉ bytes por fila).
    */
   function escalar(sprite, pantalla) {
-    const escala = escalasDePantalla(pantalla);
+    const escala = _escalasDePantalla(pantalla);
     const anchoDestino = Math.max(1, Math.round(sprite.ancho * escala.x));
     const altoDestino = Math.max(1, Math.round(sprite.alto * escala.y));
-    const pixeles = pixelesDeSprite(sprite);
+    const pixeles = _pixelesDeSprite(sprite);
 
     const bytesPorFila = Math.ceil(anchoDestino / 8);
     const filas = new Uint8Array(bytesPorFila * altoDestino);
@@ -1645,7 +1662,7 @@ var BaseCartucho = (function () {
     for (const sprite of (spritesConImagen || [])) imagenDeSprite.set(sprite.id, sprite.imagen);
     const indiceDeSegmento = new Map(viaja.segmentos.map((s, i) => [s.id, i]));
     const indiceDeSprite = new Map(viaja.sprites.map((s, i) => [s.id, i]));
-    const escala = escalasDePantalla(pantalla);
+    const escala = _escalasDePantalla(pantalla);
 
     // El Bloque 5 (Fondo) es RESERVADO: la v1 no lo escribe.
     const bloqueConfiguracion = _montarConfiguracion(json);
@@ -1657,7 +1674,7 @@ var BaseCartucho = (function () {
     // Ensamblado en el orden de los tipos; este cuerpo es lo que protege la suma.
     const partes = [bloqueDatos, bloqueConfiguracion, bloqueSprites, bloqueSegmentos];
     if (bloqueSecuencias) partes.push(bloqueSecuencias);
-    const cuerpo = concatenar(partes);
+    const cuerpo = _concatenar(partes);
 
     const cabecera = _montarCabecera(cuerpo);
 
@@ -1711,14 +1728,14 @@ var BaseCartucho = (function () {
     const fin = json.fin || {};
 
     const valores = [
-      ...u16LE(numeroODefecto(pausas.simulador, 500)),
-      ...u16LE(numeroODefecto(pausas.externo, 500)),
-      ...u16LE(aceleracion ? Number(aceleracion.cada) || 1 : NULO16_GWC),
-      ...u16LE(aceleracion ? Number(aceleracion.resta) || 0 : NULO16_GWC),
-      ...u16LE(aceleracion ? Number(aceleracion.minimo) || 0 : NULO16_GWC),
-      ...u16LE(numeroODefecto(rutas.aumentarCada, 1)),
-      ...u16LE(fin.mecanismo ? FIN_GWC[fin.mecanismo] : NULO16_GWC),
-      ...u16LE(numeroODefecto(fin.contador, NULO16_GWC))
+      ..._u16LE(_numeroODefecto(pausas.simulador, 500)),
+      ..._u16LE(_numeroODefecto(pausas.externo, 500)),
+      ..._u16LE(aceleracion ? Number(aceleracion.cada) || 1 : NULO16_GWC),
+      ..._u16LE(aceleracion ? Number(aceleracion.resta) || 0 : NULO16_GWC),
+      ..._u16LE(aceleracion ? Number(aceleracion.minimo) || 0 : NULO16_GWC),
+      ..._u16LE(_numeroODefecto(rutas.aumentarCada, 1)),
+      ..._u16LE(fin.mecanismo ? FIN_GWC[fin.mecanismo] : NULO16_GWC),
+      ..._u16LE(_numeroODefecto(fin.contador, NULO16_GWC))
     ];
     return bloque(BLOQUE_CONFIG_GWC, new Uint8Array(valores));
   }
@@ -1741,17 +1758,17 @@ var BaseCartucho = (function () {
     const tablaDirecciones = [];
     let desplazamiento = viaja.sprites.length * 4;
     for (const mascara of mascaras) {
-      tablaDirecciones.push(...u32LE(desplazamiento));
+      tablaDirecciones.push(..._u32LE(desplazamiento));
       desplazamiento += 4 + mascara.filas.length;
     }
 
     const registros = [];
     for (const mascara of mascaras) {
-      registros.push(new Uint8Array([...u16LE(mascara.ancho), ...u16LE(mascara.alto)]));
+      registros.push(new Uint8Array([..._u16LE(mascara.ancho), ..._u16LE(mascara.alto)]));
       registros.push(mascara.filas);
     }
     return bloque(BLOQUE_SPRITES_GWC,
-      concatenar([new Uint8Array(tablaDirecciones), ...registros]));
+      _concatenar([new Uint8Array(tablaDirecciones), ...registros]));
   }
 
   /**
@@ -1759,7 +1776,7 @@ var BaseCartucho = (function () {
    * ascendente, bit 2 presentar el cero (los defaults de los dos últimos
    * son 1: el GWI no lleva sobras).
    */
-  function propiedadesDeSegmento(segmento) {
+  function _propiedadesDeSegmento(segmento) {
     let propiedades = BIT_ASCENDENTE_GWC | BIT_PRESENTAR_CERO_GWC;
     if (segmento.primero) propiedades |= BIT_PRIMER_JUGADOR_GWC;
     if (segmento.direccion === 'descendente') propiedades &= ~BIT_ASCENDENTE_GWC;
@@ -1782,19 +1799,19 @@ var BaseCartucho = (function () {
   function _montarSegmentos(viaja, indiceDeSprite, indiceDeSegmento, escalaX, escalaY) {
     const registros = [];
     for (const segmento of viaja.segmentos) {
-      registros.push(...byteDe(segmento.tipo));
-      registros.push(...u16LE(Math.max(0, Math.round(segmento.x * escalaX))));
-      registros.push(...u16LE(Math.max(0, Math.round(segmento.y * escalaY))));
-      registros.push(...byteDe(indiceDe(segmento.sprite, indiceDeSprite)));
+      registros.push(..._byteDe(segmento.tipo));
+      registros.push(..._u16LE(Math.max(0, Math.round(segmento.x * escalaX))));
+      registros.push(..._u16LE(Math.max(0, Math.round(segmento.y * escalaY))));
+      registros.push(..._byteDe(indiceDe(segmento.sprite, indiceDeSprite)));
       for (const campo of ENLACES_REGISTRO_GWC) {
-        registros.push(...byteDe(indiceDe(segmento[campo], indiceDeSegmento)));
+        registros.push(..._byteDe(indiceDe(segmento[campo], indiceDeSegmento)));
       }
-      registros.push(...byteDe(byteOpcional(segmento.salvadoContador, NULO_GWC)));
-      registros.push(...byteDe(byteOpcional(segmento.muerteContador, NULO_GWC)));
-      registros.push(...byteDe(propiedadesDeSegmento(segmento)));
-      registros.push(...byteDe(byteOpcional(segmento.contadorInterno, NULO_GWC)));
-      registros.push(...byteDe(byteOpcional(segmento.valorInicial, 0)));
-      registros.push(...byteDe(byteOpcional(segmento.ruta, NULO_GWC)));
+      registros.push(..._byteDe(_byteOpcional(segmento.salvadoContador, NULO_GWC)));
+      registros.push(..._byteDe(_byteOpcional(segmento.muerteContador, NULO_GWC)));
+      registros.push(..._byteDe(_propiedadesDeSegmento(segmento)));
+      registros.push(..._byteDe(_byteOpcional(segmento.contadorInterno, NULO_GWC)));
+      registros.push(..._byteDe(_byteOpcional(segmento.valorInicial, 0)));
+      registros.push(..._byteDe(_byteOpcional(segmento.ruta, NULO_GWC)));
     }
     return bloque(BLOQUE_SEGMENTOS_GWC, new Uint8Array(registros));
   }
@@ -1814,7 +1831,7 @@ var BaseCartucho = (function () {
       json.secuencia.segmentos.length === 0) return null;
 
     const registro = [];
-    registro.push(...byteDe(Math.min(0xFF, Math.max(1, Number(json.secuencia.ticks) || 1))));
+    registro.push(..._byteDe(Math.min(0xFF, Math.max(1, Number(json.secuencia.ticks) || 1))));
 
     const idsSecuencia = json.secuencia.segmentos.slice(0, MAX_SEGMENTOS_SECUENCIA_GWC);
     for (let i = 0; i < MAX_SEGMENTOS_SECUENCIA_GWC; i++) {
@@ -1823,7 +1840,7 @@ var BaseCartucho = (function () {
       if (id && indice === NULO_GWC) {
         console.warn('[gwc] la Secuencia apunta a ' + id + ', que no viaja en el GWC: se descarta.');
       }
-      registro.push(...byteDe(indice));
+      registro.push(..._byteDe(indice));
     }
     return bloque(BLOQUE_SECUENCIAS_GWC, new Uint8Array(registro));
   }
@@ -1855,14 +1872,14 @@ var BaseCartucho = (function () {
     const direccionBloque5 = NULO32_GWC;   // Fondo: RESERVADO
 
     const contenido = [];
-    contenido.push(...byteDe(Number(json.estilo) || 0));
-    contenido.push(...u16LE(pantalla.ancho), ...u16LE(pantalla.alto));
-    contenido.push(...byteDe(viaja.sprites.length), ...byteDe(viaja.segmentos.length));
-    contenido.push(...byteDe(bloqueSecuencias ? 1 : 0));
+    contenido.push(..._byteDe(Number(json.estilo) || 0));
+    contenido.push(..._u16LE(pantalla.ancho), ..._u16LE(pantalla.alto));
+    contenido.push(..._byteDe(viaja.sprites.length), ..._byteDe(viaja.segmentos.length));
+    contenido.push(..._byteDe(bloqueSecuencias ? 1 : 0));
     contenido.push(0xFF, 0xFF, 0xFF);        // fondo RGB: blanco por defecto
-    contenido.push(...u32LE(direccionBloque0), ...u32LE(direccionBloque1),
-      ...u32LE(direccionBloque2), ...u32LE(direccionBloque3),
-      ...u32LE(direccionBloque4), ...u32LE(direccionBloque5));
+    contenido.push(..._u32LE(direccionBloque0), ..._u32LE(direccionBloque1),
+      ..._u32LE(direccionBloque2), ..._u32LE(direccionBloque3),
+      ..._u32LE(direccionBloque4), ..._u32LE(direccionBloque5));
     return bloque(BLOQUE_DATOS_GWC, new Uint8Array(contenido));
   }
 
@@ -1880,13 +1897,13 @@ var BaseCartucho = (function () {
     const tamanoTotal = TAM_CABECERA_GWC + cuerpo.length;
     const fichero = new Uint8Array(tamanoTotal);
 
-    fichero.set(textoGWC('GWC' + VERSION_GWC), 0);   // 4 bytes visibles
+    fichero.set(_textoGWC('GWC' + VERSION_GWC), 0);   // 4 bytes visibles
     fichero.set(cuerpo, TAM_CABECERA_GWC);
 
     const checksum = _sumaDeVerificacion(cuerpo);
     const codigo = _codigoDeSuma(checksum);
-    fichero.set(textoGWC(codigo), 4);                // 6 bytes: «#HHHH#»
-    fichero.set(u32LE(tamanoTotal), 10);
+    fichero.set(_textoGWC(codigo), 4);                // 6 bytes: «#HHHH#»
+    fichero.set(_u32LE(tamanoTotal), 10);
     return { bytes: fichero, checksum: checksum, codigo: codigo };
   }
 
@@ -1950,7 +1967,7 @@ var BaseCartucho = (function () {
   }
 
   /** Id legible de un segmento a partir de su índice. */
-  function idDeSegmentoGWC(indice) {
+  function _idDeSegmentoGWC(indice) {
     return 'seg_' + String(indice).padStart(3, '0');
   }
 
@@ -2121,7 +2138,7 @@ var BaseCartucho = (function () {
   function _leerRegistroDeSegmentoGWC(lector, inicioRegistro, indice, sprites) {
     const indiceSprite = lector.u8(inicioRegistro + 5);
     const segmento = {
-      id: idDeSegmentoGWC(indice),
+      id: _idDeSegmentoGWC(indice),
       x: lector.u16(inicioRegistro + 1),
       y: lector.u16(inicioRegistro + 3),
       sprite: (indiceSprite === NULO_GWC) ? null : sprites[indiceSprite].id,
@@ -2133,7 +2150,7 @@ var BaseCartucho = (function () {
     let posicion = inicioRegistro + 6;
     for (const campo of ENLACES_REGISTRO_GWC) {
       const indiceEnlace = lector.u8(posicion++);
-      if (indiceEnlace !== NULO_GWC) segmento[campo] = idDeSegmentoGWC(indiceEnlace);
+      if (indiceEnlace !== NULO_GWC) segmento[campo] = _idDeSegmentoGWC(indiceEnlace);
     }
 
     const salvadoContador = lector.u8(posicion++);
@@ -2176,7 +2193,7 @@ var BaseCartucho = (function () {
     const segmentos = [];
     for (let i = 0; i < MAX_SEGMENTOS_SECUENCIA_GWC; i++) {
       const indice = lector.u8(inicio + 1 + i);
-      if (indice !== NULO_GWC) segmentos.push(idDeSegmentoGWC(indice));
+      if (indice !== NULO_GWC) segmentos.push(_idDeSegmentoGWC(indice));
     }
     return { ticks: lector.u8(inicio), segmentos: segmentos };
   }

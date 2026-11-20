@@ -25,29 +25,28 @@
 //   arrancar               Arranca la autoría de un cartucho (GWB o GWI).
 //   reset                  Limpia el estado (recargar cartucho/setup).
 //   cargarListas           Listas del GWI al puente (ComunListas).
-//   segmentosEnMemoria     Referencia viva a los segmentos (puente).
 //   repintarAparato        Repinta el aparato (F5-I10: tras cambiar img_f en la ficha).
 //   inicializar            Cablea los eventos del mapa (una vez).
 //
 //  Identificación de grupos
-//   segId                  Id legible seg_NNN (o F0N si es ficticio).
-//   grupoDeComp            Grupo actual de un índice de componente.
-//   grupoDelPixel          Grupo de un píxel del mapa.
-//   resolverEnlace         Enlace (índice) → segId legible.
-//   propsDe                Props por componente (crea las por defecto).
-//   camposDe               Enlaces válidos para un tipo.
+//   _segId                  Id legible seg_NNN (o F0N si es ficticio).
+//   _grupoDeComp            Grupo actual de un índice de componente.
+//   _grupoDelPixel          Grupo de un píxel del mapa.
+//   _resolverEnlace         Enlace (índice) → segId legible.
+//   _propsDe                Props por componente (crea las por defecto).
+//   _camposDe               Enlaces válidos para un tipo.
 //   numeroDe / numRuta / numContador
 //                          Nº de lista, de ruta y de contador de un grupo.
 //
 //  Ficticios y jerarquía (dígito/contador/unión)
-//   clasificarBarras       Las SIETE barras de un «8» por geometría.
+//   _clasificarBarras       Las SIETE barras de un «8» por geometría.
 //   esBarraDeDigito / esDigitoDeContador / esAbsorbido
 //                          Pertenencia a un dígito, contador o unión.
 //   digitoDeBarra / contadorDeDigito / ficticioAbsorbente
 //                          El dueño de una barra, dígito o absorbido.
-//   piezaDe                La pieza visible que maneja el editor.
-//   barrasDe               Las siete barras de un dígito, con letras.
-//   cajaPresentable        Caja envolvente de un dígito/contador.
+//   _piezaDe                La pieza visible que maneja el editor.
+//   _barrasDe               Las siete barras de un dígito, con letras.
+//   _cajaPresentable        Caja envolvente de un dígito/contador.
 //   aportantes / fusionarGrupos / firmaPieza / imagenFusionada
 //                          La imagen fusionada de una pieza (OR de
 //                          píxeles, dibujada una sola vez por firma).
@@ -55,14 +54,14 @@
 //  Historial (deshacer/rehacer)
 //   registrarCambio / registrarCambios
 //                          Registra una acción (atómica, con «antes»).
-//   reproducirCambios      Reproduce un historial sobre el estado de
+//   _reproducirCambios      Reproduce un historial sobre el estado de
 //                          nacimiento (carga de GWI y fallback legacy).
 //   quitarParUnion / invertirEntrada
 //                          Inversas estructurales de unir/baja.
 //   deshacer / rehacer    Deshace y rehace la última acción atómica.
 //
 //  Reconstrucción y listas
-//   reconstruir            Re-agrupa con las uniones vigentes y fusiona
+//   _reconstruir            Re-agrupa con las uniones vigentes y fusiona
 //                          las props de los miembros.
 //   refrescar / refrescarInfo
 //                          Repinta mapa, aparato y panel de información.
@@ -72,60 +71,60 @@
 //   pintarListaSegmentos   Las cinco sublistas con su imagen.
 //   filaDeLista / agregarSublista / usosDeSprite
 //                          Una fila, una sublista con título y los usos de un sprite.
-//   abrirEnEditor          Pulsar una fila: el segmento en el Editor.
+//   _abrirEnEditor          Pulsar una fila: el segmento en el Editor.
 //   segmentos / listar    Las listas (fantasmas incluidos) y su vuelco.
 //   colorRGB / relacionadosDe / entrantesDe / listaMotor
 //                          Colores de relación y lista para el BaseGraficos.
 //
 //  Composición del aparato
-//   fijarEscalaAparato     Escala de la pantalla del aparato.
-//   pixelesDeImagen        Lee los píxeles de una imagen en memoria.
+//   _fijarEscalaAparato     Escala de la pantalla del aparato.
+//   _pixelesDeImagen        Lee los píxeles de una imagen en memoria.
 //   pintarFondoAparato     Fondo (blanco + img_f estirada).
 //   pintarSegmentoAparato  Un segmento en negro puro, escalado.
 //   pintarPantallaAutoria  Fondo solo (GWB) o composición (GWI/guardado).
 //   pintarGWI              Presentación de un GWI cargado.
 //
 //  Mapa de objetos
-//   pintarMapa             Dibuja el mapa de trabajo.
-//   puntoDe                Píxel del mapa bajo el puntero.
+//   _pintarMapa             Dibuja el mapa de trabajo.
+//   _puntoDe                Píxel del mapa bajo el puntero.
 //   alPulsarMapa / alMoverMapa / alSoltarMapa
 //                          Clic, selección múltiple por recuadro y fin.
-//   unirGrupos             Une grupos (elección o marcados).
-//   unirMarcados          Unión en lote de los marcados por recuadro.
+//   _unirGrupos             Une grupos (elección o marcados).
+//   _unirMarcados          Unión en lote de los marcados por recuadro.
 //
 //  Ficticios de edición
-//   crearFicticio          Da de alta un ficticio (dígito/contador/cartucho).
-//   separarAgrupado        Separa una pieza (inversa del agrupado).
+//   _crearFicticio          Da de alta un ficticio (dígito/contador/cartucho).
+//   _separarAgrupado        Separa una pieza (inversa del agrupado).
 //   hacerDigito / hacerContador
 //                          «Hacer dígito» y «Hacer contador».
 //
 //  Ficha del cartucho y campos del Director
 //   esCartucho / cartuchoDe / asegurarCartucho
 //                          El segmento de cartucho (único ficha).
-//   finDelCartucho         Mecanismo de fin de la ficha.
+//   _finDelCartucho         Mecanismo de fin de la ficha.
 //   secuenciaDelCartucho / sincronizarSecuencia
 //                          La Secuencia de la ficha.
 //   pausasDelCartucho / aceleracionDelCartucho / rutasDelCartucho
 //                          Pausas, aceleración y política de rutas.
-//   sincronizarDirector    Copia los campos del panel a la ficha.
+//   _sincronizarDirector    Copia los campos del panel a la ficha.
 //
 //  Enlaces y panel de propiedades
-//   aplicarEleccion        Aplica el destino clicado en el mapa.
-//   verificarReferencias  Enlaces que apuntan a segmentos extintos.
-//   moverNumero            Subir/Bajar el número de un segmento.
-//   mostrarPanel           Panel de propiedades (todo el UI de autoría).
+//   _aplicarEleccion        Aplica el destino clicado en el mapa.
+//   _verificarReferencias  Enlaces que apuntan a segmentos extintos.
+//   _moverNumero            Subir/Bajar el número de un segmento.
+//   _mostrarPanel           Panel de propiedades (todo el UI de autoría).
 //
 //  Verificación y generación
 //   verificarYGuardar      Botón «Verificar y Guardar»: verificar +
 //                          topes (aviso) + guardar GWI.
 //   generarGWIyGWC         Botón «Generar GWI+GWC»: verificar + topes
 //                          BLOQUEANTES + GWC + GWI con el Código GWC.
-//   ctxVerificacion        El contexto que pide BaseCartucho para
+//   _ctxVerificacion        El contexto que pide BaseCartucho para
 //                          verificar (helpers y tablas de aquí).
-//   avisoTopes            Presenta los avisos de tope de 255.
-//   descargarGWC          Descarga el fichero .gwc generado.
-//   montarGWI             Monta el JSON del GWI (con la autoría).
-//   guardarGWI             Validaciones de contexto y delega en
+//   _avisoTopes            Presenta los avisos de tope de 255.
+//   _descargarGWC          Descarga el fichero .gwc generado.
+//   _montarGWI             Monta el JSON del GWI (con la autoría).
+//   _guardarGWI             Validaciones de contexto y delega en
 //                          BaseCartucho.guardarGWI.
 //   cargarAutoria         Reproduce el historial de un GWI (precarga).
 // ====================================================================================================
@@ -145,9 +144,6 @@ const BaseDescomponer = (() => {
   let marcados = new Set();     // selección MÚLTIPLE por recuadro (para unir)
   let arrastre = null;          // recuadro en curso: {x0,y0,x1,y1,movido}
   let escala = 1;
-  let cartuchoActual = null;    // JSON del cartucho en edición (GWB/GWI);
-  // guardarGWI copia de aquí pantalla y
-  // botones para que el GWI sea autónomo
   // Segmentos FICTICIOS (F4-I9 v3): dígito y contador son grupos que
   // NO corresponden a ninguna componente de la imagen — nacen de
   // «Hacer dígito»/«Hacer contador» y su raíz es un id NEGATIVO
@@ -302,7 +298,7 @@ const BaseDescomponer = (() => {
    * @param {string} tipo - Tipo del segmento.
    * @returns {string[]} Nombres de los campos de enlace del tipo.
    */
-  function camposDe(tipo) {
+  function _camposDe(tipo) {
     if (tipo === 'jugador') return ENLACES_JUGADOR;
     if (tipo === 'dígito') return ENLACES_DIGITO;
     if (tipo === 'contador') return ENLACES_CONTADOR;
@@ -326,7 +322,7 @@ const BaseDescomponer = (() => {
    * @param {Array<Object>} siete - Los SIETE grupos marcados.
    * @returns {?Object<string, Object>} Mapa letra → grupo, o null.
    */
-  function clasificarBarras(siete) {
+  function _clasificarBarras(siete) {
     if (siete.length !== 7) return null;
     const horizontales = siete.filter(g => g.ancho > g.alto);
     const verticales = siete.filter(g => g.ancho <= g.alto);
@@ -355,11 +351,11 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo a comprobar.
    * @returns {boolean} true si es barra de un dígito.
    */
-  function esBarraDeDigito(g) {
+  function _esBarraDeDigito(g) {
     for (const x of grupos) {
       if (x.prop.tipo !== 'dígito') continue;
       for (const campo of ENLACES_DIGITO) {
-        if (grupoDeComp(x.prop[campo]) === g) return true;
+        if (_grupoDeComp(x.prop[campo]) === g) return true;
       }
     }
     return false;
@@ -374,11 +370,11 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo a comprobar.
    * @returns {boolean} true si es dígito de un contador.
    */
-  function esDigitoDeContador(g) {
+  function _esDigitoDeContador(g) {
     for (const x of grupos) {
       if (x.prop.tipo !== 'contador') continue;
       for (const campo of ENLACES_CONTADOR) {
-        if (grupoDeComp(x.prop[campo]) === g) return true;
+        if (_grupoDeComp(x.prop[campo]) === g) return true;
       }
     }
     return false;
@@ -389,11 +385,11 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo dígito.
    * @returns {?Object} El contador que lo agrupó.
    */
-  function contadorDeDigito(g) {
+  function _contadorDeDigito(g) {
     for (const x of grupos) {
       if (x.prop.tipo !== 'contador') continue;
       for (const campo of ENLACES_CONTADOR) {
-        if (grupoDeComp(x.prop[campo]) === g) return x;
+        if (_grupoDeComp(x.prop[campo]) === g) return x;
       }
     }
     return null;
@@ -404,11 +400,11 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo barra.
    * @returns {?Object} El dígito (o contador) que la agrupó.
    */
-  function digitoDeBarra(g) {
+  function _digitoDeBarra(g) {
     for (const x of grupos) {
       if (x.prop.tipo !== 'dígito') continue;
       for (const campo of ENLACES_DIGITO) {
-        if (grupoDeComp(x.prop[campo]) === g) return x;
+        if (_grupoDeComp(x.prop[campo]) === g) return x;
       }
     }
     return null;
@@ -425,17 +421,17 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo a nivel de píxel.
    * @returns {Object} La pieza visible que lo agrupa (o él mismo).
    */
-  function piezaDe(g) {
+  function _piezaDe(g) {
     let pieza = g;
     // Tres saltos como máximo: barra → dígito → contador, y
     // absorbido → pieza que lo absorbió (unión).
     for (let nivel = 0; nivel < 3; nivel++) {
-      if (esBarraDeDigito(pieza)) {
-        pieza = digitoDeBarra(pieza) || pieza;
-      } else if (esDigitoDeContador(pieza)) {
-        pieza = contadorDeDigito(pieza) || pieza;
+      if (_esBarraDeDigito(pieza)) {
+        pieza = _digitoDeBarra(pieza) || pieza;
+      } else if (_esDigitoDeContador(pieza)) {
+        pieza = _contadorDeDigito(pieza) || pieza;
       } else {
-        const absorbente = ficticioAbsorbente(pieza);
+        const absorbente = _ficticioAbsorbente(pieza);
         if (!absorbente || absorbente === pieza) break;
         pieza = absorbente;
       }
@@ -452,11 +448,11 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo posiblemente absorbido.
    * @returns {?Object} El ficticio que lo absorbió, o null.
    */
-  function ficticioAbsorbente(g) {
+  function _ficticioAbsorbente(g) {
     for (const f of ficticios) {
       if (!f.miembros) continue;
       for (const r of f.miembros) {
-        if (grupoDeComp(r) === g) return grupoDeComp(f.id);
+        if (_grupoDeComp(r) === g) return _grupoDeComp(f.id);
       }
     }
     return null;
@@ -468,8 +464,8 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo a comprobar.
    * @returns {boolean} true si algún ficticio de unión lo absorbió.
    */
-  function esAbsorbido(g) {
-    return ficticioAbsorbente(g) !== null;
+  function _esAbsorbido(g) {
+    return _ficticioAbsorbente(g) !== null;
   }
 
   /**
@@ -479,10 +475,10 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo dígito.
    * @returns {?Object<string, Object>} Mapa letra → grupo, o null.
    */
-  function barrasDe(g) {
+  function _barrasDe(g) {
     const barras = {};
     for (const letra of LETRAS_BARRAS) {
-      const barra = grupoDeComp(g.prop['barra_' + letra]);
+      const barra = _grupoDeComp(g.prop['barra_' + letra]);
       if (!barra) return null;
       barras[letra] = barra;
     }
@@ -498,9 +494,9 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo.
    * @returns {{x:number, y:number, ancho:number, alto:number}} Caja.
    */
-  function cajaPresentable(g) {
+  function _cajaPresentable(g) {
     if (g.prop.tipo === 'dígito') {
-      const barras = barrasDe(g);
+      const barras = _barrasDe(g);
       if (!barras) {
         return {
           x: g.x, y: g.y,
@@ -523,9 +519,9 @@ const BaseDescomponer = (() => {
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       let hay = false;
       for (const campo of ENLACES_CONTADOR) {
-        const d = grupoDeComp(g.prop[campo]);
+        const d = _grupoDeComp(g.prop[campo]);
         if (!d) continue;
-        const c = cajaPresentable(d);
+        const c = _cajaPresentable(d);
         hay = true;
         x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y);
         x1 = Math.max(x1, c.x + c.ancho); y1 = Math.max(y1, c.y + c.alto);
@@ -586,19 +582,19 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo (real o ficticio).
    * @returns {Array<Object>} Grupos reales con píxeles.
    */
-  function aportantes(g) {
+  function _aportantes(g) {
     if (!g) return [];
     if (g.raiz >= 0) return [g];
     const f = ficticios.find(x => x.id === g.raiz);
     if (!f || !f.miembros) return [];
     const lista = [];
     for (const r of f.miembros) {
-      lista.push(...aportantes(grupoDeComp(r)));
+      lista.push(..._aportantes(_grupoDeComp(r)));
     }
     return lista;
   }
 
-  function fusionarGrupos(listaP, caja) {
+  function _fusionarGrupos(listaP, caja) {
     const anchoC = Math.max(1, caja.ancho), altoC = Math.max(1, caja.alto);
     const bits = new Uint8Array(anchoC * altoC);
     for (const b of listaP) {
@@ -641,17 +637,17 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo pieza.
    * @returns {string} Firma de su composición.
    */
-  function firmaPieza(g) {
+  function _firmaPieza(g) {
     if (g.prop.tipo === 'dígito') {
       return 'D' + ENLACES_DIGITO.map(c => g.prop[c]).join(',');
     }
     return 'C' + ENLACES_CONTADOR.map(c => {
-      const d = grupoDeComp(g.prop[c]);
-      return d ? firmaPieza(d) : '-';
+      const d = _grupoDeComp(g.prop[c]);
+      return d ? _firmaPieza(d) : '-';
     }).join('|');
   }
 
-  function imagenFusionada(g) {
+  function _imagenFusionada(g) {
     // Cartucho (F3-I11): pieza SIN píxeles — su "imagen" es un
     // lienzo en blanco (solo es una marca en el mapa; nunca se
     // presenta en pantalla). Se materializa UNA vez y se cachea en
@@ -670,7 +666,7 @@ const BaseDescomponer = (() => {
     // Pieza de UNIÓN (v4): la imagen fusionada de sus ABSORBIDOS
     // (OR de píxeles sobre la caja de nacimiento de la pieza). Los
     // absorbidos pueden ser a su vez piezas de unión (unir 3 con
-    // F01): `aportantes` los EXPANDE en recursión hasta los grupos
+    // F01): `_aportantes` los EXPANDE en recursión hasta los grupos
     // de píxeles reales — sin esto F02 nacía sin la parte de F01
     // (un ficticio no tiene píxeles propios) (bug v4.6).
     if (g.raiz < 0 && g.prop.tipo !== 'dígito' && g.prop.tipo !== 'contador') {
@@ -684,8 +680,8 @@ const BaseDescomponer = (() => {
       if (!f.imagen) {
         const caja = { x: g.x, y: g.y, ancho: g.ancho, alto: g.alto };
         const reales = [];
-        for (const r of f.miembros) reales.push(...aportantes(grupoDeComp(r)));
-        f.imagen = fusionarGrupos(reales, caja);
+        for (const r of f.miembros) reales.push(..._aportantes(_grupoDeComp(r)));
+        f.imagen = _fusionarGrupos(reales, caja);
       }
       return f.imagen;
     }
@@ -701,41 +697,41 @@ const BaseDescomponer = (() => {
     // autoria, de la lista del motor y del guardado.
     const f2 = ficticios.find(x => x.id === g.raiz);
     if (f2) {
-      const firma = firmaPieza(g);
+      const firma = _firmaPieza(g);
       if (f2.imagen && f2.firma === firma) return f2.imagen;
-      const caja = cajaPresentable(g);
+      const caja = _cajaPresentable(g);
       // Las barras que componen la pieza: las del dígito, o las de
       // todos los dígitos del contador (los incompletos se saltan).
       const barrasTotal = [];
       if (g.prop.tipo === 'dígito') {
-        const barras = barrasDe(g);
+        const barras = _barrasDe(g);
         if (barras) barrasTotal.push(...Object.values(barras));
       } else {
         for (const campo of ENLACES_CONTADOR) {
-          const d = grupoDeComp(g.prop[campo]);
+          const d = _grupoDeComp(g.prop[campo]);
           if (!d) continue;
-          const barras = barrasDe(d);
+          const barras = _barrasDe(d);
           if (barras) barrasTotal.push(...Object.values(barras));
         }
       }
-      f2.imagen = fusionarGrupos(barrasTotal, caja);
+      f2.imagen = _fusionarGrupos(barrasTotal, caja);
       f2.firma = firma;
       return f2.imagen;
     }
-    const caja = cajaPresentable(g);
+    const caja = _cajaPresentable(g);
     const barrasTotal = [];
     if (g.prop.tipo === 'dígito') {
-      const barras = barrasDe(g);
+      const barras = _barrasDe(g);
       if (barras) barrasTotal.push(...Object.values(barras));
     } else {
       for (const campo of ENLACES_CONTADOR) {
-        const d = grupoDeComp(g.prop[campo]);
+        const d = _grupoDeComp(g.prop[campo]);
         if (!d) continue;
-        const barras = barrasDe(d);
+        const barras = _barrasDe(d);
         if (barras) barrasTotal.push(...Object.values(barras));
       }
     }
-    return fusionarGrupos(barrasTotal, caja);
+    return _fusionarGrupos(barrasTotal, caja);
   }
 
   /**
@@ -751,10 +747,10 @@ const BaseDescomponer = (() => {
    *   antes, la entrada es la de siempre.
    * @returns {void}
    */
-  function registrarCambio(comp, campos, antes) {
+  function _registrarCambio(comp, campos, antes) {
     const e = Object.assign({ segmento: comp }, campos);
     if (antes !== undefined) e.antes = antes;
-    registrarCambios([e]);
+    _registrarCambios([e]);
   }
 
   /**
@@ -770,7 +766,7 @@ const BaseDescomponer = (() => {
    *   ni relacionados: se añaden aquí).
    * @returns {void}
    */
-  function registrarCambios(entradas) {
+  function _registrarCambios(entradas) {
     rehacibles = [];          // acción nueva: nada que rehacer
     ultimoOp++;
     const n = ultimoOp;
@@ -789,7 +785,7 @@ const BaseDescomponer = (() => {
    * @param {Array<Object>} lista - Entradas del historial, en orden.
    * @returns {void}
    */
-  function reproducirCambios(lista) {
+  function _reproducirCambios(lista) {
     props = new Map();
     uniones = [];
     cambios = [];
@@ -847,7 +843,7 @@ const BaseDescomponer = (() => {
       } else {
         const comp = copia.segmento;
         delete copia.segmento;
-        Object.assign(propsDe(comp), copia);
+        Object.assign(_propsDe(comp), copia);
       }
       cambios.push(Object.assign({}, c));
     }
@@ -860,7 +856,7 @@ const BaseDescomponer = (() => {
    * @param {Array<number>} par - Par [compA, compB] a retirar.
    * @returns {void}
    */
-  function quitarParUnion(par) {
+  function _quitarParUnion(par) {
     const [a, b] = par;
     uniones = uniones.filter(([x, y]) =>
       !((x === a && y === b) || (x === b && y === a)));
@@ -875,9 +871,9 @@ const BaseDescomponer = (() => {
    * @param {Object} e - Entrada del historial a invertir.
    * @returns {void}
    */
-  function invertirEntrada(e) {
+  function _invertirEntrada(e) {
     if (Array.isArray(e.unir)) {
-      quitarParUnion(e.unir);
+      _quitarParUnion(e.unir);
     } else if (Array.isArray(e.altaFicticio)) {
       // Inversa del alta: el ficticio (y sus props) desaparece.
       const [id] = e.altaFicticio;
@@ -895,7 +891,7 @@ const BaseDescomponer = (() => {
     } else if (Array.isArray(e.separar)) {
       uniones.push([e.separar[0], e.separar[1]]);
     } else {
-      const p = propsDe(e.segmento);
+      const p = _propsDe(e.segmento);
       for (const campo of CAMPOS_PROP) {
         if (campo in e) p[campo] = e.antes[campo];
       }
@@ -932,21 +928,21 @@ const BaseDescomponer = (() => {
       e.antes !== undefined);
     if (invertible) {
       for (let i = bloque.length - 1; i >= 0; i--) {
-        invertirEntrada(bloque[i]);
+        _invertirEntrada(bloque[i]);
       }
       cambios = resto;
       ultimoOp = (resto.length > 0) ? resto[resto.length - 1].n : 0;
     } else {
-      reproducirCambios(resto);   // legacy: replay del resto
+      _reproducirCambios(resto);   // legacy: replay del resto
     }
     rehacibles.push(bloque);
     eleccion = null;
     marcados = new Set();
     seleccion = null;
-    reconstruir();
-    refrescar();
-    $('panelSegmento').classList.add('oculto');
-    $('panelSegmento').replaceChildren();
+    _reconstruir();
+    _refrescar();
+    _$('panelSegmento').classList.add('oculto');
+    _$('panelSegmento').replaceChildren();
     BaseDirector.avisar('Deshecha la acción ' + nUlt + ' (' +
       bloque.length + ' cambio(s)).');
   }
@@ -983,9 +979,9 @@ const BaseDescomponer = (() => {
         const [id] = e.bajaFicticio;
         ficticios = ficticios.filter(f => f.id !== id);
       } else if (Array.isArray(e.separar)) {
-        quitarParUnion(e.separar);
+        _quitarParUnion(e.separar);
       } else {
-        const p = propsDe(e.segmento);
+        const p = _propsDe(e.segmento);
         for (const campo of CAMPOS_PROP) {
           if (campo in e) p[campo] = e[campo];
         }
@@ -996,10 +992,10 @@ const BaseDescomponer = (() => {
     eleccion = null;
     marcados = new Set();
     seleccion = null;
-    reconstruir();
-    refrescar();
-    $('panelSegmento').classList.add('oculto');
-    $('panelSegmento').replaceChildren();
+    _reconstruir();
+    _refrescar();
+    _$('panelSegmento').classList.add('oculto');
+    _$('panelSegmento').replaceChildren();
     BaseDirector.avisar('Rehecha la acción ' + bloque[0].n + ' (' +
       bloque.length + ' cambio(s)).');
   }
@@ -1010,7 +1006,7 @@ const BaseDescomponer = (() => {
    * ruta/contador) y los enlaces de ambos tipos vacíos (excluyentes).
    * @returns {Object} Props por defecto.
    */
-  function propPorDefecto() {
+  function _propPorDefecto() {
     return {
       tipo: 'juego', orden: null, siguiente: null, salvado: null, muerte: null,
       izquierda: null, derecha: null, arriba: null, abajo: null,
@@ -1041,7 +1037,7 @@ const BaseDescomponer = (() => {
    * @param {string} id - Identificador del elemento.
    * @returns {HTMLElement} Elemento con ese id, o null si no existe.
    */
-  function $(id) { return document.getElementById(id); }
+  function _$(id) { return document.getElementById(id); }
 
   /**
    * Propiedades de un COMPONENTE (crea las por defecto si no existen).
@@ -1050,10 +1046,10 @@ const BaseDescomponer = (() => {
    * @param {number} comp - Índice de componente.
    * @returns {Object} Props del componente.
    */
-  function propsDe(comp) {
+  function _propsDe(comp) {
     let p = props.get(comp);
     if (!p) {
-      p = propPorDefecto();
+      p = _propPorDefecto();
       props.set(comp, p);
     }
     return p;
@@ -1065,7 +1061,7 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo.
    * @returns {string} Identificador seg_NNN.
    */
-  function segId(g) {
+  function _segId(g) {
     // Los FICTICIOS (v4) se llaman como su imagen: F01, F02... El
     // número sale de su raíz negativa (-1 → F01). Así la pieza de
     // una unión se llama igual que el sprite img_F01 que lleva, y
@@ -1083,21 +1079,21 @@ const BaseDescomponer = (() => {
    * @param {number} i - Índice de componente.
    * @returns {?Object} Grupo, o null si no está en ninguno.
    */
-  function grupoDeComp(i) { return indiceGrupo.get(i) || null; }
+  function _grupoDeComp(i) { return indiceGrupo.get(i) || null; }
 
   /**
    * El grupo de un PÍXEL del mapa (F3-I11): OJO al centinela — los
    * píxeles sin componente viajan como -1 en indicePixel, y los
    * FICTICIOS usan ids NEGATIVOS (-1 = F01), así que consultar
-   * grupoDeComp(-1) entregaría la pieza ficticia en un pixel VACÍO.
+   * _grupoDeComp(-1) entregaría la pieza ficticia en un pixel VACÍO.
    * Solo se consulta el índice cuando el píxel tiene componente.
    * @param {number} x - Coordenada de imagen.
    * @param {number} y - Coordenada de imagen.
    * @returns {?Object} Grupo del píxel, o null si es vacío.
    */
-  function grupoDelPixel(x, y) {
+  function _grupoDelPixel(x, y) {
     const i = base.indicePixel[y * base.ancho + x];
-    return (i >= 0) ? grupoDeComp(i) : null;
+    return (i >= 0) ? _grupoDeComp(i) : null;
   }
 
   /**
@@ -1105,10 +1101,10 @@ const BaseDescomponer = (() => {
    * @param {?number} valor - Índice de componente del destino.
    * @returns {?string} segId del destino, o null.
    */
-  function resolverEnlace(valor) {
+  function _resolverEnlace(valor) {
     if (valor === null || valor === false) return null;
-    const g = grupoDeComp(valor);
-    return g ? segId(g) : null;
+    const g = _grupoDeComp(valor);
+    return g ? _segId(g) : null;
   }
 
   // ---- Reconstrucción ----
@@ -1123,7 +1119,7 @@ const BaseDescomponer = (() => {
    * componente (lo que se escribe allí sobrevive aquí).
    * @returns {void}
    */
-  function reconstruir() {
+  function _reconstruir() {
     const r = BaseExtractor.reagrupar(base, uniones);
     sprites = r.sprites;
     grupos = r.grupos;
@@ -1147,7 +1143,7 @@ const BaseDescomponer = (() => {
       indiceGrupo.set(f.id, g);
     }
     for (const g of grupos) {
-      g.prop = propPorDefecto();
+      g.prop = _propPorDefecto();
       // Merge de propiedades de los miembros: el PRIMER valor no nulo
       // de cada campo gana; solo hay conflicto (y aviso) si un
       // miembro POSTERIOR discrepa de uno anterior. El default NO
@@ -1164,7 +1160,7 @@ const BaseDescomponer = (() => {
           if (fijados.has(campo)) {
             if (nuevo !== g.prop[campo]) {
               console.warn('[autoría] conflicto de "' + campo + '" al unir ' +
-                segId(g) + ': se conserva el primero.');
+                _segId(g) + ': se conserva el primero.');
             }
             continue;
           }
@@ -1177,7 +1173,7 @@ const BaseDescomponer = (() => {
         ? ENLACES_JUEGO : ENLACES_JUGADOR;
       for (const campo of camposFuera) {
         if (g.prop[campo] !== null) {
-          console.warn('[autoría] ' + segId(g) + ' es ' + g.prop.tipo +
+          console.warn('[autoría] ' + _segId(g) + ' es ' + g.prop.tipo +
             ': se descarta su enlace "' + campo + '" (tipos excluyentes).');
           g.prop[campo] = null;
         }
@@ -1193,9 +1189,9 @@ const BaseDescomponer = (() => {
     // cuenta), y además viaja en el GWI (visible:false) para que
     // el motor y la previsualización tampoco la recalculen.
     for (const g of grupos) {
-      g.absorbido = esAbsorbido(g);        // absorbido por una unión (v4)
+      g.absorbido = _esAbsorbido(g);        // absorbido por una unión (v4)
       g.oculto = g.absorbido ||
-        esBarraDeDigito(g) || esDigitoDeContador(g);
+        _esBarraDeDigito(g) || _esDigitoDeContador(g);
     }
     // Sprites de los FICTICIOS (F4-I9 v3): la IMAGEN FUSIONADA de lo
     // que agrupan es su sprite — así el GWI lleva la pieza completa
@@ -1204,11 +1200,11 @@ const BaseDescomponer = (() => {
     // incompleto (la verificación lo cantará).
     for (const g of grupos) {
       if (g.raiz >= 0) continue;
-      const caja = cajaPresentable(g);
+      const caja = _cajaPresentable(g);
       const sprite = {
         id: 'img_F' + String(-g.raiz).padStart(2, '0'),
         ancho: Math.max(1, caja.ancho), alto: Math.max(1, caja.alto),
-        imagen: imagenFusionada(g)
+        imagen: _imagenFusionada(g)
       };
       sprites.push(sprite);
       g.spriteId = sprite.id;
@@ -1219,8 +1215,8 @@ const BaseDescomponer = (() => {
     // (ComunListas.secuenciaDeCartucho) al iniciar; sin esto, definirla en
     // el editor y pulsar Start SIN recargar el GWI dejaba el puente
     // en null: las animaciones no se lanzaban nunca.
-    sincronizarSecuencia();
-    sincronizarDirector();   // F4-I2: pausas/aceleración/rutas en vivo
+    _sincronizarSecuencia();
+    _sincronizarDirector();   // F4-I2: pausas/aceleración/rutas en vivo
   }
 
   /**
@@ -1235,7 +1231,7 @@ const BaseDescomponer = (() => {
    * @param {string} familia - 'inicio', 'vida' o 'muerte'.
    * @returns {number} Posición 1..N en la familia.
    */
-  function numeroDe(g, familia) {
+  function _numeroDe(g, familia) {
     const grupoF = grupos.filter(x => x.prop.tipo === familia);
     grupoF.sort((a, b) => ((a.prop.orden || 0) - (b.prop.orden || 0)) ||
       (grupos.indexOf(a) - grupos.indexOf(b)));
@@ -1250,7 +1246,7 @@ const BaseDescomponer = (() => {
    * @param {number} delta - -1 para subir, +1 para bajar.
    * @returns {boolean} true si se movió; false si ya era extremo.
    */
-  function moverNumero(g, delta) {
+  function _moverNumero(g, delta) {
     const familia = g.prop.tipo;
     const grupoF = grupos.filter(x => x.prop.tipo === familia);
     grupoF.sort((a, b) => ((a.prop.orden || 0) - (b.prop.orden || 0)) ||
@@ -1262,20 +1258,20 @@ const BaseDescomponer = (() => {
     // nace null y el intercambio null<->null no cambiaba nada (el
     // número no se movía nunca). Con (orden||0) la ordenación es
     // estable también con nulls mezclados con valores.
-    const viejos = new Map(grupoF.map(x => [x.raiz, propsDe(x.raiz).orden]));
+    const viejos = new Map(grupoF.map(x => [x.raiz, _propsDe(x.raiz).orden]));
     for (let k = 0; k < grupoF.length; k++) {
-      propsDe(grupoF[k].raiz).orden = k + 1;
+      _propsDe(grupoF[k].raiz).orden = k + 1;
     }
     // Intercambio con el vecino (sobre valores YA materializados).
-    const o = propsDe(g.raiz).orden;
-    propsDe(g.raiz).orden = propsDe(grupoF[j].raiz).orden;
-    propsDe(grupoF[j].raiz).orden = o;
+    const o = _propsDe(g.raiz).orden;
+    _propsDe(g.raiz).orden = _propsDe(grupoF[j].raiz).orden;
+    _propsDe(grupoF[j].raiz).orden = o;
     // UNA acción atómica con TODAS las entradas cuyo "orden"
     // almacenado cambió (materializaciones incluidas): un solo gesto
     // del autor, se deshace junto.
     const entradas = [];
     for (const x of grupoF) {
-      const p = propsDe(x.raiz);
+      const p = _propsDe(x.raiz);
       if (p.orden !== viejos.get(x.raiz)) {
         entradas.push({
           segmento: x.raiz, orden: p.orden,
@@ -1283,7 +1279,7 @@ const BaseDescomponer = (() => {
         });
       }
     }
-    registrarCambios(entradas);
+    _registrarCambios(entradas);
     return true;
   }
 
@@ -1292,8 +1288,8 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo del inicio.
    * @returns {number} Posición 1..N entre los inicios.
    */
-  function numRuta(g) {
-    return numeroDe(g, 'inicio');
+  function _numRuta(g) {
+    return _numeroDe(g, 'inicio');
   }
 
   /**
@@ -1301,8 +1297,8 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo del contador.
    * @returns {number} Posición 1..N en su familia.
    */
-  function numContador(g) {
-    return numeroDe(g, g.prop.tipo);
+  function _numContador(g) {
+    return _numeroDe(g, g.prop.tipo);
   }
 
   /**
@@ -1310,7 +1306,7 @@ const BaseDescomponer = (() => {
    * BaseDirector con el resumen del diseño (resumen()).
    * @returns {void}
    */
-  function refrescarInfo() {
+  function _refrescarInfo() {
     BaseDirector.pintarInfo();
   }
 
@@ -1322,7 +1318,7 @@ const BaseDescomponer = (() => {
    */
   function resumen() {
     return {
-      segmentos: grupos.filter(g => !esCartucho(g)).length,
+      segmentos: grupos.filter(g => !_esCartucho(g)).length,
       imagenes: sprites.length
     };
   }
@@ -1338,7 +1334,7 @@ const BaseDescomponer = (() => {
    * @param {?Object} g - Grupo a seleccionar al pulsar, o null.
    * @returns {HTMLLIElement} La fila.
    */
-  function filaDeLista(id, tipo, imagen, g) {
+  function _filaDeLista(id, tipo, imagen, g) {
     const li = document.createElement('li');
     const idEl = document.createElement('span');
     idEl.className = 'idSeg';
@@ -1362,7 +1358,7 @@ const BaseDescomponer = (() => {
     if (g) {
       li.classList.add('seleccionable');
       li.title = 'Abrir ' + id + ' en el Editor';
-      li.addEventListener('click', () => abrirEnEditor(g));
+      li.addEventListener('click', () => _abrirEnEditor(g));
     }
     return li;
   }
@@ -1404,18 +1400,18 @@ const BaseDescomponer = (() => {
       const ul = document.createElement('ul');
       for (const g of sub.grupos) {
         const imagen = SIN_IMAGEN.includes(g.prop.tipo) ? null : g.sprite && g.sprite.imagen;
-        const li = filaDeLista(segId(g), g.prop.tipo, imagen, g);
+        const li = _filaDeLista(_segId(g), g.prop.tipo, imagen, g);
         if (g.sprite && usos.get(g.sprite).length > 1) li.classList.add('deduplicado');
         ul.appendChild(li);
       }
-      agregarSublista(contenedor, sub.titulo + ' (' + sub.grupos.length + ')', ul);
+      _agregarSublista(contenedor, sub.titulo + ' (' + sub.grupos.length + ')', ul);
     }
     const usadas = new Set(grupos.map(g => g.sprite));
     const libres = sprites.filter(s => !usadas.has(s));
     if (libres.length > 0) {
       const ul = document.createElement('ul');
-      for (const s of libres) ul.appendChild(filaDeLista(s.id, 'imagen', s.imagen, null));
-      agregarSublista(contenedor, 'Imágenes sin segmento (' + libres.length + ')', ul);
+      for (const s of libres) ul.appendChild(_filaDeLista(s.id, 'imagen', s.imagen, null));
+      _agregarSublista(contenedor, 'Imágenes sin segmento (' + libres.length + ')', ul);
     }
     // Abajo del todo, la lista de deduplicados: UNA fila por imagen
     // compartida (la imagen, su id y los segmentos que la usan), sin
@@ -1424,13 +1420,13 @@ const BaseDescomponer = (() => {
     if (compartidos.length > 0) {
       const ul = document.createElement('ul');
       for (const [sprite, gs] of compartidos) {
-        const fila = filaDeLista(sprite.id,
-          'usada por ' + gs.map(segId).join(', '), sprite.imagen, null);
+        const fila = _filaDeLista(sprite.id,
+          'usada por ' + gs.map(_segId).join(', '), sprite.imagen, null);
         fila.title = 'Imagen compartida por ' + gs.length +
           ' segmentos (deduplicación: se guarda una sola vez).';
         ul.appendChild(fila);
       }
-      agregarSublista(contenedor, 'Segmentos deduplicados (' + compartidos.length + ')', ul);
+      _agregarSublista(contenedor, 'Segmentos deduplicados (' + compartidos.length + ')', ul);
     }
   }
 
@@ -1441,7 +1437,7 @@ const BaseDescomponer = (() => {
    * @param {Object} sprite - El sprite a contar.
    * @returns {number} Cuántos grupos lo usan.
    */
-  function usosDeSprite(sprite) {
+  function _usosDeSprite(sprite) {
     let n = 0;
     for (const g of grupos) if (g.sprite === sprite) n++;
     return n;
@@ -1454,7 +1450,7 @@ const BaseDescomponer = (() => {
    * @param {HTMLUListElement} ul - Sus filas.
    * @returns {void}
    */
-  function agregarSublista(contenedor, titulo, ul) {
+  function _agregarSublista(contenedor, titulo, ul) {
     const h = document.createElement('h3');
     h.textContent = titulo;
     contenedor.append(h, ul);
@@ -1468,13 +1464,13 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo de la fila pulsada.
    * @returns {void}
    */
-  function abrirEnEditor(g) {
+  function _abrirEnEditor(g) {
     marcados = new Set();
     eleccion = null;
-    seleccion = esCartucho(g) ? g : piezaDe(g);
+    seleccion = _esCartucho(g) ? g : _piezaDe(g);
     BaseDirector.pestanna('vistaEditor');
-    pintarMapa();
-    mostrarPanel();
+    _pintarMapa();
+    _mostrarPanel();
   }
 
   /**
@@ -1492,7 +1488,7 @@ const BaseDescomponer = (() => {
     // La ficha del CARTUCHO (F3-I11) NO viaja en la lista (v12.5):
     // no es arte — su mecanismo de fin es una propiedad del
     // cartucho que viaja en el campo «fin» del GWI.
-    const lista = grupos.filter(g => !esCartucho(g)).map(function (g) {
+    const lista = grupos.filter(g => !_esCartucho(g)).map(function (g) {
       // Los ABSORBIDOS por una unión (v4) viajan MARCADOS con
       // fusionadoPor (la pieza F01 que los absorbió) y ocultos: sus
       // imágenes siguen en el cartucho (la pieza las lleva dentro
@@ -1503,9 +1499,9 @@ const BaseDescomponer = (() => {
       // Los FICTICIOS viajan con su caja presentable (envolvente de
       // lo que agrupan, reposiciones incluidas): el GWI es fiel a
       // lo que el editor ve.
-      const cajaFic = (g.raiz < 0) ? cajaPresentable(g) : null;
+      const cajaFic = (g.raiz < 0) ? _cajaPresentable(g) : null;
       const seg = {
-        id: segId(g),
+        id: _segId(g),
         x: cajaFic ? cajaFic.x : g.x,
         y: cajaFic ? cajaFic.y : g.y,
         sprite: g.spriteId,
@@ -1514,7 +1510,7 @@ const BaseDescomponer = (() => {
       };
       if (esJugador) {
         for (const d of ENLACES_JUGADOR) {
-          seg[d] = resolverEnlace(g.prop[d]);
+          seg[d] = _resolverEnlace(g.prop[d]);
         }
         // Marca de jugador inicial (F3-I3): solo viaja si está puesta
         // (el motor busca primero un segmento con primero=true y, si
@@ -1523,27 +1519,27 @@ const BaseDescomponer = (() => {
         // Inverso de la colisión (redundancia deliberada, como los
         // inversos de direcciones): el jugador sabe quién choca.
         if (g.prop.colisionDe !== null) {
-          seg.colisionDe = resolverEnlace(g.prop.colisionDe);
+          seg.colisionDe = _resolverEnlace(g.prop.colisionDe);
         }
       } else {
-        seg.siguiente = resolverEnlace(g.prop.siguiente);
-        seg.salvado = resolverEnlace(g.prop.salvado);
-        seg.muerte = resolverEnlace(g.prop.muerte);
+        seg.siguiente = _resolverEnlace(g.prop.siguiente);
+        seg.salvado = _resolverEnlace(g.prop.salvado);
+        seg.muerte = _resolverEnlace(g.prop.muerte);
         // Acompañantes (13.ª iteración): ambos lados viajan en el
         // GWI (redundancia deliberada, como los inversos de las
         // direcciones — el motor solo lee el lado del principal).
         if (g.prop.mostrarJunto !== null) {
-          seg.mostrarJunto = resolverEnlace(g.prop.mostrarJunto);
+          seg.mostrarJunto = _resolverEnlace(g.prop.mostrarJunto);
         }
         if (g.prop.mostradoJunto !== null) {
-          seg.mostradoJunto = resolverEnlace(g.prop.mostradoJunto);
+          seg.mostradoJunto = _resolverEnlace(g.prop.mostradoJunto);
         }
         // Colisiones (F3-I7): solo viajan si están puestas. La cadena
         // del desenlace (salvado/muerte) enlaza con un segmento de
         // juego o de vida/muerte; el contador interno que aumenta es
         // 'vida'/'muerte' o nada (null = regla por defecto).
         if (g.prop.colision !== null) {
-          seg.colision = resolverEnlace(g.prop.colision);
+          seg.colision = _resolverEnlace(g.prop.colision);
         }
         if (g.prop.salvadoContador !== null) {
           seg.salvadoContador = g.prop.salvadoContador;
@@ -1556,7 +1552,7 @@ const BaseDescomponer = (() => {
         // enciende las barras REALES de cada posición.
         if (g.prop.tipo === 'dígito') {
           for (const campo of ENLACES_DIGITO) {
-            const idB = resolverEnlace(g.prop[campo]);
+            const idB = _resolverEnlace(g.prop[campo]);
             if (idB) seg[campo] = idB;
           }
         }
@@ -1566,7 +1562,7 @@ const BaseDescomponer = (() => {
         // false (el true es el defecto y el GWI no lleva sobras).
         if (g.prop.tipo === 'contador') {
           for (const campo of ENLACES_CONTADOR) {
-            const idD = resolverEnlace(g.prop[campo]);
+            const idD = _resolverEnlace(g.prop[campo]);
             if (idD) seg[campo] = idD;
           }
           seg.contadorInterno = g.prop.contadorInterno === null
@@ -1590,15 +1586,15 @@ const BaseDescomponer = (() => {
       // Absorbido por una unión (v4): marcado con la pieza F01 que
       // lo fusionó, oculto, y sin pintarse nunca (visible:false).
       if (g.absorbido) {
-        seg.fusionadoPor = segId(ficticioAbsorbente(g));
+        seg.fusionadoPor = _segId(_ficticioAbsorbente(g));
         seg.visible = false;
       }
       // Las componentes absorbidas por una unión NO viajan aquí como
       // "unidos" (redundante con el historial de cambios): aparecen
       // como fantasmas tipo 99 al final de la lista.
-      if (g.prop.tipo === 'inicio') seg.ruta = numRuta(g);
+      if (g.prop.tipo === 'inicio') seg.ruta = _numRuta(g);
       if (g.prop.tipo === 'vida' || g.prop.tipo === 'muerte') {
-        seg.contador = numContador(g);
+        seg.contador = _numContador(g);
       }
       return seg;
     });
@@ -1621,7 +1617,7 @@ const BaseDescomponer = (() => {
           sprite: null,
           tipo: 99,
           estado: 0, cambiado: 0,
-          absorbidoPor: segId(g)
+          absorbidoPor: _segId(g)
         });
       }
     }
@@ -1652,7 +1648,7 @@ const BaseDescomponer = (() => {
    * @param {string} hex - Color en formato #RRGGBB.
    * @returns {number[]} [r, g, b].
    */
-  function colorRGB(hex) {
+  function _colorRGB(hex) {
     return [parseInt(hex.slice(1, 3), 16),
     parseInt(hex.slice(3, 5), 16),
     parseInt(hex.slice(5, 7), 16)];
@@ -1676,13 +1672,13 @@ const BaseDescomponer = (() => {
    * @param {?Object} g - Grupo seleccionado.
    * @returns {Set<Object>} Grupos relacionados (salientes).
    */
-  function relacionadosDe(g) {
+  function _relacionadosDe(g) {
     const rel = new Set();
     if (!g) return rel;
     const p = g.prop;
     if (p.tipo === 'jugador') {
       for (const d of ENLACES_JUGADOR) {
-        const destino = grupoDeComp(p[d]);
+        const destino = _grupoDeComp(p[d]);
         if (destino) rel.add(destino);
       }
       return rel;
@@ -1695,8 +1691,8 @@ const BaseDescomponer = (() => {
     while (pendientes.length > 0) {
       const actual = pendientes.pop();
       const pa = actual.prop;
-      for (const campo of camposDe(pa.tipo)) {
-        const destino = grupoDeComp(pa[campo]);
+      for (const campo of _camposDe(pa.tipo)) {
+        const destino = _grupoDeComp(pa[campo]);
         if (!destino) continue;
         rel.add(destino);
         if (!vistos.has(destino)) {
@@ -1721,22 +1717,22 @@ const BaseDescomponer = (() => {
    * @param {?Object} g - Grupo seleccionado.
    * @returns {Set<Object>} Grupos que apuntan al seleccionado.
    */
-  function entrantesDe(g) {
+  function _entrantesDe(g) {
     const ent = new Set();
     if (!g) return ent;
     for (const x of grupos) {
       if (x === g) continue;
       const px = x.prop;
-      const campos = camposDe(px.tipo);
+      const campos = _camposDe(px.tipo);
       for (const campo of campos) {
-        if (grupoDeComp(px[campo]) === g) { ent.add(x); break; }
+        if (_grupoDeComp(px[campo]) === g) { ent.add(x); break; }
       }
       // Colisiones (F3-I7): también es entrante quien declara su
       // colisión contra el seleccionado (el punto de decisión) y,
       // en un jugador, quien lleva su inverso colisionDe.
       if (!ent.has(x) &&
-        (grupoDeComp(px.colision) === g ||
-          (px.tipo === 'jugador' && grupoDeComp(px.colisionDe) === g))) {
+        (_grupoDeComp(px.colision) === g ||
+          (px.tipo === 'jugador' && _grupoDeComp(px.colisionDe) === g))) {
         ent.add(x);
       }
     }
@@ -1751,9 +1747,9 @@ const BaseDescomponer = (() => {
    * la MISMA forma de lista que usará el motor del juego con el GWI.
    * @returns {Array<{x:number, y:number, imagen:object, color:number[]}>}
    */
-  function listaMotor() {
-    const rel = relacionadosDe(seleccion);
-    const ent = entrantesDe(seleccion);
+  function _listaMotor() {
+    const rel = _relacionadosDe(seleccion);
+    const ent = _entrantesDe(seleccion);
     return grupos.map(g => {
       const color = rel.has(g) ? COLOR_RELACION
         : (ent.has(g) ? COLOR_ENTRANTE
@@ -1762,10 +1758,10 @@ const BaseDescomponer = (() => {
       // La ficha del CARTUCHO (F3-I11) NO se pinta en el mapa
       // (v12.5): fuera del lienzo, sin romper la alineación de
       // índices del BaseGraficos — se abre con un clic en el vacío.
-      if (esCartucho(g)) {
+      if (_esCartucho(g)) {
         return {
           x: -9999, y: -9999, imagen: g.sprite.imagen,
-          color: colorRGB(color)
+          color: _colorRGB(color)
         };
       }
       // Las BARRAS de un dígito y los DÍGITOS de un contador no se
@@ -1775,18 +1771,18 @@ const BaseDescomponer = (() => {
       if (g.oculto) {
         return {
           x: -9999, y: -9999, imagen: g.sprite.imagen,
-          color: colorRGB(color)
+          color: _colorRGB(color)
         };
       }
       // Los dígitos y contadores se pintan como UNA pieza: su imagen
       // FUSIONADA del «8» y la caja envolvente de las siete barras
       // (F4-I9). El resto, sprite y caja de siempre.
-      const caja = cajaPresentable(g);
+      const caja = _cajaPresentable(g);
       return {
         x: caja.x,
         y: caja.y,
-        imagen: imagenFusionada(g),
-        color: colorRGB(color)
+        imagen: _imagenFusionada(g),
+        color: _colorRGB(color)
       };
     });
   }
@@ -1803,8 +1799,8 @@ const BaseDescomponer = (() => {
    * @param {number} altoS - Alto de img_s en píxeles.
    * @returns {void}
    */
-  function fijarEscalaAparato(anchoS, altoS) {
-    const canvas = $('pantalla');
+  function _fijarEscalaAparato(anchoS, altoS) {
+    const canvas = _$('pantalla');
     if (!anchoS || !altoS) {                 // sin img_s: fuera la escala
       canvas.escalaX = undefined;            // vieja (que el BaseGraficos deduzca
       canvas.escalaY = undefined;             // del fondo, como antes)
@@ -1821,7 +1817,7 @@ const BaseDescomponer = (() => {
    * @param {object} imagen - Canvas o Image del sprite.
    * @returns {ImageData} Píxeles del sprite.
    */
-  function pixelesDeImagen(imagen) {
+  function _pixelesDeImagen(imagen) {
     const ancho = imagen.naturalWidth || imagen.width;
     const alto = imagen.naturalHeight || imagen.height;
     if (imagen.getContext) {                  // ya es un canvas
@@ -1844,7 +1840,7 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
   function pintarFondoAparato() {
-    const canvas = $('pantalla');
+    const canvas = _$('pantalla');
     const imgF = BaseDirector.imagenFondo();
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
@@ -1876,7 +1872,7 @@ const BaseDescomponer = (() => {
       console.warn('[aparato] escala sin fijar: no se pinta el segmento.');
       return;
     }
-    const pix = pixelesDeImagen(imagen);
+    const pix = _pixelesDeImagen(imagen);
     const p = pix.data;
     const sw = pix.width, sh = pix.height;
     // Caja destino en píxeles del canvas (recortada al lienzo)
@@ -1911,8 +1907,8 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
   function pintarPantallaAutoria() {
-    const canvas = $('pantalla');
-    fijarEscalaAparato(base ? base.ancho : 0, base ? base.alto : 0);
+    const canvas = _$('pantalla');
+    _fijarEscalaAparato(base ? base.ancho : 0, base ? base.alto : 0);
     pintarFondoAparato();
     // La composición (fondo + segmentos en negro, look LCD) es la
     // PREVISUALIZACIÓN del resultado final: solo se ofrece con un
@@ -1928,11 +1924,11 @@ const BaseDescomponer = (() => {
       if (g.oculto) continue;
       // El segmento de CARTUCHO (F3-I11) no es arte: no se presenta
       // en la previsualización (su "imagen" es un lienzo en blanco).
-      if (esCartucho(g)) continue;
+      if (_esCartucho(g)) continue;
       // Dígitos y contadores: pieza única (imagen fusionada del
       // «8», caja envolvente); el resto, como siempre (F4-I9).
-      const caja = cajaPresentable(g);
-      pintarSegmentoAparato(canvas, caja.x, caja.y, imagenFusionada(g));
+      const caja = _cajaPresentable(g);
+      pintarSegmentoAparato(canvas, caja.x, caja.y, _imagenFusionada(g));
     }
   }
 
@@ -1992,15 +1988,15 @@ const BaseDescomponer = (() => {
     }
     // Pintado con las funciones propias del diseñador (sin BaseGraficos):
     // fondo + todos los segmentos de la lista temporal, en negro.
-    fijarEscalaAparato(imgS ? imgS.naturalWidth : 0, imgS ? imgS.naturalHeight : 0);
-    const canvas = $('pantalla');
+    _fijarEscalaAparato(imgS ? imgS.naturalWidth : 0, imgS ? imgS.naturalHeight : 0);
+    const canvas = _$('pantalla');
     pintarFondoAparato();
     for (const seg of lista) {
       pintarSegmentoAparato(canvas, seg.x, seg.y, seg.imagen);
     }
     // Restaurar la lista del editor (la de grupos), que arrancar ya
     // fijó: sin esto, el primer clic en el mapa pintaría sin colores.
-    BaseGraficos.fijarSegmentos(listaMotor());
+    BaseGraficos.fijarSegmentos(_listaMotor());
     console.info('[gwi] pantalla fusionada (fondo + ' + lista.length +
       ' segmentos); ' + (segmentosJson || []).length +
       ' segmento(s) en memoria.');
@@ -2016,9 +2012,9 @@ const BaseDescomponer = (() => {
    * propiedad del canvas (canvas.escala), que es lo que usa el BaseGraficos.
    * @returns {void}
    */
-  function pintarMapa() {
-    const canvas = $('mapaSegmentos');
-    $('zonaMapa').classList.remove('oculto');
+  function _pintarMapa() {
+    const canvas = _$('mapaSegmentos');
+    _$('zonaMapa').classList.remove('oculto');
     escala = Math.min(ESCALA_MAX,
       Math.max(ESCALA_MIN, Math.floor(ANCHO_MAPA_MAX / base.ancho)));
     canvas.width = base.ancho * escala;
@@ -2028,7 +2024,7 @@ const BaseDescomponer = (() => {
     // de dibujar: si quedó desfasada (p. ej. la de pintarGWI, con
     // color null tras cargar un GWI), los segmentos saldrían todos
     // negros. El mapa es el consumidor de la vista de trabajo.
-    BaseGraficos.fijarSegmentos(listaMotor());
+    BaseGraficos.fijarSegmentos(_listaMotor());
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#FFFFFF';               // lienzo neutro, sin fondo
@@ -2042,12 +2038,12 @@ const BaseDescomponer = (() => {
     // Cajas y números con el mismo criterio que el BaseGraficos: azul los
     // salientes del seleccionado, magenta los que le apuntan, su
     // color de tipo el resto, rojo intenso el seleccionado.
-    const relCajas = relacionadosDe(seleccion);
-    const entCajas = entrantesDe(seleccion);
+    const relCajas = _relacionadosDe(seleccion);
+    const entCajas = _entrantesDe(seleccion);
     for (let i = 0; i < grupos.length; i++) {
       const g = grupos[i];
       if (g.oculto) continue;   // agrupadas: solo se ve su pieza
-      if (esCartucho(g)) continue; // ficha del cartucho: fuera del mapa
+      if (_esCartucho(g)) continue; // ficha del cartucho: fuera del mapa
       const sel = (seleccion === g) || marcados.has(g);
       const color = sel ? '#E04040'
         : (relCajas.has(g) ? COLOR_RELACION
@@ -2057,11 +2053,11 @@ const BaseDescomponer = (() => {
       // En pantalla, caja y número: F01, F02... para los ficticios
       // (v4: la pieza se llama como su imagen img_F01); correlativo
       // 000.. para los segmentos reales.
-      const num = (g.raiz < 0) ? segId(g) : String(i).padStart(3, '0');
+      const num = (g.raiz < 0) ? _segId(g) : String(i).padStart(3, '0');
       const anchoTexto = ctx.measureText(num).width;
       // Caja: envolvente del «8» en dígitos/contadores (F4-I9),
       // propia en el resto.
-      const caja = cajaPresentable(g);
+      const caja = _cajaPresentable(g);
       ctx.strokeStyle = color;
       ctx.lineWidth = sel ? 2 : 1;
       ctx.strokeRect(caja.x * escala - 0.5, caja.y * escala - 0.5,
@@ -2089,7 +2085,7 @@ const BaseDescomponer = (() => {
       const pares = [];
       for (const g of grupos) {
         if (g.prop.colision === null) continue;
-        const jugador = grupoDeComp(g.prop.colision);
+        const jugador = _grupoDeComp(g.prop.colision);
         if (!jugador) continue;
         if (g === seleccion || jugador === seleccion) pares.push([g, jugador]);
       }
@@ -2127,11 +2123,11 @@ const BaseDescomponer = (() => {
    * vistas (aparato y mapa).
    * @returns {void}
    */
-  function refrescar() {
-    refrescarInfo();
-    BaseGraficos.fijarSegmentos(listaMotor());      // grupos → lista del BaseGraficos
+  function _refrescar() {
+    _refrescarInfo();
+    BaseGraficos.fijarSegmentos(_listaMotor());      // grupos → lista del BaseGraficos
     pintarPantallaAutoria();
-    pintarMapa();
+    _pintarMapa();
   }
 
   // ---- Interacción ----
@@ -2142,8 +2138,8 @@ const BaseDescomponer = (() => {
    * @param {PointerEvent} ev - Evento de puntero.
    * @returns {{x:number, y:number}} Coordenadas de imagen.
    */
-  function puntoDe(ev) {
-    const canvas = $('mapaSegmentos');
+  function _puntoDe(ev) {
+    const canvas = _$('mapaSegmentos');
     const r = canvas.getBoundingClientRect();
     return {
       x: Math.floor((ev.clientX - r.left) * canvas.width / r.width / escala),
@@ -2159,9 +2155,9 @@ const BaseDescomponer = (() => {
    * @param {PointerEvent} ev - Evento de puntero.
    * @returns {void}
    */
-  function alPulsarMapa(ev) {
+  function _alPulsarMapa(ev) {
     if (!base) return;
-    const p = puntoDe(ev);
+    const p = _puntoDe(ev);
     if (p.x < 0 || p.y < 0 || p.x >= base.ancho || p.y >= base.alto) return;
     if (eleccion) {
       arrastre = null;
@@ -2169,8 +2165,8 @@ const BaseDescomponer = (() => {
       // a nivel de píxel: elegir el dígito de un contador clicando
       // su «8» debe entregar el DÍGITO ficticio (la pieza visible),
       // no una de sus barras.
-      const grupo = grupoDelPixel(p.x, p.y);
-      if (grupo) aplicarEleccion(piezaDe(grupo));
+      const grupo = _grupoDelPixel(p.x, p.y);
+      if (grupo) _aplicarEleccion(_piezaDe(grupo));
       return;
     }
     arrastre = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, movido: false };
@@ -2184,20 +2180,20 @@ const BaseDescomponer = (() => {
    * @param {PointerEvent} ev - Evento de puntero.
    * @returns {void}
    */
-  function alMoverMapa(ev) {
+  function _alMoverMapa(ev) {
     if (!arrastre || eleccion) return;
     if (ev.buttons !== undefined && (ev.buttons & 1) === 0) {
-      alSoltarMapa(ev);          // soltó fuera del lienzo: cerrar aquí
+      _alSoltarMapa(ev);          // soltó fuera del lienzo: cerrar aquí
       return;
     }
-    const p = puntoDe(ev);
+    const p = _puntoDe(ev);
     arrastre.x1 = p.x;
     arrastre.y1 = p.y;
     if (!arrastre.movido &&
       (Math.abs(p.x - arrastre.x0) > 1 || Math.abs(p.y - arrastre.y0) > 1)) {
       arrastre.movido = true;
     }
-    if (arrastre.movido) pintarMapa();
+    if (arrastre.movido) _pintarMapa();
   }
 
   /**
@@ -2209,7 +2205,7 @@ const BaseDescomponer = (() => {
    * @param {PointerEvent} ev - Evento de puntero.
    * @returns {void}
    */
-  function alSoltarMapa(ev) {
+  function _alSoltarMapa(ev) {
     if (!arrastre) return;
     const a = arrastre;
     arrastre = null;
@@ -2218,15 +2214,15 @@ const BaseDescomponer = (() => {
       const ry0 = Math.min(a.y0, a.y1), ry1 = Math.max(a.y0, a.y1);
       const dentro = grupos.filter(g => {
         if (g.oculto) return false;   // agrupadas: no se marcan
-        if (esCartucho(g)) return false; // la ficha del cartucho tampoco
+        if (_esCartucho(g)) return false; // la ficha del cartucho tampoco
         const gx = g.x, gy = g.y;
         return gx <= rx1 && gx + g.ancho - 1 >= rx0 &&
           gy <= ry1 && gy + g.alto - 1 >= ry0;
       });
       marcados = new Set(dentro);
       seleccion = (dentro.length === 1) ? dentro[0] : null;
-      pintarMapa();
-      mostrarPanel();
+      _pintarMapa();
+      _mostrarPanel();
       if (dentro.length > 1) {
         BaseDirector.avisar(dentro.length + ' segmentos marcados: "Unir" los ' +
           'fusiona; un clic en el mapa los desmarca.');
@@ -2238,23 +2234,23 @@ const BaseDescomponer = (() => {
     // es desmarcar; para la ficha, un clic en el vacío sin marcas).
     if (marcados.size > 0) {
       marcados = new Set();
-      pintarMapa();
-      mostrarPanel();
+      _pintarMapa();
+      _mostrarPanel();
       return;
     }
     const x = a.x0, y = a.y0;
     if (x < 0 || y < 0 || x >= base.ancho || y >= base.alto) return;
-    const grupo = grupoDelPixel(x, y);
+    const grupo = _grupoDelPixel(x, y);
     if (!grupo) {
       // Clic en el VACÍO (v12.5): abre la ficha del CARTUCHO
       // (F3-I11), QUE NO SE PINTA en el mapa — cualquier punto
       // sin segmento es su zona de clic, así su caja no ocupa
       // sitio ni puede quedar escondida tras el arte.
-      const cart = cartuchoDe();
+      const cart = _cartuchoDe();
       if (cart) {
         seleccion = cart;
-        pintarMapa();
-        mostrarPanel();
+        _pintarMapa();
+        _mostrarPanel();
       }
       return;
     }
@@ -2262,9 +2258,9 @@ const BaseDescomponer = (() => {
     // agrupado su CONTADOR: SIEMPRE la pieza VISIBLE, subiendo toda
     // la jerarquía (F4-I9 v3). Un clic en cualquier parte del «8»
     // o del número selecciona la pieza entera.
-    seleccion = piezaDe(grupo);
-    pintarMapa();
-    mostrarPanel();
+    seleccion = _piezaDe(grupo);
+    _pintarMapa();
+    _mostrarPanel();
   }
 
   /**
@@ -2275,20 +2271,20 @@ const BaseDescomponer = (() => {
    * un solo gesto del autor, se deshace junto.
    * @returns {void}
    */
-  function unirMarcados() {
+  function _unirMarcados() {
     const lista = grupos.filter(g => marcados.has(g));   // orden del mapa
     // La ficha del cartucho (F3-I11) no participa en uniones: no
     // es arte (y el recuadro ya no la marca; esto es por si un
     // GWI editado a mano la metió en «marcados»).
-    if (lista.some(esCartucho)) {
+    if (lista.some(_esCartucho)) {
       BaseDirector.avisarError('El segmento de cartucho no participa en ' +
         'uniones: es la ficha del cartucho, no arte.');
       return;
     }
     if (lista.length < 2) {
       marcados = new Set();
-      refrescar();
-      mostrarPanel();
+      _refrescar();
+      _mostrarPanel();
       return;
     }
     // Tipos distintos NO se unen: casi siempre es un error del
@@ -2309,22 +2305,22 @@ const BaseDescomponer = (() => {
     // dígito con sus enlaces barra_a..g. Igual que el usuario
     // esperaba: unir los 7 segmentos crea el dígito.
     if (lista.length === 7 && lista.every(g => g.prop.tipo === 'juego') &&
-      clasificarBarras(lista)) {
-      hacerDigito();
+      _clasificarBarras(lista)) {
+      _hacerDigito();
       return;
     }
     // ABSORCIÓN (v4): la unión crea una PIEZA NUEVA que absorbe los
     // marcados — mismo sistema que dígito/contador. Los absorbidos
     // quedan inertes y ocultos; la pieza nueva toma el siguiente
     // número libre.
-    const ids = lista.map(g => segId(g)).join(', ');
-    const id = unirGrupos(lista);
+    const ids = lista.map(g => _segId(g)).join(', ');
+    const id = _unirGrupos(lista);
     marcados = new Set();
-    seleccion = grupoDeComp(id) || null;
-    refrescar();
-    mostrarPanel();
+    seleccion = _grupoDeComp(id) || null;
+    _refrescar();
+    _mostrarPanel();
     BaseDirector.avisar('Unidos ' + ids + ' en la pieza nueva ' +
-      segId(seleccion) + ' (los originales quedan absorbidos).');
+      _segId(seleccion) + ' (los originales quedan absorbidos).');
   }
 
   /**
@@ -2338,7 +2334,7 @@ const BaseDescomponer = (() => {
    *   Caja de nacimiento del ficticio.
    * @returns {number} Id negativo del ficticio.
    */
-  function crearFicticio(caja, miembros) {
+  function _crearFicticio(caja, miembros) {
     ficticioSeq++;
     const id = -ficticioSeq;
     ficticios.push({
@@ -2357,7 +2353,7 @@ const BaseDescomponer = (() => {
    * @param {Object} g - Grupo.
    * @returns {boolean} true si es el segmento de cartucho.
    */
-  function esCartucho(g) {
+  function _esCartucho(g) {
     return !!(g && g.prop && g.prop.tipo === 'cartucho');
   }
 
@@ -2365,7 +2361,7 @@ const BaseDescomponer = (() => {
    * El segmento de CARTUCHO vigente, o null (F3-I11).
    * @returns {?Object} Grupo del segmento de cartucho.
    */
-  function cartuchoDe() {
+  function _cartuchoDe() {
     return grupos.find(g => g.prop.tipo === 'cartucho') || null;
   }
 
@@ -2377,8 +2373,8 @@ const BaseDescomponer = (() => {
    * { mecanismo: "contador", contador: N }. null = sin definir.
    * @returns {?Object} Configuración de fin, o null.
    */
-  function finDelCartucho() {
-    const cart = cartuchoDe();
+  function _finDelCartucho() {
+    const cart = _cartuchoDe();
     if (!cart) return null;
     const p = cart.prop;
     if (p.finJuego === null) return null;
@@ -2395,14 +2391,14 @@ const BaseDescomponer = (() => {
    * sin Secuencia.
    * @returns {?Object} Configuración de secuencia, o null.
    */
-  function secuenciaDelCartucho() {
-    const cart = cartuchoDe();
+  function _secuenciaDelCartucho() {
+    const cart = _cartuchoDe();
     if (!cart) return null;
     const p = cart.prop;
     const lista = [];
     for (const campo of CAMPOS_SECUENCIA) {
       if (p[campo] === null) continue;
-      const id = resolverEnlace(p[campo]);
+      const id = _resolverEnlace(p[campo]);
       if (id) lista.push(id);
     }
     if (lista.length === 0) return null;
@@ -2417,14 +2413,14 @@ const BaseDescomponer = (() => {
    * escribía solo BaseDirector al cargar (json.secuencia): definir la
    * Secuencia en el editor y pulsar Start sin recargar dejaba el
    * puente con null — las animaciones no se lanzaban nunca. La llama
-   * reconstruir() (todo cambio de la ficha pasa por ahí: ticks,
+   * _reconstruir() (todo cambio de la ficha pasa por ahí: ticks,
    * elegir/quitar segmento, deshacer/rehacer y el replay de la carga).
    * @returns {void}
    */
-  function sincronizarSecuencia() {
+  function _sincronizarSecuencia() {
     if (typeof ComunListas !== 'undefined' &&
       typeof ComunListas.fijarSecuencia === 'function') {
-      ComunListas.fijarSecuencia(secuenciaDelCartucho());
+      ComunListas.fijarSecuencia(_secuenciaDelCartucho());
     }
   }
 
@@ -2434,8 +2430,8 @@ const BaseDescomponer = (() => {
    * no lo declara (el Director mantiene su 500 histórico).
    * @returns {?Object} Configuración de pausas, o null.
    */
-  function pausasDelCartucho() {
-    const cart = cartuchoDe();
+  function _pausasDelCartucho() {
+    const cart = _cartuchoDe();
     if (!cart) return null;
     const p = cart.prop;
     if (p.pausaSim === null && p.pausaEsp === null) return null;
@@ -2451,8 +2447,8 @@ const BaseDescomponer = (() => {
    * aceleración a medias es un error de verificación.
    * @returns {?Object} Configuración de aceleración, o null.
    */
-  function aceleracionDelCartucho() {
-    const cart = cartuchoDe();
+  function _aceleracionDelCartucho() {
+    const cart = _cartuchoDe();
     if (!cart) return null;
     const p = cart.prop;
     if (p.accCada === null && p.accResta === null && p.accMinimo === null) {
@@ -2470,8 +2466,8 @@ const BaseDescomponer = (() => {
    * regla histórica de lanzamiento).
    * @returns {?Object} Configuración de rutas, o null.
    */
-  function rutasDelCartucho() {
-    const cart = cartuchoDe();
+  function _rutasDelCartucho() {
+    const cart = _cartuchoDe();
     if (!cart) return null;
     const p = cart.prop;
     if (p.aumentarCada === null) return null;
@@ -2482,19 +2478,19 @@ const BaseDescomponer = (() => {
    * ESCRIBE los campos del DIRECTOR en el PUENTE (F4-I2), igual
    * que sincronizarSecuencia: lo que la ficha tiene AHORA, visible
    * para el motor al instante, sin guardar ni recargar. La llama
-   * reconstruir() junto a la de la Secuencia.
+   * _reconstruir() junto a la de la Secuencia.
    * @returns {void}
    */
-  function sincronizarDirector() {
+  function _sincronizarDirector() {
     if (typeof ComunListas === 'undefined') return;
     if (typeof ComunListas.fijarPausas === 'function') {
-      ComunListas.fijarPausas(pausasDelCartucho());
+      ComunListas.fijarPausas(_pausasDelCartucho());
     }
     if (typeof ComunListas.fijarAceleracion === 'function') {
-      ComunListas.fijarAceleracion(aceleracionDelCartucho());
+      ComunListas.fijarAceleracion(_aceleracionDelCartucho());
     }
     if (typeof ComunListas.fijarRutas === 'function') {
-      ComunListas.fijarRutas(rutasDelCartucho());
+      ComunListas.fijarRutas(_rutasDelCartucho());
     }
   }
 
@@ -2513,7 +2509,7 @@ const BaseDescomponer = (() => {
    * finContador) viajan en sus propias entradas.
    * @returns {boolean} true si lo creó, false si ya existía.
    */
-  function asegurarCartucho() {
+  function _asegurarCartucho() {
     // ¿Ya hay alguno? Se mira en ficticios+props (aún sin grupos
     // reconstruidos): el replay de un GWI lo deja aquí.
     for (const f of ficticios) {
@@ -2522,9 +2518,9 @@ const BaseDescomponer = (() => {
     }
     const LADO = 16;
     const x = 0, y = 0;             // sin presencia en el mapa: fija
-    const id = crearFicticio({ x: x, y: y, ancho: LADO, alto: LADO }, null);
-    propsDe(id).tipo = 'cartucho';
-    registrarCambios([{ altaFicticio: [id, x, y, LADO, LADO, null] },
+    const id = _crearFicticio({ x: x, y: y, ancho: LADO, alto: LADO }, null);
+    _propsDe(id).tipo = 'cartucho';
+    _registrarCambios([{ altaFicticio: [id, x, y, LADO, LADO, null] },
     {
       segmento: id, tipo: 'cartucho',
       antes: { tipo: 'juego' }
@@ -2551,18 +2547,18 @@ const BaseDescomponer = (() => {
    * @param {Array<Object>} lista - Grupos a unir (mismo tipo).
    * @returns {number} Id negativo de la pieza nueva.
    */
-  function unirGrupos(lista) {
+  function _unirGrupos(lista) {
     // Caja de nacimiento: envolvente de las cajas presentadas.
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const g of lista) {
-      const c = cajaPresentable(g);
+      const c = _cajaPresentable(g);
       x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y);
       x1 = Math.max(x1, c.x + c.ancho); y1 = Math.max(y1, c.y + c.alto);
     }
     const raices = lista.map(g => g.raiz);
-    const id = crearFicticio({ x: x0, y: y0, ancho: x1 - x0, alto: y1 - y0 },
+    const id = _crearFicticio({ x: x0, y: y0, ancho: x1 - x0, alto: y1 - y0 },
       raices);
-    const p = propsDe(id);
+    const p = _propsDe(id);
     const enRaices = new Set(raices);
     const entradas = [{
       altaFicticio: [id, x0, y0, x1 - x0, y1 - y0,
@@ -2578,8 +2574,11 @@ const BaseDescomponer = (() => {
         const v = pa[campo];
         if (v === null || v === false || v === undefined) continue;
         if (fijados.has(campo)) continue;
-        fijados.add(campo);
+        // Un enlace hacia DENTRO del conjunto no se hereda NI fija el campo:
+        // con A→B→C, al unir A+B el «siguiente»→C de B debe poder pasar a la
+        // pieza nueva (REVISION #19).
         if (TODOS_ENLACES.indexOf(campo) >= 0 && enRaices.has(v)) continue;
+        fijados.add(campo);
         if (p[campo] === v) continue;
         const antes = {}; antes[campo] = p[campo];
         p[campo] = v;
@@ -2603,8 +2602,8 @@ const BaseDescomponer = (() => {
         }
       }
     }
-    registrarCambios(entradas);
-    reconstruir();
+    _registrarCambios(entradas);
+    _reconstruir();
     return id;
   }
 
@@ -2621,7 +2620,7 @@ const BaseDescomponer = (() => {
    * todos de tipo juego y geometría reconocible de «8».
    * @returns {void}
    */
-  function hacerDigito() {
+  function _hacerDigito() {
     const lista = grupos.filter(g => marcados.has(g));
     if (lista.length !== 7) {
       BaseDirector.avisarError('Hacer dígito necesita exactamente 7 barras ' +
@@ -2636,14 +2635,14 @@ const BaseDescomponer = (() => {
     // Ninguna barra puede pertenecer ya a OTRO dígito: compartirlas
     // entre contadores queda para otra iteración.
     for (const g of lista) {
-      const dueno = digitoDeBarra(g);
+      const dueno = _digitoDeBarra(g);
       if (dueno) {
-        BaseDirector.avisarError(segId(g) + ' ya es barra del dígito ' +
-          segId(dueno) + ': las barras no se comparten.');
+        BaseDirector.avisarError(_segId(g) + ' ya es barra del dígito ' +
+          _segId(dueno) + ': las barras no se comparten.');
         return;
       }
     }
-    const barras = clasificarBarras(lista);
+    const barras = _clasificarBarras(lista);
     if (!barras) {
       BaseDirector.avisarError('La selección no parece un «8»: se necesitan ' +
         '3 barras horizontales (a, g, d) y 4 verticales sin ' +
@@ -2657,8 +2656,8 @@ const BaseDescomponer = (() => {
       x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
       x1 = Math.max(x1, b.x + b.ancho); y1 = Math.max(y1, b.y + b.alto);
     }
-    const id = crearFicticio({ x: x0, y: y0, ancho: x1 - x0, alto: y1 - y0 });
-    const p = propsDe(id);
+    const id = _crearFicticio({ x: x0, y: y0, ancho: x1 - x0, alto: y1 - y0 });
+    const p = _propsDe(id);
     p.tipo = 'dígito';
     const entradas = [{ altaFicticio: [id, x0, y0, x1 - x0, y1 - y0] },
     {
@@ -2673,13 +2672,13 @@ const BaseDescomponer = (() => {
         antes: { [campo]: null }
       });
     }
-    registrarCambios(entradas);
-    reconstruir();
+    _registrarCambios(entradas);
+    _reconstruir();
     marcados = new Set();
-    seleccion = grupoDeComp(id) || null;
-    refrescar();
-    mostrarPanel();
-    BaseDirector.avisar('Dígito creado: ' + segId(seleccion) +
+    seleccion = _grupoDeComp(id) || null;
+    _refrescar();
+    _mostrarPanel();
+    BaseDirector.avisar('Dígito creado: ' + _segId(seleccion) +
       ' agrupa las siete barras (dejan de ser manejables).');
   }
   /**
@@ -2706,7 +2705,7 @@ const BaseDescomponer = (() => {
    * gesto. Los dígitos no se comparten entre contadores.
    * @returns {void}
    */
-  function hacerContador() {
+  function _hacerContador() {
     const lista = grupos.filter(g => marcados.has(g));
     if (lista.length < 1 || lista.length > 4) {
       BaseDirector.avisarError('Hacer contador necesita de 1 a 4 dígitos ' +
@@ -2720,28 +2719,28 @@ const BaseDescomponer = (() => {
     }
     // Ningún dígito puede estar ya en otro contador.
     for (const g of lista) {
-      const dueno = contadorDeDigito(g);
+      const dueno = _contadorDeDigito(g);
       if (dueno) {
-        BaseDirector.avisarError(segId(g) + ' ya es dígito del contador ' +
-          segId(dueno) + ': los dígitos no se comparten.');
+        BaseDirector.avisarError(_segId(g) + ' ya es dígito del contador ' +
+          _segId(dueno) + ': los dígitos no se comparten.');
         return;
       }
     }
     // Unidades = el «8» presentado más a la derecha; los demás
     // crecen a la izquierda.
     lista.sort((a, b) => {
-      const ca = cajaPresentable(a), cb = cajaPresentable(b);
+      const ca = _cajaPresentable(a), cb = _cajaPresentable(b);
       return (cb.x + cb.ancho) - (ca.x + ca.ancho);
     });
     // Caja de nacimiento del ficticio: envolvente de los dígitos.
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const d of lista) {
-      const c = cajaPresentable(d);
+      const c = _cajaPresentable(d);
       x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y);
       x1 = Math.max(x1, c.x + c.ancho); y1 = Math.max(y1, c.y + c.alto);
     }
-    const id = crearFicticio({ x: x0, y: y0, ancho: x1 - x0, alto: y1 - y0 });
-    const p = propsDe(id);
+    const id = _crearFicticio({ x: x0, y: y0, ancho: x1 - x0, alto: y1 - y0 });
+    const p = _propsDe(id);
     p.tipo = 'contador';
     // Contador interno: el MENOR de 1..4 libre (nunca null: el
     // guardado no puede fallar por olvidarlo).
@@ -2769,13 +2768,13 @@ const BaseDescomponer = (() => {
         antes: { [campo]: null }
       });
     }
-    registrarCambios(entradas);
-    reconstruir();
+    _registrarCambios(entradas);
+    _reconstruir();
     marcados = new Set();
-    seleccion = grupoDeComp(id) || null;
-    refrescar();
-    mostrarPanel();
-    BaseDirector.avisar('Contador creado: ' + segId(seleccion) + ' agrupa ' +
+    seleccion = _grupoDeComp(id) || null;
+    _refrescar();
+    _mostrarPanel();
+    BaseDirector.avisar('Contador creado: ' + _segId(seleccion) + ' agrupa ' +
       lista.length + ' dígito(s); usa el contador interno ' + interno +
       ' (cámbialo en su panel si no es el que querías).');
   }
@@ -2789,7 +2788,7 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
 
-  function separarAgrupado() {
+  function _separarAgrupado() {
     const g = seleccion;
     if (!g) return;
     // Solo los FICTICIOS se separan (F4-I9 v3): disuelve el grupo y
@@ -2801,10 +2800,10 @@ const BaseDescomponer = (() => {
     if (g.prop.tipo === 'dígito') {
       // Un dígito DENTRO de un contador no se separa: la referencia
       // del contador quedaría colgante. Sepárase el contador antes.
-      const cont = contadorDeDigito(g);
+      const cont = _contadorDeDigito(g);
       if (cont) {
-        BaseDirector.avisarError(segId(g) + ' es dígito del contador ' +
-          segId(cont) + ': separa primero el contador.');
+        BaseDirector.avisarError(_segId(g) + ' es dígito del contador ' +
+          _segId(cont) + ': separa primero el contador.');
         return;
       }
       // La baja se APLICA al estado vivo AQUÍ (el historial solo
@@ -2817,11 +2816,11 @@ const BaseDescomponer = (() => {
         f.miembros || null]
       }];
       ficticios = ficticios.filter(x => x.id !== f.id);
-      registrarCambios(baja);
-      reconstruir();
+      _registrarCambios(baja);
+      _reconstruir();
       seleccion = null;
-      refrescar();
-      mostrarPanel();
+      _refrescar();
+      _mostrarPanel();
       BaseDirector.avisar('Dígito separado: sus siete barras vuelven al ' +
         'mapa como segmentos manejables.');
     } else if (g.prop.tipo === 'contador') {
@@ -2833,11 +2832,11 @@ const BaseDescomponer = (() => {
         f.miembros || null]
       }];
       ficticios = ficticios.filter(x => x.id !== f.id);
-      registrarCambios(baja);
-      reconstruir();
+      _registrarCambios(baja);
+      _reconstruir();
       seleccion = null;
-      refrescar();
-      mostrarPanel();
+      _refrescar();
+      _mostrarPanel();
       BaseDirector.avisar('Contador separado: sus dígitos vuelven al ' +
         'mapa como segmentos manejables.');
     } else if (f.miembros) {
@@ -2866,11 +2865,11 @@ const BaseDescomponer = (() => {
         f.miembros.slice()]
       });
       ficticios = ficticios.filter(x => x.id !== f.id);
-      registrarCambios(entradas);
-      reconstruir();
+      _registrarCambios(entradas);
+      _reconstruir();
       seleccion = null;
-      refrescar();
-      mostrarPanel();
+      _refrescar();
+      _mostrarPanel();
       BaseDirector.avisar('Pieza separada: los ' + f.miembros.length +
         ' segmentos absorbidos vuelven al mapa como manejables ' +
         '(sus enlaces externos apuntaban a la pieza y quedan anulados).');
@@ -2882,12 +2881,12 @@ const BaseDescomponer = (() => {
    * @param {Object} destino - Grupo clicado como destino.
    * @returns {void}
    */
-  function aplicarEleccion(destino) {
+  function _aplicarEleccion(destino) {
     const campo = eleccion.campo;
     const origen = eleccion.origen;
     eleccion = null;
-    const idO = segId(origen);
-    const idD = segId(destino);
+    const idO = _segId(origen);
+    const idD = _segId(destino);
     if (campo === 'unir') {
       // Tipos distintos NO se unen: casi siempre es un error del
       // autor. Se bloquea con error sin tocar nada: que cambie el
@@ -2896,23 +2895,23 @@ const BaseDescomponer = (() => {
         BaseDirector.avisarError('No se pueden unir segmentos de tipos distintos (' +
           origen.prop.tipo + ' y ' + destino.prop.tipo +
           '): cambia el tipo de uno de los dos antes de unir.');
-        refrescar();
+        _refrescar();
         return;
       }
       // ABSORCIÓN (v4): la unión crea una PIEZA NUEVA que absorbe a
       // los dos — mismo sistema que unirMarcados. La pieza nueva
       // hereda las props y los enlaces externos re-apuntados.
-      const id = unirGrupos([origen, destino]);
-      seleccion = grupoDeComp(id) || null;
-      refrescar();
-      mostrarPanel();
+      const id = _unirGrupos([origen, destino]);
+      seleccion = _grupoDeComp(id) || null;
+      _refrescar();
+      _mostrarPanel();
       BaseDirector.avisar('Unidos ' + idO + ' y ' + idD + ' en la pieza nueva ' +
-        segId(seleccion) + ' (los originales quedan absorbidos).');
+        _segId(seleccion) + ' (los originales quedan absorbidos).');
       return;
     }
     if (destino === origen) {
       BaseDirector.avisarError('Un segmento no puede apuntar a sí mismo.');
-      refrescar();
+      _refrescar();
       return;
     }
     // Colisiones (F3-I7): validación por campo ANTES de escribir.
@@ -2928,7 +2927,7 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('La dirección "' + campo + '" debe apuntar a ' +
         'un segmento de tipo jugador (' + idD + ' es ' +
         destino.prop.tipo + ').');
-      refrescar();
+      _refrescar();
       return;
     }
     // Secuencia (duodécima iteración): sus segmentos solo son de
@@ -2939,7 +2938,7 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('El segmento de la Secuencia debe ser de ' +
         'tipo juego, inicio o adicional (' + idD + ' es ' +
         destino.prop.tipo + ').');
-      refrescar();
+      _refrescar();
       return;
     }
     // Acompañantes (13.ª iteración): el secundario NO forma parte
@@ -2951,54 +2950,54 @@ const BaseDescomponer = (() => {
       if (pd.tipo !== 'juego') {
         BaseDirector.avisarError('El secundario «mostrar junto a» debe ser ' +
           'de tipo juego (' + idD + ' es ' + pd.tipo + ').');
-        refrescar(); return;
+        _refrescar(); return;
       }
       if (pd.siguiente !== null || pd.salvado !== null || pd.muerte !== null ||
         pd.colision !== null) {
         BaseDirector.avisarError(idD + ' forma parte de una cadena o declara ' +
           'colisión: un secundario no pertenece a ninguna red de enlaces.');
-        refrescar(); return;
+        _refrescar(); return;
       }
       if (pd.mostrarJunto !== null) {
         BaseDirector.avisarError(idD + ' ya es principal de otro secundario: ' +
           'no se encadenan acompañamientos.');
-        refrescar(); return;
+        _refrescar(); return;
       }
-      if (pd.mostradoJunto !== null && grupoDeComp(pd.mostradoJunto) !== origen) {
+      if (pd.mostradoJunto !== null && _grupoDeComp(pd.mostradoJunto) !== origen) {
         BaseDirector.avisarError(idD + ' ya es secundario de ' +
-          resolverEnlace(pd.mostradoJunto) + ': un secundario tiene ' +
+          _resolverEnlace(pd.mostradoJunto) + ': un secundario tiene ' +
           'un solo principal.');
-        refrescar(); return;
+        _refrescar(); return;
       }
       const duenoC = grupos.find(x => x !== origen &&
         ['siguiente', 'salvado', 'muerte'].some(c =>
-          grupoDeComp(x.prop[c]) === destino));
+          _grupoDeComp(x.prop[c]) === destino));
       if (duenoC) {
         BaseDirector.avisarError(idD + ' es eslabón de la cadena de ' +
-          segId(duenoC) + ': un secundario no pertenece a ninguna ' +
+          _segId(duenoC) + ': un secundario no pertenece a ninguna ' +
           'red de enlaces.');
-        refrescar(); return;
+        _refrescar(); return;
       }
     }
     if (campo === 'colision') {
       if (destino.prop.tipo !== 'jugador') {
         BaseDirector.avisarError('La colisión debe apuntar a un segmento de tipo ' +
           'jugador (' + idD + ' es ' + destino.prop.tipo + ').');
-        refrescar();
+        _refrescar();
         return;
       }
       const dueno = grupos.find(x => x !== origen &&
         x.prop.colision !== null &&
-        grupoDeComp(x.prop.colision) === destino);
+        _grupoDeComp(x.prop.colision) === destino);
       if (dueno) {
         BaseDirector.avisarError(idD + ' ya es el punto de colisión de ' +
-          segId(dueno) + ': un jugador no puede serlo de varios ' +
+          _segId(dueno) + ': un jugador no puede serlo de varios ' +
           'elementos.');
-        refrescar();
+        _refrescar();
         return;
       }
     }
-    const p = propsDe(origen.raiz);
+    const p = _propsDe(origen.raiz);
     // La cadena de un desenlace de colisión (F3-I7) enlaza con un
     // segmento de juego (p. ej. la animación de las aletas), de
     // vida/muerte (la presentación de un contador) o de inicio; a un
@@ -3008,7 +3007,7 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('El desenlace ' + campo + ' debe enlazar con un ' +
         'segmento de tipo juego, inicio o vida/muerte (' + idD + ' es ' +
         destino.prop.tipo + ').');
-      refrescar();
+      _refrescar();
       return;
     }
     // Dígitos del contador (F4-I9): un contador solo enlaza con
@@ -3019,16 +3018,16 @@ const BaseDescomponer = (() => {
       if (destino.prop.tipo !== 'dígito') {
         BaseDirector.avisarError('El contador debe enlazar con un segmento de ' +
           'tipo dígito (' + idD + ' es ' + destino.prop.tipo + ').');
-        refrescar();
+        _refrescar();
         return;
       }
       for (const x of grupos) {
         if (x.prop.tipo === 'contador' && x !== origen) {
           for (const otra of ENLACES_CONTADOR) {
-            if (grupoDeComp(x.prop[otra]) === destino) {
+            if (_grupoDeComp(x.prop[otra]) === destino) {
               BaseDirector.avisarError(idD + ' ya es dígito del contador ' +
-                segId(x) + ': los dígitos no se comparten.');
-              refrescar();
+                _segId(x) + ': los dígitos no se comparten.');
+              _refrescar();
               return;
             }
           }
@@ -3039,17 +3038,17 @@ const BaseDescomponer = (() => {
       if (destino.prop.tipo !== 'juego') {
         BaseDirector.avisarError('Las barras son segmentos de tipo juego (' +
           idD + ' es ' + destino.prop.tipo + ').');
-        refrescar();
+        _refrescar();
         return;
       }
       for (const x of grupos) {
         if (x.prop.tipo === 'dígito' && x !== origen) {
           for (const otra of ENLACES_DIGITO) {
-            if (grupoDeComp(x.prop[otra]) === destino) {
+            if (_grupoDeComp(x.prop[otra]) === destino) {
               BaseDirector.avisarError(idD + ' ya es la barra "' +
                 otra.replace('barra_', '') + '" del dígito ' +
-                segId(x) + ': las barras no se comparten.');
-              refrescar();
+                _segId(x) + ': las barras no se comparten.');
+              _refrescar();
               return;
             }
           }
@@ -3058,7 +3057,7 @@ const BaseDescomponer = (() => {
     }
     if (p[campo] !== null) {
       console.warn('[autoría] ' + campo + ' de ' + idO + ' redefinido (antes: ' +
-        resolverEnlace(p[campo]) + ').');
+        _resolverEnlace(p[campo]) + ').');
     }
     const viejo = p[campo];
     p[campo] = destino.raiz;
@@ -3076,13 +3075,13 @@ const BaseDescomponer = (() => {
     }];
     if (ENLACES_JUGADOR.indexOf(campo) >= 0) {
       const inv = INVERSO[campo];
-      const pd = propsDe(destino.raiz);
+      const pd = _propsDe(destino.raiz);
       const viejoInv = pd[inv];
       if (viejoInv !== origen.raiz) {
         if (viejo !== null) {
-          const ant = grupoDeComp(viejo);
+          const ant = _grupoDeComp(viejo);
           if (ant) {
-            const pa = propsDe(ant.raiz);
+            const pa = _propsDe(ant.raiz);
             if (pa[inv] === origen.raiz) {
               entradas.push({
                 segmento: ant.raiz, [inv]: null,
@@ -3093,9 +3092,9 @@ const BaseDescomponer = (() => {
           }
         }
         if (viejoInv !== null) {
-          const tercero = grupoDeComp(viejoInv);
+          const tercero = _grupoDeComp(viejoInv);
           if (tercero) {
-            const pt = propsDe(tercero.raiz);
+            const pt = _propsDe(tercero.raiz);
             if (pt[campo] === destino.raiz) {
               entradas.push({
                 segmento: tercero.raiz, [campo]: null,
@@ -3119,27 +3118,27 @@ const BaseDescomponer = (() => {
     // del principal de un tercero que apuntara al nuevo secundario).
     if (campo === 'mostrarJunto') {
       const inv = 'mostradoJunto';
-      const pdd = propsDe(destino.raiz);
+      const pdd = _propsDe(destino.raiz);
       const viejoInv = pdd[inv];
       if (viejoInv !== origen.raiz) {
         if (viejo !== null) {
-          const ant = grupoDeComp(viejo);
-          if (ant && propsDe(ant.raiz)[inv] === origen.raiz) {
+          const ant = _grupoDeComp(viejo);
+          if (ant && _propsDe(ant.raiz)[inv] === origen.raiz) {
             entradas.push({
               segmento: ant.raiz, [inv]: null,
               antes: { [inv]: origen.raiz }
             });
-            propsDe(ant.raiz)[inv] = null;
+            _propsDe(ant.raiz)[inv] = null;
           }
         }
         if (viejoInv !== null) {
-          const tercero = grupoDeComp(viejoInv);
-          if (tercero && propsDe(tercero.raiz)[campo] === destino.raiz) {
+          const tercero = _grupoDeComp(viejoInv);
+          if (tercero && _propsDe(tercero.raiz)[campo] === destino.raiz) {
             entradas.push({
               segmento: tercero.raiz, [campo]: null,
               antes: { [campo]: destino.raiz }
             });
-            propsDe(tercero.raiz)[campo] = null;
+            _propsDe(tercero.raiz)[campo] = null;
           }
         }
         entradas.push({
@@ -3149,16 +3148,16 @@ const BaseDescomponer = (() => {
         pdd[inv] = origen.raiz;
       }
     }
-    registrarCambios(entradas);
+    _registrarCambios(entradas);
     // Reconstruir ANTES de refrescar: el enlace se escribió en la prop
     // del componente (fuente de verdad), pero la vista lee g.prop (la
     // copia fusionada que solo reconstruir actualiza). Sin esto, el
     // azul de relación no aparecía hasta que un cambio de tipo
     // reconstruyera (bug de "los colores no salen").
-    reconstruir();
-    seleccion = grupoDeComp(origen.raiz) || null;   // grupos nuevos tras reconstruir
-    refrescar();
-    mostrarPanel();
+    _reconstruir();
+    seleccion = _grupoDeComp(origen.raiz) || null;   // grupos nuevos tras reconstruir
+    _refrescar();
+    _mostrarPanel();
     BaseDirector.avisar(idO + '.' + campo + ' = ' + idD + '.');
   }
 
@@ -3171,9 +3170,9 @@ const BaseDescomponer = (() => {
    * unión.
    * @returns {void}
    */
-  function mostrarPanel() {
+  function _mostrarPanel() {
     const g = seleccion;
-    const panel = $('panelSegmento');
+    const panel = _$('panelSegmento');
     panel.replaceChildren();
     // Selección MÚLTIPLE por recuadro: panel mínimo con el UNIR de
     // todos los marcados (un clic en el mapa los desmarca).
@@ -3195,7 +3194,7 @@ const BaseDescomponer = (() => {
       const bUnir = document.createElement('button');
       bUnir.type = 'button';
       bUnir.textContent = 'Unir ' + n + ' segmentos';
-      bUnir.addEventListener('click', unirMarcados);
+      bUnir.addEventListener('click', _unirMarcados);
       fila.appendChild(et);
       fila.appendChild(bUnir);
       panel.appendChild(fila);
@@ -3211,7 +3210,7 @@ const BaseDescomponer = (() => {
       bDig.title = 'Clasifica las siete barras marcadas como el «8» de un ' +
         'display de 7 segmentos (a–g) y crea un NUEVO segmento ' +
         'dígito que las agrupa (dejan de ser manejables).';
-      bDig.addEventListener('click', hacerDigito);
+      bDig.addEventListener('click', _hacerDigito);
       filaDig.appendChild(etDig);
       filaDig.appendChild(bDig);
       panel.appendChild(filaDig);
@@ -3227,7 +3226,7 @@ const BaseDescomponer = (() => {
       bCon.title = 'Agrupa los dígitos marcados en un NUEVO segmento de ' +
         'contador (dejan de verse: se maneja solo el contador); ' +
         'el de las unidades es digito_1.';
-      bCon.addEventListener('click', hacerContador);
+      bCon.addEventListener('click', _hacerContador);
       filaCon.appendChild(etCon);
       filaCon.appendChild(bCon);
       panel.appendChild(filaCon);
@@ -3238,14 +3237,14 @@ const BaseDescomponer = (() => {
       return;
     }
     panel.classList.remove('oculto');
-    const p = propsDe(g.raiz);
+    const p = _propsDe(g.raiz);
 
     const titulo = document.createElement('h3');
-    titulo.textContent = segId(g) + ' · ' + g.ancho + '×' + g.alto +
+    titulo.textContent = _segId(g) + ' · ' + g.ancho + '×' + g.alto +
       ' · ' + g.spriteId +
-      ((p.tipo === 'inicio') ? ' · INICIO DE RUTA ' + numRuta(g) : '') +
+      ((p.tipo === 'inicio') ? ' · INICIO DE RUTA ' + _numRuta(g) : '') +
       ((p.tipo === 'vida' || p.tipo === 'muerte') ?
-        ' · ' + p.tipo.toUpperCase() + ' ' + numContador(g) : '');
+        ' · ' + p.tipo.toUpperCase() + ' ' + _numContador(g) : '');
     panel.appendChild(titulo);
 
     // Segmento de CARTUCHO (F3-I11): panel PROPIO — la ficha de las
@@ -3308,11 +3307,11 @@ const BaseDescomponer = (() => {
           });
           p.finContador = 1;
         }
-        registrarCambios(entradas);
-        reconstruir();
-        seleccion = grupoDeComp(g.raiz) || null;
-        refrescar();
-        mostrarPanel();
+        _registrarCambios(entradas);
+        _reconstruir();
+        seleccion = _grupoDeComp(g.raiz) || null;
+        _refrescar();
+        _mostrarPanel();
       });
       filaFin.appendChild(etFin);
       filaFin.appendChild(selFin);
@@ -3342,13 +3341,13 @@ const BaseDescomponer = (() => {
         selCon.value = String(Number(p.finContador) || 1);
         selCon.addEventListener('change', () => {
           const nuevo = Number(selCon.value);
-          registrarCambio(g.raiz, { finContador: nuevo },
+          _registrarCambio(g.raiz, { finContador: nuevo },
             { finContador: p.finContador });
           p.finContador = nuevo;
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         filaCon.appendChild(etCon);
         filaCon.appendChild(selCon);
@@ -3391,12 +3390,12 @@ const BaseDescomponer = (() => {
           if (nuevo === p.secTicks) return;
           const viejo = p.secTicks;
           p.secTicks = nuevo;
-          registrarCambio(g.raiz, { secTicks: nuevo },
+          _registrarCambio(g.raiz, { secTicks: nuevo },
             { secTicks: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         filaT.appendChild(etT);
         filaT.appendChild(inpT);
@@ -3410,13 +3409,13 @@ const BaseDescomponer = (() => {
         et.textContent = 'Segmento ' + k;
         const valor = document.createElement('span');
         valor.className = 'valor';
-        valor.textContent = resolverEnlace(p[campo]) || '—';
+        valor.textContent = _resolverEnlace(p[campo]) || '—';
         const bElegir = document.createElement('button');
         bElegir.type = 'button';
         bElegir.textContent = 'Elegir';
         bElegir.addEventListener('click', () => {
           eleccion = { campo: campo, origen: g };
-          refrescarInfo();
+          _refrescarInfo();
           BaseDirector.avisar('Pulsa en el mapa el segmento ' + k +
             ' de la Secuencia.');
         });
@@ -3430,12 +3429,12 @@ const BaseDescomponer = (() => {
           bQuitar.addEventListener('click', () => {
             const viejo = p[campo];
             p[campo] = null;
-            registrarCambio(g.raiz, { [campo]: null },
+            _registrarCambio(g.raiz, { [campo]: null },
               { [campo]: viejo });
-            reconstruir();
-            seleccion = grupoDeComp(g.raiz) || null;
-            refrescar();
-            mostrarPanel();
+            _reconstruir();
+            seleccion = _grupoDeComp(g.raiz) || null;
+            _refrescar();
+            _mostrarPanel();
           });
           fila.appendChild(bQuitar);
         }
@@ -3467,11 +3466,11 @@ const BaseDescomponer = (() => {
           if (nuevo === p[campo]) return;
           const viejo = p[campo];
           p[campo] = nuevo;
-          registrarCambio(g.raiz, { [campo]: nuevo }, { [campo]: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _registrarCambio(g.raiz, { [campo]: nuevo }, { [campo]: viejo });
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         fila.appendChild(et);
         fila.appendChild(inp);
@@ -3532,34 +3531,34 @@ const BaseDescomponer = (() => {
         ((p.tipo === 'inicio') ? 'ruta' : 'contador');
       const numSpan = document.createElement('span');
       numSpan.className = 'valor';
-      numSpan.textContent = String(numeroDe(g, p.tipo));
+      numSpan.textContent = String(_numeroDe(g, p.tipo));
       const bSubir = document.createElement('button');
       bSubir.type = 'button';
       bSubir.textContent = '↑ Subir';
       bSubir.addEventListener('click', () => {
-        if (!moverNumero(g, -1)) {
+        if (!_moverNumero(g, -1)) {
           BaseDirector.avisar('Ya es el primero de su ' +
             ((p.tipo === 'inicio') ? 'ruta' : 'contador') + '.');
           return;
         }
-        reconstruir();
-        seleccion = grupoDeComp(g.raiz) || null;
-        refrescar();
-        mostrarPanel();
+        _reconstruir();
+        seleccion = _grupoDeComp(g.raiz) || null;
+        _refrescar();
+        _mostrarPanel();
       });
       const bBajar = document.createElement('button');
       bBajar.type = 'button';
       bBajar.textContent = '↓ Bajar';
       bBajar.addEventListener('click', () => {
-        if (!moverNumero(g, +1)) {
+        if (!_moverNumero(g, +1)) {
           BaseDirector.avisar('Ya es el último de su ' +
             ((p.tipo === 'inicio') ? 'ruta' : 'contador') + '.');
           return;
         }
-        reconstruir();
-        seleccion = grupoDeComp(g.raiz) || null;
-        refrescar();
-        mostrarPanel();
+        _reconstruir();
+        seleccion = _grupoDeComp(g.raiz) || null;
+        _refrescar();
+        _mostrarPanel();
       });
       filaOrden.appendChild(etOrden);
       filaOrden.appendChild(numSpan);
@@ -3605,11 +3604,11 @@ const BaseDescomponer = (() => {
       const descartes = {};
       const previos = { tipo: anterior };
       if (anterior !== p.tipo) {
-        for (const campo of camposDe(anterior)) {
+        for (const campo of _camposDe(anterior)) {
           if (p[campo] !== null) {
-            console.warn('[autoría] ' + segId(g) + ' pasa a ' + p.tipo +
+            console.warn('[autoría] ' + _segId(g) + ' pasa a ' + p.tipo +
               ': se descarta su enlace "' + campo + '" (' +
-              resolverEnlace(p[campo]) + ').');
+              _resolverEnlace(p[campo]) + ').');
             previos[campo] = p[campo];
             descartes[campo] = null;
             p[campo] = null;
@@ -3618,7 +3617,7 @@ const BaseDescomponer = (() => {
         // La marca de PRIMER JUGADOR es del tipo jugador: al dejar
         // de serlo, se descarta también (misma acción del historial).
         if (anterior === 'jugador' && p.primero) {
-          console.warn('[autoría] ' + segId(g) + ' pasa a ' + p.tipo +
+          console.warn('[autoría] ' + _segId(g) + ' pasa a ' + p.tipo +
             ': se descarta su marca de primer jugador.');
           previos.primero = p.primero;
           descartes.primero = null;
@@ -3633,9 +3632,9 @@ const BaseDescomponer = (() => {
           TIPOS_COLISION.indexOf(p.tipo) < 0) {
           for (const campo of [...ENLACES_COLISION, ...CONTADORES_COLISION]) {
             if (p[campo] !== null) {
-              console.warn('[autoría] ' + segId(g) + ' pasa a ' + p.tipo +
+              console.warn('[autoría] ' + _segId(g) + ' pasa a ' + p.tipo +
                 ': se descarta su "' + campo + '" (' +
-                (resolverEnlace(p[campo]) || p[campo]) + ').');
+                (_resolverEnlace(p[campo]) || p[campo]) + ').');
               previos[campo] = p[campo];
               descartes[campo] = null;
               p[campo] = null;
@@ -3643,7 +3642,7 @@ const BaseDescomponer = (() => {
           }
         }
         if (anterior === 'jugador' && p.colisionDe !== null) {
-          console.warn('[autoría] ' + segId(g) + ' pasa a ' + p.tipo +
+          console.warn('[autoría] ' + _segId(g) + ' pasa a ' + p.tipo +
             ': se descarta su inverso de colisión.');
           previos.colisionDe = p.colisionDe;
           descartes.colisionDe = null;
@@ -3687,11 +3686,11 @@ const BaseDescomponer = (() => {
         segmento: g.raiz,
         tipo: p.tipo
       }, descartes, { antes: previos })];
-      const cart = cartuchoDe();
-      // OJO: se escribe en propsDe(cart.raiz) — el MAPA de props es
-      // la fuente de verdad; g.prop es una copia que reconstruir()
+      const cart = _cartuchoDe();
+      // OJO: se escribe en _propsDe(cart.raiz) — el MAPA de props es
+      // la fuente de verdad; g.prop es una copia que _reconstruir()
       // re-fusiona y lo puesto ahí se perdería.
-      const pCart = cart ? propsDe(cart.raiz) : null;
+      const pCart = cart ? _propsDe(cart.raiz) : null;
       // Desasociación simétrica: si este era el ÚLTIMO de su familia
       // y el fin apuntaba a ella, se retira en la misma acción (un
       // fin sin familia es un error bloqueante en la verificación:
@@ -3731,10 +3730,10 @@ const BaseDescomponer = (() => {
         for (const campo of ENLACES_JUGADOR) {
           const viejoD = previos[campo];
           if (viejoD === undefined) continue;   // no lo tenía
-          const dest = grupoDeComp(viejoD);
+          const dest = _grupoDeComp(viejoD);
           if (!dest) continue;
           const inv = INVERSO[campo];
-          const pd = propsDe(dest.raiz);
+          const pd = _propsDe(dest.raiz);
           if (pd[inv] === g.raiz) {
             entradasAccion.push({
               segmento: dest.raiz, [inv]: null,
@@ -3744,16 +3743,16 @@ const BaseDescomponer = (() => {
           }
         }
       }
-      registrarCambios(entradasAccion);
-      reconstruir();      // g.prop debe reflejar el cambio YA (pantalla/mapa)
-      // reconstruir() recrea los grupos: el g capturado por el panel
+      _registrarCambios(entradasAccion);
+      _reconstruir();      // g.prop debe reflejar el cambio YA (pantalla/mapa)
+      // _reconstruir() recrea los grupos: el g capturado por el panel
       // queda obsoleto. Re-localizamos el grupo por su componente raíz.
-      seleccion = grupoDeComp(g.raiz) || null;
-      refrescar();
-      mostrarPanel();
+      seleccion = _grupoDeComp(g.raiz) || null;
+      _refrescar();
+      _mostrarPanel();
       // Traza de diagnóstico (temporal): si el color no cambia en
       // pantalla, esto dice si el problema es el repintado o el estado.
-      console.info('[autoría] tipo cambiado a "' + p.tipo + '" en ' + segId(g) +
+      console.info('[autoría] tipo cambiado a "' + p.tipo + '" en ' + _segId(g) +
         ' · color esperado: ' + COLOR_TIPO[p.tipo] +
         ' · pantalla redibujada: ' + (seleccion ? 'sí' : 'no'));
     });
@@ -3778,7 +3777,7 @@ const BaseDescomponer = (() => {
         bSep.title = 'La pieza desaparece y los ' + fSel.miembros.length +
           ' segmentos absorbidos vuelven al editor como ' +
           'manejables.';
-        bSep.addEventListener('click', separarAgrupado);
+        bSep.addEventListener('click', _separarAgrupado);
         filaSep.appendChild(etSep);
         filaSep.appendChild(bSep);
         panel.appendChild(filaSep);
@@ -3808,7 +3807,7 @@ const BaseDescomponer = (() => {
           const entradas = [];
           for (const otro of grupos) {
             if (otro !== g && otro.prop.tipo === 'jugador' && otro.prop.primero) {
-              const pOtro = propsDe(otro.raiz);
+              const pOtro = _propsDe(otro.raiz);
               entradas.push({
                 segmento: otro.raiz, primero: null,
                 antes: { primero: pOtro.primero }
@@ -3821,18 +3820,18 @@ const BaseDescomponer = (() => {
             antes: { primero: p.primero }
           });
           p.primero = true;
-          registrarCambios(entradas);
-          BaseDirector.avisar('Primer jugador: ' + segId(g) + '.');
+          _registrarCambios(entradas);
+          BaseDirector.avisar('Primer jugador: ' + _segId(g) + '.');
         } else {
-          registrarCambio(g.raiz, { primero: null }, { primero: p.primero });
+          _registrarCambio(g.raiz, { primero: null }, { primero: p.primero });
           p.primero = null;
           BaseDirector.avisar('Sin marca de primer jugador: el motor usará ' +
             'el primero que encuentre.');
         }
-        reconstruir();
-        seleccion = grupoDeComp(g.raiz) || null;
-        refrescar();
-        mostrarPanel();
+        _reconstruir();
+        seleccion = _grupoDeComp(g.raiz) || null;
+        _refrescar();
+        _mostrarPanel();
       });
       filaPrimero.appendChild(etPrimero);
       filaPrimero.appendChild(chk);
@@ -3851,7 +3850,7 @@ const BaseDescomponer = (() => {
       arriba: 'Arriba', abajo: 'Abajo',
       mostrarJunto: 'Mostrar junto a'
     };
-    const activos = camposDe(p.tipo);
+    const activos = _camposDe(p.tipo);
     const grupoEtiqueta = (p.tipo === 'jugador') ? 'direcciones' : 'cadena';
     const subtitulo = document.createElement('div');
     subtitulo.className = 'subPanel';
@@ -3873,7 +3872,7 @@ const BaseDescomponer = (() => {
       et.textContent = nombres[campo];
       const valor = document.createElement('span');
       valor.className = 'valor';
-      valor.textContent = resolverEnlace(p[campo]) || '—';
+      valor.textContent = _resolverEnlace(p[campo]) || '—';
       const bElegir = document.createElement('button');
       bElegir.type = 'button';
       bElegir.textContent = 'Elegir';
@@ -3881,9 +3880,9 @@ const BaseDescomponer = (() => {
       bElegir.addEventListener('click', () => {
         if (!activo) return;
         eleccion = { campo: campo, origen: g };
-        refrescarInfo();
+        _refrescarInfo();
         BaseDirector.avisar('Pulsa en el mapa el segmento «' + nombres[campo] +
-          '» de ' + segId(g) + '.');
+          '» de ' + _segId(g) + '.');
       });
       fila.appendChild(et);
       fila.appendChild(valor);
@@ -3903,10 +3902,10 @@ const BaseDescomponer = (() => {
             antes: { [campo]: viejo }
           }];
           if (ENLACES_JUGADOR.indexOf(campo) >= 0) {
-            const dest = grupoDeComp(viejo);
+            const dest = _grupoDeComp(viejo);
             if (dest) {
               const inv = INVERSO[campo];
-              const pd = propsDe(dest.raiz);
+              const pd = _propsDe(dest.raiz);
               if (pd[inv] === g.raiz) {
                 entradasQ.push({
                   segmento: dest.raiz, [inv]: null,
@@ -3920,22 +3919,22 @@ const BaseDescomponer = (() => {
           // a» retira también el «mostrado junto a» del secundario
           // si apuntaba de vuelta — misma acción atómica.
           if (campo === 'mostrarJunto') {
-            const dest = grupoDeComp(viejo);
-            if (dest && propsDe(dest.raiz).mostradoJunto === g.raiz) {
+            const dest = _grupoDeComp(viejo);
+            if (dest && _propsDe(dest.raiz).mostradoJunto === g.raiz) {
               entradasQ.push({
                 segmento: dest.raiz, mostradoJunto: null,
                 antes: { mostradoJunto: g.raiz }
               });
-              propsDe(dest.raiz).mostradoJunto = null;
+              _propsDe(dest.raiz).mostradoJunto = null;
             }
           }
-          registrarCambios(entradasQ);
+          _registrarCambios(entradasQ);
           // Igual que al crear el enlace: reconstruir para que g.prop
           // (lo que lee la vista) refleje el borrado YA.
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         fila.appendChild(bQuitar);
       }
@@ -3957,7 +3956,7 @@ const BaseDescomponer = (() => {
         '(lo escribe el editor, como los inversos).';
       const vJunto = document.createElement('span');
       vJunto.className = 'valor';
-      vJunto.textContent = resolverEnlace(p.mostradoJunto) || '—';
+      vJunto.textContent = _resolverEnlace(p.mostradoJunto) || '—';
       filaJunto.appendChild(etJunto);
       filaJunto.appendChild(vJunto);
       panel.appendChild(filaJunto);
@@ -3984,10 +3983,10 @@ const BaseDescomponer = (() => {
       // fija colisionDe en el GWI).
       const chocaVivo = grupos.find(x =>
         x !== g && x.prop.colision !== null &&
-        grupoDeComp(x.prop.colision) === g);
+        _grupoDeComp(x.prop.colision) === g);
       vChoca.textContent =
-        (chocaVivo ? segId(chocaVivo) : null) ||
-        resolverEnlace(p.colisionDe) || '—';
+        (chocaVivo ? _segId(chocaVivo) : null) ||
+        _resolverEnlace(p.colisionDe) || '—';
       filaChoca.appendChild(etChoca);
       filaChoca.appendChild(vChoca);
       panel.appendChild(filaChoca);
@@ -4006,7 +4005,7 @@ const BaseDescomponer = (() => {
         et.textContent = nombreCol;
         const valor = document.createElement('span');
         valor.className = 'valor';
-        valor.textContent = resolverEnlace(p.colision) || '—';
+        valor.textContent = _resolverEnlace(p.colision) || '—';
         const bElegir = document.createElement('button');
         bElegir.type = 'button';
         bElegir.textContent = 'Elegir';
@@ -4014,9 +4013,9 @@ const BaseDescomponer = (() => {
         bElegir.addEventListener('click', () => {
           if (!activo) return;
           eleccion = { campo: 'colision', origen: g };
-          refrescarInfo();
+          _refrescarInfo();
           BaseDirector.avisar('Pulsa en el mapa el segmento «' + nombreCol +
-            '» de ' + segId(g) + '.');
+            '» de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
         fila.appendChild(valor);
@@ -4028,11 +4027,11 @@ const BaseDescomponer = (() => {
           bQuitar.addEventListener('click', () => {
             const viejo = p.colision;
             p.colision = null;
-            registrarCambio(g.raiz, { colision: null }, { colision: viejo });
-            reconstruir();
-            seleccion = grupoDeComp(g.raiz) || null;
-            refrescar();
-            mostrarPanel();
+            _registrarCambio(g.raiz, { colision: null }, { colision: viejo });
+            _reconstruir();
+            seleccion = _grupoDeComp(g.raiz) || null;
+            _refrescar();
+            _mostrarPanel();
           });
           fila.appendChild(bQuitar);
         }
@@ -4055,7 +4054,7 @@ const BaseDescomponer = (() => {
         et.textContent = nombresDes[campo];
         const valor = document.createElement('span');
         valor.className = 'valor';
-        valor.textContent = resolverEnlace(p[campo]) || '—';
+        valor.textContent = _resolverEnlace(p[campo]) || '—';
         const bElegir = document.createElement('button');
         bElegir.type = 'button';
         bElegir.textContent = 'Elegir';
@@ -4063,9 +4062,9 @@ const BaseDescomponer = (() => {
         bElegir.addEventListener('click', () => {
           if (!activo) return;
           eleccion = { campo: campo, origen: g };
-          refrescarInfo();
+          _refrescarInfo();
           BaseDirector.avisar('Pulsa en el mapa el segmento «' + nombresDes[campo] +
-            '» de ' + segId(g) + '.');
+            '» de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
         fila.appendChild(valor);
@@ -4077,11 +4076,11 @@ const BaseDescomponer = (() => {
           bQuitar.addEventListener('click', () => {
             const viejo = p[campo];
             p[campo] = null;
-            registrarCambio(g.raiz, { [campo]: null }, { [campo]: viejo });
-            reconstruir();
-            seleccion = grupoDeComp(g.raiz) || null;
-            refrescar();
-            mostrarPanel();
+            _registrarCambio(g.raiz, { [campo]: null }, { [campo]: viejo });
+            _reconstruir();
+            seleccion = _grupoDeComp(g.raiz) || null;
+            _refrescar();
+            _mostrarPanel();
           });
           fila.appendChild(bQuitar);
         }
@@ -4130,12 +4129,12 @@ const BaseDescomponer = (() => {
           if (nuevo === p[campo]) return;
           const viejo = p[campo];
           p[campo] = nuevo;
-          registrarCambio(g.raiz, { [campo]: nuevo }, { [campo]: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
-          BaseDirector.avisar(segId(g) + '.' + campo + ' = ' +
+          _registrarCambio(g.raiz, { [campo]: nuevo }, { [campo]: viejo });
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
+          BaseDirector.avisar(_segId(g) + '.' + campo + ' = ' +
             (nuevo === null ? 'ninguno' : nuevo) + '.');
         });
         fila.appendChild(et);
@@ -4161,15 +4160,15 @@ const BaseDescomponer = (() => {
         et.textContent = 'Barra ' + letra;
         const valor = document.createElement('span');
         valor.className = 'valor';
-        valor.textContent = resolverEnlace(p[campo]) || '—';
+        valor.textContent = _resolverEnlace(p[campo]) || '—';
         const bElegir = document.createElement('button');
         bElegir.type = 'button';
         bElegir.textContent = 'Elegir';
         bElegir.addEventListener('click', () => {
           eleccion = { campo: campo, origen: g };
-          refrescarInfo();
+          _refrescarInfo();
           BaseDirector.avisar('Pulsa en el mapa la barra ' + letra +
-            ' de ' + segId(g) + '.');
+            ' de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
         fila.appendChild(valor);
@@ -4181,11 +4180,11 @@ const BaseDescomponer = (() => {
           bQuitar.addEventListener('click', () => {
             const viejo = p[campo];
             p[campo] = null;
-            registrarCambio(g.raiz, { [campo]: null }, { [campo]: viejo });
-            reconstruir();
-            seleccion = grupoDeComp(g.raiz) || null;
-            refrescar();
-            mostrarPanel();
+            _registrarCambio(g.raiz, { [campo]: null }, { [campo]: viejo });
+            _reconstruir();
+            seleccion = _grupoDeComp(g.raiz) || null;
+            _refrescar();
+            _mostrarPanel();
           });
           fila.appendChild(bQuitar);
         }
@@ -4206,7 +4205,7 @@ const BaseDescomponer = (() => {
         'posición (digito_1 = unidades).';
       bHC.addEventListener('click', () => {
         marcados = new Set([g]);
-        hacerContador();
+        _hacerContador();
       });
       filaHC.appendChild(etHC);
       filaHC.appendChild(bHC);
@@ -4222,7 +4221,7 @@ const BaseDescomponer = (() => {
       bSepD.textContent = 'Separar dígito';
       bSepD.title = 'Devuelve las siete barras al editor como segmentos ' +
         'manejables.';
-      bSepD.addEventListener('click', separarAgrupado);
+      bSepD.addEventListener('click', _separarAgrupado);
       filaSepD.appendChild(etSepD);
       filaSepD.appendChild(bSepD);
       panel.appendChild(filaSepD);
@@ -4253,14 +4252,14 @@ const BaseDescomponer = (() => {
               nDig === 3 ? ' (centenas)' : ' (millares)');
         const valor = document.createElement('span');
         valor.className = 'valor';
-        valor.textContent = resolverEnlace(p[campo]) || '—';
+        valor.textContent = _resolverEnlace(p[campo]) || '—';
         const bElegir = document.createElement('button');
         bElegir.type = 'button';
         bElegir.textContent = 'Elegir';
         bElegir.addEventListener('click', () => {
           eleccion = { campo: campo, origen: g };
-          refrescarInfo();
-          BaseDirector.avisar('Pulsa en el mapa el DÍGITO de ' + segId(g) + '.');
+          _refrescarInfo();
+          BaseDirector.avisar('Pulsa en el mapa el DÍGITO de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
         fila.appendChild(valor);
@@ -4272,11 +4271,11 @@ const BaseDescomponer = (() => {
           bQuitar.addEventListener('click', () => {
             const viejo = p[campo];
             p[campo] = null;
-            registrarCambio(g.raiz, { [campo]: null }, { [campo]: viejo });
-            reconstruir();
-            seleccion = grupoDeComp(g.raiz) || null;
-            refrescar();
-            mostrarPanel();
+            _registrarCambio(g.raiz, { [campo]: null }, { [campo]: viejo });
+            _reconstruir();
+            seleccion = _grupoDeComp(g.raiz) || null;
+            _refrescar();
+            _mostrarPanel();
           });
           fila.appendChild(bQuitar);
         }
@@ -4300,12 +4299,12 @@ const BaseDescomponer = (() => {
           if (nuevo === p.contadorInterno) return;
           const viejo = p.contadorInterno;
           p.contadorInterno = nuevo;
-          registrarCambio(g.raiz, { contadorInterno: nuevo },
+          _registrarCambio(g.raiz, { contadorInterno: nuevo },
             { contadorInterno: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         fila.appendChild(et);
         fila.appendChild(sel);
@@ -4327,12 +4326,12 @@ const BaseDescomponer = (() => {
           if (nuevo === p.valorInicial) return;
           const viejo = p.valorInicial;
           p.valorInicial = nuevo;
-          registrarCambio(g.raiz, { valorInicial: nuevo },
+          _registrarCambio(g.raiz, { valorInicial: nuevo },
             { valorInicial: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         fila.appendChild(et);
         fila.appendChild(inp);
@@ -4356,12 +4355,12 @@ const BaseDescomponer = (() => {
           if (sel.value === p.direccion) return;
           const viejo = p.direccion;
           p.direccion = sel.value;
-          registrarCambio(g.raiz, { direccion: sel.value },
+          _registrarCambio(g.raiz, { direccion: sel.value },
             { direccion: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         fila.appendChild(et);
         fila.appendChild(sel);
@@ -4381,12 +4380,12 @@ const BaseDescomponer = (() => {
           if (nuevo === (p.presentarCero !== false)) return;
           const viejo = p.presentarCero;
           p.presentarCero = nuevo;
-          registrarCambio(g.raiz, { presentarCero: nuevo },
+          _registrarCambio(g.raiz, { presentarCero: nuevo },
             { presentarCero: viejo });
-          reconstruir();
-          seleccion = grupoDeComp(g.raiz) || null;
-          refrescar();
-          mostrarPanel();
+          _reconstruir();
+          seleccion = _grupoDeComp(g.raiz) || null;
+          _refrescar();
+          _mostrarPanel();
         });
         fila.appendChild(et);
         fila.appendChild(chk);
@@ -4417,7 +4416,7 @@ const BaseDescomponer = (() => {
       bSepC.textContent = 'Separar contador';
       bSepC.title = 'El contador desaparece: sus dígitos vuelven al ' +
         'mapa como segmentos manejables.';
-      bSepC.addEventListener('click', separarAgrupado);
+      bSepC.addEventListener('click', _separarAgrupado);
       filaSepC.appendChild(etSepC);
       filaSepC.appendChild(bSepC);
       panel.appendChild(filaSepC);
@@ -4436,8 +4435,8 @@ const BaseDescomponer = (() => {
       bUnir.textContent = 'Unir con… (elegir en el mapa)';
       bUnir.addEventListener('click', () => {
         eleccion = { campo: 'unir', origen: g };
-        refrescarInfo();
-        BaseDirector.avisar('Pulsa en el mapa el segmento a unir con ' + segId(g) + '.');
+        _refrescarInfo();
+        BaseDirector.avisar('Pulsa en el mapa el segmento a unir con ' + _segId(g) + '.');
       });
       filaUnir.appendChild(etUnir);
       filaUnir.appendChild(bUnir);
@@ -4464,12 +4463,12 @@ const BaseDescomponer = (() => {
         const eliminados = antes.filter(par => uniones.indexOf(par) < 0);
         console.info('[autoría] unión deshecha: ' + eliminados.length +
           ' par(es) eliminado(s).');
-        registrarCambios(eliminados.map(par => ({ separar: par })));
-        reconstruir();
+        _registrarCambios(eliminados.map(par => ({ separar: par })));
+        _reconstruir();
         seleccion = null;
-        refrescar();
-        $('panelSegmento').classList.add('oculto');
-        $('panelSegmento').replaceChildren();
+        _refrescar();
+        _$('panelSegmento').classList.add('oculto');
+        _$('panelSegmento').replaceChildren();
       });
       filaDes.appendChild(etDes);
       filaDes.appendChild(bDes);
@@ -4495,7 +4494,7 @@ const BaseDescomponer = (() => {
     // clausura: los grupos del editor, sus helpers y las constantes
     // de los enlaces. Los inversos que calcula se registran en el
     // historial del editor, como siempre.
-    const hallazgos = BaseCartucho.verificarCartucho(ctxVerificacion());
+    const hallazgos = BaseCartucho.verificarCartucho(_ctxVerificacion());
     const errores = hallazgos.errores;
     const avisos = hallazgos.avisos;
     if (errores.length > 0) {
@@ -4505,7 +4504,7 @@ const BaseDescomponer = (() => {
       return;
     }
     for (const a of avisos) console.warn('[verificar] ' + a);
-    guardarGWI(avisos.length);
+    _guardarGWI(avisos.length);
   }
 
   /**
@@ -4516,13 +4515,13 @@ const BaseDescomponer = (() => {
    * MISMA verificación.
    * @returns {Object} El contexto que espera verificarCartucho.
    */
-  function ctxVerificacion() {
+  function _ctxVerificacion() {
     return {
       grupos: grupos,
-      propsDe: propsDe, grupoDeComp: grupoDeComp, segId: segId,
-      numRuta: numRuta, resolverEnlace: resolverEnlace,
-      camposDe: camposDe, reconstruir: reconstruir,
-      registrarCambio: registrarCambio,
+      propsDe: _propsDe, grupoDeComp: _grupoDeComp, segId: _segId,
+      numRuta: _numRuta, resolverEnlace: _resolverEnlace,
+      camposDe: _camposDe, reconstruir: _reconstruir,
+      registrarCambio: _registrarCambio,
       ENLACES_JUGADOR: ENLACES_JUGADOR, ENLACES_JUEGO: ENLACES_JUEGO,
       ENLACES_COLISION: ENLACES_COLISION, ENLACES_DIGITO: ENLACES_DIGITO,
       ENLACES_CONTADOR: ENLACES_CONTADOR,
@@ -4539,11 +4538,11 @@ const BaseDescomponer = (() => {
    * por una unión).
    * @returns {void}
    */
-  function avisoTopes() {
+  function _avisoTopes() {
     const json = {
       sprites: sprites.map(s => ({ id: s.id })),
       segmentos: segmentos(),
-      secuencia: secuenciaDelCartucho() || undefined
+      secuencia: _secuenciaDelCartucho() || undefined
     };
     if (!BaseCartucho.validarTopes(json)) {
       console.warn('[gwc] el cartucho supera el tope de 255 ' +
@@ -4561,7 +4560,7 @@ const BaseDescomponer = (() => {
    * @param {Uint8Array} bytes - El fichero GWC completo.
    * @returns {void}
    */
-  function descargarGWC(bytes) {
+  function _descargarGWC(bytes) {
     const blob = new Blob([bytes], { type: 'application/octet-stream' });
     const a = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -4589,6 +4588,16 @@ const BaseDescomponer = (() => {
    * @returns {Promise<void>}
    */
   async function generarGWIyGWC() {
+    try {
+      await _generarPar();
+    } catch (e) {
+      console.error(e);
+      BaseDirector.avisarError('No se generó el par GWI+GWC: ' + e.message);
+    }
+  }
+
+  /** El cuerpo de «Generar»: se monta todo en memoria y los ficheros se descargan al final (atomicidad del par). */
+  async function _generarPar() {
     if (!base || grupos.length === 0) {
       BaseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
       return;
@@ -4608,7 +4617,7 @@ const BaseDescomponer = (() => {
     const imagenesFicha = BaseFicha.imagenesEnMemoria();
     // 1. La verificación del diseñador, BLOQUEANTE (misma llamada y
     // misma presentación que «Verificar y Guardar»).
-    const hallazgos = BaseCartucho.verificarCartucho(ctxVerificacion());
+    const hallazgos = BaseCartucho.verificarCartucho(_ctxVerificacion());
     if (hallazgos.errores.length > 0) {
       for (const e of hallazgos.errores) console.error('[verificar] ' + e);
       BaseDirector.avisarError('Definición incompleta: ' + hallazgos.errores.length +
@@ -4618,7 +4627,7 @@ const BaseDescomponer = (() => {
     for (const a of hallazgos.avisos) console.warn('[verificar] ' + a);
     // 2. Topes del GWC, BLOQUEANTES aquí (en descomponer y al
     // guardar el GWI son un aviso): no se genera NINGÚN fichero.
-    const json = montarGWI();
+    const json = _montarGWI();
     if (!BaseCartucho.validarTopes(json)) {
       console.error('[gwc] el cartucho supera el tope de 255 ' +
         'sprites/segmentos/secuencias del GWC: no se genera nada.');
@@ -4655,7 +4664,7 @@ const BaseDescomponer = (() => {
     let nDedup = 0;
     let ahorroGWI = 0;
     for (const sprite of sprites) {
-      const usos = usosDeSprite(sprite);
+      const usos = _usosDeSprite(sprite);
       if (usos < 2) continue;
       nDedup++;
       let bytes = sprite.ancho * sprite.alto;   // aproximación si no hay toBlob
@@ -4669,7 +4678,6 @@ const BaseDescomponer = (() => {
       ? Math.round((ahorroGWI / tamanoSinDedup) * 100) : 0;
     const pctGWC = gwc.bytes.length + gwc.ahorroSprites > 0
       ? Math.round((gwc.ahorroSprites / (gwc.bytes.length + gwc.ahorroSprites)) * 100) : 0;
-    descargarGWC(gwc.bytes);
     BaseDirector.avisar(BaseCartucho.estadistica(gwc));
     // 4. El GWI después, con el Código GWC del par: el código del
     // GWC recién generado (TEXTO «#HHHH#», visible igual que en la
@@ -4684,6 +4692,7 @@ const BaseDescomponer = (() => {
     // El GWB después (F5-I10): los tres ficheros de la misma ficha, ya
     // verificada arriba, para que vayan de la mano.
     if (tamGWI) {
+      _descargarGWC(gwc.bytes);   // el GWC se descarga SOLO cuando el GWI se ha guardado (sin GWC huérfano)
       const gwbOk = await BaseFicha.guardar();
       if (gwbOk) BaseDirector.avisar('Generados GWC, GWI y GWB (' + json.nombre + ').');
     }
@@ -4719,7 +4728,7 @@ const BaseDescomponer = (() => {
    *        GWI viaja SIN codigoGWC.
    * @returns {Object} GWI completo (tal como se guardaría).
    */
-  function montarGWI(codigo) {
+  function _montarGWI(codigo) {
     // Autoría persistente: el HISTORIAL CRONOLÓGICO es la única fuente
     // de verdad (sin redundancia): props (cambios de campos), uniones
     // (entradas "unir"/"separar") viajan
@@ -4781,17 +4790,17 @@ const BaseDescomponer = (() => {
       botones: ficha.botones.length > 0 ? ficha.botones : undefined,
       // Mecanismo de fin de partida (F3-I11, v12.5): PROPIEDAD DEL
       // CARTUCHO, al nivel superior — no un segmento tipo 7.
-      fin: finDelCartucho() || undefined,
+      fin: _finDelCartucho() || undefined,
       // Secuencia (duodécima iteración): animación periódica del
       // cartucho, al nivel superior como el fin.
-      secuencia: secuenciaDelCartucho() || undefined,
+      secuencia: _secuenciaDelCartucho() || undefined,
       // F4-I2: los campos del Director al nivel superior, igual
       // que el fin y la Secuencia. Solo si están definidos: un
       // GWI sin ellos se comporta como siempre (500 ms, sin
       // acelerar, una ruta a la vez).
-      pausas: pausasDelCartucho() || undefined,
-      aceleracion: aceleracionDelCartucho() || undefined,
-      rutas: rutasDelCartucho() || undefined,
+      pausas: _pausasDelCartucho() || undefined,
+      aceleracion: _aceleracionDelCartucho() || undefined,
+      rutas: _rutasDelCartucho() || undefined,
       sprites: sprites.map(s => ({
         id: s.id, ancho: s.ancho, alto: s.alto,
         fichero: 'segmentos/' + s.id + '.png'
@@ -4819,7 +4828,7 @@ const BaseDescomponer = (() => {
    * @param {number} nAvisos - Avisos de la verificación (informativo).
    * @returns {Promise<void>}
    */
-  async function guardarGWI(nAvisos) {
+  async function _guardarGWI(nAvisos) {
     // El GWI es un cartucho COMPLETO: copia estilo, pantalla y botones
     // del cartucho en edición (cartuchoActual). Sin ese cartucho en
     // memoria saldría un GWI con estilo null que NO cargaría. Bloqueo
@@ -4837,7 +4846,7 @@ const BaseDescomponer = (() => {
     const imagenesFicha = BaseFicha.imagenesEnMemoria();
     // El módulo de cartuchos gestiona JSZip, los avisos de inicio y
     // fin, y el bloqueo del botón mientras el ZIP se escribe.
-    const tamGWI = await BaseCartucho.guardarGWI(montarGWI(), sprites,
+    const tamGWI = await BaseCartucho.guardarGWI(_montarGWI(), sprites,
       imagenesFicha.img_f, imagenesFicha.img_s,
       imagenesFicha.img_m, nAvisos);
     if (tamGWI) {
@@ -4850,7 +4859,7 @@ const BaseDescomponer = (() => {
       pintarPantallaAutoria();
       // Aviso de topes (F5-I6): al guardar el GWI es NO bloqueante
       // — el diseñador decide si seguir; «Generar GWI+GWC» bloquea.
-      avisoTopes();
+      _avisoTopes();
     }
   }
 
@@ -4874,7 +4883,7 @@ const BaseDescomponer = (() => {
       // Replay del historial: la MISMA lista que se guarda, aplicada
       // en orden sobre el estado de nacimiento (el contador viaja
       // en el GWI para que la numeración continúe entre guardados).
-      reproducirCambios(aut.cambios);
+      _reproducirCambios(aut.cambios);
       if (typeof aut.ultimoOp === 'number') ultimoOp = aut.ultimoOp;
     } else {
       // Formato antiguo (estado final en dicts): compatibilidad con
@@ -4883,7 +4892,7 @@ const BaseDescomponer = (() => {
       ficticios = [];
       ficticioSeq = 0;
       for (const comp of Object.keys(aut.props || {})) {
-        const p = propPorDefecto();
+        const p = _propPorDefecto();
         Object.assign(p, aut.props[comp]);
         props.set(Number(comp), p);
       }
@@ -4900,13 +4909,13 @@ const BaseDescomponer = (() => {
    * reconstrucción inicial, no en cada refrescar.
    * @returns {number} Cantidad de referencias colgantes.
    */
-  function verificarReferencias() {
+  function _verificarReferencias() {
     let colgantes = 0;
     for (const g of grupos) {
-      const p = propsDe(g.raiz);
+      const p = _propsDe(g.raiz);
       for (const campo of [...TODOS_ENLACES, 'colisionDe']) {
-        if (p[campo] !== null && !grupoDeComp(p[campo])) {
-          console.error('[autoría] ' + segId(g) + '.' + campo +
+        if (p[campo] !== null && !_grupoDeComp(p[campo])) {
+          console.error('[autoría] ' + _segId(g) + '.' + campo +
             ' apunta a un segmento que no existe (referencia ' +
             'colgante del GWI).');
           colgantes++;
@@ -4949,10 +4958,6 @@ const BaseDescomponer = (() => {
     base = resultado;
     seleccion = null;
     eleccion = null;
-    // El cartucho completo se conserva (privado, sin window.__) para
-    // que guardarGWI copie pantalla y botones: el GWI resultante es
-    // un cartucho autónomo.
-    cartuchoActual = cartucho || null;
     if (autoria && cargarAutoria(autoria)) {
       componerPantalla = true;             // GWI: previsualización completa
       console.info('[autoría] precargada del GWI: ' + uniones.length +
@@ -4967,12 +4972,12 @@ const BaseDescomponer = (() => {
       rehacibles = [];
       componerPantalla = false;            // GWB fresco: solo fondo
     }
-    asegurarCartucho();          // F3-I11: la ficha del cartucho SIEMPRE existe
-    reconstruir();
-    if (autoria) verificarReferencias();   // colgantes al entrar, aviso
-    refrescar();
-    $('panelSegmento').classList.add('oculto');
-    $('panelSegmento').replaceChildren();
+    _asegurarCartucho();          // F3-I11: la ficha del cartucho SIEMPRE existe
+    _reconstruir();
+    if (autoria) _verificarReferencias();   // colgantes al entrar, aviso
+    _refrescar();
+    _$('panelSegmento').classList.add('oculto');
+    _$('panelSegmento').replaceChildren();
     console.log('[autoría] ' + base.comps.length + ' componente(s), ' +
       sprites.length + ' sprite(s) único(s), ' + grupos.length + ' segmento(s)');
     listar();
@@ -4981,7 +4986,7 @@ const BaseDescomponer = (() => {
     // Aviso de topes (F5-I6): al descomponer es NO bloqueante — el
     // diseñador decide si seguir con un cartucho que el GWC no podrá
     // llevar; «Generar GWI+GWC» lo bloqueará.
-    avisoTopes();
+    _avisoTopes();
     return true;
   }
 
@@ -5007,11 +5012,10 @@ const BaseDescomponer = (() => {
     eleccion = null;
     marcados = new Set();    // selección múltiple anterior, fuera
     arrastre = null;         // recuadro en curso, fuera
-    cartuchoActual = null;   // nada de la autoría anterior
-    $('zonaMapa').classList.add('oculto');
-    $('panelSegmento').classList.add('oculto');
-    $('panelSegmento').replaceChildren();
-    $('listaSegmentos').replaceChildren();      // lista del cartucho anterior, fuera
+    _$('zonaMapa').classList.add('oculto');
+    _$('panelSegmento').classList.add('oculto');
+    _$('panelSegmento').replaceChildren();
+    _$('listaSegmentos').replaceChildren();      // lista del cartucho anterior, fuera
   }
 
   /**
@@ -5028,25 +5032,14 @@ const BaseDescomponer = (() => {
   }
 
   /**
-   * La lista de segmentos en memoria, por REFERENCIA. Vive en
-   * ComunListas (el puente de datos); aquí se expone para el
-   * propio flujo de autoría. El motor del juego NO usa esta vía:
-   * consulta ComunListas directamente (etapas inconexas).
-   * @returns {Array<Object>} Referencia viva a los segmentos.
-   */
-  function segmentosEnMemoria() {
-    return ComunListas.segmentos();
-  }
-
-  /**
    * Cablea el clic del mapa de segmentos (lo llama el BaseDirector al
    * inicializar).
    * @returns {void}
    */
   function inicializar() {
-    $('mapaSegmentos').addEventListener('pointerdown', alPulsarMapa);
-    $('mapaSegmentos').addEventListener('pointermove', alMoverMapa);
-    $('mapaSegmentos').addEventListener('pointerup', alSoltarMapa);
+    _$('mapaSegmentos').addEventListener('pointerdown', _alPulsarMapa);
+    _$('mapaSegmentos').addEventListener('pointermove', _alMoverMapa);
+    _$('mapaSegmentos').addEventListener('pointerup', _alSoltarMapa);
   }
 
   return {
@@ -5057,7 +5050,6 @@ const BaseDescomponer = (() => {
     rehacer: rehacer,
     cargarAutoria: cargarAutoria,
     cargarListas: cargarListas,
-    segmentosEnMemoria: segmentosEnMemoria,
     pintarFondoAparato: pintarFondoAparato,
     pintarSegmentoAparato: pintarSegmentoAparato,
     pintarGWI: pintarGWI,

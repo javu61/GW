@@ -65,7 +65,9 @@ var JuegoDirector = (function () {
     // x = (a·x + c) mod 2^16 — el AND 0xFFFF ES el módulo del uint16
     // (en el ESP32 el desbordamiento del uint16_t lo hace solo)
     estadoLCG = (estadoLCG * LCG_A + LCG_C) & 0xFFFF;
-    return estadoLCG % max;
+    // Se usan los bits ALTOS: con a y c impares el bit 0 alterna 0,1,0,1 y
+    // «% 2» daría siempre la misma secuencia (REVISION #3). Vale para max <= 256.
+    return (estadoLCG >>> 8) % max;
   }
 
   // --- Reloj ---
@@ -135,28 +137,36 @@ var JuegoDirector = (function () {
    *      tick y tick.
    * @returns {void}
    */
-  function tick() {
+  function _tick() {
     if (Finalizar) {
       _finJuego();
       return;                    // sin programar el siguiente tick
     }
     if (!Pausa) {
-      JuegoMotorEstados.tick();  // (motor de juego: estados)
-      JuegoMotorGrafico.tick();  // (motor gráfico: presentación)
-      if (typeof JuegoMotorEstados.terminada === 'function' &&
-        JuegoMotorEstados.terminada()) {
+      try {
+        JuegoMotorEstados.tick();  // (motor de juego: estados)
+        JuegoMotorGrafico.tick();  // (motor gráfico: presentación)
+        if (JuegoMotorEstados.terminada()) {
+          _finJuego();
+          return;                  // sin programar el siguiente tick
+        }
+        ticks++;
+        _acelerar();
+        _avisarTick();
+      } catch (e) {
+        // Una excepción en un motor no deja un reloj muerto que dice
+        // seguir en marcha (REVISION #15): se termina la partida y se avisa.
+        console.error(e);
         _finJuego();
-        return;                  // sin programar el siguiente tick
+        BaseDirector.avisarError('La partida se detuvo por un error: ' + e.message);
+        return;
       }
-      ticks++;
-      _acelerar();
-      _avisarTick();
     }
     _programar();
   }
 
   function _programar() {
-    temporizador = setTimeout(tick, pausaVig); // encadenado, nunca setInterval; F4-I2: la VIGENTE
+    temporizador = setTimeout(_tick, pausaVig); // encadenado, nunca setInterval; F4-I2: la VIGENTE
   }
 
   function _detener() {
@@ -255,7 +265,7 @@ var JuegoDirector = (function () {
     BaseDirector.jugar();                     // modo juego (solo el Simulador)
     JuegoMotorEstados.iniciar();              // estado inicial del juego
     JuegoMotorGrafico.inicializar();          // fondo fijo en pantalla
-    tick(); // tick inmediato y de ahí el bucle encadenado
+    _tick(); // tick inmediato y de ahí el bucle encadenado
   }
 
   // --- Aduana de entrada (F3-I2) ---

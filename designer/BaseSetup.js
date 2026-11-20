@@ -69,7 +69,12 @@ const BaseSetup = (function () {
     return (BOTONES_POR_ESTILO[estilo] || []).slice();
   }
 
-  /** Crea un elemento con clase y texto opcionales. */
+  /** Crea un elemento con clase y texto opcionales. 
+   * @param {string} etiqueta - Nombre de la etiqueta.
+   * @param {string} [clase] - Clase CSS opcional.
+   * @param {string} [texto] - Texto opcional.
+   * @returns {HTMLElement} El elemento creado. 
+  */
   function el(etiqueta, clase, texto) {
     const e = document.createElement(etiqueta);
     if (clase) e.className = clase;
@@ -77,42 +82,42 @@ const BaseSetup = (function () {
     return e;
   }
 
-  //++
-  // /** Añade una fila «caption + control (+ nota)» a la rejilla. */
-  // function campo(padre, caption, control, nota) {
-  //   padre.appendChild(el('div', 'fichaCaption', caption));
-  //   const celda = el('div', 'fichaCampo');
-  //   celda.appendChild(control);
-  //   if (nota) celda.appendChild(el('span', 'fichaNota', nota));
-  //   padre.appendChild(celda);
-  //   return control;
-  // }
+  /** Añade una fila «caption + control (+ nota)» a la rejilla. 
+   * @param {HTMLElement} padre - Elemento donde se añade la fila.
+   * @param {string} caption - Texto de la etiqueta.
+   * @param {HTMLElement} control - Control (input, select, textarea...).
+   * @param {string} [nota] - Nota opcional.
+   * @param {boolean} [multilinea=false] - true si el control es multilinea, por defecto es false.
+   * @returns {HTMLElement} El control añadido.
+  */
+  function campo(padre, caption, control, nota, multilinea = false) {
+    const lbl = el('div', 'fichaCaption', caption);
+    const celda = el('div', 'fichaCampo');
 
-/** Añade una fila «caption + control (+ nota)» a la rejilla. */
-function campo(padre, caption, control, nota, multilinea = false) {
-  const lbl = el('div', 'fichaCaption', caption);
-  const celda = el('div', 'fichaCampo');
-
-  if (multilinea) {
-    // Si no pasas un control o pasas un input normal, creamos un textarea
-    if (!control || control.tagName !== 'TEXTAREA') {
-      control = el('textarea');
+    if (multilinea) {
+      // Si no pasas un control o pasas un input normal, creamos un textarea
+      if (!control || control.tagName !== 'TEXTAREA') {
+        control = el('textarea');
+      }
+      control.rows = 3;
+      lbl.classList.add('multilinea');   // Clase extra por si quieres alinear arriba
+      celda.classList.add('multilinea'); // Clase extra para que ocupe más ancho si quieres
     }
-    control.rows = 3;
-    lbl.classList.add('multilinea');   // Clase extra por si quieres alinear arriba
-    celda.classList.add('multilinea'); // Clase extra para que ocupe más ancho si quieres
+
+    celda.appendChild(control);
+    if (nota) celda.appendChild(el('span', 'fichaNota', nota));
+
+    padre.appendChild(lbl);
+    padre.appendChild(celda);
+    return control;
   }
 
-  celda.appendChild(control);
-  if (nota) celda.appendChild(el('span', 'fichaNota', nota));
 
-  padre.appendChild(lbl);
-  padre.appendChild(celda);
-  return control;
-}
-
-
-  /** Crea un input con atributos. */
+  /** Crea un input con atributos. 
+   * @param {string} tipo - El tipo de input.
+   * @param {Object} extra - Atributos adicionales para el input.
+   * @returns {HTMLInputElement} El elemento input creado.
+  */
   function entrada(tipo, extra) {
     const i = document.createElement('input');
     i.type = tipo;
@@ -139,9 +144,8 @@ function campo(padre, caption, control, nota, multilinea = false) {
   }
 
   /**
-   * Vuelca a datosBoton lo escrito en la tabla (para que sobreviva al
-   * cambio de estilo) y la vuelve a pintar con los botones del estilo
-   * elegido.
+   * Vuelca a datosBoton lo escrito en la tabla (para que sobreviva al cambio de estilo) 
+   * y la vuelve a pintar con los botones del estilo elegido.
    * @returns {void}
    */
   function pintarTablaBotones() {
@@ -193,7 +197,7 @@ function campo(padre, caption, control, nota, multilinea = false) {
     datos.appendChild(el('h3', null, 'Datos del GWS'));
     const rejilla = el('div', 'fichaRejilla');
     campos.nombre = campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
-    campos.descripcion = campo(rejilla, 'Descripción', entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }),'Informativa', true);
+    campos.descripcion = campo(rejilla, 'Descripción', entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }), 'Informativa', true);
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(elige estilo)'], ['2', '2 botones'], ['4', '4 botones'], ['5', '5 botones']]) {
       const o = document.createElement('option');
@@ -247,7 +251,9 @@ function campo(padre, caption, control, nota, multilinea = false) {
     }
   }
 
-  /** Garantiza que la ficha esté construida. */
+  /** Garantiza que la ficha esté construida. 
+   * @returns {void}
+   */
   function asegurar() {
     if (!raiz) pintar();
   }
@@ -324,7 +330,11 @@ function campo(padre, caption, control, nota, multilinea = false) {
     return json;
   }
 
-  /** Muestra errores (rojo) y avisos (ámbar) bajo la ficha. */
+  /** Muestra errores (rojo) y avisos (ámbar) bajo la ficha. 
+   * @param {string[]} errores - Mensajes de error.    
+   * @param {string[]} avisos - Mensajes de aviso.
+   * @returns {void}
+   */
   function pintarMensajes(errores, avisos) {
     mensajes.textContent = '';
     for (const [lista, clase, titulo] of [[errores, 'fichaError', 'Errores'], [avisos, 'fichaAviso', 'Avisos']]) {

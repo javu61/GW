@@ -1,8 +1,7 @@
 'use strict';
 
 // BaseSetup.js
-// ==================================================
-//
+// ================================================================================================
 // PROPÓSITO
 //   La pestaña «Setup» (F5-I12): la ficha del setup (GWS), con los
 //   datos de la máquina: nombre, descripción, estilo, resolución y la
@@ -23,21 +22,23 @@
 //   aplica el JSON que devuelve leer.
 //
 // FUNCIONES
-//  Pantalla
-//   pintar             Construye la ficha (la primera vez) en el contenedor.
-//   reiniciar          Deja la ficha en blanco.
-//   poblar             Rellena la ficha desde un GWS ya leído (y la da por aplicada).
-//  Lectura
-//   leer               Construye el JSON del GWS con lo que hay en la ficha.
-//   verificar          Valida la ficha con las reglas del director.
-//   guardar            Verifica y descarga el GWS (.json).
-//  Aplicar
-//   hayCambios         ¿Hay cambios sin aplicar (borrador)?
-//   marcarAplicado     Da la ficha por aplicada (apaga el aviso).
-//   botonesDelEstilo   Números de botón posibles de un estilo.
-//  Internas
-//   asegurar, el, campo, marcarCambios, pintarTablaBotones,
-//   pintarMensajes, nombreFichero, descargar.
+//   Pantalla
+//     pintar             Construye la ficha (la primera vez) en el contenedor.
+//     reiniciar          Deja la ficha en blanco.
+//     poblar             Rellena la ficha desde un GWS ya leído (y la da por aplicada).
+//   Lectura
+//     leer               Construye el JSON del GWS con lo que hay en la ficha.
+//     verificar          Valida la ficha con las reglas del director.
+//     guardar            Verifica y descarga el GWS (.json).
+//   Aplicar
+//     hayCambios         ¿Hay cambios sin aplicar (borrador)?
+//     marcarAplicado     Da la ficha por aplicada (apaga el aviso).
+//     botonesDelEstilo   Números de botón posibles de un estilo.
+//   Internas
+//     _asegurar              _crearElemento      _campo
+//     _descargar             _marcarCambios      _nombreFichero    
+//     _pintarTablaBotones    _pintarMensajes
+// ====================================================================================================
 
 const BaseSetup = (function () {
 
@@ -75,7 +76,7 @@ const BaseSetup = (function () {
    * @param {string} [texto] - Texto opcional.
    * @returns {HTMLElement} El elemento creado. 
   */
-  function el(etiqueta, clase, texto) {
+  function _crearElemento(etiqueta, clase, texto) {
     const e = document.createElement(etiqueta);
     if (clase) e.className = clase;
     if (texto !== undefined) e.textContent = texto;
@@ -90,14 +91,14 @@ const BaseSetup = (function () {
    * @param {boolean} [multilinea=false] - true si el control es multilinea, por defecto es false.
    * @returns {HTMLElement} El control añadido.
   */
-  function campo(padre, caption, control, nota, multilinea = false) {
-    const lbl = el('div', 'fichaCaption', caption);
-    const celda = el('div', 'fichaCampo');
+  function _campo(padre, caption, control, nota, multilinea = false) {
+    const lbl = _crearElemento('div', 'fichaCaption', caption);
+    const celda = _crearElemento('div', 'fichaCampo');
 
     if (multilinea) {
       // Si no pasas un control o pasas un input normal, creamos un textarea
       if (!control || control.tagName !== 'TEXTAREA') {
-        control = el('textarea');
+        control = _crearElemento('textarea');
       }
       control.rows = 3;
       lbl.classList.add('multilinea');   // Clase extra por si quieres alinear arriba
@@ -105,7 +106,7 @@ const BaseSetup = (function () {
     }
 
     celda.appendChild(control);
-    if (nota) celda.appendChild(el('span', 'fichaNota', nota));
+    if (nota) celda.appendChild(_crearElemento('span', 'fichaNota', nota));
 
     padre.appendChild(lbl);
     padre.appendChild(celda);
@@ -130,7 +131,7 @@ const BaseSetup = (function () {
    * @param {boolean} hay - true si hay cambios sin aplicar.
    * @returns {void}
    */
-  function marcarCambios(hay) {
+  function _marcarCambios(hay) {
     sucio = !!hay;
     if (avisoCambios) avisoCambios.classList.toggle('oculto', !sucio);
   }
@@ -148,7 +149,7 @@ const BaseSetup = (function () {
    * y la vuelve a pintar con los botones del estilo elegido.
    * @returns {void}
    */
-  function pintarTablaBotones() {
+  function _pintarTablaBotones() {
     for (const tr of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
       const q = (c) => tr.querySelector('.' + c).value;
       datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: q('colTecla'), alias: q('colAlias') };
@@ -156,8 +157,8 @@ const BaseSetup = (function () {
     cuerpoBotones.textContent = '';
     const numeros = botonesDelEstilo(campos.estilo.value);
     if (numeros.length === 0) {
-      const tr = el('tr');
-      const td = el('td', 'fichaVacio', 'Elige un estilo para ver los botones.');
+      const tr = _crearElemento('tr');
+      const td = _crearElemento('td', 'fichaVacio', 'Elige un estilo para ver los botones.');
       td.colSpan = 4;
       tr.appendChild(td);
       cuerpoBotones.appendChild(tr);
@@ -165,16 +166,16 @@ const BaseSetup = (function () {
     }
     for (const n of numeros) {
       const d = datosBoton[String(n)] || { puerto: '', tecla: '', alias: '' };
-      const tr = el('tr');
+      const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
-      const tdN = el('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
+      const tdN = _crearElemento('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
       const puerto = entrada('number', { className: 'colPuerto', min: 0, step: 1, value: d.puerto });
       const tecla = entrada('text', { className: 'colTecla', maxLength: 1, value: d.tecla });
       tecla.style.width = '3em';
       const alias = entrada('text', { className: 'colAlias', value: d.alias });
       alias.style.minWidth = '8em';
       for (const c of [puerto, tecla, alias]) {
-        const td = el('td');
+        const td = _crearElemento('td');
         td.appendChild(c);
         tr.appendChild(td);
       }
@@ -190,51 +191,51 @@ const BaseSetup = (function () {
    */
   function construir(contenedor) {
     contenedor.textContent = '';
-    avisoCambios = el('p', 'fichaAviso oculto', 'Hay cambios sin aplicar: pulsa Aplicar o Guardar GWS para ponerlos en marcha.');
+    avisoCambios = _crearElemento('p', 'fichaAviso oculto', 'Hay cambios sin aplicar: pulsa Aplicar o Guardar GWS para ponerlos en marcha.');
     contenedor.appendChild(avisoCambios);
 
-    const datos = el('section', 'fichaSeccion');
-    datos.appendChild(el('h3', null, 'Datos del GWS'));
-    const rejilla = el('div', 'fichaRejilla');
-    campos.nombre = campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
-    campos.descripcion = campo(rejilla, 'Descripción', entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }), 'Informativa', true);
+    const datos = _crearElemento('section', 'fichaSeccion');
+    datos.appendChild(_crearElemento('h3', null, 'Datos del GWS'));
+    const rejilla = _crearElemento('div', 'fichaRejilla');
+    campos.nombre = _campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
+    campos.descripcion = _campo(rejilla, 'Descripción', entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }), 'Informativa', true);
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(elige estilo)'], ['2', '2 botones'], ['4', '4 botones'], ['5', '5 botones']]) {
       const o = document.createElement('option');
       o.value = valor; o.textContent = texto;
       estilo.appendChild(o);
     }
-    campos.estilo = campo(rejilla, 'Estilo', estilo);
-    const par = el('div', 'fichaPar');
+    campos.estilo = _campo(rejilla, 'Estilo', estilo);
+    const par = _crearElemento('div', 'fichaPar');
     campos.ancho = entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
     campos.alto = entrada('number', { min: 1, step: 1, placeholder: 'alto' });
-    par.append(campos.ancho, el('span', null, '×'), campos.alto);
-    campo(rejilla, 'Resolución', par, 'Píxeles de la pantalla.');
+    par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
+    _campo(rejilla, 'Resolución', par, 'Píxeles de la pantalla.');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
-    const seccionBot = el('section', 'fichaSeccion');
-    seccionBot.appendChild(el('h3', null, 'Botones'));
-    const tabla = el('table', 'fichaTabla');
-    const cab = el('thead');
-    const trCab = el('tr');
-    for (const t of ['Botón', 'Puerto', 'Tecla', 'Alias']) trCab.appendChild(el('th', null, t));
+    const seccionBot = _crearElemento('section', 'fichaSeccion');
+    seccionBot.appendChild(_crearElemento('h3', null, 'Botones'));
+    const tabla = _crearElemento('table', 'fichaTabla');
+    const cab = _crearElemento('thead');
+    const trCab = _crearElemento('tr');
+    for (const t of ['Botón', 'Puerto', 'Tecla', 'Alias']) trCab.appendChild(_crearElemento('th', null, t));
     cab.appendChild(trCab);
-    cuerpoBotones = el('tbody');
+    cuerpoBotones = _crearElemento('tbody');
     tabla.append(cab, cuerpoBotones);
     seccionBot.appendChild(tabla);
-    seccionBot.appendChild(el('p', 'fichaNota',
+    seccionBot.appendChild(_crearElemento('p', 'fichaNota',
       'Puerto: pin del botón en la máquina real. Tecla: letra del teclado para probar en el simulador. ' +
       'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
     contenedor.appendChild(seccionBot);
 
-    mensajes = el('div', 'fichaMensajes');
+    mensajes = _crearElemento('div', 'fichaMensajes');
     contenedor.appendChild(mensajes);
 
-    campos.estilo.addEventListener('change', pintarTablaBotones);
-    contenedor.addEventListener('input', () => marcarCambios(true));
-    contenedor.addEventListener('change', () => marcarCambios(true));
-    pintarTablaBotones();
+    campos.estilo.addEventListener('change', _pintarTablaBotones);
+    contenedor.addEventListener('input', () => _marcarCambios(true));
+    contenedor.addEventListener('change', () => _marcarCambios(true));
+    _pintarTablaBotones();
   }
 
   /**
@@ -254,7 +255,7 @@ const BaseSetup = (function () {
   /** Garantiza que la ficha esté construida. 
    * @returns {void}
    */
-  function asegurar() {
+  function _asegurar() {
     if (!raiz) pintar();
   }
 
@@ -263,16 +264,16 @@ const BaseSetup = (function () {
    * @returns {void}
    */
   function reiniciar() {
-    asegurar();
+    _asegurar();
     datosBoton = {};
     campos.nombre.value = '';
     campos.descripcion.value = '';
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
-    pintarTablaBotones();
+    _pintarTablaBotones();
     mensajes.textContent = '';
-    marcarCambios(false);
+    _marcarCambios(false);
   }
 
   /**
@@ -281,7 +282,7 @@ const BaseSetup = (function () {
    * @returns {void}
    */
   function poblar(json) {
-    asegurar();
+    _asegurar();
     reiniciar();
     campos.nombre.value = json.nombre || '';
     campos.descripcion.value = json.descripcion || '';
@@ -297,8 +298,8 @@ const BaseSetup = (function () {
         alias: b.alias || ''
       };
     }
-    pintarTablaBotones();
-    marcarCambios(false);
+    _pintarTablaBotones();
+    _marcarCambios(false);
   }
 
   /**
@@ -307,8 +308,8 @@ const BaseSetup = (function () {
    * @returns {Object} El JSON del GWS.
    */
   function leer() {
-    asegurar();
-    pintarTablaBotones();             // vuelca lo escrito en datosBoton
+    _asegurar();
+    _pintarTablaBotones();             // vuelca lo escrito en datosBoton
     const json = { tipo: GWS_TIPO, version: GWS_VERSION, nombre: campos.nombre.value.trim() };
     const desc = campos.descripcion.value.trim();
     if (desc !== '') json.descripcion = desc;
@@ -335,13 +336,13 @@ const BaseSetup = (function () {
    * @param {string[]} avisos - Mensajes de aviso.
    * @returns {void}
    */
-  function pintarMensajes(errores, avisos) {
+  function _pintarMensajes(errores, avisos) {
     mensajes.textContent = '';
     for (const [lista, clase, titulo] of [[errores, 'fichaError', 'Errores'], [avisos, 'fichaAviso', 'Avisos']]) {
       if (lista.length === 0) continue;
-      const bloque = el('div', clase, titulo + ':');
-      const ul = el('ul');
-      for (const m of lista) ul.appendChild(el('li', null, m));
+      const bloque = _crearElemento('div', clase, titulo + ':');
+      const ul = _crearElemento('ul');
+      for (const m of lista) ul.appendChild(_crearElemento('li', null, m));
       bloque.appendChild(ul);
       mensajes.appendChild(bloque);
     }
@@ -387,7 +388,7 @@ const BaseSetup = (function () {
         else if (b.tecla === undefined) avisos.push('El botón ' + n + ' no tiene tecla: se usará la de por defecto.');
       }
     }
-    if (opt.mostrar) pintarMensajes(errores, avisos);
+    if (opt.mostrar) _pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos, json: json };
   }
 
@@ -396,7 +397,7 @@ const BaseSetup = (function () {
    * @param {string} nombre - Nombre del setup.
    * @returns {string} P. ej. «setup_ESP32 GW 4 botones.json».
    */
-  function nombreFichero(nombre) {
+  function _nombreFichero(nombre) {
     const limpio = nombre.replace(/[\\/:*?"<>|]/g, '_').trim() || 'setup';
     return limpio + '.json';
   }
@@ -407,7 +408,7 @@ const BaseSetup = (function () {
    * @param {string} texto - Contenido.
    * @returns {void}
    */
-  function descargar(nombre, texto) {
+  function _descargar(nombre, texto) {
     const url = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url;
@@ -426,7 +427,7 @@ const BaseSetup = (function () {
   function guardar() {
     const r = verificar({ mostrar: true });
     if (r.errores.length > 0) return null;
-    descargar(nombreFichero(r.json.nombre), JSON.stringify(r.json, null, 2));
+    _descargar(_nombreFichero(r.json.nombre), JSON.stringify(r.json, null, 2));
     return r.json;
   }
 
@@ -438,7 +439,7 @@ const BaseSetup = (function () {
     verificar: verificar,
     guardar: guardar,
     hayCambios: hayCambios,
-    marcarAplicado: () => marcarCambios(false),
+    marcarAplicado: () => _marcarCambios(false),
     botonesDelEstilo: botonesDelEstilo
   };
 

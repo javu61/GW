@@ -1,5 +1,5 @@
 // ComunListas — el puente de datos entre las dos etapas del sistema.
-//
+// ====================================================================================================
 // El sistema tiene DOS etapas deliberadamente inconexas (decisión
 // de diseño): la AUTORÍA (ficheros Base*, Fase 1: extraer,
 // editar, guardar el GWI) y el JUEGO (ficheros Juego*, Fase 2:
@@ -27,7 +27,7 @@
 //
 // Script clásico (sin módulos, compatible file://). Carga el
 // PRIMERO de todos los scripts del proyecto.
-//
+// ====================================================================================================
 
 var ComunListas = (function () {
   'use strict';
@@ -300,9 +300,11 @@ var ComunListas = (function () {
    * (nº GWI al guardar) y el motor (comparaciones al barrer).
    * 'digito' es el nombre sin acento del tipo «dígito» (5).
    */
-  var tipos = { jugador: 0, juego: 1, inicio: 2, vida: 3, muerte: 4,
-                digito: 5, contador: 6, cartucho: 7,
-                adicional: 8, inicioAdicional: 9 };
+  var tipos = {
+    jugador: 0, juego: 1, inicio: 2, vida: 3, muerte: 4,
+    digito: 5, contador: 6, cartucho: 7,
+    adicional: 8, inicioAdicional: 9
+  };
 
   /**
    * ENUMERACIÓN DEL MECANISMO DE FIN (F3-I11): lo que el segmento
@@ -310,8 +312,10 @@ var ComunListas = (function () {
    * en el GWI (texto autoexplicativo); ninguno = null (la
    * verificación lo exige puesto).
    */
-  var fin = { ninguno: null, vida: 'vida', muerte: 'muerte',
-              contador: 'contador' };
+  var fin = {
+    ninguno: null, vida: 'vida', muerte: 'muerte',
+    contador: 'contador'
+  };
 
   return {
     cargar: cargar,

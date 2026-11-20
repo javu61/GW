@@ -1,6 +1,5 @@
-// JuegoMotorEstados — el que decide qué segmentos están encendidos
-// y dónde.
-//
+// JuegoMotorEstados — el que decide qué segmentos están encendidos y dónde.
+// ====================================================================================================
 // Motor de juego (Fase 3): el estado del juego VIVE EN LA LISTA DE
 // SEGMENTOS del puente ComunListas (la que la carga del GWI deja
 // en memoria). El tick hace TRES cosas, en este orden:
@@ -86,7 +85,7 @@
 //
 // Script clásico (sin módulos, compatible file://). Carga tras
 // BaseDirector.js y antes de JuegoMotorGrafico.js.
-//
+// ====================================================================================================
 
 var JuegoMotorEstados = (function () {
   'use strict';
@@ -165,7 +164,7 @@ var JuegoMotorEstados = (function () {
     // el SEGMENTO DE CARTUCHO (F3-I11: la ficha de configuración,
     // nunca es arte). Las barras quedan fuera por idsBarras.
     if (seg.tipo === tiposEnum.jugador || seg.tipo === tiposEnum.digito ||
-        seg.tipo === tiposEnum.contador || seg.tipo === tiposEnum.cartucho) {
+      seg.tipo === tiposEnum.contador || seg.tipo === tiposEnum.cartucho) {
       return false;
     }
     // FIN POR ICONOS (corrección del 21-10-2026): los segmentos de
@@ -186,7 +185,7 @@ var JuegoMotorEstados = (function () {
     // viven en su PROPIO bucle (avanzarAdicionales) o en la
     // Secuencia del cartucho (marca animados).
     if (seg.tipo === tiposEnum.adicional ||
-        seg.tipo === tiposEnum.inicioAdicional) {
+      seg.tipo === tiposEnum.inicioAdicional) {
       return false;
     }
     if (idsBarras[seg.id]) return false;   // barra de un dígito: la enciende el contador
@@ -361,7 +360,7 @@ var JuegoMotorEstados = (function () {
    */
   var TABLA_SIETE = {
     '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd',
-    '4': 'fgbc',   '5': 'afgcd', '6': 'afgedc', '7': 'abc',
+    '4': 'fgbc', '5': 'afgcd', '6': 'afgedc', '7': 'abc',
     '8': 'abcdefg', '9': 'abcdfg'
   };
   var LETRAS_BARRAS = 'abcdefg';
@@ -455,16 +454,20 @@ var JuegoMotorEstados = (function () {
    * @since 3.8
    */
   var tiposEnum = (typeof ComunListas !== 'undefined' &&
-                   ComunListas.tipos)
+    ComunListas.tipos)
     ? ComunListas.tipos
-    : { jugador: 0, juego: 1, inicio: 2, vida: 3, muerte: 4,
-        digito: 5, contador: 6, cartucho: 7,
-        adicional: 8, inicioAdicional: 9 };
+    : {
+      jugador: 0, juego: 1, inicio: 2, vida: 3, muerte: 4,
+      digito: 5, contador: 6, cartucho: 7,
+      adicional: 8, inicioAdicional: 9
+    };
   var finEnum = (typeof ComunListas !== 'undefined' &&
-                 ComunListas.fin)
+    ComunListas.fin)
     ? ComunListas.fin
-    : { ninguno: null, vida: 'vida', muerte: 'muerte',
-        contador: 'contador' };
+    : {
+      ninguno: null, vida: 'vida', muerte: 'muerte',
+      contador: 'contador'
+    };
 
   /**
    * La lista de segmentos en memoria, por REFERENCIA, del puente
@@ -492,7 +495,7 @@ var JuegoMotorEstados = (function () {
     // como AMPLIACIÓN futura (decisión del usuario, 24-10-2026:
     // solo la usan los últimos juegos lanzados).
     return typeof ComunListas !== 'undefined' &&
-           !!ComunListas.reglas() && !!ComunListas.reglas().combinar;
+      !!ComunListas.reglas() && !!ComunListas.reglas().combinar;
   }
 
   /**
@@ -523,7 +526,7 @@ var JuegoMotorEstados = (function () {
     }
     if (debug()) {
       console.warn('motor del juego: ningún segmento marcado como ' +
-                   'jugador; se usa el primero de la lista.');
+        'jugador; se usa el primero de la lista.');
     }
     return 0;
   }
@@ -550,7 +553,7 @@ var JuegoMotorEstados = (function () {
     if (!idNuevo) {
       if (debug()) {
         console.warn('motor del juego: el jugador ' + (actual.id || '?') +
-                     ' no tiene enlace "' + direccion + '": no se mueve.');
+          ' no tiene enlace "' + direccion + '": no se mueve.');
       }
       return;
     }
@@ -561,8 +564,8 @@ var JuegoMotorEstados = (function () {
     if (idxNuevo < 0) {
       if (debug()) {
         console.warn('motor del juego: el enlace "' + direccion + '" del ' +
-                     'jugador ' + (actual.id || '?') + ' apunta a ' + idNuevo +
-                     ', que no existe en la lista.');
+          'jugador ' + (actual.id || '?') + ' apunta a ' + idNuevo +
+          ', que no existe en la lista.');
       }
       return;
     }
@@ -574,7 +577,7 @@ var JuegoMotorEstados = (function () {
     jugador = idxNuevo;                      // el nuevo es el jugador
     if (debug()) {
       console.log('motor del juego: jugador ' + (actual.id || '?') +
-                   ' apagado, ' + (nuevo.id || '?') + ' encendido');
+        ' apagado, ' + (nuevo.id || '?') + ' encendido');
     }
   }
 
@@ -654,7 +657,7 @@ var JuegoMotorEstados = (function () {
     if (inicios.length === 0) {
       if (debug()) {
         console.warn('motor del juego: el cartucho no tiene inicios ' +
-                     'de ruta; no nacen rutas.');
+          'de ruta; no nacen rutas.');
       }
       return;
     }
@@ -665,7 +668,7 @@ var JuegoMotorEstados = (function () {
     // que es la regla histórica). Tope de seguridad: nunca más
     // simultáneas que las rutas DEFINIDAS en el cartucho.
     var maxSim = (typeof JuegoDirector !== 'undefined' &&
-                  typeof JuegoDirector.maxRutasSimultaneas === 'function')
+      typeof JuegoDirector.maxRutasSimultaneas === 'function')
       ? JuegoDirector.maxRutasSimultaneas() : 1;
     if (maxSim > inicios.length) maxSim = inicios.length;
     if (nRutasVivas >= maxSim) return;
@@ -698,12 +701,12 @@ var JuegoMotorEstados = (function () {
     // rutas.aumentarCada, el máximo de simultáneas).
     nRutasVivas++;
     if (typeof JuegoDirector !== 'undefined' &&
-        typeof JuegoDirector.rutaLanzada === 'function') {
+      typeof JuegoDirector.rutaLanzada === 'function') {
       JuegoDirector.rutaLanzada();
     }
     if (debug()) {
       console.log('motor del juego: ruta ' + (elegido.ruta || '?') +
-                  ' lanzada (' + (elegido.id || '?') + ' encendido)');
+        ' lanzada (' + (elegido.id || '?') + ' encendido)');
     }
   }
 
@@ -784,7 +787,7 @@ var JuegoMotorEstados = (function () {
     var direccion = null;
     for (var i = 0; i < segs.length; i++) {
       if (segs[i].tipo === tiposEnum.contador &&
-          Number(segs[i].contadorInterno) === n + 1) {
+        Number(segs[i].contadorInterno) === n + 1) {
         direccion = segs[i].direccion || 'ascendente';
         break;
       }
@@ -852,8 +855,8 @@ var JuegoMotorEstados = (function () {
       if (!contador.digito_1) {
         if (debug()) {
           console.warn('motor del juego: el contador ' + (contador.id || '?') +
-                       ' no enlaza con su dígito de las unidades: no se ' +
-                       'presenta.');
+            ' no enlaza con su dígito de las unidades: no se ' +
+            'presenta.');
         }
         return;
       }
@@ -861,8 +864,8 @@ var JuegoMotorEstados = (function () {
       if (idxU < 0 || segs[idxU].tipo !== tiposEnum.digito) {
         if (debug()) {
           console.warn('motor del juego: el digito_1 del contador ' +
-                       (contador.id || '?') + ' no es un dígito: no se ' +
-                       'presenta.');
+            (contador.id || '?') + ' no es un dígito: no se ' +
+            'presenta.');
         }
         return;
       }
@@ -874,8 +877,8 @@ var JuegoMotorEstados = (function () {
         if (idxDig < 0 || segs[idxDig].tipo !== tiposEnum.digito) {
           if (debug()) {
             console.warn('motor del juego: el ' + campo + ' del contador ' +
-                         (contador.id || '?') + ' no es un dígito: se ' +
-                         'presentan las posiciones que hay.');
+              (contador.id || '?') + ' no es un dígito: se ' +
+              'presentan las posiciones que hay.');
           }
           break;
         }
@@ -883,8 +886,8 @@ var JuegoMotorEstados = (function () {
         if (!fila) {
           if (debug()) {
             console.warn('motor del juego: al dígito ' +
-                         (segs[idxDig].id || '?') + ' le faltan barras: se ' +
-                         'presentan las posiciones que hay.');
+              (segs[idxDig].id || '?') + ' le faltan barras: se ' +
+              'presentan las posiciones que hay.');
           }
           break;
         }
@@ -1101,7 +1104,7 @@ var JuegoMotorEstados = (function () {
     for (var f = 0; f < segs.length; f++) {
       var sf = segs[f];
       if (sf.visible && (sf.tipo === tiposEnum.adicional ||
-          sf.tipo === tiposEnum.inicioAdicional) && !animados[sf.id]) {
+        sf.tipo === tiposEnum.inicioAdicional) && !animados[sf.id]) {
         foto.push(sf);
       }
     }
@@ -1112,7 +1115,7 @@ var JuegoMotorEstados = (function () {
       if (j < 0) {
         if (debug()) {
           console.warn('motor del juego: el siguiente del adicional ' +
-                       (seg.id || '?') + ' no existe: se apaga.');
+            (seg.id || '?') + ' no existe: se apaga.');
         }
         seg.visible = false;               // cadena rota: muere
         seg.cambiar = true;
@@ -1124,7 +1127,7 @@ var JuegoMotorEstados = (function () {
       segs[j].cambiar = true;
       if (debug()) {
         console.log('motor del juego: adicional avanza, ' +
-                    (segs[j].id || '?') + ' encendido');
+          (segs[j].id || '?') + ' encendido');
       }
     }
   }
@@ -1148,7 +1151,7 @@ var JuegoMotorEstados = (function () {
    */
   function avanzarSecuencia(segs) {
     if (!configSec || !configSec.segmentos ||
-        configSec.segmentos.length === 0) return;
+      configSec.segmentos.length === 0) return;
     if (desenlaceMuerte) return;    // 23-10: suspendida SOLO en ciclo de muerte
     if (secIdx >= 0) {
       // Animando: apagar el actual y pasar al siguiente.
@@ -1185,7 +1188,7 @@ var JuegoMotorEstados = (function () {
     segs[iS].cambiar = true;
     if (debug()) {
       console.log('motor del juego: Secuencia, ' + idS + ' encendido (' +
-                  (secIdx + 1) + '/' + configSec.segmentos.length + ')');
+        (secIdx + 1) + '/' + configSec.segmentos.length + ')');
     }
   }
 
@@ -1229,7 +1232,8 @@ var JuegoMotorEstados = (function () {
     var segs = lista();
     if (configFin.mecanismo === finEnum.vida) {
       if (familiaIconos(segs, tiposEnum.vida).every(function (s) {
-            return !s.visible; })) {
+        return !s.visible;
+      })) {
         terminada = true;
       }
     } else if (configFin.mecanismo === finEnum.muerte) {
@@ -1319,19 +1323,19 @@ var JuegoMotorEstados = (function () {
     seg.visible = false;                      // el punto decide y se apaga
     seg.cambiar = true;
     var sufijo = nCont >= 0 ? ' (contador ' + (nCont + 1) + ': ' +
-                 contadoresInternos[nCont] + ')' : '';
+      contadoresInternos[nCont] + ')' : '';
     if (!enlace) {
       if (debug()) {
         console.log('motor del juego: ' + (seg.id || '?') + ' colisión ' +
-                    (positiva ? 'POSITIVA' : 'NEGATIVA') +
-                    ' sin cadena: el elemento desaparece' + sufijo);
+          (positiva ? 'POSITIVA' : 'NEGATIVA') +
+          ' sin cadena: el elemento desaparece' + sufijo);
       }
       return;
     }
     if (idxDestino < 0) {
       if (debug()) {
         console.warn('motor del juego: el desenlace de ' + (seg.id || '?') +
-                     ' apunta a ' + enlace + ', que no existe: la cadena muere.');
+          ' apunta a ' + enlace + ', que no existe: la cadena muere.');
       }
       return;
     }
@@ -1341,8 +1345,8 @@ var JuegoMotorEstados = (function () {
       // toque (acumulativo desde el último en muerte).
       if (debug()) {
         console.log('motor del juego: ' + (seg.id || '?') + ' colisión ' +
-                    (positiva ? 'POSITIVA' : 'NEGATIVA') + ' → aterriza en ' +
-                    enlace + ': la familia cuenta el desenlace');
+          (positiva ? 'POSITIVA' : 'NEGATIVA') + ' → aterriza en ' +
+          enlace + ': la familia cuenta el desenlace');
       }
       return;
     }
@@ -1381,13 +1385,13 @@ var JuegoMotorEstados = (function () {
       }
       if (debug()) {
         console.log('motor del juego: desenlace en marcha, juego ' +
-                    'congelado');
+          'congelado');
       }
     }
     if (debug()) {
       console.log('motor del juego: ' + (seg.id || '?') + ' colisión ' +
-                  (positiva ? 'POSITIVA' : 'NEGATIVA') + ' → ' +
-                  enlace + ' encendido' + sufijo);
+        (positiva ? 'POSITIVA' : 'NEGATIVA') + ' → ' +
+        enlace + ' encendido' + sufijo);
     }
   }
 
@@ -1415,7 +1419,7 @@ var JuegoMotorEstados = (function () {
     secContador = 0;                // la Secuencia, a cero al inicio
     secIdx = -1;
     configSec = (typeof ComunListas !== 'undefined' &&
-                 typeof ComunListas.secuenciaDeCartucho === 'function')
+      typeof ComunListas.secuenciaDeCartucho === 'function')
       ? ComunListas.secuenciaDeCartucho() : null;
     var segs = lista();
     jugador = buscarJugador(segs);
@@ -1507,9 +1511,9 @@ var JuegoMotorEstados = (function () {
     if (j) { j.visible = true; j.cambiar = true; }
     if (debug()) {
       console.log('motor del juego: iniciado, ' + segs.length +
-                  ' segmento(s) en memoria, contadores [' +
-                  contadoresInternos.join(', ') + ']' +
-                  (j ? ', jugador ' + (j.id || '?') + ' encendido' : ''));
+        ' segmento(s) en memoria, contadores [' +
+        contadoresInternos.join(', ') + ']' +
+        (j ? ', jugador ' + (j.id || '?') + ' encendido' : ''));
     }
   }
 
@@ -1550,7 +1554,7 @@ var JuegoMotorEstados = (function () {
     });
     if (debug()) {
       console.log('motor del juego. Banderas cambiar: ' +
-                  (cambiadas === 0 ? 'No modificadas' : cambiadas + ' modificadas'));
+        (cambiadas === 0 ? 'No modificadas' : cambiadas + ' modificadas'));
     }
     // 2. RUTAS: foto de los elementos de ruta visibles ANTES de
     //    tocar nada (si un recién encendido avanzara otra vez en
@@ -1576,8 +1580,8 @@ var JuegoMotorEstados = (function () {
       // ciclo encontraba el segmento ya encendido y no pasaba de
       // él: nunca aterrizaba y no se producían muertes.
       if (seg.visible && esCadena(seg) &&
-          (!animados[seg.id] || marcaDesenlace[seg.id]) &&
-          (!congelada || marcaDesenlace[seg.id])) vivos.push(seg);
+        (!animados[seg.id] || marcaDesenlace[seg.id]) &&
+        (!congelada || marcaDesenlace[seg.id])) vivos.push(seg);
     });
     vivos.forEach(function (seg) {
       // ¿Es un PUNTO DE COLISIÓN? (F3-I8): si declara colision,
@@ -1597,7 +1601,7 @@ var JuegoMotorEstados = (function () {
         muereRuta(seg);                      // F4-I2
         if (debug()) {
           console.log('motor del juego: ' + (seg.id || '?') +
-                      ' murió al final de la ruta');
+            ' murió al final de la ruta');
         }
         return;
       }
@@ -1608,8 +1612,8 @@ var JuegoMotorEstados = (function () {
       if (idxSiguiente < 0) {
         if (debug()) {
           console.warn('motor del juego: el enlace siguiente de ' +
-                        (seg.id || '?') + ' apunta a ' + idSiguiente +
-                        ', que no existe: la ruta muere.');
+            (seg.id || '?') + ' apunta a ' + idSiguiente +
+            ', que no existe: la ruta muere.');
         }
         seg.visible = false;
         seg.cambiar = true;
@@ -1628,8 +1632,8 @@ var JuegoMotorEstados = (function () {
         contarAterrizaje(segs, segs[idxSiguiente]);
         if (debug()) {
           console.log('motor del juego: ruta aterriza en ' +
-                      (segs[idxSiguiente].id || '?') +
-                      ': la familia cuenta el desenlace');
+            (segs[idxSiguiente].id || '?') +
+            ': la familia cuenta el desenlace');
         }
         return;
       }
@@ -1645,7 +1649,7 @@ var JuegoMotorEstados = (function () {
       }
       if (debug()) {
         console.log('motor del juego: ruta avanza, ' +
-                    (segs[idxSiguiente].id || '?') + ' encendido');
+          (segs[idxSiguiente].id || '?') + ' encendido');
       }
       // ¿El destino es un PUNTO DE COLISIÓN? (F3-I8): la decisión
       // ocurre EL MISMO TICK en que la ruta lo enciende — el
@@ -1681,7 +1685,7 @@ var JuegoMotorEstados = (function () {
         desenlaceMuerte = false;
         if (debug()) {
           console.log('motor del juego: desenlace terminado, juego ' +
-                      'descongelado');
+            'descongelado');
         }
       }
     }
@@ -1709,12 +1713,12 @@ var JuegoMotorEstados = (function () {
     //    congela el juego y el director detiene el reloj.
     comprobarFin();
     if (!terminada && prevFin > 0 && configFin.contador >= 1 &&
-        contadoresInternos[configFin.contador - 1] === 0) {
+      contadoresInternos[configFin.contador - 1] === 0) {
       terminada = true;
     }
     if (terminada && debug()) {
       console.log('motor del juego: partida terminada (mecanismo: ' +
-                  configFin.mecanismo + ')');
+        configFin.mecanismo + ')');
     }
   }
 
@@ -1755,8 +1759,10 @@ var JuegoMotorEstados = (function () {
    * @since 3.6 (genéricos: 3.7)
    */
   function contadores() {
-    return { vidas: contadoresInternos[0], muertes: contadoresInternos[1],
-             internos: contadoresInternos.slice() };
+    return {
+      vidas: contadoresInternos[0], muertes: contadoresInternos[1],
+      internos: contadoresInternos.slice()
+    };
   }
 
   /**
@@ -1780,7 +1786,7 @@ var JuegoMotorEstados = (function () {
     }
     if (debug()) {
       console.log('motor del juego: prueba de aleatorios → ' +
-                  numeros.join(', '));
+        numeros.join(', '));
     }
     return numeros;
   }
@@ -1799,7 +1805,7 @@ var JuegoMotorEstados = (function () {
    */
   function secuenciaInfo() {
     var hay = !!(configSec && configSec.segmentos &&
-                 configSec.segmentos.length > 0);
+      configSec.segmentos.length > 0);
     return {
       configurada: hay,
       ticks: hay ? Math.max(1, Number(configSec.ticks) || 1) : 0,
@@ -1820,17 +1826,19 @@ var JuegoMotorEstados = (function () {
    */
   function estadoRutas() {
     var maxSim = (typeof JuegoDirector !== 'undefined' &&
-                  typeof JuegoDirector.maxRutasSimultaneas === 'function')
+      typeof JuegoDirector.maxRutasSimultaneas === 'function')
       ? JuegoDirector.maxRutasSimultaneas() : 1;
     return { vivas: nRutasVivas, maxSimultaneas: maxSim };
   }
-  return { iniciar: iniciar, tick: tick,
-           jugadorActual: jugadorActual, rutasVivas: rutasVivas,
-           contadores: contadores,
-           terminada: function () { return terminada; },
-           congelada: function () { return congelada; },
-           pruebaAleatorios: pruebaAleatorios,
-           secuenciaInfo: secuenciaInfo,
-           estadoRutas: estadoRutas,
-           MOVER: MOVER };
+  return {
+    iniciar: iniciar, tick: tick,
+    jugadorActual: jugadorActual, rutasVivas: rutasVivas,
+    contadores: contadores,
+    terminada: function () { return terminada; },
+    congelada: function () { return congelada; },
+    pruebaAleatorios: pruebaAleatorios,
+    secuenciaInfo: secuenciaInfo,
+    estadoRutas: estadoRutas,
+    MOVER: MOVER
+  };
 })();

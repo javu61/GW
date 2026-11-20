@@ -1,5 +1,5 @@
 // JuegoMotorGrafico — el que presenta la pantalla (la pieza real).
-//
+// ====================================================================================================
 // Motor gráfico REAL (Fase 2): composición pura con REPINTADO
 // COMPLETO por estado. Dos instrucciones, como definió el
 // análisis (F2-I1):
@@ -32,7 +32,7 @@
 //
 // Script clásico (sin módulos, compatible file://). Carga tras
 // JuegoMotorEstados.js y antes de JuegoDirector.js.
-//
+// ====================================================================================================
 
 var JuegoMotorGrafico = (function () {
   'use strict';
@@ -106,9 +106,9 @@ var JuegoMotorGrafico = (function () {
     const p = pix.data;                             //Imagen en sí
     const sw = pix.width, sh = pix.height;          //Tamaño de la imagen
     const xf = x * escX, yf = y * escY;             //Tamaño de la imagen escalada
-    
+
     //Máximo y mínimo de la caja destino, recortada al canvas      
-    const x0 = Math.max(0, Math.round(xf));         
+    const x0 = Math.max(0, Math.round(xf));
     const y0 = Math.max(0, Math.round(yf));
     const x1 = Math.min(canvas.width, Math.round(xf + sw * escX));
     const y1 = Math.min(canvas.height, Math.round(yf + sh * escY));
@@ -172,7 +172,7 @@ var JuegoMotorGrafico = (function () {
     }
     if (debug()) {
       console.log('motor gráfico: ' + presentados + ' segmento(s) presentado(s)' +
-                  (sinImagen ? ' — ¡ojo! ' + sinImagen + ' visible(s) sin imagen' : ''));
+        (sinImagen ? ' — ¡ojo! ' + sinImagen + ' visible(s) sin imagen' : ''));
     }
   }
 

@@ -1,8 +1,7 @@
 'use strict';
 
 // BasePACK.js
-// ==================================================
-//
+// ====================================================================================================
 // PROPÓSITO
 //   Manejo unificado de los PAQUETES de ficheros del proyecto (cartuchos
 //   GWB y GWI empaquetados). Hoy el paquete es un ZIP (librería JSZip),
@@ -49,6 +48,7 @@
 // ENTRADAS
 //   Cada entrada es {nombre, contenido}: nombre con su ruta dentro del
 //   paquete ("segmentos/img_001.png") y contenido un Blob o un texto.
+// ====================================================================================================
 
 var BasePACK = (function () {
 

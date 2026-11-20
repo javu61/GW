@@ -1,7 +1,5 @@
-//
 // BaseGraficos.js
-// ==================================================
-//
+// ====================================================================================================
 // PROPÓSITO
 //   El dibujo del MAPA DE TRABAJO del diseñador: el fondo (img_f) y
 //   los segmentos presentados con el color de su tipo o de sus
@@ -36,6 +34,7 @@
 //
 // Carga DESPUÉS de BaseExtractor.js y ANTES de BaseDescomponer.js y
 // BaseDirector.js.
+// ====================================================================================================
 
 var BaseGraficos = (function () {
   'use strict';
@@ -96,7 +95,7 @@ var BaseGraficos = (function () {
    * @param {HTMLCanvasElement} donde - Canvas destino.
    * @returns {{x:number, y:number}} Factor de escala por eje.
    */
-  function escalaDe(donde) {
+  function _escalaDe(donde) {
     if (donde.escalaX && donde.escalaY) return { x: donde.escalaX, y: donde.escalaY };
     if (donde.escala) return { x: donde.escala, y: donde.escala };
     if (fondo && fondo.naturalWidth) {
@@ -203,7 +202,7 @@ var BaseGraficos = (function () {
     const escribir = tipico && seg.color;    // diseñador: color del tipo
     const rgb = escribir ? seg.color : COLOR_PRESENTAR;
 
-    const esc = escalaDe(donde);
+    const esc = _escalaDe(donde);
     if (!(esc.x > 0) || !(esc.y > 0)) {
       console.warn('[motor] escala no positiva (' + esc.x + 'x' + esc.y + '): no se pinta.');
       return;
@@ -242,7 +241,7 @@ var BaseGraficos = (function () {
         // Escritura DIRECTA del color (negro en modo LCD, color del
         // tipo en el diseñador): sin XOR no hay auto-borrado â quitar
         // un segmento = repintar fondo y restantes (ver JSDoc).
-        d[j]     = cr;
+        d[j] = cr;
         d[j + 1] = cg;
         d[j + 2] = cb;
       }

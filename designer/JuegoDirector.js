@@ -1,5 +1,6 @@
-// ============================================================
+// ====================================================================================================
 // JuegoDirector.js — el reloj del simulador (Fase 2/3/4/5)
+// ====================================================================================================
 // Objeto global: JuegoDirector
 // F3-I4: añade el GENERADOR DE ALEATORIOS (LCG de 16 bits).
 //   - La semilla es del director: misma semilla = misma partida.
@@ -13,7 +14,7 @@
 //   programa siempre y, con Pausa activa, solo se salta el trabajo;
 //   así el navegador atiende el teclado entre tick y tick y el Stop
 //   funciona también estando en pausa.
-// ============================================================
+// ====================================================================================================
 
 var JuegoDirector = (function () {
   'use strict';
@@ -79,11 +80,11 @@ var JuegoDirector = (function () {
    */
   function acelerar() {
     var acc = (typeof ComunListas !== 'undefined' &&
-               typeof ComunListas.aceleracionDeCartucho === 'function')
+      typeof ComunListas.aceleracionDeCartucho === 'function')
       ? ComunListas.aceleracionDeCartucho() : null;
     if (acc && ticks > 0 && ticks % (Number(acc.cada) || 0) === 0) {
       var nuevaP = Math.max(Number(acc.minimo) || 0,
-                            pausaVig - (Number(acc.resta) || 0));
+        pausaVig - (Number(acc.resta) || 0));
       pausaVig = Math.min(pausaBase, nuevaP);
     }
   }
@@ -98,7 +99,7 @@ var JuegoDirector = (function () {
   function avisarTick() {
     if (typeof BaseDirector === 'undefined') return;
     if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG &&
-        typeof JuegoMotorEstados.contadores === 'function') {
+      typeof JuegoMotorEstados.contadores === 'function') {
       var c = JuegoMotorEstados.contadores();
       // Secuencia (23-10): diagnóstico del lanzamiento de las
       // animaciones junto al contador de ticks — «Sec: n/m» son
@@ -109,14 +110,14 @@ var JuegoDirector = (function () {
         var si = JuegoMotorEstados.secuenciaInfo();
         sec = si.configurada
           ? (si.animando
-              ? ' · Sec: ' + si.idActual + ' (' +
-                (si.suspendida ? 'suspendida' : 'animando') + ')'
-              : ' · Sec: ' + si.contador + '/' + si.ticks)
+            ? ' · Sec: ' + si.idActual + ' (' +
+            (si.suspendida ? 'suspendida' : 'animando') + ')'
+            : ' · Sec: ' + si.contador + '/' + si.ticks)
           : ' · Sec: sin cartucho';
       }
       BaseDirector.avisar('Tick ' + ticks + ' · Vidas: ' + c.vidas +
-                          ' · Muertes: ' + c.muertes + sec +
-                          ' · Pausa: ' + pausaVig + ' ms');
+        ' · Muertes: ' + c.muertes + sec +
+        ' · Pausa: ' + pausaVig + ' ms');
     } else {
       BaseDirector.avisar('Tick ' + ticks);
     }
@@ -143,7 +144,7 @@ var JuegoDirector = (function () {
       JuegoMotorEstados.tick();  // (motor de juego: estados)
       JuegoMotorGrafico.tick();  // (motor gráfico: presentación)
       if (typeof JuegoMotorEstados.terminada === 'function' &&
-          JuegoMotorEstados.terminada()) {
+        JuegoMotorEstados.terminada()) {
         finJuego();
         return;                  // sin programar el siguiente tick
       }
@@ -241,7 +242,7 @@ var JuegoDirector = (function () {
     // GWI no lo declara: el comportamiento histórico) y contado-
     // res de la política de rutas — partida nueva, todo a cero.
     var cfgP = (typeof ComunListas !== 'undefined' &&
-                typeof ComunListas.pausasDeCartucho === 'function')
+      typeof ComunListas.pausasDeCartucho === 'function')
       ? ComunListas.pausasDeCartucho() : null;
     pausaBase = (cfgP && Number(cfgP.simulador) > 0)
       ? Number(cfgP.simulador) : 500;
@@ -259,16 +260,16 @@ var JuegoDirector = (function () {
     //     los ficheros reales: ambas pasadas idénticas, más las
     //     regresiones de pulsaciones y secuencia).
     //     SOLO PARA LAS PRUEBAS, comentar luego
-//     var pruebaA = JuegoMotorEstados.pruebaAleatorios();
-//     reiniciarAleatorios();                     // "vuelve a inicializar"
-//     var pruebaB = JuegoMotorEstados.pruebaAleatorios();
-//     var iguales = pruebaA.length === pruebaB.length &&
-//       pruebaA.every(function (v, i) { return v === pruebaB[i]; });
-//     if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) {
-//       console.info('A1: ' + pruebaA.join(', '));
-//       console.info('A2: ' + pruebaB.join(', '));
-//       console.info('JuegoDirector: prueba de aleatorios ' + (iguales ? 'OK' : 'FALLO'));
-//     }
+    //     var pruebaA = JuegoMotorEstados.pruebaAleatorios();
+    //     reiniciarAleatorios();                     // "vuelve a inicializar"
+    //     var pruebaB = JuegoMotorEstados.pruebaAleatorios();
+    //     var iguales = pruebaA.length === pruebaB.length &&
+    //       pruebaA.every(function (v, i) { return v === pruebaB[i]; });
+    //     if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) {
+    //       console.info('A1: ' + pruebaA.join(', '));
+    //       console.info('A2: ' + pruebaB.join(', '));
+    //       console.info('JuegoDirector: prueba de aleatorios ' + (iguales ? 'OK' : 'FALLO'));
+    //     }
 
     tick(); // tick inmediato y de ahí el bucle encadenado
   }
@@ -302,7 +303,7 @@ var JuegoDirector = (function () {
   function rutaLanzada() {
     rutasLanzadas++;
     var cfgR = (typeof ComunListas !== 'undefined' &&
-                typeof ComunListas.rutasDeCartucho === 'function')
+      typeof ComunListas.rutasDeCartucho === 'function')
       ? ComunListas.rutasDeCartucho() : null;
     var cada = cfgR ? (Number(cfgR.aumentarCada) || 0) : 0;
     if (cada > 0 && rutasLanzadas % cada === 0) maxSimultaneas++;

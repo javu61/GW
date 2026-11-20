@@ -1,51 +1,50 @@
 'use strict';
 
-/*
- * BaseExtractor.js
- * ==================================================
- *
- * PROPÓSITO
- *   Extraer los segmentos elementales desde la imagen de segmentos
- *   (img_s) de un cartucho: la GEOMETRÍA pura, sin lógica alguna.
- *   La imagen es estrictamente blanco y negro: blanco = fondo (se
- *   ignora), negro = contenido; una componente conexa negra
- *   (conectividad 8) = un segmento elemental. Cualquier otro color
- *   es error bloqueante (verificarBN).
- *
- * SEPARACIÓN
- *   La geometría se dibuja, la lógica se señala: aquí no hay roles
- *   (tipo, uniones, secuencias, salidas, bifurcaciones, indicadores);
- *   los asigna el autor en el mapa de objetos de BaseDescomponer.
- *   La reagrupación (uniones de componentes) es aparte de la
- *   extracción: extraerBN no aplica ninguna unión, las recibe
- *   reagrupar ya decididas. Se carga antes que BaseGraficos.js,
- *   BaseDescomponer.js y BaseDirector.js.
- *
- * FUNCIONES
- *
- *  Utilidades
- *   hex            Color → '#RRGGBB' (para el mensaje de intrusos).
- *   leerImagen     Imagen en memoria → píxeles (canvas, RGBA).
- *   componentes    Componentes conexas de una máscara (conectividad
- *                  8) con caja y lista de píxeles.
- *   crearUnionFind Estructura unir/buscar para las reagrupaciones.
- *
- *  API pública
- *   verificarBN    img → null si es B/N puro, o mensaje con los
- *                  colores intrusos (bloqueante, máximo 8 en el
- *                  mensaje, ordenado por píxeles).
- *   extraerBN      img → base = { ancho, alto, comps, indicePixel,
- *                  ruido }: componentes elementales y mapa
- *                  píxel → componente; el ruido (< 4 px) se
- *                  descarta contando con aviso.
- *   reagrupar      (base, uniones) → { sprites, grupos }: fusiona
- *                  por pares de índices (union-find), sprites únicos
- *                  por huella EXACTA (dimensiones + píxeles, nada de
- *                  «casi iguales»), orden determinista arriba-abajo
- *                  e izquierda-derecha, sprites numerados img_NNN por
- *                  primera aparición. Las uniones con índices
- *                  inexistentes avisan y se ignoran.
- */
+// BaseExtractor.js
+// ====================================================================================================
+// 
+//  PROPÓSITO
+//    Extraer los segmentos elementales desde la imagen de segmentos
+//    (img_s) de un cartucho: la GEOMETRÍA pura, sin lógica alguna.
+//    La imagen es estrictamente blanco y negro: blanco = fondo (se
+//    ignora), negro = contenido; una componente conexa negra
+//    (conectividad 8) = un segmento elemental. Cualquier otro color
+//    es error bloqueante (verificarBN).
+// 
+//  SEPARACIÓN
+//    La geometría se dibuja, la lógica se señala: aquí no hay roles
+//    (tipo, uniones, secuencias, salidas, bifurcaciones, indicadores);
+//    los asigna el autor en el mapa de objetos de BaseDescomponer.
+//    La reagrupación (uniones de componentes) es aparte de la
+//    extracción: extraerBN no aplica ninguna unión, las recibe
+//    reagrupar ya decididas. Se carga antes que BaseGraficos.js,
+//    BaseDescomponer.js y BaseDirector.js.
+// 
+//  FUNCIONES
+// 
+//   Utilidades
+//    hex            Color → '#RRGGBB' (para el mensaje de intrusos).
+//    leerImagen     Imagen en memoria → píxeles (canvas, RGBA).
+//    componentes    Componentes conexas de una máscara (conectividad
+//                   8) con caja y lista de píxeles.
+//    crearUnionFind Estructura unir/buscar para las reagrupaciones.
+// 
+//   API pública
+//    verificarBN    img → null si es B/N puro, o mensaje con los
+//                   colores intrusos (bloqueante, máximo 8 en el
+//                   mensaje, ordenado por píxeles).
+//    extraerBN      img → base = { ancho, alto, comps, indicePixel,
+//                   ruido }: componentes elementales y mapa
+//                   píxel → componente; el ruido (< 4 px) se
+//                   descarta contando con aviso.
+//    reagrupar      (base, uniones) → { sprites, grupos }: fusiona
+//                   por pares de índices (union-find), sprites únicos
+//                   por huella EXACTA (dimensiones + píxeles, nada de
+//                   «casi iguales»), orden determinista arriba-abajo
+//                   e izquierda-derecha, sprites numerados img_NNN por
+//                   primera aparición. Las uniones con índices
+//                   inexistentes avisan y se ignoran.
+// ====================================================================================================
 
 const BaseExtractor = (() => {
 

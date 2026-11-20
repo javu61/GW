@@ -297,12 +297,12 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 }
 
 .fichaCampo.multilinea textarea {
-  width: 50%;              /* Ocupa la mitad del ancho disponible */
-  min-width: 260px;        /* Mismo ancho mínimo que tus input[type=text] */
+  width: 50%;                /* Ocupa la mitad del ancho disponible */
+  min-width: 260px;          /* Mismo ancho mínimo que tus input[type=text] */
   background: #1f2226;     /* Mismo fondo gris oscuro que el resto de campos */
   color: #e8e8e8;          /* Mismo color de texto */
   border: 1px solid #555;  /* Mismo borde */
-  border-radius: 6px;      /* Mismo redondeo */
+  border-radius: 6px;        /* Mismo redondeo */
   padding: 5px 8px;
   font-family: inherit;
   font-size: 0.95rem;
@@ -316,5 +316,5 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 }
 
 .fichaCampo.multilinea textarea:disabled {
-  opacity: 0.4;            /* Igual que tus input:disabled */
+  opacity: 0.4;              /* Igual que tus input:disabled */
 }

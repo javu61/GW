@@ -1,8 +1,7 @@
 'use strict';
 
 // BaseDescomponer.js
-// ==================================================
-//
+// ====================================================================================================
 // PROPÓSITO
 //   La autoría de los segmentos de un cartucho: el mapa de objetos
 //   (seleccionar, señalar propiedades, unir, agrupar), el panel de
@@ -129,6 +128,7 @@
 //   guardarGWI             Validaciones de contexto y delega en
 //                          BaseCartucho.guardarGWI.
 //   cargarAutoria         Reproduce el historial de un GWI (precarga).
+// ====================================================================================================
 
 const BaseDescomponer = (() => {
 

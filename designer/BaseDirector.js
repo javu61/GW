@@ -1,7 +1,7 @@
 'use strict';
 
 // BaseDirector.js
-// ==================================================
+// ====================================================================================================
 //
 // PROPÓSITO
 //   Orquesta la máquina y el cartucho: cablea los botones e inputs,
@@ -88,6 +88,7 @@
 // JS puro, script clásico sin módulos ES (compatible con file://).
 // Encapsulado como los demás ficheros del proyecto: IIFE con el
 // objeto público BaseDirector.
+// ====================================================================================================
 
 var BaseDirector = (function () {
 

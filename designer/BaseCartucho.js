@@ -1,8 +1,7 @@
 'use strict';
 
 // BaseCartucho.js
-// ==================================================
-//
+// ====================================================================================================
 // PROPÓSITO
 //   Lectura y grabación de los tres formatos de cartucho del proyecto
 //   (GWB, GWI y GWC) y verificación del cartucho antes de escribirlo.
@@ -11,60 +10,66 @@
 // FUNCIONES
 //
 //  Utilidades de ficheros
-//   leerJSON               Lee un fichero y lo parsea como JSON.
-//   crearURL / revocarURLs Crea object URLs de ficheros y las revoca todas.
-//   cargarImagen           Carga un fichero como imagen.
-//   cargarImagenAux        Carga una imagen opcional (null si falta o falla).
-//   imagenBlob             Convierte una imagen en un PNG (Blob).
+//   leerJSON                Lee un fichero y lo parsea como JSON.
+//   crearURL / revocarURLs  Crea object URLs de ficheros y las revoca todas.
+//   cargarImagen            Carga un fichero como imagen.
+//   _cargarImagenAux        Carga una imagen opcional (null si falta o falla).
+//   imagenBlob              Convierte una imagen en un PNG (Blob).
 //
 //  Lectura de GWB / GWI
-//   construirMapaFicheros  Mapa nombre → fichero de la carpeta o del paquete.
-//   elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
-//   validarComunes         Contrato de ENTRADA común a GWB y GWI (img_s
-//                          obligatoria; img_f e img_m opcionales).
-//   validarGWB/GWI         Validación ESPECÍFICA por tipo (F5-I9): llaman
-//                          a validarComunes al principio.
-//   cargarDelMapa          Carga una imagen referenciada por el JSON.
-//   validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
-//   leerCartucho           Lectura completa: JSON, validación despachada
-//                          por tipo, tipo esperado e imágenes.
-//   abrirPACK              Abre un paquete de cartucho (delega en BasePACK.leerPACK).
-//   leerGWB / leerGWI      Lectura específica: delegan en leerCartucho
-//                          con el tipo esperado.
+//   _construirMapaFicheros  Mapa nombre → fichero de la carpeta o del paquete.
+//   _elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
+//   validarComunes          Contrato de ENTRADA común a GWB y GWI (img_s
+//                           obligatoria; img_f e img_m opcionales).
+//   validarGWB              Validación ESPECÍFICA, llama a validarComunes
+//   validarGWI              Validación ESPECÍFICA, llama a validarComunes
+//   cargarDelMapa           Carga una imagen referenciada por el JSON.
+//   _validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
+//   leerCartucho            Lectura completa: JSON, validación despachada
+//                           por tipo, tipo esperado e imágenes.
+//   abrirPACK               Abre un paquete de cartucho (delega en BasePACK.leerPACK).
+//   leerGWB / leerGWI       Lectura específica: delegan en leerCartucho
+//                           con el tipo esperado.
 //
 //  Grabación del GWI
-//   formatearGWI           Serializa el GWI en JSON compacto.
-//   guardarGWI             Guarda el GWI en paquete (avisos y bloqueo del botón).
-//   guardarGWIEnDisco      Monta las entradas del GWI y las guarda (BasePACK.guardarPACK).
-//   formatearGWB           Serializa el GWB (solo lo que un GWB declara).
-//   guardarGWB             Guarda el GWB en paquete (F5-I10: JSON + imágenes).
+//   _formatearGWI           Serializa el GWI en JSON compacto.
+//   guardarGWI              Guarda el GWI en paquete (avisos y bloqueo del botón).
+//   _guardarGWIEnDisco      Monta las entradas del GWI y las guarda (BasePACK.guardarPACK).
+//   _formatearGWB           Serializa el GWB (solo lo que un GWB declara).
+//   guardarGWB              Guarda el GWB en paquete (F5-I10: JSON + imágenes).
 //
 //  Verificación del diseñador
-//   verificarCartucho      Recorre los grupos y devuelve errores y avisos
-//                          (delega en una función por regla).
+//   verificarCartucho       Recorre los grupos y devuelve errores y avisos
+//                           (delega en una función por regla).
 //
 //  Grabación del GWC
-//   generarGWC             Orquesta el ensamblado del fichero binario.
-//   montarConfiguracion    Bloque 1: valores del Director y del fin.
-//   montarSprites          Bloque 2: máscaras de 1 bit escaladas.
-//   montarSegmentos        Bloque 3: registros fijos de 32 bytes.
-//   montarSecuencias       Bloque 4: la Secuencia (opcional).
-//   montarDatosGenerales   Bloque 0: estilo, pantalla (resolución), conteos, direcciones.
-//   montarCabecera         Cabecera con código «#HHHH#» y tamaño.
-//   validarTopes           Comprueba el tope de 255 elementos por índice.
-//   viajanEnGWC            Qué segmentos y sprites viajan al GWC.
-//   escalar                Sprite → máscara de 1 bit escalada a la pantalla.
-//   indiceDe               Id legible → índice de 1 byte (0xFF = nulo).
-//   bloque                 Estructura común de un bloque.
-//   sumaDeVerificacion     Calcula el CRC de 16 bits
-//   codigoDeSuma           Retorna el texto del CRC como «#HHHH#».
-//   estadistica            Texto con el tamaño final y su desglose.
+//   generarGWC              Orquesta el ensamblado del fichero binario.
+//   _montarConfiguracion    Bloque 1: valores del Director y del fin.
+//   _montarSprites          Bloque 2: máscaras de 1 bit escaladas.
+//   _montarSegmentos        Bloque 3: registros fijos de 32 bytes.
+//   _montarSecuencias       Bloque 4: la Secuencia (opcional).
+//   _montarDatosGenerales   Bloque 0: estilo, pantalla (resolución), conteos, direcciones.
+//   _montarCabecera         Cabecera con código «#HHHH#» y tamaño.
+//   validarTopes            Comprueba el tope de 255 elementos por índice.
+//   _viajanEnGWC            Qué segmentos y sprites viajan al GWC.
+//   escalar                 Sprite → máscara de 1 bit escalada a la pantalla.
+//   indiceDe                Id legible → índice de 1 byte (0xFF = nulo).
+//   bloque                  Estructura común de un bloque.
+//   _sumaDeVerificacion     Calcula el CRC de 16 bits
+//   _codigoDeSuma           Retorna el texto del CRC como «#HHHH#».
+//   estadistica             Texto con el tamaño final y su desglose.
 //
 //  Lectura del GWC (autocontenida)
-//   leerGWC                Valida y reconstruye listas y configuración.
-//   crearLectorBytes, validarCabeceraGWC, abrirBloqueGWC,
-//   leerDatosGeneralesGWC, leerConfiguracionGWC, leerSpritesGWC,
-//   leerSegmentosGWC, leerSecuenciasGWC   Un paso de la lectura cada una.
+//   leerGWC                 Valida y reconstruye listas y configuración.
+//   _crearLectorBytes       
+//   _validarCabeceraGWC 
+//   _abrirBloqueGWC
+//   _leerDatosGeneralesGWC  
+//   _leerConfiguracionGWC 
+//   _leerSpritesGWC
+//   _leerSegmentosGWC
+//   _leerSecuenciasGWC      Un paso de la lectura cada una.
+// ====================================================================================================
 
 var BaseCartucho = (function () {
 
@@ -138,7 +143,7 @@ var BaseCartucho = (function () {
    * @param {string} nombre - Nombre referenciado por el JSON.
    * @returns {Promise<?HTMLImageElement>} Imagen, o null si no está/falla.
    */
-  async function cargarImagenAux(mapa, nombre) {
+  async function _cargarImagenAux(mapa, nombre) {
     if (typeof nombre !== 'string' || !mapa.has(nombre)) return null;
     try {
       return await cargarImagen(mapa.get(nombre));
@@ -170,7 +175,7 @@ var BaseCartucho = (function () {
    * @param {File[]} ficheros - Ficheros de la carpeta o del paquete.
    * @returns {Map<string,File>} Mapa nombre → File.
    */
-  function construirMapaFicheros(ficheros) {
+  function _construirMapaFicheros(ficheros) {
     const mapa = new Map();
     for (const fichero of ficheros) {
       if (mapa.has(fichero.name)) console.warn('Fichero repetido en la carpeta: ' + fichero.name);
@@ -231,7 +236,7 @@ var BaseCartucho = (function () {
    * @param {Map<string,File>} mapa - Mapa nombre → File.
    * @returns {Promise<{nombre:string, json:Object}>} JSON elegido.
    */
-  async function elegirJSONCartucho(mapa) {
+  async function _elegirJSONCartucho(mapa) {
     const nombres = Array.from(mapa.keys()).filter(n => n.toLowerCase().endsWith('.json'));
     if (nombres.length === 0) throw new Error('la carpeta no contiene ningún .json.');
 
@@ -402,7 +407,7 @@ var BaseCartucho = (function () {
    * @param {string} nombre - Nombre del fichero img_s (para el aviso).
    * @returns {void}
    */
-  function validarTamanoImgS(imgS, imgF, nombre) {
+  function _validarTamanoImgS(imgS, imgF, nombre) {
     if (imgS && imgF && (imgS.naturalWidth !== imgF.naturalWidth ||
       imgS.naturalHeight !== imgF.naturalHeight)) {
       console.warn(nombre + ' no mide lo mismo que img_f: ' +
@@ -426,8 +431,8 @@ var BaseCartucho = (function () {
    *                     imgM:Promise<?HTMLImageElement>}>} Cartucho leído.
    */
   async function leerCartucho(ficheros, estiloMaquina, tipoEsperado) {
-    const mapa = construirMapaFicheros(ficheros);
-    const elegido = await elegirJSONCartucho(mapa);
+    const mapa = _construirMapaFicheros(ficheros);
+    const elegido = await _elegirJSONCartucho(mapa);
     const json = elegido.json;
 
     // Validación despachada por tipo (F5-I9): la específica se ejecuta
@@ -466,12 +471,12 @@ var BaseCartucho = (function () {
 
     // img_s: base de la geometría. En un GWI puede venir como fichero
     // propio (copiado al guardar); si no, la de pantalla.
-    const imgS = (await cargarImagenAux(mapa, json.imagenes.img_s)) ||
-      (await cargarImagenAux(mapa, json.img_s));
-    validarTamanoImgS(imgS, imgF, json.imagenes ? json.imagenes.img_s : '(gwi)');
+    const imgS = (await _cargarImagenAux(mapa, json.imagenes.img_s)) ||
+      (await _cargarImagenAux(mapa, json.img_s));
+    _validarTamanoImgS(imgS, imgF, json.imagenes ? json.imagenes.img_s : '(gwi)');
 
     // img_m (portada): se carga en paralelo, sin bloquear; aún no se muestra.
-    const imgM = cargarImagenAux(mapa, json.imagenes.img_m);
+    const imgM = _cargarImagenAux(mapa, json.imagenes.img_m);
 
     return {
       nombre: elegido.nombre, json: json, mapa: mapa,
@@ -555,14 +560,14 @@ var BaseCartucho = (function () {
    * @param {Object} json - GWI completo (tal como se guardaría).
    * @returns {string} Texto JSON del GWI.
    */
-  function formatearGWI(json) {
+  function _formatearGWI(json) {
     // El código del par (suma de verificación del GWC) solo si existe.
     const lineaCodigoGWC = (json.codigoGWC !== undefined && json.codigoGWC !== null)
       ? [lineaDeCampo('codigoGWC', json.codigoGWC)] : [];
 
     // imagenes TAL CUAL (decisión del cierre de la F5-I9): el GWI es el
     // contenedor intermedio y debe ser AUTOSUFICIENTE — declara todo lo
-    // que el GWB declara, incluso redundante, y guardarGWIEnDisco incluye
+    // que el GWB declara, incluso redundante, y _guardarGWIEnDisco incluye
     // en el paquete cada imagen declarada (img_m incluida). Si se declarara
     // sin viajar, el GWI generado no cargaría: contrato de entrada.
     const imagenesGWI = json.imagenes;
@@ -590,7 +595,7 @@ var BaseCartucho = (function () {
    * @param {Object} json - GWB a guardar.
    * @returns {string} Texto JSON del GWB.
    */
-  function formatearGWB(json) {
+  function _formatearGWB(json) {
     const lineas = [
       lineaDeCampo('tipo', 'GWB'),
       lineaDeCampo('version', json.version),
@@ -618,7 +623,7 @@ var BaseCartucho = (function () {
    * @param {?HTMLImageElement} imgM - Imagen de portada en memoria (img_m).
    * @param {number} nAvisos - Avisos de la verificación (informativo).
    * @returns {Promise<number>} Tamaño aproximado del GWI en bytes (ver
-   *          guardarGWIEnDisco), o 0 si falló.
+   *          _guardarGWIEnDisco), o 0 si falló.
    */
   async function guardarGWI(json, sprites, imgF, imgS, imgM, nAvisos) {
     try {
@@ -626,7 +631,7 @@ var BaseCartucho = (function () {
       const botonGuardar = document.getElementById('btnGuardar');
       botonGuardar.disabled = true;
       try {
-        return await guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos);
+        return await _guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos);
       } finally {
         botonGuardar.disabled = false;   // siempre, aunque el guardado falle
       }
@@ -656,7 +661,7 @@ var BaseCartucho = (function () {
    * @returns {Promise<number>} Tamaño aproximado del GWI (F5-I7): la suma
    *          de los bytes del JSON y de los PNG que contiene, no el paquete.
    */
-  async function guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos) {
+  async function _guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos) {
     const entradas = [];                  // {nombre, contenido} del paquete
 
     for (const sprite of sprites) {
@@ -698,7 +703,7 @@ var BaseCartucho = (function () {
       // consola.
       console.info('[guardar] cartucho sin portada: el paquete no incluye img_m.');
     }
-    entradas.push({ nombre: 'cartucho_GWI.json', contenido: formatearGWI(json) });
+    entradas.push({ nombre: 'cartucho_GWI.json', contenido: _formatearGWI(json) });
 
     const tamano = await BasePACK.guardarPACK(entradas, 'cartucho_GWI');
 
@@ -759,7 +764,7 @@ var BaseCartucho = (function () {
             referenciaImgM + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
-      entradas.push({ nombre: 'cartucho_GWB.json', contenido: formatearGWB(json) });
+      entradas.push({ nombre: 'cartucho_GWB.json', contenido: _formatearGWB(json) });
       const tamano = await BasePACK.guardarPACK(entradas, 'cartucho_GWB');
       BaseDirector.avisar('GWB guardado en ' + BasePACK.nombreFichero('cartucho_GWB') + ' (JSON + ' +
         'imágenes de pantalla). Cárgalo con «Cargar GWB (ZIP)».');
@@ -1525,7 +1530,7 @@ var BaseCartucho = (function () {
    * @param {Object} json - GWI montado.
    * @returns {{segmentos:Array, sprites:Array}} Las dos listas que viajan.
    */
-  function viajanEnGWC(json) {
+  function _viajanEnGWC(json) {
     const segmentos = (json.segmentos || []).filter(s =>
       s.tipo !== TIPO_FANTASMA && !s.fusionadoPor);
     const spritesUsados = new Set();
@@ -1545,7 +1550,7 @@ var BaseCartucho = (function () {
    * @returns {boolean} true si todo está dentro de los topes.
    */
   function validarTopes(json) {
-    const viaja = viajanEnGWC(json);
+    const viaja = _viajanEnGWC(json);
     const haySecuencia = json.secuencia && json.secuencia.segmentos &&
       json.secuencia.segmentos.length > 0;
     const numeroSecuencias = haySecuencia ? 1 : 0;
@@ -1635,7 +1640,7 @@ var BaseCartucho = (function () {
     }
 
     // Lo que VIAJA y las tablas de índices: todos los bloques montan sobre ellas.
-    const viaja = viajanEnGWC(json);
+    const viaja = _viajanEnGWC(json);
     const imagenDeSprite = new Map();
     for (const sprite of (spritesConImagen || [])) imagenDeSprite.set(sprite.id, sprite.imagen);
     const indiceDeSegmento = new Map(viaja.segmentos.map((s, i) => [s.id, i]));
@@ -1643,18 +1648,18 @@ var BaseCartucho = (function () {
     const escala = escalasDePantalla(pantalla);
 
     // El Bloque 5 (Fondo) es RESERVADO: la v1 no lo escribe.
-    const bloqueConfiguracion = montarConfiguracion(json);
-    const bloqueSprites = montarSprites(viaja, imagenDeSprite, pantalla);
-    const bloqueSegmentos = montarSegmentos(viaja, indiceDeSprite, indiceDeSegmento, escala.x, escala.y);
-    const bloqueSecuencias = montarSecuencias(json, indiceDeSegmento);
-    const bloqueDatos = montarDatosGenerales(json, viaja, pantalla, bloqueConfiguracion, bloqueSprites, bloqueSegmentos, bloqueSecuencias);
+    const bloqueConfiguracion = _montarConfiguracion(json);
+    const bloqueSprites = _montarSprites(viaja, imagenDeSprite, pantalla);
+    const bloqueSegmentos = _montarSegmentos(viaja, indiceDeSprite, indiceDeSegmento, escala.x, escala.y);
+    const bloqueSecuencias = _montarSecuencias(json, indiceDeSegmento);
+    const bloqueDatos = _montarDatosGenerales(json, viaja, pantalla, bloqueConfiguracion, bloqueSprites, bloqueSegmentos, bloqueSecuencias);
 
     // Ensamblado en el orden de los tipos; este cuerpo es lo que protege la suma.
     const partes = [bloqueDatos, bloqueConfiguracion, bloqueSprites, bloqueSegmentos];
     if (bloqueSecuencias) partes.push(bloqueSecuencias);
     const cuerpo = concatenar(partes);
 
-    const cabecera = montarCabecera(cuerpo);
+    const cabecera = _montarCabecera(cuerpo);
 
     // Espacio ahorrado por la deduplicación de sprites (informativo):
     // cada máscara se escribe UNA vez aunque la usen varios segmentos;
@@ -1699,7 +1704,7 @@ var BaseCartucho = (function () {
    * @param {Object} json - GWI montado.
    * @returns {Uint8Array} El Bloque 1 completo.
    */
-  function montarConfiguracion(json) {
+  function _montarConfiguracion(json) {
     const pausas = json.pausas || {};
     const aceleracion = json.aceleracion || null;
     const rutas = json.rutas || {};
@@ -1723,12 +1728,12 @@ var BaseCartucho = (function () {
    * desplazamiento del registro de máscara desde el inicio del CONTENIDO
    * del bloque) y a continuación las máscaras en el mismo orden (cada
    * registro: ancho 2, alto 2, filas), ESCALADAS a la pantalla declarada.
-   * @param {{segmentos:Array, sprites:Array}} viaja - Lo que viaja (viajanEnGWC).
+   * @param {{segmentos:Array, sprites:Array}} viaja - Lo que viaja (_viajanEnGWC).
    * @param {Map<string,object>} imagenDeSprite - Tabla id sprite → imagen.
    * @param {Object} pantalla - Pantalla declarada y fuente (ver escalar).
    * @returns {Uint8Array} El Bloque 2 completo.
    */
-  function montarSprites(viaja, imagenDeSprite, pantalla) {
+  function _montarSprites(viaja, imagenDeSprite, pantalla) {
     const mascaras = viaja.sprites.map(s => escalar(
       { id: s.id, ancho: s.ancho, alto: s.alto, imagen: imagenDeSprite.get(s.id) }, pantalla));
 
@@ -1774,7 +1779,7 @@ var BaseCartucho = (function () {
    * @param {number} escalaY - Escala Y (pantalla / fuente).
    * @returns {Uint8Array} El Bloque 3 completo.
    */
-  function montarSegmentos(viaja, indiceDeSprite, indiceDeSegmento, escalaX, escalaY) {
+  function _montarSegmentos(viaja, indiceDeSprite, indiceDeSegmento, escalaX, escalaY) {
     const registros = [];
     for (const segmento of viaja.segmentos) {
       registros.push(...byteDe(segmento.tipo));
@@ -1804,7 +1809,7 @@ var BaseCartucho = (function () {
    * @param {Map<string,number>} indiceDeSegmento - Tabla id segmento → índice.
    * @returns {?Uint8Array} El Bloque 4 completo, o null.
    */
-  function montarSecuencias(json, indiceDeSegmento) {
+  function _montarSecuencias(json, indiceDeSegmento) {
     if (!json.secuencia || !json.secuencia.segmentos ||
       json.secuencia.segmentos.length === 0) return null;
 
@@ -1839,7 +1844,7 @@ var BaseCartucho = (function () {
    * @param {?Uint8Array} bloqueSecuencias - Bloque 4 montado (o null).
    * @returns {Uint8Array} El Bloque 0 completo.
    */
-  function montarDatosGenerales(json, viaja, pantalla, bloqueConfig, bloqueSprites,
+  function _montarDatosGenerales(json, viaja, pantalla, bloqueConfig, bloqueSprites,
     bloqueSegmentos, bloqueSecuencias) {
     const direccionBloque0 = TAM_CABECERA_GWC;
     const direccionBloque1 = direccionBloque0 + TAM_CABECERA_BLOQUE_GWC + TAM_CONTENIDO_DATOS_GWC;
@@ -1871,15 +1876,15 @@ var BaseCartucho = (function () {
    * @returns {{bytes:Uint8Array, checksum:number, codigo:string}} El
    *          fichero completo, su suma de verificación y el código.
    */
-  function montarCabecera(cuerpo) {
+  function _montarCabecera(cuerpo) {
     const tamanoTotal = TAM_CABECERA_GWC + cuerpo.length;
     const fichero = new Uint8Array(tamanoTotal);
 
     fichero.set(textoGWC('GWC' + VERSION_GWC), 0);   // 4 bytes visibles
     fichero.set(cuerpo, TAM_CABECERA_GWC);
 
-    const checksum = sumaDeVerificacion(cuerpo);
-    const codigo = codigoDeSuma(checksum);
+    const checksum = _sumaDeVerificacion(cuerpo);
+    const codigo = _codigoDeSuma(checksum);
     fichero.set(textoGWC(codigo), 4);                // 6 bytes: «#HHHH#»
     fichero.set(u32LE(tamanoTotal), 10);
     return { bytes: fichero, checksum: checksum, codigo: codigo };
@@ -1891,7 +1896,7 @@ var BaseCartucho = (function () {
    * @param {Uint8Array} bytes - Los bytes a proteger.
    * @returns {number} La suma módulo 65536.
    */
-  function sumaDeVerificacion(bytes) {
+  function _sumaDeVerificacion(bytes) {
     let suma = 0;
     for (let i = 0; i < bytes.length; i++) suma = (suma + bytes[i]) & 0xFFFF;
     return suma;
@@ -1904,7 +1909,7 @@ var BaseCartucho = (function () {
    * @param {number} suma - La suma módulo 65536.
    * @returns {string} El código, p. ej. «#0B99#».
    */
-  function codigoDeSuma(suma) {
+  function _codigoDeSuma(suma) {
     return '#' + suma.toString(16).toUpperCase().padStart(4, '0') + '#';
   }
 
@@ -1935,7 +1940,7 @@ var BaseCartucho = (function () {
   // pantalla declarada.
 
   /** Lectores little-endian sobre un array de bytes. */
-  function crearLectorBytes(bytes) {
+  function _crearLectorBytes(bytes) {
     return {
       u8: (p) => bytes[p],
       u16: (p) => bytes[p] | (bytes[p + 1] << 8),
@@ -1955,7 +1960,7 @@ var BaseCartucho = (function () {
    * error explícito.
    * @returns {{suma:number, codigo:string}} Suma real y su código «#HHHH#».
    */
-  function validarCabeceraGWC(bytes, lector) {
+  function _validarCabeceraGWC(bytes, lector) {
     if (bytes.length < TAM_CABECERA_GWC) {
       throw new Error('el GWC está truncado: le faltan bytes de cabecera.');
     }
@@ -1987,7 +1992,7 @@ var BaseCartucho = (function () {
    * sea del tipo esperado y que su contenido no desborde.
    * @returns {{inicio:number, tam:number}} Posición y tamaño del contenido.
    */
-  function abrirBloqueGWC(bytes, lector, posicion, tipoEsperado, nombre) {
+  function _abrirBloqueGWC(bytes, lector, posicion, tipoEsperado, nombre) {
     if (posicion === NULO32_GWC) {
       throw new Error('falta el bloque de ' + nombre + '.');
     }
@@ -2007,8 +2012,8 @@ var BaseCartucho = (function () {
   }
 
   /** Bloque 0: estilo, pantalla, conteos, color de fondo y direcciones de los 6 bloques. */
-  function leerDatosGeneralesGWC(bytes, lector) {
-    const datos = abrirBloqueGWC(bytes, lector, TAM_CABECERA_GWC, BLOQUE_DATOS_GWC, 'Datos Generales');
+  function _leerDatosGeneralesGWC(bytes, lector) {
+    const datos = _abrirBloqueGWC(bytes, lector, TAM_CABECERA_GWC, BLOQUE_DATOS_GWC, 'Datos Generales');
     if (datos.tam < TAM_CONTENIDO_DATOS_GWC) {
       throw new Error('el Bloque 0 de Datos Generales está incompleto (' + datos.tam +
         ' de ' + TAM_CONTENIDO_DATOS_GWC + ' bytes).');
@@ -2032,8 +2037,8 @@ var BaseCartucho = (function () {
   }
 
   /** Bloque 1: pausas, aceleración, política de rutas y fin (8 uint16; nulo = no aplica). */
-  function leerConfiguracionGWC(bytes, lector, posicion) {
-    const config = abrirBloqueGWC(bytes, lector, posicion, BLOQUE_CONFIG_GWC, 'Configuración');
+  function _leerConfiguracionGWC(bytes, lector, posicion) {
+    const config = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_CONFIG_GWC, 'Configuración');
     if (config.tam < TAM_CONTENIDO_CONFIG_GWC) {
       throw new Error('el Bloque 1 de Configuración está incompleto (' + config.tam +
         ' de ' + TAM_CONTENIDO_CONFIG_GWC + ' bytes).');
@@ -2069,8 +2074,8 @@ var BaseCartucho = (function () {
    * dentro del contenido) y máscaras (ancho 2, alto 2, ⌈ancho/8⌉ bytes por
    * fila apiladas, bit más significativo a la izquierda, 1 = negro).
    */
-  function leerSpritesGWC(bytes, lector, posicion, nSprites) {
-    const bloqueSprites = abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SPRITES_GWC, 'Sprites');
+  function _leerSpritesGWC(bytes, lector, posicion, nSprites) {
+    const bloqueSprites = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SPRITES_GWC, 'Sprites');
     const finBloque = bloqueSprites.inicio + bloqueSprites.tam;
     const sprites = [];
 
@@ -2099,8 +2104,8 @@ var BaseCartucho = (function () {
    * legibles; el nulo (0xFF) deja el campo sin poner (el GWI no lleva
    * sobras: los defaults no viajan).
    */
-  function leerSegmentosGWC(bytes, lector, posicion, nSegmentos, sprites) {
-    const bloqueSegmentos = abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SEGMENTOS_GWC, 'Segmentos');
+  function _leerSegmentosGWC(bytes, lector, posicion, nSegmentos, sprites) {
+    const bloqueSegmentos = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SEGMENTOS_GWC, 'Segmentos');
     if (bloqueSegmentos.tam < nSegmentos * TAM_REGISTRO_SEGMENTO_GWC) {
       throw new Error('el Bloque 3 declara ' + nSegmentos +
         ' segmento(s) y no caben en su contenido.');
@@ -2158,9 +2163,9 @@ var BaseCartucho = (function () {
    * a nulo). La v1 lleva UNA Secuencia; si el cartucho trae más, se lee la
    * primera y se avisa. Sin bloque devuelve null.
    */
-  function leerSecuenciasGWC(bytes, lector, posicion, nSecuencias) {
+  function _leerSecuenciasGWC(bytes, lector, posicion, nSecuencias) {
     if (posicion === NULO32_GWC) return null;
-    const bloqueSecuencias = abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SECUENCIAS_GWC, 'Secuencias');
+    const bloqueSecuencias = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SECUENCIAS_GWC, 'Secuencias');
     if (nSecuencias > 1) {
       console.warn('[gwc] el cartucho declara ' + nSecuencias +
         ' Secuencias y la v1 solo entiende una: se carga la primera.');
@@ -2193,15 +2198,15 @@ var BaseCartucho = (function () {
    */
   function leerGWC(datos) {
     const bytes = (datos instanceof Uint8Array) ? datos : new Uint8Array(datos);
-    const lector = crearLectorBytes(bytes);
+    const lector = _crearLectorBytes(bytes);
 
-    const cabecera = validarCabeceraGWC(bytes, lector);
-    const generales = leerDatosGeneralesGWC(bytes, lector);
+    const cabecera = _validarCabeceraGWC(bytes, lector);
+    const generales = _leerDatosGeneralesGWC(bytes, lector);
     const direcciones = generales.direcciones;
-    const configuracion = leerConfiguracionGWC(bytes, lector, direcciones[1]);
-    const sprites = leerSpritesGWC(bytes, lector, direcciones[2], generales.nSprites);
-    const segmentos = leerSegmentosGWC(bytes, lector, direcciones[3], generales.nSegmentos, sprites);
-    const secuencia = leerSecuenciasGWC(bytes, lector, direcciones[4], generales.nSecuencias);
+    const configuracion = _leerConfiguracionGWC(bytes, lector, direcciones[1]);
+    const sprites = _leerSpritesGWC(bytes, lector, direcciones[2], generales.nSprites);
+    const segmentos = _leerSegmentosGWC(bytes, lector, direcciones[3], generales.nSegmentos, sprites);
+    const secuencia = _leerSecuenciasGWC(bytes, lector, direcciones[4], generales.nSecuencias);
 
     return {
       estilo: String(generales.estilo),

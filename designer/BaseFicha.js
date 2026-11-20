@@ -1,8 +1,7 @@
 'use strict';
 
 // BaseFicha.js
-// ==================================================
-//
+// ====================================================================================================
 // PROPÓSITO
 //   La pestaña «Cartucho» (F5-I10): la ficha del cartucho, FUENTE
 //   ÚNICA de sus datos (nombre, estilo, resolución, imágenes y botones).
@@ -31,28 +30,31 @@
 //
 // FUNCIONES
 //  Pantalla
-//   pintar             Construye la ficha (la primera vez) en el contenedor.
-//   reiniciar          Deja la ficha en blanco.
-//   poblar             Rellena campos, botones e imágenes desde una carga.
-//   ponerImagen        Pone (o quita) una imagen sin avisar al director.
-//   bloquearImgS       Bloquea/desbloquea cargar y borrar img_s.
-//   alCambiarImagen    Registra quién se entera de los cambios del usuario.
+//    pintar             Construye la ficha (la primera vez) en el contenedor.
+//    reiniciar          Deja la ficha en blanco.
+//    poblar             Rellena campos, botones e imágenes desde una carga.
+//    ponerImagen        Pone (o quita) una imagen sin avisar al director.
+//    bloquearImgS       Bloquea/desbloquea cargar y borrar img_s.
+//    alCambiarImagen    Registra quién se entera de los cambios del usuario.
 //  Lectura
-//   estado             Lee los datos de la ficha tal cual (sin completar).
-//   datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
-//   imagenesEnMemoria  Las tres imágenes {img_s, img_f, img_m}.
-//   botonesDelEstilo   Números de botón posibles de un estilo.
+//    estado             Lee los datos de la ficha tal cual (sin completar).
+//    datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
+//    imagenesEnMemoria  Las tres imágenes {img_s, img_f, img_m}.
+//    botonesDelEstilo   Números de botón posibles de un estilo.
 //  Aplicar (F5-I12)
-//   hayCambios         ¿Hay cambios sin aplicar (borrador)?
-//   marcarAplicado     Da la ficha por aplicada (apaga el aviso).
-//   ficherosGWB        Los ficheros del GWB de la ficha, en memoria.
+//    hayCambios         ¿Hay cambios sin aplicar (borrador)?
+//    marcarAplicado     Da la ficha por aplicada (apaga el aviso).
+//    ficherosGWB        Los ficheros del GWB de la ficha, en memoria.
 //  Verificación y GWB
-//   verificar          Comprueba que la ficha esté completa y correcta.
-//   guardar            Verifica y, si todo está bien, genera cartucho_GWB.
+//    verificar          Comprueba que la ficha esté completa y correcta.
+//    guardar            Verifica y, si todo está bien, genera cartucho_GWB.
 //  Internas
-//   marcarCambios, asegurar, estiloEfectivo, montarGWB, pintarMensajes, pixelesNoBN,
-//   crearTarjetaImagen, cargarImagen, colocarImagen, vaciarImagen,
-//   refrescarBotonesImagen, miniaturaDe, pintarTablaBotones, campo.
+//    _marcarCambios      _asegurar               _crearElemento
+//    _estiloEfectivo     _montarGWB              _pintarMensajes
+//    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
+//    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
+//    _miniaturaDe        _pintarTablaBotones     _campo
+// ====================================================================================================
 
 const BaseFicha = (function () {
 
@@ -109,15 +111,20 @@ const BaseFicha = (function () {
    * si está en blanco, el del setup cargado.
    * @returns {string} '2', '4', '5' o '' si no hay ninguno.
    */
-  function estiloEfectivo() {
+  function _estiloEfectivo() {
     if (campos.estilo && campos.estilo.value) return campos.estilo.value;
     const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
       ? BaseDirector.estiloDeSetup() : null;
     return delSetup || '';
   }
 
-  /** Crea un elemento con clase y texto opcionales. */
-  function el(etiqueta, clase, texto) {
+  /** Crea un elemento con clase y texto opcionales.  
+   * @param {string} etiqueta - Nombre de la etiqueta.
+   * @param {string} [clase] - Clase CSS.
+   * @param {string} [texto] - Texto a poner como contenido.
+   * @returns {HTMLElement} El elemento creado.
+  */
+  function _crearElemento(etiqueta, clase, texto) {
     const e = document.createElement(etiqueta);
     if (clase) e.className = clase;
     if (texto !== undefined) e.textContent = texto;
@@ -132,12 +139,12 @@ const BaseFicha = (function () {
    * @param {string} [nota] - Aclaración al lado del campo.
    * @returns {HTMLElement} El control.
    */
-  function campo(padre, caption, control, nota) {
-    const etiqueta = el('label', 'fichaCaption', caption);
+  function _campo(padre, caption, control, nota) {
+    const etiqueta = _crearElemento('label', 'fichaCaption', caption);
     padre.appendChild(etiqueta);
-    const celda = el('div', 'fichaCampo');
+    const celda = _crearElemento('div', 'fichaCampo');
     celda.appendChild(control);
-    if (nota) celda.appendChild(el('span', 'fichaNota', nota));
+    if (nota) celda.appendChild(_crearElemento('span', 'fichaNota', nota));
     padre.appendChild(celda);
     return control;
   }
@@ -156,24 +163,24 @@ const BaseFicha = (function () {
    * @param {{clave:string,titulo:string,obligatoria:boolean,ayuda:string}} def
    * @returns {HTMLElement} La tarjeta.
    */
-  function crearTarjetaImagen(def) {
-    const tarjeta = el('div', 'fichaImagen');
-    tarjeta.appendChild(el('h4', null, def.titulo +
+  function _crearTarjetaImagen(def) {
+    const tarjeta = _crearElemento('div', 'fichaImagen');
+    tarjeta.appendChild(_crearElemento('h4', null, def.titulo +
       (def.obligatoria ? ' *' : '')));
-    const marco = el('div', 'fichaMarco');
-    const miniatura = el('img', 'fichaMiniatura oculto');
+    const marco = _crearElemento('div', 'fichaMarco');
+    const miniatura = _crearElemento('img', 'fichaMiniatura oculto');
     miniatura.alt = def.titulo;
-    const vacio = el('span', 'fichaVacio', 'Sin imagen');
+    const vacio = _crearElemento('span', 'fichaVacio', 'Sin imagen');
     marco.append(miniatura, vacio);
-    const info = el('div', 'fichaNota', def.ayuda);
+    const info = _crearElemento('div', 'fichaNota', def.ayuda);
     const fichero = entrada('file', { accept: 'image/png' });
     fichero.className = 'oculto';
-    const cargar = el('button', null, 'Cargar…');
+    const cargar = _crearElemento('button', null, 'Cargar…');
     cargar.type = 'button';
-    const borrar = el('button', null, 'Borrar');
+    const borrar = _crearElemento('button', null, 'Borrar');
     borrar.type = 'button';
     borrar.disabled = true;
-    const acciones = el('div', 'fichaAcciones');
+    const acciones = _crearElemento('div', 'fichaAcciones');
     acciones.append(cargar, borrar);
     tarjeta.append(marco, info, acciones, fichero);
 
@@ -184,12 +191,12 @@ const BaseFicha = (function () {
 
     cargar.addEventListener('click', () => fichero.click());
     fichero.addEventListener('change', () => {
-      if (fichero.files && fichero.files[0]) cargarImagen(def.clave, fichero.files[0]);
+      if (fichero.files && fichero.files[0]) _cargarImagen(def.clave, fichero.files[0]);
       fichero.value = '';            // permite volver a elegir el mismo fichero
     });
     borrar.addEventListener('click', () => {
-      vaciarImagen(def.clave);
-      marcarCambios(true);
+      _vaciarImagen(def.clave);
+      _marcarCambios(true);
       if (alCambiar) alCambiar(def.clave, null);
     });
     return tarjeta;
@@ -201,7 +208,7 @@ const BaseFicha = (function () {
    * @param {HTMLImageElement} img - Imagen cargada.
    * @returns {string} Data URL PNG.
    */
-  function miniaturaDe(img) {
+  function _miniaturaDe(img) {
     const c = document.createElement('canvas');
     c.width = img.naturalWidth; c.height = img.naturalHeight;
     c.getContext('2d').drawImage(img, 0, 0);
@@ -214,7 +221,7 @@ const BaseFicha = (function () {
    * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
    * @returns {void}
    */
-  function refrescarBotonesImagen(clave) {
+  function _refrescarBotonesImagen(clave) {
     const d = imagenes[clave];
     if (!d) return;
     const bloqueada = clave === 'img_s' && imgSBloqueada;
@@ -233,18 +240,18 @@ const BaseFicha = (function () {
    * @param {?string} url - Object URL propia (se libera al sustituirla).
    * @returns {void}
    */
-  function colocarImagen(clave, img, nombre, url) {
+  function _colocarImagen(clave, img, nombre, url) {
     const datos = imagenes[clave];
     liberar(clave);
     datos.img = img;
     datos.nombre = nombre;
     datos.url = url || null;
-    datos.ui.miniatura.src = miniaturaDe(img);
+    datos.ui.miniatura.src = _miniaturaDe(img);
     datos.ui.miniatura.classList.remove('oculto');
     datos.ui.vacio.classList.add('oculto');
     datos.ui.info.textContent = nombre + ' — ' +
       img.naturalWidth + '×' + img.naturalHeight + ' px';
-    refrescarBotonesImagen(clave);
+    _refrescarBotonesImagen(clave);
   }
 
   /**
@@ -254,11 +261,11 @@ const BaseFicha = (function () {
    * @param {File} fichero - El PNG elegido.
    * @returns {void}
    */
-  function cargarImagen(clave, fichero) {
+  function _cargarImagen(clave, fichero) {
     const url = URL.createObjectURL(fichero);
     const img = new Image();
     img.onload = () => {
-      colocarImagen(clave, img, fichero.name, url);
+      _colocarImagen(clave, img, fichero.name, url);
       if (alCambiar) alCambiar(clave, img);
     };
     img.onerror = () => {
@@ -283,7 +290,7 @@ const BaseFicha = (function () {
    * @param {string} clave - 'img_s', 'img_f' o 'img_m'.
    * @returns {void}
    */
-  function vaciarImagen(clave) {
+  function _vaciarImagen(clave) {
     const datos = imagenes[clave];
     liberar(clave);
     datos.img = null;
@@ -292,7 +299,7 @@ const BaseFicha = (function () {
     datos.ui.miniatura.classList.add('oculto');
     datos.ui.vacio.classList.remove('oculto');
     datos.ui.info.textContent = datos.ui.ayuda;
-    refrescarBotonesImagen(clave);
+    _refrescarBotonesImagen(clave);
   }
 
   // ---------------- Botones ----------------
@@ -302,7 +309,7 @@ const BaseFicha = (function () {
    * ya escrito para cada número.
    * @returns {void}
    */
-  function pintarTablaBotones() {
+  function _pintarTablaBotones() {
     // Guarda lo escrito antes de reconstruir.
     for (const fila of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
       idsBoton[fila.dataset.numero] = {
@@ -311,10 +318,10 @@ const BaseFicha = (function () {
       };
     }
     cuerpoBotones.textContent = '';
-    const numeros = botonesDelEstilo(estiloEfectivo());
+    const numeros = botonesDelEstilo(_estiloEfectivo());
     if (numeros.length === 0) {
-      const tr = el('tr');
-      const td = el('td', 'fichaNota', 'Elige un estilo (o carga un setup) para ver los botones posibles.');
+      const tr = _crearElemento('tr');
+      const td = _crearElemento('td', 'fichaNota', 'Elige un estilo (o carga un setup) para ver los botones posibles.');
       td.colSpan = 3;
       tr.appendChild(td);
       cuerpoBotones.appendChild(tr);
@@ -322,15 +329,15 @@ const BaseFicha = (function () {
     }
     for (const n of numeros) {
       const previo = idsBoton[String(n)] || { usado: false, id: '' };
-      const tr = el('tr');
+      const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
-      const tdUsado = el('td');
+      const tdUsado = _crearElemento('td');
       const usado = entrada('checkbox');
       usado.checked = previo.usado;
       tdUsado.appendChild(usado);
-      const tdNumero = el('td', null, String(n) +
+      const tdNumero = _crearElemento('td', null, String(n) +
         (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
-      const tdId = el('td');
+      const tdId = _crearElemento('td');
       const id = entrada('text', { value: previo.id, placeholder: 'id lógico (IZQ, DER, Start…)' });
       id.disabled = !usado.checked;
       usado.addEventListener('change', () => { id.disabled = !usado.checked; });
@@ -347,10 +354,10 @@ const BaseFicha = (function () {
     contenedor.textContent = '';
 
     // Datos del GWB
-    const datos = el('section', 'fichaSeccion');
-    datos.appendChild(el('h3', null, 'Datos del GWB'));
-    const rejilla = el('div', 'fichaRejilla');
-    campos.nombre = campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre del cartucho' }));
+    const datos = _crearElemento('section', 'fichaSeccion');
+    datos.appendChild(_crearElemento('h3', null, 'Datos del GWB'));
+    const rejilla = _crearElemento('div', 'fichaRejilla');
+    campos.nombre = _campo(rejilla, 'Nombre', entrada('text', { placeholder: 'Nombre del cartucho' }));
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(sin definir)'], ['2', '2 botones'],
     ['4', '4 botones'], ['5', '5 botones']]) {
@@ -358,69 +365,69 @@ const BaseFicha = (function () {
       o.value = valor; o.textContent = texto;
       estilo.appendChild(o);
     }
-    campos.estilo = campo(rejilla, 'Estilo', estilo,
+    campos.estilo = _campo(rejilla, 'Estilo', estilo,
       'Opcional: si falta, se usa el del setup cargado.');
-    const par = el('div', 'fichaPar');
+    const par = _crearElemento('div', 'fichaPar');
     campos.ancho = entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
     campos.alto = entrada('number', { min: 1, step: 1, placeholder: 'alto' });
-    par.append(campos.ancho, el('span', null, '×'), campos.alto);
-    campo(rejilla, 'Resolución', par,
+    par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
+    _campo(rejilla, 'Resolución', par,
       'Opcional: si falta, se usa la pantalla del setup cargado.');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
     // Imágenes
-    const seccionImg = el('section', 'fichaSeccion');
-    seccionImg.appendChild(el('h3', null, 'Imágenes'));
-    const fila = el('div', 'fichaImagenes');
-    for (const def of IMAGENES) fila.appendChild(crearTarjetaImagen(def));
+    const seccionImg = _crearElemento('section', 'fichaSeccion');
+    seccionImg.appendChild(_crearElemento('h3', null, 'Imágenes'));
+    const fila = _crearElemento('div', 'fichaImagenes');
+    for (const def of IMAGENES) fila.appendChild(_crearTarjetaImagen(def));
     seccionImg.appendChild(fila);
-    seccionImg.appendChild(el('p', 'fichaNota', '* obligatoria para guardar el GWB.'));
+    seccionImg.appendChild(_crearElemento('p', 'fichaNota', '* obligatoria para guardar el GWB.'));
     contenedor.appendChild(seccionImg);
 
     // Botones
-    const seccionBot = el('section', 'fichaSeccion');
-    seccionBot.appendChild(el('h3', null, 'Botones'));
-    const tabla = el('table', 'fichaTabla');
-    const cabecera = el('thead');
-    const trCab = el('tr');
-    for (const t of ['Usado', 'Botón', 'Id']) trCab.appendChild(el('th', null, t));
+    const seccionBot = _crearElemento('section', 'fichaSeccion');
+    seccionBot.appendChild(_crearElemento('h3', null, 'Botones'));
+    const tabla = _crearElemento('table', 'fichaTabla');
+    const cabecera = _crearElemento('thead');
+    const trCab = _crearElemento('tr');
+    for (const t of ['Usado', 'Botón', 'Id']) trCab.appendChild(_crearElemento('th', null, t));
     cabecera.appendChild(trCab);
-    cuerpoBotones = el('tbody');
+    cuerpoBotones = _crearElemento('tbody');
     tabla.append(cabecera, cuerpoBotones);
     seccionBot.appendChild(tabla);
-    seccionBot.appendChild(el('p', 'fichaNota',
+    seccionBot.appendChild(_crearElemento('p', 'fichaNota',
       'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
     contenedor.appendChild(seccionBot);
 
     // Mensajes de verificación (los botones Aplicar y Guardar GWB están
     // en la pestaña, F5-I12) y el aviso de cambios sin aplicar.
-    mensajes = el('div', 'fichaMensajes');
-    avisoCambios = el('p', 'fichaAviso oculto',
+    mensajes = _crearElemento('div', 'fichaMensajes');
+    avisoCambios = _crearElemento('p', 'fichaAviso oculto',
       'Hay cambios sin aplicar: pulsa Aplicar para que pasen al editor y al simulador.');
     contenedor.insertBefore(avisoCambios, contenedor.firstChild);
     contenedor.appendChild(mensajes);
     // Toda edición del usuario (escribir, elegir, marcar, cargar o borrar
     // una imagen) deja la ficha como borrador hasta el siguiente Aplicar.
-    const marcar = () => marcarCambios(true);
+    const marcar = () => _marcarCambios(true);
     contenedor.addEventListener('input', marcar);
     contenedor.addEventListener('change', marcar);
 
-    campos.estilo.addEventListener('change', pintarTablaBotones);
-    pintarTablaBotones();
+    campos.estilo.addEventListener('change', _pintarTablaBotones);
+    _pintarTablaBotones();
   }
 
   // ---------------- Verificación y guardado ----------------
 
   /** Muestra errores (rojo) y avisos (ámbar) bajo la ficha. */
-  function pintarMensajes(errores, avisos) {
+  function _pintarMensajes(errores, avisos) {
     mensajes.textContent = '';
     if (errores.length > 0) {
-      mensajes.appendChild(el('strong', 'fichaError', 'La ficha tiene errores:'));
+      mensajes.appendChild(_crearElemento('strong', 'fichaError', 'La ficha tiene errores:'));
     }
-    const lista = el('ul');
-    for (const t of errores) lista.appendChild(el('li', 'fichaError', t));
-    for (const t of avisos) lista.appendChild(el('li', 'fichaAviso', 'Aviso: ' + t));
+    const lista = _crearElemento('ul');
+    for (const t of errores) lista.appendChild(_crearElemento('li', 'fichaError', t));
+    for (const t of avisos) lista.appendChild(_crearElemento('li', 'fichaAviso', 'Aviso: ' + t));
     if (lista.children.length > 0) mensajes.appendChild(lista);
   }
 
@@ -431,7 +438,7 @@ const BaseFicha = (function () {
    * @param {HTMLImageElement} img - Imagen.
    * @returns {number} Píxeles que no son blanco/negro puros.
    */
-  function pixelesNoBN(img) {
+  function _pixelesNoBN(img) {
     const c = document.createElement('canvas');
     c.width = img.naturalWidth; c.height = img.naturalHeight;
     const g = c.getContext('2d', { willReadFrequently: true });
@@ -456,7 +463,7 @@ const BaseFicha = (function () {
   function verificar(opciones) {
     const opt = opciones || {};
     const errores = [], avisos = [];
-    asegurar();
+    _asegurar();
     const e = estado();
     const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
       ? BaseDirector.estiloDeSetup() : null;
@@ -513,7 +520,7 @@ const BaseFicha = (function () {
         avisos.push('img_s mide ' + s.imagen.naturalWidth + '×' + s.imagen.naturalHeight +
           ' y la resolución declarada es ' + e.resolucion.ancho + '×' + e.resolucion.alto + '.');
       }
-      const raros = pixelesNoBN(s.imagen);
+      const raros = _pixelesNoBN(s.imagen);
       if (raros > 0) {
         avisos.push('img_s no es blanco y negro puro (' + raros + ' píxeles con otros ' +
           'colores; ¿antialiasing?): la carga la rechazará.');
@@ -532,12 +539,12 @@ const BaseFicha = (function () {
     // Validación del contrato del GWB (la misma que al cargarlo). El
     // mapa de ficheros se monta aquí con las imágenes en memoria.
     if (errores.length === 0) {
-      const json = montarGWB();
+      const json = _montarGWB();
       const mapa = new Map(Object.values(json.imagenes).map(n => [n, true]));
       const fallo = BaseCartucho.validarGWB(json, mapa, json.estilo || delSetup);
       if (fallo) errores.push('Validación del GWB: ' + fallo);
     }
-    if (opt.mostrar) pintarMensajes(errores, avisos);
+    if (opt.mostrar) _pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos };
   }
 
@@ -547,7 +554,7 @@ const BaseFicha = (function () {
    * @param {boolean} hay - true si hay cambios sin aplicar.
    * @returns {void}
    */
-  function marcarCambios(hay) {
+  function _marcarCambios(hay) {
     sucio = !!hay;
     if (avisoCambios) avisoCambios.classList.toggle('oculto', !sucio);
   }
@@ -569,8 +576,8 @@ const BaseFicha = (function () {
    * @returns {Promise<File[]>} Los ficheros del GWB.
    */
   async function ficherosGWB() {
-    asegurar();
-    const json = montarGWB();
+    _asegurar();
+    const json = _montarGWB();
     const ficheros = [new File([JSON.stringify(json, null, 2)], 'cartucho_GWB.json',
       { type: 'application/json' })];
     const imgs = imagenesEnMemoria();
@@ -585,7 +592,7 @@ const BaseFicha = (function () {
    * Monta el objeto GWB desde la ficha (ya verificada).
    * @returns {Object} GWB listo para serializar.
    */
-  function montarGWB() {
+  function _montarGWB() {
     const e = estado();
     const json = { tipo: 'GWB', version: 1, nombre: e.nombre };
     if (e.estilo) json.estilo = e.estilo;
@@ -607,7 +614,7 @@ const BaseFicha = (function () {
    * @returns {Promise<boolean>} true si se guardó.
    */
   async function guardar() {
-    asegurar();
+    _asegurar();
     const { errores } = verificar({ mostrar: true });
     if (errores.length > 0) {
       BaseDirector.avisarError('El GWB no se guarda: ' + errores.length +
@@ -615,7 +622,7 @@ const BaseFicha = (function () {
       return false;
     }
     const e = estado();
-    const tamano = await BaseCartucho.guardarGWB(montarGWB(),
+    const tamano = await BaseCartucho.guardarGWB(_montarGWB(),
       e.imagenes.img_f ? e.imagenes.img_f.imagen : null,
       e.imagenes.img_s.imagen,
       e.imagenes.img_m ? e.imagenes.img_m.imagen : null);
@@ -633,9 +640,9 @@ const BaseFicha = (function () {
       raiz = contenedor;
       campos = {}; imagenes = {}; idsBoton = {};
       construir(contenedor);
-      refrescarBotonesImagen('img_s');
+      _refrescarBotonesImagen('img_s');
     } else {
-      pintarTablaBotones();           // el setup pudo cambiar desde la última visita
+      _pintarTablaBotones();           // el setup pudo cambiar desde la última visita
     }
   }
 
@@ -644,7 +651,7 @@ const BaseFicha = (function () {
    * antes de que el usuario abra la pestaña).
    * @returns {void}
    */
-  function asegurar() {
+  function _asegurar() {
     if (!raiz) pintar(document.getElementById('fichaCartucho'));
   }
 
@@ -654,8 +661,8 @@ const BaseFicha = (function () {
    *   imagenes:Object, botones:Array}} Datos de la ficha.
    */
   function estado() {
-    asegurar();
-    pintarTablaBotones();             // vuelca lo escrito en idsBoton
+    _asegurar();
+    _pintarTablaBotones();             // vuelca lo escrito en idsBoton
     const ancho = parseInt(campos.ancho.value, 10);
     const alto = parseInt(campos.alto.value, 10);
     const imgs = {};
@@ -663,7 +670,7 @@ const BaseFicha = (function () {
       imgs[d.clave] = imagenes[d.clave].img
         ? { imagen: imagenes[d.clave].img, nombre: imagenes[d.clave].nombre } : null;
     }
-    const botones = botonesDelEstilo(estiloEfectivo())
+    const botones = botonesDelEstilo(_estiloEfectivo())
       .filter(n => idsBoton[String(n)] && idsBoton[String(n)].usado)
       .map(n => ({ numero: n, id: idsBoton[String(n)].id.trim() }));
     return {
@@ -708,7 +715,7 @@ const BaseFicha = (function () {
    *   img_m:?HTMLImageElement}} Imágenes en memoria.
    */
   function imagenesEnMemoria() {
-    asegurar();
+    _asegurar();
     const o = {};
     for (const d of IMAGENES) o[d.clave] = imagenes[d.clave].img;
     return o;
@@ -720,8 +727,8 @@ const BaseFicha = (function () {
    * @returns {void}
    */
   function reiniciar() {
-    asegurar();
-    for (const d of IMAGENES) vaciarImagen(d.clave);
+    _asegurar();
+    for (const d of IMAGENES) _vaciarImagen(d.clave);
     idsBoton = {};
     extras = {};
     campos.nombre.value = '';
@@ -729,9 +736,9 @@ const BaseFicha = (function () {
     campos.ancho.value = '';
     campos.alto.value = '';
     cuerpoBotones.textContent = '';
-    pintarTablaBotones();
+    _pintarTablaBotones();
     if (mensajes) mensajes.textContent = '';
-    marcarCambios(false);
+    _marcarCambios(false);
   }
 
   /**
@@ -743,7 +750,7 @@ const BaseFicha = (function () {
    * @returns {void}
    */
   function poblar(d) {
-    asegurar();
+    _asegurar();
     if (d.nombre !== undefined) campos.nombre.value = d.nombre || '';
     if (d.estilo !== undefined) {
       const v = d.estilo === null ? '' : String(d.estilo);
@@ -762,7 +769,7 @@ const BaseFicha = (function () {
       }
       cuerpoBotones.textContent = '';   // que no pise lo recién cargado
     }
-    pintarTablaBotones();
+    _pintarTablaBotones();
     if (d.imagenes) {
       for (const [clave, img] of Object.entries(d.imagenes)) {
         if (img && imagenes[clave]) ponerImagen(clave, img, clave + '.png');
@@ -770,7 +777,7 @@ const BaseFicha = (function () {
     }
     if (d.extras) extras = Object.assign({}, d.extras);
     if (mensajes) mensajes.textContent = '';
-    marcarCambios(false);        // lo cargado es lo aplicado
+    _marcarCambios(false);        // lo cargado es lo aplicado
   }
 
   /**
@@ -783,10 +790,10 @@ const BaseFicha = (function () {
    * @returns {void}
    */
   function ponerImagen(clave, img, nombre) {
-    asegurar();
+    _asegurar();
     if (!imagenes[clave]) return;
-    if (img) colocarImagen(clave, img, nombre || clave + '.png', null);
-    else vaciarImagen(clave);
+    if (img) _colocarImagen(clave, img, nombre || clave + '.png', null);
+    else _vaciarImagen(clave);
   }
 
   /**
@@ -797,7 +804,7 @@ const BaseFicha = (function () {
    */
   function bloquearImgS(bloquear) {
     imgSBloqueada = !!bloquear;
-    if (raiz) refrescarBotonesImagen('img_s');
+    if (raiz) _refrescarBotonesImagen('img_s');
   }
 
   /**
@@ -824,7 +831,7 @@ const BaseFicha = (function () {
     verificar: verificar,
     guardar: guardar,
     hayCambios: hayCambios,
-    marcarAplicado: () => marcarCambios(false),
+    marcarAplicado: () => _marcarCambios(false),
     ficherosGWB: ficherosGWB,
     botonesDelEstilo: botonesDelEstilo
   };

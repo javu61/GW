@@ -149,11 +149,11 @@ La verificación es una función única, usada por el guardado del GWB, el del G
 Guardar un cartucho en una carpeta de disco no es cosa que un
 navegador sepa hacer sin más: no puede crear un directorio y escribir
 ficheros dentro de forma general. La solución es usar el mismo sistema 
-que utilizamos al guardar el GWI: un botón \textbf{Verificar y guardar GWB} en la 
-ficha que genera \texttt{cartucho\_GWB.zip} con el JSON y las imágenes que el cartucho declara, 
-con el mismo empaquetado que ya existe (iteración~\ref{sec:F5I11}). Se escribe con un serializador propio, 
-\texttt{formatearGWB}, que incluye solo lo que un GWB declara (sin sprites, segmentos ni autoría). 
-Mientras guarda, el botón queda deshabilitado.
+que utilizamos al guardar el GWI: un botón \textbf{Verificar y guardar GWB}
+en la ficha que genera \texttt{cartucho\_GWB.zip} con el JSON y las imágenes 
+que el cartucho declara, con el mismo empaquetado que ya existe para los 
+cartuchos GWI. Se escribe con un serializador propio, 
+\texttt{formatearGWB}, que incluye solo lo que un GWB declara (sin sprites, segmentos ni autoría). Mientras guarda, el botón queda deshabilitado.
 
 La carga de ficheros ZIP ya está resuelta por la iteración anterior: el
 núcleo de carga detecta la forma por el CONTENIDO
@@ -161,7 +161,7 @@ núcleo de carga detecta la forma por el CONTENIDO
 sigue el camino de apertura del paquete y recursión con el tipo esperado y 
 carga como si fuera la carpeta. 
 
-El único hueco era de entrada: el botón «Cargar GWB» usa un selector 
+El único hueco era de entrada: en el botón «Cargar GWB» se usaba un selector 
 de directorio (\texttt{webkitdirectory}), que no admite soltar un ZIP. 
 \underline{En esta iteración} se añade pues la doble vía de entrada del 
 GWB, carpeta o ZIP, desdoblando en dos botones, uno carga un directorio 

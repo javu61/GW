@@ -1,14 +1,30 @@
 # GW
 Game &amp; Watch: Proyecto de creación de un sistema para juegos del tipo WG en un ESP32
 
-Fichero  Index.html      : Carga del entorno
-Ficheros Base*           : Editor de cartuchos
-Ficheros Juego*          : Emulador para ejecutar el juego
-Directorio GW Memoria    : Memoria del proyecto
-Directorio GW Iteraciones: Diario del desarrollo
-Ficheros setup*.js       : Configuración de la máquina
-Ficheros cartucho*       : Datos de los cartuchos creados
-Directorio cartucho      : Cartucho GWB sin comprimir
+NOTA: El fichero cartucho_GWC.gwc es el único binario y no se debe tocar, igual que los empaquetados 
+      y los de imágenes *.png, pero para el resto todos los ficheros de texto y de fuentes deben usar
+      convención de fin de línea de Windows CR+LF.
+
+Tipos de Cartucho:
+GWS: Setup, el de la máquina final (pantalla y botones)
+GWB: Base, imágenes de partida y botones a usar
+GWI: Intermedio, todo lo necesario para el juego, en formato legible + imágenes
+GWC: Compacto, el único binario preparado para la carga en el ESP32
+
+
+Directorio  GW Memoria      : Memoria del proyecto
+Directorio  GW Iteraciones  : Diario del desarrollo
+
+Fichero     Index.html      : Carga del entorno
+Directorio  designer        : Módulos javaScript
+  Ficheros    Base*           : Editor de cartuchos
+  Ficheros    Juego*          : Emulador para ejecutar el juego
+  Fichero     ComunListas.js  : Enlace entre módulos Base y Juego
+  Fichero     estilos.css     : CSS del sistema
+  Ficehro     jszip.min.js    : módulo de manejo de ZIP estándar
+Ficheros    setup*.js       : Configuración de la máquina base
+Directorio  cartucho        : Cartucho GWB sin comprimir
+Ficheros    cartucho*       : Datos de los cartuchos creados
 
 
 ORDEN DE CAGA DE LOS MODULOS:
@@ -24,5 +40,3 @@ ORDEN DE CAGA DE LOS MODULOS:
   <script src="designer/JuegoMotorEstados.js"></script>
   <script src="designer/JuegoMotorGrafico.js"></script>
   <script src="designer/JuegoDirector.js"></script>
-
-El fichero cartucho_GWC.gwc es el único binario y no se debe tocar, igual que los empaquetados y los de imágenes *.png, pero para el resto todos los ficheros de texto y de fuentes deben usar convención de fin de línea de Windows CR+LF.

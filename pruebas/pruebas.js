@@ -1,4 +1,4 @@
-// pruebas/Pruebas.js — Pestaña «Pruebas» del diseñador
+// pruebas/pruebas.js — Pestaña «Pruebas» del diseñador
 // ================================================================================================
 // PROPÓSITO
 //   Reúne en una pestaña del navegador (VISIBLE SOLO CON GW_DEBUG, index.html) comprobaciones

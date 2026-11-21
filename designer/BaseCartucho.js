@@ -24,6 +24,8 @@
 //   validarGWB              Validación ESPECÍFICA, llama a validarComunes
 //   validarGWI              Validación ESPECÍFICA, llama a validarComunes
 //   cargarDelMapa           Carga una imagen referenciada por el JSON.
+//   _esColorRGB             ¿Es un color «#RRGGBB»? (ColorFondo, F5-I14).
+//   _bytesDeColor           Bytes R, G, B de un «#RRGGBB» (blanco por defecto).
 //   _validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
 //   leerCartucho            Lectura completa: JSON, validación despachada
 //                           por tipo, tipo esperado e imágenes.
@@ -55,8 +57,8 @@
 //   escalar                 Sprite → máscara de 1 bit escalada a la pantalla.
 //   indiceDe                Id legible → índice de 1 byte (0xFF = nulo).
 //   bloque                  Estructura común de un bloque.
-//   _sumaDeVerificacion     Calcula el CRC de 16 bits
-//   _codigoDeSuma           Retorna el texto del CRC como «#HHHH#».
+//   _crc16                  CRC-16/CCITT-FALSE del cuerpo del GWC (F5-I14).
+//   _codigoDeCRC            Retorna el texto del CRC como «#HHHH#».
 //   estadistica             Texto con el tamaño final y su desglose.
 //
 //  Lectura del GWC (autocontenida)
@@ -65,10 +67,58 @@
 //   _validarCabeceraGWC 
 //   _abrirBloqueGWC
 //   _leerDatosGeneralesGWC  
+//   _mecanismoDeFin         Código de fin → mecanismo (error si es desconocido).
 //   _leerConfiguracionGWC 
 //   _leerSpritesGWC
 //   _leerSegmentosGWC
 //   _leerSecuenciasGWC      Un paso de la lectura cada una.
+//
+//  Otras funciones internas (lista completada en F5-I14)
+//   _crearURL                     Crea una object URL para un fichero y la anota para revocarla al li…
+//   _leerJSONsLegibles            Lee todos los .json indicados; los que no se puedan leer se saltan…
+//   _elegirPorPrioridad           Elige el JSON de mayor prioridad de tipo (GWC > GWI > GWB).
+//   _describirTiposEncontrados    Texto que dice exactamente qué «tipo» declara cada JSON leído (nada…
+//   _lineaDeCampo                 Línea JSON de un campo simple: `  "clave": valor`.
+//   _lineaDeLista                 Lista con UNA línea por elemento (sprites, segmentos, botones...).
+//   _lineaDeAutoria               Sección de autoría: historial a una línea por acción + contador.
+//   _lineasOpcionales             Líneas de los campos opcionales que el GWI sí trae.
+//   _verificarReferenciasColgantesUn enlace que no resuelve a NINGÚN grupo existente es un ERROR bloq…
+//   _verificarInversosDeDireccionesInverso de las direcciones del jugador:
+//   _verificarInversoDeUnaDireccionComprueba (y completa si falta) el inverso de UNA dirección de un j…
+//   _verificarInversosDeColision  Inverso de la colisión:
+//   _verificarSegmentosUnoAUno    Revisa cada segmento según su tipo.
+//   _verificarEnlacesPropios      Los enlaces del tipo deben apuntar a un segmento que exista y que n…
+//   _verificarCadenaDeRuta        Avisos sobre cadenas: inicios que no llevan a ningún sitio, contado…
+//   _verificarJugador             Todo jugador necesita ALGUNA dirección (sin ninguna es imposible de…
+//   _verificarColisionDeclarada   Colisiones:
+//   _verificarDigito              Dígito: las SIETE barras (barra_a..g) puestas y de tipo juego.
+//   _verificarContador            Contador:
+//   _verificarAdicional           Tipos adicionales (fuera del juego):
+//   _recogerApuntadosPorCadena    Raíces de todos los grupos a los que alguna cadena (siguiente/salva…
+//   _verificarAcompanantes        Acompañantes:
+//   _completarInversoDeAcompananteCalcula B.mostradoJunto = A si falta; avisa si apunta a otro.
+//   _verificarReglasDeSecundario  Solo tipo juego, sin cadena ni colisión, que nadie lo apunte y que…
+//   _retirarAcompanantesHuerfanos Un «mostrado junto a» cuyo principal ya no lo apunta se retira (com…
+//   _verificarBarrasDeDigitos     Las barras no se comparten entre dígitos (error) y no participan en…
+//   _verificarDigitosDeContadores Un dígito solo puede ser posición de UN contador (si no, dos contad…
+//   _verificarFichaDeCartucho     Debe haber exactamente UNA ficha de cartucho y con mecanismo de fin…
+//   _verificarMecanismoDeFin      Coherencia del mecanismo de fin con lo que el cartucho tiene en pan…
+//   _verificarFinPorContador      Fin por contador:
+//   _verificarSecuenciaDeCartucho Secuencia: cada segmento existe y es juego/inicio/adicional; con se…
+//   _verificarDirectorDeCartucho  Campos del Director:
+//   _verificarJugadoresYRutas     Al menos UN jugador (sin él no hay partida: bloqueante) y al menos…
+//   _byteDe                       Un byte como array.
+//   _u16LE                        uint16 little-endian como array de 2 bytes.
+//   _u32LE                        uint32 little-endian como array de 4 bytes.
+//   _textoGWC                     Texto ASCII como array de bytes.
+//   _concatenar                   Concatena varios arrays/Uint8Array en un único Uint8Array.
+//   _numeroODefecto               Valor numérico o su valor por defecto si falta (undefined/null).
+//   _byteOpcional                 Un campo opcional del GWI como byte:
+//   _escalasDePantalla            Escala por eje de la imagen fuente a la pantalla declarada.
+//   _pixelesDeSprite              Píxeles RGBA de un sprite (canvas del editor, o Image pasada por un…
+//   _propiedadesDeSegmento        Byte de propiedades de un segmento:
+//   _idDeSegmentoGWC              Id legible de un segmento a partir de su índice.
+//   _leerRegistroDeSegmentoGWC    Un registro de segmento del Bloque 3 como objeto con la forma del e…
 // ====================================================================================================
 
 var BaseCartucho = (function () {
@@ -161,11 +211,11 @@ var BaseCartucho = (function () {
    * @param {HTMLImageElement} imagen - Imagen en memoria (img_f o img_s).
    * @returns {Promise<Blob>} PNG de la imagen.
    */
-  function imagenBlob(imagen) {
+  function imagenBlob(imagen, ancho, alto) {
     const lienzo = document.createElement('canvas');
-    lienzo.width = imagen.naturalWidth;
-    lienzo.height = imagen.naturalHeight;
-    lienzo.getContext('2d').drawImage(imagen, 0, 0);
+    lienzo.width = ancho > 0 ? ancho : imagen.naturalWidth;
+    lienzo.height = alto > 0 ? alto : imagen.naturalHeight;
+    lienzo.getContext('2d').drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
     return new Promise(resolver => lienzo.toBlob(resolver, 'image/png'));
   }
 
@@ -299,10 +349,16 @@ var BaseCartucho = (function () {
           ' y el setup es de estilo ' + estiloMaquina + ' (menos botones).';
       }
     }
-    // resolucion {ancho, alto}: OPCIONAL en el GWB (si falta se usa la
-    // "pantalla" del GWS cargado); OBLIGATORIA en el GWI. Un GWI antiguo 
-    // sin ella se rechaza con un mensaje claro. Si viene y difiere de la
-    // del setup, solo aviso por consola (no bloquea).
+    // ColorFondo (F5-I14): OPCIONAL, '#RRGGBB'. Es el fondo de la pantalla
+    // cuando el cartucho no tiene img_f (blanco si falta).
+    if (json.ColorFondo !== undefined && json.ColorFondo !== null &&
+      !_esColorRGB(json.ColorFondo)) {
+      return 'el "ColorFondo" del cartucho debe ser un color "#RRGGBB".';
+    }
+    // resolucion {ancho, alto}: OPCIONAL en el GWB; OBLIGATORIA en el GWI,
+    // que debe poder cargarse sin un setup previo. Es INFORMATIVA (F5-I14):
+    // la que manda es la del Setup (el hardware); si difiere se escala y
+    // solo hay aviso por consola (no bloquea).
     if (json.resolucion === undefined || json.resolucion === null) {
       if (json.tipo === 'GWI') {
         return 'el GWI necesita "resolucion" {ancho, alto}.';
@@ -398,6 +454,25 @@ var BaseCartucho = (function () {
   async function cargarDelMapa(mapa, rutaFichero) {
     const fichero = mapa.get(rutaFichero) || mapa.get(rutaFichero.split('/').pop());
     return cargarImagen(fichero);
+  }
+
+  /**
+   * ¿Es un color «#RRGGBB»?
+   * @param {*} valor - Valor a comprobar.
+   * @returns {boolean} true si es un texto «#RRGGBB» (hexadecimal).
+   */
+  function _esColorRGB(valor) {
+    return typeof valor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(valor);
+  }
+
+  /**
+   * Bytes R, G, B de un color «#RRGGBB» (blanco si no es válido o falta).
+   * @param {?string} color - Color «#RRGGBB».
+   * @returns {number[]} [R, G, B].
+   */
+  function _bytesDeColor(color) {
+    const c = _esColorRGB(color) ? color : COLOR_FONDO_DEFECTO;
+    return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
   }
 
   /**
@@ -563,7 +638,7 @@ var BaseCartucho = (function () {
    * @returns {string} Texto JSON del GWI.
    */
   function _formatearGWI(json) {
-    // El código del par (suma de verificación del GWC) solo si existe.
+    // El código del par (CRC del GWC) solo si existe.
     const lineaCodigoGWC = (json.codigoGWC !== undefined && json.codigoGWC !== null)
       ? [_lineaDeCampo('codigoGWC', json.codigoGWC)] : [];
 
@@ -581,6 +656,7 @@ var BaseCartucho = (function () {
       _lineaDeCampo('nombre', json.nombre),
       _lineaDeCampo('estilo', json.estilo),
       _lineaDeCampo('resolucion', json.resolucion),
+      ...(_esColorRGB(json.ColorFondo) ? [_lineaDeCampo('ColorFondo', json.ColorFondo)] : []),
       _lineaDeCampo('imagenes', imagenesGWI),
       ..._lineasOpcionales(json),
       _lineaDeLista('botones', json.botones),
@@ -605,6 +681,7 @@ var BaseCartucho = (function () {
     ];
     if (json.estilo) lineas.push(_lineaDeCampo('estilo', json.estilo));
     if (json.resolucion) lineas.push(_lineaDeCampo('resolucion', json.resolucion));
+    if (_esColorRGB(json.ColorFondo)) lineas.push(_lineaDeCampo('ColorFondo', json.ColorFondo));
     lineas.push(_lineaDeCampo('imagenes', json.imagenes));
     for (const campo of ['combinar', 'etiquetas']) {
       if (json[campo]) lineas.push(_lineaDeCampo(campo, json[campo]));
@@ -674,7 +751,13 @@ var BaseCartucho = (function () {
     const referenciaImgS = (json.imagenes && json.imagenes.img_s) || json.img_s || null;
     const referenciaImgF = (json.imagenes && json.imagenes.img_f) || null;
     if (imgF && referenciaImgF) {
-      entradas.push({ nombre: referenciaImgF, contenido: await imagenBlob(imgF) });
+      // F5-I14: en el GWI el fondo va SIEMPRE al tamaño del Setup (el GWB
+      // conserva el original).
+      const pantalla = BaseDirector.pantallaDeSetup();
+      entradas.push({
+        nombre: referenciaImgF,
+        contenido: await imagenBlob(imgF, pantalla ? pantalla.ancho : 0, pantalla ? pantalla.alto : 0)
+      });
     } else if (referenciaImgF) {
       BaseDirector.avisarError('El paquete no incluye img_f: el GWI no podrá cargar solo.');
     } else {
@@ -1413,6 +1496,9 @@ var BaseCartucho = (function () {
 
   // Versión del formato: el CARÁCTER «1» (la cabecera se lee «GWC1»).
   const VERSION_GWC = '1';
+  const COLOR_FONDO_DEFECTO = '#FFFFFF';   // fondo si el cartucho no declara ColorFondo
+  const CRC16_POLINOMIO = 0x1021;          // CRC-16/CCITT-FALSE: polinomio,
+  const CRC16_INICIAL = 0xFFFF;            // valor inicial (sin reflejar, sin xor final)
 
   // Tamaños fijos del formato.
   const TAM_CABECERA_GWC = 14;
@@ -1642,7 +1728,7 @@ var BaseCartucho = (function () {
    * Genera el GWC: valida los topes y ORQUESTA el ensamblado — cada bloque
    * lo monta SU PROPIA función; el Bloque 0 va el último (necesita las
    * direcciones de los demás) y la cabecera al final, sobre los bytes ya
-   * montados, con la suma de verificación del resto. DETERMINISTA: sin
+   * montados, con el CRC del resto. DETERMINISTA: sin
    * azar y con recorridos en orden fijo.
    * @param {Object} json - GWI montado (listas, fin, secuencia, pausas,
    *        aceleración y rutas al nivel superior).
@@ -1860,7 +1946,8 @@ var BaseCartucho = (function () {
 
   /**
    * Bloque 0 Datos Generales: estilo, pantalla declarada, conteos, color de
-   * fondo RGB (blanco: la v1 no escribe el bloque de fondo) y las
+   * fondo RGB (json.ColorFondo, blanco por defecto: la v1 no escribe el
+   * bloque de imagen de fondo) y las
    * direcciones de los seis bloques (los ausentes, a nulo). Mide SIEMPRE 40
    * bytes (35 de contenido): las direcciones se calculan con los TAMAÑOS
    * de los bloques ya montados — por eso se monta el último aunque en el
@@ -1889,7 +1976,7 @@ var BaseCartucho = (function () {
     contenido.push(..._u16LE(pantalla.ancho), ..._u16LE(pantalla.alto));
     contenido.push(..._byteDe(viaja.sprites.length), ..._byteDe(viaja.segmentos.length));
     contenido.push(..._byteDe(bloqueSecuencias ? 1 : 0));
-    contenido.push(0xFF, 0xFF, 0xFF);        // fondo RGB: blanco por defecto
+    contenido.push(..._bytesDeColor(json.ColorFondo));   // fondo RGB (blanco por defecto)
     contenido.push(..._u32LE(direccionBloque0), ..._u32LE(direccionBloque1),
       ..._u32LE(direccionBloque2), ..._u32LE(direccionBloque3),
       ..._u32LE(direccionBloque4), ..._u32LE(direccionBloque5));
@@ -1898,13 +1985,13 @@ var BaseCartucho = (function () {
 
   /**
    * La cabecera del fichero: «GWC» + la versión como CARÁCTER (visible al
-   * abrir el fichero: «GWC1») + la suma de verificación del resto como
+   * abrir el fichero: «GWC1») + el CRC del resto como
    * TEXTO «#HHHH#» + el tamaño del FICHERO. Se monta AL FINAL sobre el
-   * cuerpo ya ensamblado (la suma no se incluye a sí misma). La parte
+   * cuerpo ya ensamblado (el CRC no se incluye a sí mismo). La parte
    * visible va DELANTE a propósito: lo binario (el tamaño) detrás.
    * @param {Uint8Array} cuerpo - Todos los bloques ya ensamblados.
    * @returns {{bytes:Uint8Array, checksum:number, codigo:string}} El
-   *          fichero completo, su suma de verificación y el código.
+   *          fichero completo, su CRC y el código.
    */
   function _montarCabecera(cuerpo) {
     const tamanoTotal = TAM_CABECERA_GWC + cuerpo.length;
@@ -1913,34 +2000,41 @@ var BaseCartucho = (function () {
     fichero.set(_textoGWC('GWC' + VERSION_GWC), 0);   // 4 bytes visibles
     fichero.set(cuerpo, TAM_CABECERA_GWC);
 
-    const checksum = _sumaDeVerificacion(cuerpo);
-    const codigo = _codigoDeSuma(checksum);
+    const checksum = _crc16(cuerpo);
+    const codigo = _codigoDeCRC(checksum);
     fichero.set(_textoGWC(codigo), 4);                // 6 bytes: «#HHHH#»
     fichero.set(_u32LE(tamanoTotal), 10);
     return { bytes: fichero, checksum: checksum, codigo: codigo };
   }
 
   /**
-   * La suma de verificación del GWC: suma de los bytes módulo 65536. Cubre
-   * TODO el fichero menos la cabecera.
+   * El CRC-16/CCITT-FALSE del GWC (F5-I14; polinomio 0x1021, inicial 0xFFFF,
+   * sin reflejar ni xor final; «123456789» → 0x29B1). Cubre TODO el fichero
+   * menos la cabecera. Detecta bytes cambiados, intercambiados y ráfagas de
+   * hasta 16 bits, lo que la suma aditiva anterior no hacía.
    * @param {Uint8Array} bytes - Los bytes a proteger.
-   * @returns {number} La suma módulo 65536.
+   * @returns {number} El CRC de 16 bits.
    */
-  function _sumaDeVerificacion(bytes) {
-    let suma = 0;
-    for (let i = 0; i < bytes.length; i++) suma = (suma + bytes[i]) & 0xFFFF;
-    return suma;
+  function _crc16(bytes) {
+    let crc = CRC16_INICIAL;
+    for (let i = 0; i < bytes.length; i++) {
+      crc ^= bytes[i] << 8;
+      for (let bit = 0; bit < 8; bit++) {
+        crc = (crc & 0x8000) ? ((crc << 1) ^ CRC16_POLINOMIO) & 0xFFFF : (crc << 1) & 0xFFFF;
+      }
+    }
+    return crc;
   }
 
   /**
-   * Formatea una suma de verificación como el Código GWC: el TEXTO visible
-   * «#HHHH#» (hexadecimal en mayúsculas, 4 dígitos). Mismo formato que el
-   * campo del par en el GWI y que la cabecera del GWC.
-   * @param {number} suma - La suma módulo 65536.
-   * @returns {string} El código, p. ej. «#0B99#».
+   * Formatea el CRC como el Código GWC: el TEXTO visible «#HHHH#»
+   * (hexadecimal en mayúsculas, 4 dígitos). Mismo formato que el campo del
+   * par en el GWI y que la cabecera del GWC.
+   * @param {number} crc - El CRC de 16 bits.
+   * @returns {string} El código, p. ej. «#29B1#».
    */
-  function _codigoDeSuma(suma) {
-    return '#' + suma.toString(16).toUpperCase().padStart(4, '0') + '#';
+  function _codigoDeCRC(crc) {
+    return '#' + crc.toString(16).toUpperCase().padStart(4, '0') + '#';
   }
 
   /**
@@ -1986,7 +2080,7 @@ var BaseCartucho = (function () {
 
   /**
    * Valida la cabecera: tamaño mínimo, identificador «GWC», versión,
-   * tamaño declarado y suma de verificación. Cualquier desviación es un
+   * tamaño declarado y CRC. Cualquier desviación es un
    * error explícito.
    * @returns {{suma:number, codigo:string}} Suma real y su código «#HHHH#».
    */
@@ -2006,15 +2100,14 @@ var BaseCartucho = (function () {
         ') no cuadra con el fichero (' + bytes.length + ').');
     }
 
-    let suma = 0;
-    for (let i = TAM_CABECERA_GWC; i < bytes.length; i++) suma = (suma + bytes[i]) & 0xFFFF;
-    const codigoReal = '#' + suma.toString(16).toUpperCase().padStart(4, '0') + '#';
+    const crc = _crc16(bytes.subarray(TAM_CABECERA_GWC));
+    const codigoReal = _codigoDeCRC(crc);
     const codigoDeclarado = String.fromCharCode(...bytes.slice(4, 10));
     if (codigoDeclarado !== codigoReal) {
-      throw new Error('la suma de verificación no coincide (declarada ' + codigoDeclarado +
+      throw new Error('el CRC no coincide (declarado ' + codigoDeclarado +
         ', real ' + codigoReal + '): el GWC está corrupto.');
     }
-    return { suma: suma, codigo: codigoReal };
+    return { suma: crc, codigo: codigoReal };
   }
 
   /**
@@ -2066,6 +2159,13 @@ var BaseCartucho = (function () {
     };
   }
 
+  /** Mecanismo de fin a partir de su código; uno desconocido es un GWC corrupto. */
+  function _mecanismoDeFin(codigo) {
+    const mecanismo = FIN_GWC_INV[codigo];
+    if (!mecanismo) throw new Error('el Bloque 1 declara un mecanismo de fin desconocido (' + codigo + ').');
+    return mecanismo;
+  }
+
   /** Bloque 1: pausas, aceleración, política de rutas y fin (9 uint16; nulo = no declarado; los GWC de 8 valores se leen con las reglas a 0). */
   function _leerConfiguracionGWC(bytes, lector, posicion) {
     const config = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_CONFIG_GWC, 'Configuración');
@@ -2099,7 +2199,7 @@ var BaseCartucho = (function () {
       combinar: (config.tam >= TAM_CONTENIDO_CONFIG_GWC) &&
         (valor(8) & BIT_REGLA_COMBINAR_GWC) !== 0,
       fin: (codigoFin !== NULO16_GWC) ? {
-        mecanismo: FIN_GWC_INV[codigoFin] || 'contador',
+        mecanismo: _mecanismoDeFin(codigoFin),
         contador: (contadorFin !== NULO16_GWC) ? contadorFin : undefined
       } : null
     };
@@ -2112,6 +2212,10 @@ var BaseCartucho = (function () {
    */
   function _leerSpritesGWC(bytes, lector, posicion, nSprites) {
     const bloqueSprites = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SPRITES_GWC, 'Sprites');
+    if (bloqueSprites.tam < nSprites * 4) {
+      throw new Error('el Bloque 2 declara ' + nSprites +
+        ' sprite(s) y su tabla de direcciones no cabe en su contenido.');
+    }
     const finBloque = bloqueSprites.inicio + bloqueSprites.tam;
     const sprites = [];
 
@@ -2148,14 +2252,18 @@ var BaseCartucho = (function () {
     }
     const segmentos = [];
     for (let i = 0; i < nSegmentos; i++) {
-      segmentos.push(_leerRegistroDeSegmentoGWC(lector, bloqueSegmentos.inicio + i * TAM_REGISTRO_SEGMENTO_GWC, i, sprites));
+      segmentos.push(_leerRegistroDeSegmentoGWC(lector, bloqueSegmentos.inicio + i * TAM_REGISTRO_SEGMENTO_GWC, i, sprites, nSegmentos));
     }
     return segmentos;
   }
 
   /** Un registro de segmento del Bloque 3 como objeto con la forma del editor. */
-  function _leerRegistroDeSegmentoGWC(lector, inicioRegistro, indice, sprites) {
+  function _leerRegistroDeSegmentoGWC(lector, inicioRegistro, indice, sprites, nSegmentos) {
     const indiceSprite = lector.u8(inicioRegistro + 5);
+    if (indiceSprite !== NULO_GWC && indiceSprite >= sprites.length) {
+      throw new Error('el segmento ' + indice + ' usa el sprite ' + indiceSprite +
+        ' y el cartucho solo tiene ' + sprites.length + '.');
+    }
     const segmento = {
       id: _idDeSegmentoGWC(indice),
       x: lector.u16(inicioRegistro + 1),
@@ -2169,6 +2277,10 @@ var BaseCartucho = (function () {
     let posicion = inicioRegistro + 6;
     for (const campo of ENLACES_REGISTRO_GWC) {
       const indiceEnlace = lector.u8(posicion++);
+      if (indiceEnlace !== NULO_GWC && indiceEnlace >= nSegmentos) {
+        throw new Error('el segmento ' + indice + ' enlaza (' + campo + ') con el segmento ' +
+          indiceEnlace + ' y el cartucho solo tiene ' + nSegmentos + '.');
+      }
       if (indiceEnlace !== NULO_GWC) segmento[campo] = _idDeSegmentoGWC(indiceEnlace);
     }
 
@@ -2202,7 +2314,7 @@ var BaseCartucho = (function () {
    * a nulo). La v1 lleva UNA Secuencia; si el cartucho trae más, se lee la
    * primera y se avisa. Sin bloque devuelve null.
    */
-  function _leerSecuenciasGWC(bytes, lector, posicion, nSecuencias) {
+  function _leerSecuenciasGWC(bytes, lector, posicion, nSecuencias, nSegmentos) {
     if (posicion === NULO32_GWC) return null;
     const bloqueSecuencias = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_SECUENCIAS_GWC, 'Secuencias');
     if (nSecuencias > 1) {
@@ -2215,6 +2327,10 @@ var BaseCartucho = (function () {
     const segmentos = [];
     for (let i = 0; i < MAX_SEGMENTOS_SECUENCIA_GWC; i++) {
       const indice = lector.u8(inicio + 1 + i);
+      if (indice !== NULO_GWC && indice >= nSegmentos) {
+        throw new Error('la Secuencia usa el segmento ' + indice +
+          ' y el cartucho solo tiene ' + nSegmentos + '.');
+      }
       if (indice !== NULO_GWC) segmentos.push(_idDeSegmentoGWC(indice));
     }
     return { ticks: lector.u8(inicio), segmentos: segmentos };
@@ -2245,7 +2361,7 @@ var BaseCartucho = (function () {
     const configuracion = _leerConfiguracionGWC(bytes, lector, direcciones[1]);
     const sprites = _leerSpritesGWC(bytes, lector, direcciones[2], generales.nSprites);
     const segmentos = _leerSegmentosGWC(bytes, lector, direcciones[3], generales.nSegmentos, sprites);
-    const secuencia = _leerSecuenciasGWC(bytes, lector, direcciones[4], generales.nSecuencias);
+    const secuencia = _leerSecuenciasGWC(bytes, lector, direcciones[4], generales.nSecuencias, generales.nSegmentos);
 
     return {
       estilo: String(generales.estilo),

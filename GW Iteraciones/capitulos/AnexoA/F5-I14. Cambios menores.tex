@@ -1,0 +1,120 @@
+\section{Decimocuarta iteración de la Fase 5: cambios menores}
+\label{sec:F5I14}
+
+Esta iteración agrupa pequeños cambios que tocan el formato del GWC, para regenerar los cartuchos una sola vez: el color de fondo y la regla de las resoluciones, una mejora en el cálculo del CRC-16 en lugar de la suma aditiva y la validación del lector del GWC. 
+
+\subsection{Color de fondo y resoluciones}
+\label{sec:F5I14Fondo}
+
+Hay dos ideas de partida:
+
+\begin{itemize}
+	\item Si el cartucho no tiene imagen de fondo (como en el juego Ball real), la pantalla se pinta de un color liso: blanco por defecto o el que defina el cartucho. La imagen de fondo dentro del GWC (Bloque 5) sigue reservada de momento hasta efectuar las pruebas en un ESP32 real para definir el mejor sistema, como define el apartado «Bloque de la imagen de Fondo» del formato del cartucho (sección~\ref{sec:F5I2Fondo}).
+
+	\item En las resoluciones manda siempre lo definido en el Setup, porque es lo que describe el hardware disponible en el ESP32, el dato se incluye en el resto de cartuchos como información necesaria.
+\end{itemize}
+
+\subsubsection{El campo ColorFondo}
+
+El GWB y el GWI admiten un campo opcional \texttt{ColorFondo} con formato \texttt{"\#RRGGBB"}:
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Lugar} & \textbf{Comportamiento} \\
+		\midrule
+		GWB / GWI & Nuevo campo opcional \texttt{ColorFondo}. Si falta o es blanco no se escribe (los valores por defecto no viajan). Un valor que no sea \texttt{\#RRGGBB} es un error de validación. \\
+		Ficha (pestaña Cartucho) & Selector «Color de fondo», que solo se usa si no hay \texttt{img\_f}. \\
+		GWC & Se escribe en el campo \textbf{Fondo} (3 bytes RGB) del Bloque 0. Hasta ahora siempre llevaba \texttt{FF FF FF}. \\
+		Simulador / editor & Sin \texttt{img\_f}, la pantalla se pinta con \texttt{ColorFondo}; con \texttt{img\_f}, manda la imagen. El GWC ya pintaba su color de fondo; ahora el GWI hace lo mismo. \\
+		\bottomrule
+	\end{tabularx}
+	\caption{El color de fondo en cada formato.}
+\end{table}
+
+\subsubsection{Regla de las resoluciones}
+
+\begin{enumerate}
+	\item La resolución del \textbf{Setup} es la de la pantalla real y es la que manda. El GWC se genera siempre para esa pantalla, y el simulador la dibuja de ese tamaño.
+	
+	\item La \texttt{resolucion} del cartucho es \textbf{informativa}: indica el tamaño de trabajo de las imágenes y permite que un GWI o un GWC lleven su propia pantalla declarada, de modo que en el futuro puedan cargarse en el simulador sin un Setup previo. Si difiere de la del Setup no es un error: la ficha avisa de que manda la del Setup.
+	
+	\item \texttt{img\_f} se escala siempre al tamaño del Setup al guardar el \textbf{GWI}. El \textbf{GWB} la conserva en su tamaño original (es material de partida y no se debe degradar). \texttt{img\_s} no cambia: es la base de la geometría y las posiciones del GWC se escalan a partir de ella.
+\end{enumerate}
+
+\subsection{CRC-16 en lugar de la suma}
+\label{sec:F5I14CRC}
+
+La suma de verificación era un sistema rápido y sencillo de calcular: la suma de los bytes módulo 65536. Esa suma no detecta dos bytes intercambiados de sitio ni cambios que se compensen, pero la idea ya era un CRC. En esta iteración se sustituye por el \textbf{CRC-16/CCITT-FALSE}: polinomio \texttt{0x1021}, valor inicial \texttt{0xFFFF}, sin reflejar y sin XOR final. Se comprueba contra el vector estándar: la cadena «123456789» da \texttt{0x29B1}.
+
+\begin{itemize}
+	\item Sigue cubriendo todo el fichero menos la cabecera y se escribe igual, como texto \texttt{\#HHHH\#}. El Código GWC del par del GWI no cambia de formato, pero sí de valor.
+	\item El generador y el lector comparten ahora la misma función (antes el lector repetía el bucle de la suma).
+	\item Los GWC y los GWI generados antes de esta iteración dejan de cuadrar: el lector los rechaza con «el CRC no coincide». Hay que regenerar el par con «Generar GWB+GWI+GWC». No se cambia la versión del formato porque todavía no hay cartuchos en uso fuera del desarrollo.
+\end{itemize}
+
+El \textbf{CRC-16/CCITT-FALSE} es una variante de verificación de redundancia cíclica de 16 bits con polinomio 0x1021, valor inicial 0xFFFF, sin reflexión de bits (refin = false, refout = false) y sin XOR final (xorout = 0x0000). Usa estos parámetros y vectores de prueba:
+
+\begin{itemize}
+	\item Ancho: 16 bits
+	\item Polinomio: 0x1021 $x^{16} + x^{12} + x^5 + 1$
+	\item Valor inicial (Init): 0xFFFF
+	\item Reflejar entrada (RefIn): false
+	\item Reflejar salida (RefOut): false
+	\item XOR final (XorOut): 0x0000
+	\item Comprobación ASCII "123456789": 0x29B1
+	\item Entrada vacía: 0xFFFF
+\end{itemize}
+
+\subsection{El lector del GWC}
+\label{sec:F5I14Lector}
+
+El lector del GWC era permisivo con los datos incoherentes y fallaba con un \texttt{TypeError} sin explicación, o peor, los disfrazaba. Como ese lector servirá de base al del ESP32, ahora valida y da un error claro en cada caso:
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Situación} & \textbf{Resultado} \\
+		\midrule
+		Un segmento usa un sprite que no existe & Error: «el segmento N usa el sprite K y el cartucho solo tiene M» \\
+		Un enlace apunta a un segmento que no existe & Error indicando segmento, campo y número \\
+		La Secuencia usa un segmento que no existe & Error indicando el segmento \\
+		Código de fin desconocido (antes se leía como «contador») & Error: «mecanismo de fin desconocido» \\
+		La tabla de direcciones de sprites no cabe en el Bloque 2 & Error \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Validaciones nuevas del lector del GWC.}
+\end{table}
+
+En todos los casos el cartucho no se carga a medias: la llamada falla antes de devolver nada y el simulador conserva el cartucho anterior.
+
+\subsection{Pruebas}
+\label{sec:F5I14Pruebas}
+
+\begin{itemize}
+	\item Nuevo módulo \texttt{pruebas/pruebasF5I14.js} (15 comprobaciones): vector del CRC; detección de bytes intercambiados; \texttt{ColorFondo} de ida y vuelta por el GWC (blanco por defecto y \texttt{\#336699}); el color cambia el código del GWC; la ficha lo entrega y el blanco no viaja; un GWB sin \texttt{img\_f} y con \texttt{ColorFondo} se carga y pinta ese color; y las cinco validaciones del lector, corrompiendo el fichero y recalculando el CRC para que solo falle la validación nueva.
+	\item Ampliado \texttt{pruebas/equivalenciaGWC.js}: compara también \texttt{ColorFondo} del GWI con el fondo del GWC, y la variante declara \texttt{\#336699}. Resultado: datos iguales, 32 ticks iguales con GWI y con GWC.
+\end{itemize}
+
+\subsection{Ficheros modificados}
+\label{sec:F5I14Ficheros}
+
+\begin{itemize}
+	\item \texttt{BaseCartucho.js}: \texttt{ColorFondo} (validación, serialización GWB/GWI, Bloque 0), \texttt{imagenBlob} con tamaño opcional (escala de \texttt{img\_f} en el GWI), \texttt{\_crc16} y \texttt{\_codigoDeCRC} (sustituyen a la suma), validaciones del lector y \texttt{\_mecanismoDeFin}.
+	\item \texttt{BaseFicha.js}: selector de color, avisos de resolución y tamaño de \texttt{img\_f}.
+	\item \texttt{BaseDirector.js}: \texttt{colorFondo}, \texttt{\_fondoDeColor} y su uso en la carga y el simulador.
+	\item \texttt{BaseDescomponer.js}: \texttt{ColorFondo} en el GWI y fondo del editor.
+\end{itemize}
+
+\subsection{Mejoras pendientes}
+\label{sec:F5I14Pendientes}
+
+\begin{itemize}
+	\item Cargar un GWI o un GWC en el simulador sin Setup previo, usando su resolución declarada (hoy las pestañas Cartucho y Simulador exigen un Setup).
+
+	\item Incluir la imagen de fondo en el GWC (Bloque 5), una vez estudiada la mejor representación en el ESP32 real.
+
+	\item Regenerar el par GWI/GWC de ejemplo con el cartucho completo: el código del par ha cambiado otra vez (CRC).
+\end{itemize}

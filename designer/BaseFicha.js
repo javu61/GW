@@ -51,7 +51,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _pintarTablaBotones     _campo
-//    _entrada            _liberar                _construir
+//    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
 const BaseFicha = (function () {
@@ -67,6 +67,8 @@ const BaseFicha = (function () {
     '4': [0, 1, 4, 5, ...TRIO_SISTEMA],
     '5': [0, 1, 2, 3, 4, ...TRIO_SISTEMA]
   };
+
+  const COLOR_BLANCO = '#ffffff';  // ColorFondo por defecto (no viaja en el cartucho)
 
   const IMAGENES = [
     {
@@ -143,6 +145,11 @@ const BaseFicha = (function () {
     if (nota) celda.appendChild(_crearElemento('span', 'fichaNota', nota));
     padre.appendChild(celda);
     return control;
+  }
+
+  /** ¿Es un color «#RRGGBB»? */
+  function _esColor(v) {
+    return typeof v === 'string' && /^#[0-9A-Fa-f]{6}$/.test(v);
   }
 
   function _entrada(tipo, extra) {
@@ -362,6 +369,9 @@ const BaseFicha = (function () {
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par,
       'Opcional: si falta, se usa la pantalla del setup cargado.');
+    campos.colorFondo = _entrada('color', { value: COLOR_BLANCO });
+    _campo(rejilla, 'Color de fondo', campos.colorFondo,
+      'Se usa si no hay img_f (blanco por defecto).');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
@@ -487,13 +497,13 @@ const BaseFicha = (function () {
     } else if (e.resolucion && pantalla &&
       (pantalla.ancho !== e.resolucion.ancho || pantalla.alto !== e.resolucion.alto)) {
       avisos.push('La resolución de la ficha (' + e.resolucion.ancho + '×' + e.resolucion.alto +
-        ') difiere de la del setup (' + pantalla.ancho + '×' + pantalla.alto + ')' +
-        (opt.generar ? ': el GWC se genera a la pantalla del setup (escalar a la ' +
-          'resolución de la ficha queda pendiente).' : '.'));
+        ') es informativa y difiere de la del setup (' + pantalla.ancho + '×' + pantalla.alto +
+        '): manda la del setup, y el GWI/GWC se generan a esa pantalla.');
     }
 
     // Imágenes: img_s obligatoria. Los tamaños pueden diferir (img_s
-    // grande para trabajar cómodo): el GWC las escala al generarse.
+    // grande para trabajar cómodo): el GWC escala al generarse y img_f
+    // se escala al tamaño del setup al guardar el GWI (el GWB la conserva).
     const s = e.imagenes.img_s, f = e.imagenes.img_f;
     if (!s) {
       errores.push('Falta img_s (obligatoria: de ella se extrae la geometría).');
@@ -502,7 +512,7 @@ const BaseFicha = (function () {
         s.imagen.naturalHeight !== f.imagen.naturalHeight)) {
         avisos.push('img_s (' + s.imagen.naturalWidth + '×' + s.imagen.naturalHeight +
           ') e img_f (' + f.imagen.naturalWidth + '×' + f.imagen.naturalHeight +
-          ') miden distinto (se escalarán al generar el GWC).');
+          ') miden distinto (img_f se escalará al tamaño del setup en el GWI; el GWB la conserva).');
       }
       if (e.resolucion && (s.imagen.naturalWidth !== e.resolucion.ancho ||
         s.imagen.naturalHeight !== e.resolucion.alto)) {
@@ -586,6 +596,7 @@ const BaseFicha = (function () {
     const json = { tipo: 'GWB', version: 1, nombre: e.nombre };
     if (e.estilo) json.estilo = e.estilo;
     if (e.resolucion) json.resolucion = e.resolucion;
+    if (e.colorFondo) json.ColorFondo = e.colorFondo;
     json.imagenes = { img_s: 'img_s.png' };
     if (e.imagenes.img_f) json.imagenes.img_f = 'img_f.png';
     if (e.imagenes.img_m) json.imagenes.img_m = 'img_m.png';
@@ -647,7 +658,7 @@ const BaseFicha = (function () {
   /**
    * Lee la ficha tal cual está (sin completar con el setup).
    * @returns {{nombre:string, estilo:?string, resolucion:?Object,
-   *   imagenes:Object, botones:Array}} Datos de la ficha.
+   *   colorFondo:?string, imagenes:Object, botones:Array}} Datos de la ficha.
    */
   function estado() {
     _asegurar();
@@ -666,6 +677,9 @@ const BaseFicha = (function () {
       nombre: campos.nombre.value.trim(),
       estilo: campos.estilo.value || null,
       resolucion: (ancho > 0 && alto > 0) ? { ancho: ancho, alto: alto } : null,
+      // Solo viaja si no es el blanco por defecto (los defaults no viajan).
+      colorFondo: campos.colorFondo.value.toLowerCase() === COLOR_BLANCO
+        ? null : campos.colorFondo.value.toUpperCase(),
       imagenes: imgs,
       botones: botones
     };
@@ -691,6 +705,7 @@ const BaseFicha = (function () {
       nombre: e.nombre,
       estilo: e.estilo || delSetup,
       resolucion: e.resolucion || pantalla,
+      colorFondo: e.colorFondo,
       imagenes: nombres,
       imgs: imagenesEnMemoria(),
       botones: e.botones,
@@ -724,6 +739,7 @@ const BaseFicha = (function () {
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
+    campos.colorFondo.value = COLOR_BLANCO;
     cuerpoBotones.textContent = '';
     _pintarTablaBotones();
     if (mensajes) mensajes.textContent = '';
@@ -734,7 +750,7 @@ const BaseFicha = (function () {
    * Rellena la ficha desde una carga (GWS, GWB o GWI). Solo toca lo que
    * viene definido; el director llama antes a reiniciar().
    * @param {{nombre:?string, estilo:?(string|number), resolucion:?Object,
-   *   botones:?Array<{numero:(string|number), id:?string}>,
+   *   colorFondo:?string, botones:?Array<{numero:(string|number), id:?string}>,
    *   imagenes:?Object, extras:?Object}} d - Datos a mostrar.
    * @returns {void}
    */
@@ -750,6 +766,9 @@ const BaseFicha = (function () {
       const r = d.resolucion;
       campos.ancho.value = r && r.ancho ? r.ancho : '';
       campos.alto.value = r && r.alto ? r.alto : '';
+    }
+    if (d.colorFondo !== undefined) {
+      campos.colorFondo.value = _esColor(d.colorFondo) ? d.colorFondo.toLowerCase() : COLOR_BLANCO;
     }
     if (d.botones !== undefined) {
       idsBoton = {};

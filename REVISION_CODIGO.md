@@ -21,13 +21,14 @@ Solo se marcan los puntos comprobados contra el código actual. Lo no citado aqu
 | 19 | Resuelto | `fijados.add(campo)` va después de descartar los enlaces internos. |
 | 31 | Resuelto (F5-I13) | El GWC no se comportaba como el GWI: rutas, pausas, orden de iconos y `combinar`. Ahora lo no declarado viaja como nulo y hay una prueba de equivalencia (`pruebas/equivalenciaGWC.js`). |
 | 29 | Resuelto (F5-I13) | El `contador` de vida y muerte viaja en el byte «valor inicial u orden» del registro de segmento. |
-| 28 | Pendiente | La suma de verificación sigue siendo aditiva. Cambiarla a CRC-16/CCITT altera el formato del GWC (y el «Código GWC» de los GWI existentes): hacerlo junto con la revisión de formatos (P03/P04). |
+| 30 | Resuelto (F5-I14) | El lector del GWC valida índices de sprite, enlaces, Secuencia, tabla de sprites y código de fin (error claro, no TypeError ni «contador» por defecto). |
+| 28 | Resuelto (F5-I14) | CRC-16/CCITT-FALSE en lugar de la suma aditiva (`_crc16`), compartido por generador y lector. |
 
 **Código muerto eliminado:** `avisarEtiquetas`, `BLOQUE_FONDO_GWC`, `cartuchoActual`, `segmentosEnMemoria`, y el bloqueo de img_s de la ficha (`bloquearImgS`, `alCambiarImagen`), que F5-I12 sustituye por el botón Aplicar.
 
 **Convención de nombres (F5-I12):** las funciones locales de cada módulo llevan `_` delante; solo las exportadas por el `return` del módulo no. Los motores y la ficha no exportan nada con `_`.
 
-**Siguen pendientes, por prioridad:** 6, 8, 9 y 10 (motor de estados); 11-13, 17; 18, 20-27 (editor); 29-30 (GWC); las erratas y discrepancias de la sección 2; las funciones gigantes y los patrones repetidos de la sección 3. Las exportaciones sin uso (p. ej. `JuegoMotorEstados.estadoRutas`, `BasePACK.verificarPACK`) se han dejado porque forman parte de la API documentada en el Anexo A.
+**Siguen pendientes, por prioridad:** 6, 8, 9 y 10 (motor de estados); 11-13, 17; 18, 20-27 (editor); las erratas y discrepancias de la sección 2; las funciones gigantes y los patrones repetidos de la sección 3. Las exportaciones sin uso (p. ej. `JuegoMotorEstados.estadoRutas`, `BasePACK.verificarPACK`) se han dejado porque forman parte de la API documentada en el Anexo A.
 
 ---
 

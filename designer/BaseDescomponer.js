@@ -79,7 +79,7 @@
 //  Composición del aparato
 //   _fijarEscalaAparato     Escala de la pantalla del aparato.
 //   _pixelesDeImagen        Lee los píxeles de una imagen en memoria.
-//   pintarFondoAparato     Fondo (blanco + img_f estirada).
+//   pintarFondoAparato     Fondo (ColorFondo + img_f estirada).
 //   pintarSegmentoAparato  Un segmento en negro puro, escalado.
 //   pintarPantallaAutoria  Fondo solo (GWB) o composición (GWI/guardado).
 //   pintarGWI              Presentación de un GWI cargado.
@@ -127,6 +127,49 @@
 //   _guardarGWI             Validaciones de contexto y delega en
 //                          BaseCartucho.guardarGWI.
 //   cargarAutoria         Reproduce el historial de un GWI (precarga).
+//
+//  Otras funciones internas (lista completada en F5-I14)
+//   _esBarraDeDigito              ¿Es este grupo una BARRA de un dígito (F4-I9)? Las barras se agrupa…
+//   _esDigitoDeContador           ¿Es este grupo un DÍGITO agrupado por un contador (F4-I9 v3)? Igual…
+//   _contadorDeDigito             El CONTADOR dueño de un dígito (o null si es dígito libre).
+//   _digitoDeBarra                El DÍGITO dueño de una barra (o null si es barra libre).
+//   _ficticioAbsorbente           La PIEZA (ficticio de UNIÓN) que ABSORBIÓ a un grupo (v4), o null.
+//   _esAbsorbido                  ¿Está este grupo ABSORBIDO por una unión (v4)? Los absorbidos no se…
+//   _aportantes                   Los grupos que APORTAN píxeles a una pieza (v4.6):
+//   _fusionarGrupos               
+//   _firmaPieza                   FIRMA de composición de una pieza (v4.7):
+//   _imagenFusionada              
+//   _registrarCambio              Registra una acción INDIVIDUAL:
+//   _registrarCambios             Registra una acción del historial, atómica:
+//   _quitarParUnion               Quita un par de la lista de uniones, en CUALQUIER de los dos órdene…
+//   _invertirEntrada              Aplica la INVERSA de una entrada del historial usando el valor prev…
+//   _propPorDefecto               Propiedades de un segmento recién nacido (todas por defecto):
+//   _numeroDe                     Número (posición) de un segmento numerable dentro de su familia ('i…
+//   _numRuta                      Número de ruta de un segmento de inicio.
+//   _numContador                  Número de contador de un segmento vida/muerte.
+//   _refrescarInfo                Repinta el panel de información (F5-I7):
+//   _filaDeLista                  Fila de la lista:
+//   _usosDeSprite                 Número de segmentos que usan un sprite (deduplicación:
+//   _agregarSublista              Añade una sublista con su título al contenedor.
+//   _colorRGB                     Convierte un color hex "#RRGGBB" a componentes [r, g, b].
+//   _relacionadosDe               Segmentos enlazados (SALIENTES) con el seleccionado:
+//   _entrantesDe                  Grupos cuyo enlace apunta DIRECTAMENTE al seleccionado (sus "anteri…
+//   _listaMotor                   Construye la lista residente del BaseGraficos desde los grupos:
+//   _refrescar                    Refresca todo el estado visible:
+//   _alPulsarMapa                 Pulsación en el mapa:
+//   _alMoverMapa                  Movimiento con el botón pulsado:
+//   _alSoltarMapa                 Al soltar:
+//   _esCartucho                   ¿El grupo es el segmento de CARTUCHO (F3-I11)? La ficha que alberga…
+//   _cartuchoDe                   El segmento de CARTUCHO vigente, o null (F3-I11).
+//   _secuenciaDelCartucho         La SECUENCIA como PROPIEDAD DEL CARTUCHO (duodécima iteración):
+//   _sincronizarSecuencia         ESCRIBE la Secuencia en el PUENTE (corrección del 23-10-2026):
+//   _pausasDelCartucho            Las PAUSAS como PROPIEDAD DEL CARTUCHO (F4-I2):
+//   _aceleracionDelCartucho       La ACELERACIÓN como PROPIEDAD DEL CARTUCHO (F4-I2):
+//   _rutasDelCartucho             La política de RUTAS como PROPIEDAD DEL CARTUCHO (F4-I2):
+//   _asegurarCartucho             ASEGURA que existe el segmento de CARTUCHO (F3-I11):
+//   _hacerDigito                  HACER DÍGITO (F4-I9 v3):
+//   _hacerContador                HACER CONTADOR (F4-I9 v3):
+//   _generarPar                   El cuerpo de «Generar»: se monta todo en memoria y los ficheros se…
 // ====================================================================================================
 
 const BaseDescomponer = (() => {
@@ -1844,7 +1887,7 @@ const BaseDescomponer = (() => {
     const imgF = BaseDirector.imagenFondo();
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#FFFFFF';               // base opaca (LCD apagado)
+    ctx.fillStyle = BaseDirector.colorFondo();   // base opaca (LCD apagado; ColorFondo del cartucho)
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (imgF) ctx.drawImage(imgF, 0, 0, canvas.width, canvas.height);
   }
@@ -4776,6 +4819,8 @@ const BaseDescomponer = (() => {
       // Resolución (obligatoria en el GWI, autosuficiente): la de la
       // ficha o, si está vacía, la del GWS en uso.
       resolucion: ficha.resolucion || null,
+      // ColorFondo (F5-I14): solo viaja si no es el blanco por defecto.
+      ...(ficha.colorFondo ? { ColorFondo: ficha.colorFondo } : {}),
       // Código GWC del par (F5-I6): el código «#HHHH#» del GWC,
       // AUSENTE cuando no lo hay (el GWI no lleva sobras). Solo lo
       // estampa «Generar GWI+GWC», con el código del GWC recién

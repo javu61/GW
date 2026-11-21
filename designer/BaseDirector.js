@@ -45,7 +45,7 @@
 //  Limpieza y dibujo
 //   _limpiarCartucho          Vacía el cartucho en memoria (y la autoría).
 //   _pintarFondoNeutro        Color de "sin cartucho".
-//   _pintarFondoCartucho      img_f escalada para LLENAR el canvas (blanco sin fondo).
+//   _pintarFondoCartucho      img_f escalada para LLENAR el canvas (ColorFondo/blanco sin fondo).
 //
 //  Panel de información (F5-I7)
 //   pintarInfo               Máquina y cartucho; en el Editor, el diseño.
@@ -66,6 +66,7 @@
 //   _volcarAlPuente           Fondo, reglas y campos del Director al puente
 //                            (compartido por GWI/GWB y GWC).
 //   _procesarGWC              Binario: leerGWC + puente + presentación.
+//   _fondoDeColor             Fondo plano del ColorFondo (null si es blanco).
 //   _fabricarFondoColor       Canvas plano del color del Bloque 0.
 //   _fabricarSprite           Imagen de una máscara de 1 bit.
 //
@@ -87,6 +88,18 @@
 // JS puro, script clásico sin módulos ES (compatible con file://).
 // Encapsulado como los demás ficheros del proyecto: IIFE con el
 // objeto público BaseDirector.
+//
+//  Otras funciones internas (lista completada en F5-I14)
+//   _procesarSetup                Proceso del setup GWS dentro del núcleo unificado (F5-I10):
+//   _aplicarJSONSetup             Valida y APLICA un setup ya leído (de fichero o de la ficha de la p…
+//   _aplicarDesdeFichaSetup       Botón «Aplicar» de la pestaña Setup (F5-I12):
+//   _aplicarDesdeFichaCartucho    Botón «Aplicar» de la pestaña Cartucho (F5-I12):
+//   _textoBytes                   Bytes en texto legible, o «—» si no hay dato.
+//   _buscarBotonPorTecla          Encuentra el botón físico asociado a una tecla (si existe).
+//   _alPulsarTecla                Permite jugar sin ratón:
+//   _alSoltarTecla                Soltar una tecla quita el resaltado de su botón.
+//   _pulsarSistema                Pulsación de un botón del trío en modo sistema (F5-I10).
+//   _lanzarJuego                  Lanza la partida con el TIPO del botón pulsado (F5-I10):
 // ====================================================================================================
 
 var BaseDirector = (function () {
@@ -106,6 +119,7 @@ var BaseDirector = (function () {
   let cartucho = null;                    // JSON del cartucho leído
   let pestanaVista = 'vistaSetup';        // vista activa (la fija mostrarPestanna; F5-I12: arranca en Setup)
   let imgM = null;                        // portada (img_m): cargada pero aún sin uso visual
+  let colorFondo = '#FFFFFF';             // ColorFondo del cartucho (fondo si no hay img_f; F5-I14)
   let imgF = null;                        // fondo (img_f): guardado en memoria para el motor gráfico
   let imgS = null;                        // imagen de segmentos (img_s): fuente de los sprites
   let numeroStart = BOTON_R;              // botón que arranca el juego (id "Start" del cartucho)
@@ -334,6 +348,7 @@ var BaseDirector = (function () {
     tamGWC = null;
     imgM = null;
     imgF = null;
+    colorFondo = '#FFFFFF';
     imgS = null;
     BaseDescomponer.reset();
     BaseGraficos.fijarFondo(null);
@@ -908,17 +923,21 @@ var BaseDirector = (function () {
       if (tipo === 'GWI') _montarBotonesSistema();
 
       imgF = leido.imgF;
-      _pintarFondoCartucho(imgF);
-      // El fondo (img_f) es SIEMPRE el fondo en todas las vistas; el
+      colorFondo = json.ColorFondo || '#FFFFFF';
+      // Sin img_f, el fondo es el ColorFondo del cartucho (F5-I14); en
+      // blanco (por defecto) no hace falta fabricar nada.
+      const fondo = imgF || _fondoDeColor(colorFondo);
+      _pintarFondoCartucho(fondo);
+      // El fondo es SIEMPRE el fondo en todas las vistas; el
       // BaseGraficos lo guarda: DibujarFondo y el XOR lo necesitan.
-      BaseGraficos.fijarFondo(imgF);
+      BaseGraficos.fijarFondo(fondo);
 
       // img_s: la base de la geometría (leída por el módulo; en GWI
       // puede venir como fichero propio copiado al guardar).
       imgS = leido.imgS;
       BaseDescomponer.reset();                     // autoría anterior, fuera
       // El puente se escribe DESPUÉS del reset (ver volcarAlPuente).
-      _volcarAlPuente(imgF, !!json.combinar, json);
+      _volcarAlPuente(fondo, !!json.combinar, json);
       // GWB: pantalla = solo fondo HASTA descomponer (entonces la
       // autoría pinta fondo + segmentos negros con refrescar).
 
@@ -959,6 +978,7 @@ var BaseDirector = (function () {
         nombre: json.nombre,
         estilo: json.estilo,
         resolucion: json.resolucion,
+        colorFondo: json.ColorFondo || null,
         botones: (json.botones || []).map(b => ({
           numero: _normalizarNumeroBoton(b.numero), id: b.id
         })),
@@ -1078,6 +1098,7 @@ var BaseDirector = (function () {
     // El fondo del GWC es un COLOR (v1: sin bloque de fondo): se
     // fabrica un canvas plano del color del Bloque 0 — el mismo
     // camino que img_f (pintado, motor gráfico y puente).
+    colorFondo = leido.fondo;
     imgF = _fabricarFondoColor(leido.fondo, leido.resolucion.ancho,
       leido.resolucion.alto);
     imgS = null;                   // el GWC no lleva img_s: sin geometría
@@ -1141,12 +1162,24 @@ var BaseDirector = (function () {
   }
 
   /**
-   * Fabrica el FONDO de un GWC: un canvas plano del color declarado en
-   * el Bloque 0 (la v1 no escribe el bloque de fondo). El resto del
-   * simulador lo consume como a img_f.
-   * @param {string} color - Color '#RRGGBB' del Bloque 0.
-   * @param {number} ancho - Ancho de la pantalla declarada.
-   * @param {number} alto - Alto de la pantalla declarada.
+   * El fondo plano del ColorFondo de un GWB/GWI sin img_f, del tamaño del
+   * canvas de la pantalla (F5-I14). Null si es blanco (no hace falta).
+   * @param {?string} color - Color '#RRGGBB'.
+   * @returns {?HTMLCanvasElement} El canvas del fondo, o null.
+   */
+  function _fondoDeColor(color) {
+    if (!color || color.toUpperCase() === '#FFFFFF') return null;
+    const canvas = _$('pantalla');
+    return _fabricarFondoColor(color, canvas.width, canvas.height);
+  }
+
+  /**
+   * Fabrica el FONDO de un color plano: el del Bloque 0 de un GWC (la v1
+   * no escribe el bloque de imagen de fondo) o el ColorFondo de un GWI. El
+   * resto del simulador lo consume como a img_f.
+   * @param {string} color - Color '#RRGGBB'.
+   * @param {number} ancho - Ancho del canvas.
+   * @param {number} alto - Alto del canvas.
    * @returns {HTMLCanvasElement} El canvas del fondo.
    */
   function _fabricarFondoColor(color, ancho, alto) {
@@ -1575,7 +1608,7 @@ var BaseDirector = (function () {
     estiloDeSetup: () => (setupGWS ? String(setupGWS.estilo) : null),
     pantallaDeSetup: () => (setupGWS && setupGWS.resolucion)
       ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto } : null,
-    imagenFondo: () => imgF, imagenSegmentos: () => imgS,
+    imagenFondo: () => imgF, colorFondo: () => colorFondo, imagenSegmentos: () => imgS,
     imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
     imagenBlob: (img) => BaseCartucho.imagenBlob(img)
   };

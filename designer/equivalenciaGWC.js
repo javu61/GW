@@ -1,4 +1,4 @@
-// pruebas/equivalenciaGWC.js — F5-I13 (+ ColorFondo, F5-I14)
+// pruebas/equivalenciaGWC.js — F5-I13 (+ cartucho completo y semillas, F5-I14)
 // ================================================================================================
 // PROPÓSITO
 //   Comprueba que un GWC generado desde un GWI es EQUIVALENTE a él: mismos datos de configuración
@@ -16,6 +16,11 @@
 //
 // USO
 //   NODE_PATH=$(npm root -g) node pruebas/equivalenciaGWC.js [setup.json] [gwi.zip] [ticks]
+//   COMPLETO=1 (F5-I14) declara en el GWI rutas, aceleración, pausas y «combinar» y JUEGA con
+//   ese cartucho completo (datos y partida tick a tick), no solo los datos.
+//   SEMILLAS=1,6699,48879 (F5-I14) lista de semillas del generador de aleatorios con las que se
+//   juega; por defecto cinco. Cada semilla es una partida distinta y todas deben coincidir.
+//   DEPURAR=1 muestra, en la primera diferencia de cada partida, el estado de los segmentos.
 //   VARIANTE=1 declara además rutas, aceleración, pausas y regla «combinar» (que el cartucho de
 //   ejemplo no usa) y comprueba solo los DATOS: así se prueba que también viajan los valores
 //   declarados, no solo los ausentes.
@@ -29,8 +34,9 @@ const { execFileSync } = require('child_process');
 
 const RAIZ = path.resolve(__dirname, '..');
 const SETUP = process.argv[2] || path.join(RAIZ, 'setup4.json');
-const GWI = process.argv[3] || path.join(RAIZ, 'cartucho_gwi.zip');
+let GWI = process.argv[3] || path.join(RAIZ, 'cartucho_gwi.zip');
 const TICKS = Number(process.argv[4]) || 400;
+const SEMILLAS = (process.env.SEMILLAS || '1,6699,48879,32767,4660').split(',').map(Number);
 
 function jsonDelGWI(zip) {
   const dir = fs.mkdtempSync('/tmp/gwi_');
@@ -42,12 +48,32 @@ function jsonDelGWI(zip) {
 (async () => {
   const json = jsonDelGWI(GWI);
   const VARIANTE = !!process.env.VARIANTE;
-  if (VARIANTE) {
+  const COMPLETO = !!process.env.COMPLETO;
+  if (VARIANTE || COMPLETO) {
     json.rutas = { aumentarCada: 3 };
     json.aceleracion = { cada: 5, resta: 20, minimo: 100 };
     json.pausas = { simulador: 300, externo: 250 };
     json.combinar = true;
     json.ColorFondo = '#336699';
+  }
+  if (COMPLETO) {
+    // Un GWI con esas declaraciones, empaquetado de nuevo para jugarlo de verdad.
+    const dir = fs.mkdtempSync('/tmp/gwi_c_');
+    execFileSync('unzip', ['-q', '-o', GWI, '-d', dir]);
+    const f = fs.readdirSync(dir).find(n => n.endsWith('.json'));
+    // Al cargar un GWI, pausas, aceleración y rutas se RECONSTRUYEN desde las propiedades del
+    // segmento «cartucho» (autoria.cambios): hay que declararlas ahí, no solo arriba.
+    const cartucho = json.autoria.cambios.find(c => c.tipo === 'cartucho').segmento;
+    const nuevas = { pausaSim: 300, pausaEsp: 250, accCada: 5, accResta: 20, accMinimo: 100, aumentarCada: 3 };
+    for (const [campo, valor] of Object.entries(nuevas)) {
+      json.autoria.ultimoOp += 1;
+      json.autoria.cambios.push({ n: json.autoria.ultimoOp, relacionados: 0, segmento: cartucho,
+        [campo]: valor, antes: { [campo]: null } });
+    }
+    fs.writeFileSync(path.join(dir, f), JSON.stringify(json, null, 2));
+    GWI = '/tmp/gwi_completo.zip';
+    if (fs.existsSync(GWI)) fs.unlinkSync(GWI);
+    execFileSync('zip', ['-q', '-r', GWI, '.'], { cwd: dir });
   }
   const navegador = await chromium.launch();
   const pg = await navegador.newPage();
@@ -126,10 +152,10 @@ function jsonDelGWI(zip) {
   }, { j: json, bytes: gwcBytes });
 
   // --- JUEGO: N ticks con cada cartucho y comparación tick a tick ---
-  const jugar = async (cargar) => {
+  const jugar = async (cargar, semilla) => {
     await cargar();
     await pg.click('#pesSimulador');
-    await pg.evaluate(() => { window.__cola.length = 0; });
+    await pg.evaluate((sem) => { window.__cola.length = 0; JuegoDirector.fijarSemilla(sem); }, semilla);
     await pg.keyboard.press('z');                       // A = Start
     await pg.waitForTimeout(100);
     return pg.evaluate((n) => {
@@ -143,26 +169,31 @@ function jsonDelGWI(zip) {
       return hist;
     }, TICKS);
   };
-  if (VARIANTE) {
+  if (VARIANTE && !COMPLETO) {
     console.log('Datos: ' + (difs.length === 0 ? 'IGUALES (variante con rutas, aceleración, pausas y combinar)' : difs.length + ' diferencia(s)'));
     for (const x of difs.slice(0, 40)) console.log('  - ' + x);
     await navegador.close();
     process.exit(difs.length === 0 && errores.length === 0 ? 0 : 1);
   }
-  const histGWI = await jugar(async () => { await pg.setInputFiles('#ficheroGWIZip', GWI); await pg.waitForTimeout(3500); });
-  const histGWC = await jugar(async () => {
-    await pg.setInputFiles('#ficheroGWC', { name: 'equiv.gwc', mimeType: 'application/octet-stream', buffer: Buffer.from(gwcBytes) });
-    await pg.waitForTimeout(1500);
-  });
-  let primera = -1;
-  const n = Math.min(histGWI.length, histGWC.length);
-  for (let t = 0; t < n; t++) if (histGWI[t] !== histGWC[t]) { primera = t; break; }
-
-  console.log('Datos: ' + (difs.length === 0 ? 'IGUALES' : difs.length + ' diferencia(s)'));
+  let fallosJuego = 0;
+  console.log('Datos: ' + (difs.length === 0 ? 'IGUALES' + (COMPLETO ? ' (cartucho completo)' : '') : difs.length + ' diferencia(s)'));
   for (const x of difs.slice(0, 40)) console.log('  - ' + x);
-  console.log('Juego: ' + histGWI.length + ' ticks con el GWI, ' + histGWC.length + ' con el GWC; ' +
-    (primera < 0 && histGWI.length === histGWC.length ? 'IGUAL tick a tick' : 'primera diferencia en el tick ' + (primera < 0 ? n + 1 : primera + 1)));
+  for (const semilla of SEMILLAS) {
+    const histGWI = await jugar(async () => { await pg.setInputFiles('#ficheroGWIZip', GWI); await pg.waitForTimeout(3500); }, semilla);
+    const histGWC = await jugar(async () => {
+      await pg.setInputFiles('#ficheroGWC', { name: 'equiv.gwc', mimeType: 'application/octet-stream', buffer: Buffer.from(gwcBytes) });
+      await pg.waitForTimeout(1500);
+    }, semilla);
+    let primera = -1;
+    const n = Math.min(histGWI.length, histGWC.length);
+    for (let t = 0; t < n; t++) if (histGWI[t] !== histGWC[t]) { primera = t; break; }
+    const igualPartida = primera < 0 && histGWI.length === histGWC.length && histGWI.length > 0;
+    if (!igualPartida) fallosJuego++;
+    if (process.env.DEPURAR && primera >= 0) { console.log(' GWI:', histGWI[primera]); console.log(' GWC:', histGWC[primera]); console.log(' GWI-1:', histGWI[primera-1]); console.log(' GWC-1:', histGWC[primera-1]); }
+    console.log('Juego (semilla ' + semilla + '): ' + histGWI.length + ' ticks con el GWI, ' + histGWC.length + ' con el GWC; ' +
+      (igualPartida ? 'IGUAL tick a tick' : 'primera diferencia en el tick ' + (primera < 0 ? n + 1 : primera + 1)));
+  }
   if (errores.length) console.log('Errores de página:', errores);
   await navegador.close();
-  process.exit(difs.length === 0 && primera < 0 && histGWI.length === histGWC.length && errores.length === 0 ? 0 : 1);
+  process.exit(difs.length === 0 && fallosJuego === 0 && errores.length === 0 ? 0 : 1);
 })();

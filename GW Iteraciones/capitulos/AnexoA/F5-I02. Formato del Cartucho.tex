@@ -87,7 +87,7 @@ El fichero comienza por una cabecera de tamaño fijo que lo identifica unívocam
 		
 		Versión & Char & 1 & Versión del formato, inicialmente «1» \\ \hline
 		
-		CheckSum & Char & 6 & Suma de verificación de 16 bits del resto del fichero tras esta cabecera, sin incluirla, en formato «\#hhhh\#» para que sea visible\footnotemark \\ \hline
+		CheckSum & Char & 6 & \sout{Suma de verificación} CRC-16/CCITT\footnote{Cambiado en la iteración \ref{sec:F5I14CRC}.} de 16 bits del resto del fichero tras esta cabecera, sin incluirla, en formato «\#hhhh\#» para que sea visible\footnotemark \\ \hline
 		
 		Tamaño & Num & 4 & Tamaño del fichero \\ \hline	
 		\hline\hline
@@ -113,13 +113,13 @@ Este bloque define los datos generales del cartucho y el juego, siendo una estru
 		Tipo del bloque & Num & 1 & Número fijo: 0\\
 		\hline
 		
-		Tamaño & Num & 4 & Tamaño del bloque. 35 fijo \\
+		Tamaño & Num & 4 & Tamaño del bloque. \sout{35} 36 fijo\footnote{Se añade el byte de reglas, ver \ref{sec:F5I14Reglas}.} \\
 		\hline
 		
-		Contenido & Variable & 35 & Contenido del bloque \\
+		Contenido & Variable & \sout{35} 36 & Contenido del bloque \\
 		
 		\hline\hline
-		\multicolumn{4}{c}{\textbf{Tamaño: 40 Bytes}} \\ \hline
+		\multicolumn{4}{c}{\textbf{Tamaño: \sout{40} 41 Bytes}} \\ \hline
 	\end{tabular}
 	\caption{Bloque de Datos Generales.}
 \end{table}
@@ -140,7 +140,12 @@ estructura de C y sepa dónde está todo sin recorrer nada (se indica expresamen
 		Sprites & Num & 1 & Número de sprites en el cartucho & -  \\ \hline
 		Segmentos & Num & 1 & Número de segmentos en el cartucho & -  \\ \hline
 		Secuencias & Num & 1 & Número de secuencias en el cartucho & - \\ \hline
-		Fondo & Num & 3 & Color de fondo en RGB. & - \\ \hline
+		Fondo & Num & 3 & Color de fondo en RGB (campo \texttt{ColorFondo} del cartucho, blanco por defecto)\footnotemark. & - \\ \hline
+		Reglas & Num & 1 & Campo de bits con las reglas del juego:
+		\begin{itemize}
+			\item  el bit 0 es la regla \textbf{combinar}; 
+			\item los demás bits están reservados y valen 0\footnotemark
+		\end{itemize} & - \\ \hline
 		Inicio Bloque 0 & Num & 4 & Inicio del bloque 0 & Ob. \\ \hline
 		Inicio Bloque 1 & Num & 4 & Inicio del bloque 1 & Ob. \\ \hline
 		Inicio Bloque 2 & Num & 4 & Inicio del bloque 2 & Ob. \\ \hline
@@ -149,11 +154,18 @@ estructura de C y sepa dónde está todo sin recorrer nada (se indica expresamen
 		Inicio Bloque 5 & Num & 4 & Inicio del bloque 5 o \textbf{nulo} & Opc \\
 		
 		\hline\hline
-		\multicolumn{5}{c}{\textbf{Tamaño: 35 Bytes}} \\ \hline
+		\multicolumn{5}{c}{\textbf{Tamaño: \sout{35} 36 Bytes}} \\ \hline
 	\end{tabular}
 	\caption{Bloque 0: Datos Generales.}
 	\label{tab:bloque0DatosGenerales}
 \end{table}
+
+% Ajuste del contador para que coincidan los números de las dos notas
+\addtocounter{footnote}{-1}
+\footnotetext{Se define desde el cartucho en la iteración \ref{sec:F5I14Fondo}; antes valía siempre blanco.}
+\stepcounter{footnote}
+\footnotetext{Antes era el valor 08 del Bloque 1, ver \ref{sec:F5I14Reglas}.}
+
 
 Los punteros al inicio de los bloques se establecen solo para que sea
 más rápida la lectura del cartucho e ir directos al inicio de cada uno de los bloques.
@@ -164,9 +176,9 @@ Si no hay secuencias o imagen de fondo, los punteros a dichos bloques tendrán e
 \subsection{Bloque 1: Configuración general del juego}
 \label{sec:F5I2ConfGen}
 
-\textbf{NOTA:} Inicialmente eran 8 valores, pero se amplían a 9 al detectar un error, ver \ref{sec:F5I13}
+\textbf{NOTA:} Inicialmente eran 8 valores, se ampliaron a 9 al detectar un error (ver \ref{sec:F5I13}) y vuelven a ser 8 al pasar las reglas del juego al Bloque 0 (ver \ref{sec:F5I14Reglas}).
 
-Es necesario disponer de varios datos generales sobre el juego, velocidades, aceleraciones, lanzamientos, etc. Para guardar estos datos usaremos una tabla de \textbf{nueve} valores numéricos de 16 bits, de esta manera se reservan estos 18 bytes que estarán siempre presentes, y serán leídos por el firmware en una sola pasada como un array de \texttt{uint16\_t}.
+Es necesario disponer de varios datos generales sobre el juego, velocidades, aceleraciones, lanzamientos, etc. Para guardar estos datos usaremos una tabla de \textbf{ocho} valores numéricos de 16 bits, de esta manera se reservan estos 16 bytes que estarán siempre presentes, y serán leídos por el firmware en una sola pasada como un array de \texttt{uint16\_t}.
 
 \begin{table}[htbp]
 	\centering
@@ -177,13 +189,13 @@ Es necesario disponer de varios datos generales sobre el juego, velocidades, ace
 		Tipo del bloque & Num & 1 & Número fijo: 1\\
 		\hline
 		
-		Tamaño & Num & 4 & Tamaño del bloque. \sout{16} 20 fijo \\
+		Tamaño & Num & 4 & Tamaño del bloque. 16 fijo \\
 		\hline
 		
-		Contenido & Num & 18 & Contenido del bloque, 9 valores numéricos \\
+		Contenido & Num & 16 & Contenido del bloque, 8 valores numéricos \\
 		
 		\hline\hline
-		\multicolumn{4}{c}{\textbf{Tamaño: 23 Bytes}} \\ \hline
+		\multicolumn{4}{c}{\textbf{Tamaño: 21 Bytes}} \\ \hline
 	\end{tabular}
 	\caption{Bloque de Configuración general del juego.}
 \end{table}
@@ -216,7 +228,7 @@ sea su origen:
 		
 		07 & Contador de fin & El contador elegido cuando el mecanismo es por contador; \textbf{nulo} si no aplica \\ \hline
 		
-		08 & Reglas del juego & Campo de bits con las reglas del cartucho: el bit 0 es la regla \textbf{combinar} (dos pulsaciones en un mismo tick)\footnote{Inicialmnete no se maneja esta regla pues será una posible ampliación}; los demás bits están reservados y valen 0. Vale 0 si el cartucho no declara ninguna regla \\ \hline
+		08 & \textbf{Libre} & Antes contenía las reglas del juego; se movieron al Bloque 0 (campo \textbf{Reglas}), ver \ref{sec:F5I14Reglas}. Queda disponible para una ampliación futura. \\ \hline
 			
 	\end{tabular}
 	\caption{Datos en la tabla de configuración general del juego.}
@@ -475,8 +487,7 @@ Pero reservaremos una iteración solo para buscar la mejor técnica para poder o
 \label{sec:F5I2Def}
 
 La generación es siempre \textbf{determinista}: el mismo GWI debe
-producir siempre el mismo GWC byte a byte, con la misma suma de
-verificación. El generador es equivalente a un compilador, con
+producir siempre el mismo GWC byte a byte, con el mismo CRC. El generador es equivalente a un compilador, con
 el mismo origen siempre produce el mismo resultado.
 
 Para asegurar esto, se añade en el Cartucho GWI un campo denominado \textbf{codigoGWC} con el contenido del campo Checksum del cartucho GWC junto a sus marcas de inicio y fin (formato \#FFFF\#), que coincide cuando ambos cartuchos se han generado a partir de los mismos datos exactamente.

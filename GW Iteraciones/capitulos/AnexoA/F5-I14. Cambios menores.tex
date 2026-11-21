@@ -1,7 +1,7 @@
 \section{Decimocuarta iteración de la Fase 5: cambios menores}
 \label{sec:F5I14}
 
-Esta iteración agrupa pequeños cambios que tocan el formato del GWC, para regenerar los cartuchos una sola vez: el color de fondo y la regla de las resoluciones, una mejora en el cálculo del CRC-16 en lugar de la suma aditiva y la validación del lector del GWC. 
+Esta iteración agrupa pequeños cambios que tocan el formato del GWC, para regenerar los cartuchos una sola vez: el color de fondo y la regla de las resoluciones, una mejora en el cálculo del CRC-16 en lugar de la suma aditiva la validación del lector del GWC, el paso de las reglas del juego al Bloque 0 y una prueba de equivalencia GWI/GWC con un cartucho completo y varias partidas. 
 
 \subsection{Color de fondo y resoluciones}
 \label{sec:F5I14Fondo}
@@ -9,7 +9,7 @@ Esta iteración agrupa pequeños cambios que tocan el formato del GWC, para rege
 Hay dos ideas de partida:
 
 \begin{itemize}
-	\item Si el cartucho no tiene imagen de fondo (como en el juego Ball real), la pantalla se pinta de un color liso: blanco por defecto o el que defina el cartucho. La imagen de fondo dentro del GWC (Bloque 5) sigue reservada de momento hasta efectuar las pruebas en un ESP32 real para definir el mejor sistema, como define el apartado «Bloque de la imagen de Fondo» del formato del cartucho (sección~\ref{sec:F5I2Fondo}).
+	\item Si el cartucho no tiene imagen de fondo (como en el juego real Ball), la pantalla se pinta de un color liso: blanco por defecto o el que defina el cartucho. La imagen de fondo dentro del GWC (Bloque 5) sigue reservada de momento hasta efectuar las pruebas en un ESP32 real para definir el mejor sistema, como define el apartado «Bloque de la imagen de Fondo» del formato del cartucho (sección~\ref{sec:F5I2Fondo}).
 
 	\item En las resoluciones manda siempre lo definido en el Setup, porque es lo que describe el hardware disponible en el ESP32, el dato se incluye en el resto de cartuchos como información necesaria.
 \end{itemize}
@@ -94,13 +94,61 @@ El lector del GWC era permisivo con los datos incoherentes y fallaba con un \tex
 
 En todos los casos el cartucho no se carga a medias: la llamada falla antes de devolver nada y el simulador conserva el cartucho anterior.
 
+\subsection{Las reglas del juego pasan al Bloque 0}
+\label{sec:F5I14Reglas}
+
+En F5-I13 se amplió el Bloque 1 con un noveno valor, el campo de bits de reglas del juego, cuyo bit 0 es la regla \emph{combinar}. Aquel valor era un atajo: no es un dato de configuración del Director (pausas, aceleración, rutas, fin) sino una propiedad del cartucho, igual que el estilo o la pantalla. Se mueve al Bloque 0, y el valor 08 del Bloque 1 queda libre.
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Elemento} & \textbf{Antes (F5-I13)} & \textbf{Ahora (F5-I14)} \\
+		\midrule
+		Bloque 0 & 35 bytes de contenido (40 con su cabecera) & 36 bytes (41): se añade el byte \textbf{Reglas} tras el color de fondo; las seis direcciones de bloque se desplazan un byte \\
+		Bloque 1 & 9 valores, 18 bytes (23 con su cabecera) & 8 valores, 16 bytes (21): el valor 08 queda \textbf{libre} \\
+		Regla \emph{combinar} & Bit 0 del valor 08 del Bloque 1 & Bit 0 del byte Reglas del Bloque 0 \\
+		Lector & Aceptaba Bloques 1 de 8 y de 9 valores & Exige exactamente el formato nuevo (no hay cartuchos GWC anteriores en uso) \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Movimiento del bit \emph{combinar}.}
+\end{table}
+
+La regla \emph{combinar} no se maneja todavía en el juego real (será una ampliación), pero viaja igual en el GWI y en el GWC, en cumplimiento del principio de F5-I13. Se prueba que el bit sale y vuelve a leerse, y que los Bloques 0 y 1 miden 36 y 16 bytes.
+
+\subsection{Equivalencia GWI/GWC con un cartucho completo y varias partidas}
+\label{sec:F5I14Equivalencia}
+
+La prueba de equivalencia de F5-I13 jugaba una sola partida con un cartucho que no declaraba rutas, aceleración ni pausas. Se amplía en dos direcciones:
+
+\begin{itemize}
+	\item \textbf{Cartucho completo} (\texttt{COMPLETO=1}): el GWI se empaqueta de nuevo declarando pausas (300 y 250 ms), aceleración (cada 5, resta 20, mínimo 100), aumento de rutas cada 3 y la regla \emph{combinar}, y se juega con él (antes la variante solo comparaba datos).
+	\item \textbf{Varias semillas}: se juega una partida por semilla (por defecto cinco: 1, 6699, 48879, 32767 y 4660) con el GWI y con el GWC, y todas deben coincidir tick a tick. Para ello el director del juego dispone de \texttt{fijarSemilla(valor)}.
+\end{itemize}
+
+\textbf{Un falso positivo instructivo.} La primera ejecución con el cartucho completo mostró una diferencia en el tick 23 de todas las semillas. No era un fallo del GWC: al cargar un GWI las pausas, la aceleración y las rutas \emph{no se leen de los campos de primer nivel}, sino que se reconstruyen a partir de las propiedades del segmento «cartucho» registradas en \texttt{autoria.cambios}. El GWI de la prueba ignoraba lo declarado arriba y jugaba con los valores antiguos, mientras el GWC (generado desde el JSON modificado) usaba los nuevos. Se corrigió la prueba para declarar los valores donde el GWI los lee. Se deja anotado porque tiene una consecuencia: \textbf{quien edite a mano un GWI debe tocar \texttt{autoria}}, no solo los campos de primer nivel, que se regeneran al guardar.
+
+\textbf{Resultado:} con el cartucho de ejemplo y con el cartucho completo, datos iguales y todas las partidas iguales tick a tick (entre 32 y 38 ticks, porque sin pulsaciones la partida termina pronto por el mecanismo de fin «muerte»).
+
 \subsection{Pruebas}
 \label{sec:F5I14Pruebas}
 
 \begin{itemize}
 	\item Nuevo módulo \texttt{pruebas/pruebasF5I14.js} (15 comprobaciones): vector del CRC; detección de bytes intercambiados; \texttt{ColorFondo} de ida y vuelta por el GWC (blanco por defecto y \texttt{\#336699}); el color cambia el código del GWC; la ficha lo entrega y el blanco no viaja; un GWB sin \texttt{img\_f} y con \texttt{ColorFondo} se carga y pinta ese color; y las cinco validaciones del lector, corrompiendo el fichero y recalculando el CRC para que solo falle la validación nueva.
 	
-	\item Ampliado \texttt{pruebas/equivalenciaGWC.js}: compara también \texttt{ColorFondo} del GWI con el fondo del GWC, y la variante declara \texttt{\#336699}. Resultado: datos iguales, 32 ticks iguales con GWI y con GWC.
+	\item Ampliado \texttt{pruebas/equivalenciaGWC.js}: compara también \texttt{ColorFondo} del GWI con el fondo del GWC (la variante y el cartucho completo declaran \texttt{\#336699}), juega con cinco semillas y admite \texttt{COMPLETO=1} y \texttt{DEPURAR=1} (ver sección~\ref{sec:F5I14Equivalencia}).
+
+	\item La prueba de \texttt{ColorFondo} de la pestaña Pruebas (\texttt{pruebas/pruebas.js}) comprueba además el bit \emph{combinar} en el Bloque 0 y el tamaño de los Bloques 0 y 1; y las pruebas de corrupción del lector usan ahora las nuevas posiciones de las direcciones de bloque.
+\end{itemize}
+
+\subsection{Ficheros modificados}
+\label{sec:F5I14Ficheros}
+
+\begin{itemize}
+	\item \texttt{BaseCartucho.js}: \texttt{ColorFondo}, \texttt{\_crc16} y \texttt{\_codigoDeCRC}, validaciones del lector, y el byte de reglas en el Bloque 0 (el Bloque 1 vuelve a 8 valores).
+	\item \texttt{BaseFicha.js}, \texttt{BaseDirector.js} y \texttt{BaseDescomponer.js}: selector de color, fondo plano y avisos de resolución.
+	\item \texttt{JuegoDirector.js}: \texttt{fijarSemilla(valor)}.
+	\item \texttt{pruebas/pruebas.js}, \texttt{pruebas/pruebasF5I14.js} y \texttt{pruebas/equivalenciaGWC.js}.
 \end{itemize}
 
 \subsection{Mejoras pendientes}
@@ -111,5 +159,9 @@ En todos los casos el cartucho no se carga a medias: la llamada falla antes de d
 
 	\item Incluir la imagen de fondo en el GWC (Bloque 5), una vez estudiada la mejor representación en el ESP32 real.
 
-	\item Regenerar el par GWI/GWC de ejemplo con el cartucho completo: el código del par ha cambiado otra vez (CRC).
+	\item Regenerar el par GWI/GWC de ejemplo con el cartucho completo: el código del par ha cambiado otra vez (CRC y nuevo Bloque 0).
+
+	\item Que la prueba de equivalencia juegue con pulsaciones (izquierda y derecha) y no solo con la partida sin intervención, para cubrir colisiones, vidas y la regla \emph{combinar} cuando el juego la use.
+
+	\item Que Generar avise si el par GWI/GWC existente en el destino está desequilibrado (códigos distintos).
 \end{itemize}

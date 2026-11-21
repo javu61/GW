@@ -80,13 +80,9 @@ como posibles ampliaciones:
 
 \item Bloque A: formato y fiabilidad del GWC (antes de la documentación y del ESP32)
 	\begin{itemize}	
-		\item P05. Ejecutar la prueba de equivalencia con un cartucho completo (fin, secuencia, aceleración y rutas declarados) y con varias semillas.
+		\item P05. HECHO en F5-I14: equivalencia con cartucho completo y cinco semillas.
 		
-		\item P06. Pasar el bit combinar al Bloque 0 (datos generales).
-		Ese bloque tiene hoy 35 bytes y ninguno libre, así que habría que añadir un byte de reglas (36 bytes).
-		Cambia el formato, así que va con P02-P04.
-		El valor 08 del Bloque 1 pasaría a libre. Como hoy ya funciona, se hace solo si se toca el formato por P02-P04.
-	\end{itemize}
+		\item P06. HECHO en F5-I14: el bit combinar pasa al Bloque 0; el valor 08 del Bloque 1 queda libre.
 
 \item Bloque B: motor y editor
 	\begin{itemize}

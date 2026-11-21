@@ -46,11 +46,11 @@
 //
 //  Grabación del GWC
 //   generarGWC              Orquesta el ensamblado del fichero binario.
-//   _montarConfiguracion    Bloque 1: Director, fin y reglas (lo no declarado, nulo).
+//   _montarConfiguracion    Bloque 1: Director y fin (lo no declarado, nulo).
 //   _montarSprites          Bloque 2: máscaras de 1 bit escaladas.
 //   _montarSegmentos        Bloque 3: registros fijos de 32 bytes.
 //   _montarSecuencias       Bloque 4: la Secuencia (opcional).
-//   _montarDatosGenerales   Bloque 0: estilo, pantalla (resolución), conteos, direcciones.
+//   _montarDatosGenerales   Bloque 0: estilo, pantalla, conteos, fondo, reglas, direcciones.
 //   _montarCabecera         Cabecera con código «#HHHH#» y tamaño.
 //   validarTopes            Comprueba el tope de 255 elementos por índice.
 //   _viajanEnGWC            Qué segmentos y sprites viajan al GWC.
@@ -1503,10 +1503,9 @@ var BaseCartucho = (function () {
   // Tamaños fijos del formato.
   const TAM_CABECERA_GWC = 14;
   const TAM_CABECERA_BLOQUE_GWC = 5;          // tipo (1) + tamaño del contenido (4)
-  const TAM_CONTENIDO_DATOS_GWC = 35;         // Bloque 0
-  const TAM_CONTENIDO_CONFIG_GWC = 18;        // Bloque 1: 9 valores uint16 (F5-I13: + reglas)
-  const TAM_MINIMO_CONFIG_GWC = 16;           // los GWC anteriores a F5-I13 (8 valores) se siguen leyendo
-  const BIT_REGLA_COMBINAR_GWC = 0x0001;      // valor 9 (reglas), bit 0: regla «combinar»
+  const TAM_CONTENIDO_DATOS_GWC = 36;         // Bloque 0 (F5-I14: + byte de reglas)
+  const TAM_CONTENIDO_CONFIG_GWC = 16;        // Bloque 1: 8 valores uint16 (F5-I14: el 08 queda libre)
+  const BIT_REGLA_COMBINAR_GWC = 0x01;        // Bloque 0, byte de reglas, bit 0: regla «combinar»
   const TAM_REGISTRO_SEGMENTO_GWC = 32;       // Bloque 3
   const TAM_REGISTRO_SECUENCIA_GWC = 6;       // Bloque 4: ticks + 5 índices
   const MAX_SEGMENTOS_SECUENCIA_GWC = 5;
@@ -1804,9 +1803,9 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Bloque 1 Configuración: los 9 valores uint16 del cartucho, siempre
-   * presentes y deterministas (F5-I13): pausas (2), aceleración (3), rutas (1),
-   * fin (2) y reglas (1). Lo que el GWI no declara viaja como NULO (0xFFFF),
+   * Bloque 1 Configuración: los 8 valores uint16 del cartucho, siempre
+   * presentes y deterministas (F5-I13): pausas (2), aceleración (3), rutas (1)
+   * y fin (2). El valor 08 (reglas) pasó al Bloque 0 en F5-I14 y queda libre. Lo que el GWI no declara viaja como NULO (0xFFFF),
    * nunca como un valor por defecto inventado.
    * @param {Object} json - GWI montado.
    * @returns {Uint8Array} El Bloque 1 completo.
@@ -1828,8 +1827,7 @@ var BaseCartucho = (function () {
       ..._u16LE(aceleracion ? Number(aceleracion.minimo) || 0 : NULO16_GWC),
       ..._u16LE(_numeroODefecto(rutas.aumentarCada, NULO16_GWC)),
       ..._u16LE(fin.mecanismo ? FIN_GWC[fin.mecanismo] : NULO16_GWC),
-      ..._u16LE(_numeroODefecto(fin.contador, NULO16_GWC)),
-      ..._u16LE(json.combinar ? BIT_REGLA_COMBINAR_GWC : 0)     // F5-I13: reglas del juego
+      ..._u16LE(_numeroODefecto(fin.contador, NULO16_GWC))
     ];
     return bloque(BLOQUE_CONFIG_GWC, new Uint8Array(valores));
   }
@@ -1948,8 +1946,8 @@ var BaseCartucho = (function () {
    * Bloque 0 Datos Generales: estilo, pantalla declarada, conteos, color de
    * fondo RGB (json.ColorFondo, blanco por defecto: la v1 no escribe el
    * bloque de imagen de fondo) y las
-   * direcciones de los seis bloques (los ausentes, a nulo). Mide SIEMPRE 40
-   * bytes (35 de contenido): las direcciones se calculan con los TAMAÑOS
+   * direcciones de los seis bloques (los ausentes, a nulo). Mide SIEMPRE 41
+   * bytes (36 de contenido): las direcciones se calculan con los TAMAÑOS
    * de los bloques ya montados — por eso se monta el último aunque en el
    * fichero va el primero.
    * @param {Object} json - GWI montado.
@@ -1977,6 +1975,7 @@ var BaseCartucho = (function () {
     contenido.push(..._byteDe(viaja.sprites.length), ..._byteDe(viaja.segmentos.length));
     contenido.push(..._byteDe(bloqueSecuencias ? 1 : 0));
     contenido.push(..._bytesDeColor(json.ColorFondo));   // fondo RGB (blanco por defecto)
+    contenido.push(json.combinar ? BIT_REGLA_COMBINAR_GWC : 0);   // F5-I14: reglas del juego
     contenido.push(..._u32LE(direccionBloque0), ..._u32LE(direccionBloque1),
       ..._u32LE(direccionBloque2), ..._u32LE(direccionBloque3),
       ..._u32LE(direccionBloque4), ..._u32LE(direccionBloque5));
@@ -2134,7 +2133,7 @@ var BaseCartucho = (function () {
     return { inicio: posicion + TAM_CABECERA_BLOQUE_GWC, tam: tamano };
   }
 
-  /** Bloque 0: estilo, pantalla, conteos, color de fondo y direcciones de los 6 bloques. */
+  /** Bloque 0: estilo, pantalla, conteos, color de fondo, reglas y direcciones de los 6 bloques. */
   function _leerDatosGeneralesGWC(bytes, lector) {
     const datos = _abrirBloqueGWC(bytes, lector, TAM_CABECERA_GWC, BLOQUE_DATOS_GWC, 'Datos Generales');
     if (datos.tam < TAM_CONTENIDO_DATOS_GWC) {
@@ -2145,7 +2144,8 @@ var BaseCartucho = (function () {
     const colorFondo = '#' + [lector.u8(p + 8), lector.u8(p + 9), lector.u8(p + 10)]
       .map(v => v.toString(16).toUpperCase().padStart(2, '0')).join('');
     const direcciones = [];
-    for (let i = 0; i < 6; i++) direcciones.push(lector.u32(p + 11 + i * 4));
+    const reglas = lector.u8(p + 11);
+    for (let i = 0; i < 6; i++) direcciones.push(lector.u32(p + 12 + i * 4));
 
     return {
       estilo: lector.u8(p),
@@ -2155,6 +2155,7 @@ var BaseCartucho = (function () {
       nSegmentos: lector.u8(p + 6),
       nSecuencias: lector.u8(p + 7),
       fondo: colorFondo,
+      combinar: (reglas & BIT_REGLA_COMBINAR_GWC) !== 0,
       direcciones: direcciones
     };
   }
@@ -2166,10 +2167,10 @@ var BaseCartucho = (function () {
     return mecanismo;
   }
 
-  /** Bloque 1: pausas, aceleración, política de rutas y fin (9 uint16; nulo = no declarado; los GWC de 8 valores se leen con las reglas a 0). */
+  /** Bloque 1: pausas, aceleración, política de rutas y fin (8 uint16; nulo = no declarado). */
   function _leerConfiguracionGWC(bytes, lector, posicion) {
     const config = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_CONFIG_GWC, 'Configuración');
-    if (config.tam < TAM_MINIMO_CONFIG_GWC) {
+    if (config.tam < TAM_CONTENIDO_CONFIG_GWC) {
       throw new Error('el Bloque 1 de Configuración está incompleto (' + config.tam +
         ' de ' + TAM_CONTENIDO_CONFIG_GWC + ' bytes).');
     }
@@ -2196,8 +2197,6 @@ var BaseCartucho = (function () {
       aceleracion: aceleracionCompleta
         ? { cada: aceleracionCada, resta: aceleracionResta, minimo: aceleracionMinimo } : null,
       rutas: (valor(5) !== NULO16_GWC) ? { aumentarCada: valor(5) } : null,
-      combinar: (config.tam >= TAM_CONTENIDO_CONFIG_GWC) &&
-        (valor(8) & BIT_REGLA_COMBINAR_GWC) !== 0,
       fin: (codigoFin !== NULO16_GWC) ? {
         mecanismo: _mecanismoDeFin(codigoFin),
         contador: (contadorFin !== NULO16_GWC) ? contadorFin : undefined
@@ -2370,7 +2369,7 @@ var BaseCartucho = (function () {
       pausas: configuracion.pausas,
       aceleracion: configuracion.aceleracion,
       rutas: configuracion.rutas,
-      combinar: configuracion.combinar,
+      combinar: generales.combinar,
       fin: configuracion.fin,
       sprites: sprites,
       segmentos: segmentos,

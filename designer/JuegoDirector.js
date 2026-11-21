@@ -6,6 +6,7 @@
 //   - La semilla es del director: misma semilla = misma partida.
 //   - El motor de estados queda puro y determinista; pedirá
 //     los números al director ("dame un número de ruta").
+// F5-I14: fijarSemilla(valor) cambia la semilla (pruebas con varias partidas).
 // F3-I8: la barra de estado presenta, con GW_DEBUG activo, los
 //   contadores internos de la partida tras el contador de ticks
 //   ("Tick N · Vidas: V · Muertes: M", del JuegoMotorEstados).
@@ -60,6 +61,14 @@ var JuegoDirector = (function () {
   var estadoLCG = SEMILLA;
 
   function _reiniciarAleatorios() { estadoLCG = SEMILLA; }
+
+  /**
+   * Cambia la semilla del generador de aleatorios (F5-I14, para probar la
+   * equivalencia GWI/GWC con varias partidas distintas). Surte efecto en
+   * el siguiente arranque.
+   * @param {number} valor - Semilla de 16 bits.
+   */
+  function _fijarSemilla(valor) { SEMILLA = valor & 0xFFFF; }
 
   function aleatorio(max) {
     // x = (a·x + c) mod 2^16 — el AND 0xFFFF ES el módulo del uint16
@@ -345,6 +354,7 @@ var JuegoDirector = (function () {
     estaPausada: _estaPausada,                 // F5-I10
     tipoDePartida: _tipoDePartida,             // F5-I10
     aleatorio: aleatorio,                     // F3-I4: la única puerta del generador
+    fijarSemilla: _fijarSemilla,               // F5-I14: semilla de la partida (pruebas)
     rutaLanzada: _rutaLanzada,                 // F4-I2
     maxRutasSimultaneas: _maxRutasSimultaneas, // F4-I2
     pausaVigente: _pausaVigente                // F4-I2

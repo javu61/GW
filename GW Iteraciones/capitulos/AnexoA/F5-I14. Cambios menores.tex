@@ -46,12 +46,16 @@ El GWB y el GWI admiten un campo opcional \texttt{ColorFondo} con formato \textt
 \subsection{CRC-16 en lugar de la suma}
 \label{sec:F5I14CRC}
 
-La suma de verificación era un sistema rápido y sencillo de calcular: la suma de los bytes módulo 65536. Esa suma no detecta dos bytes intercambiados de sitio ni cambios que se compensen, pero la idea ya era un CRC. En esta iteración se sustituye por el \textbf{CRC-16/CCITT-FALSE}: polinomio \texttt{0x1021}, valor inicial \texttt{0xFFFF}, sin reflejar y sin XOR final. Se comprueba contra el vector estándar: la cadena «123456789» da \texttt{0x29B1}.
+La suma de verificación era un sistema rápido y sencillo de calcular: la suma de los bytes módulo 65536. Esa suma no detecta dos bytes intercambiados de sitio ni cambios que se compensen, solo era un sistema sencillo y rápido para avanzar, pero la idea inicial ya era usar un CRC. En esta iteración se sustituye la suma por un \textbf{CRC-16/CCITT-FALSE}: polinomio \texttt{0x1021}, valor inicial \texttt{0xFFFF}, sin reflejar y sin XOR final. Se comprueba contra el vector estándar: la cadena «123456789» da \texttt{0x29B1}.
 
 \begin{itemize}
-	\item Sigue cubriendo todo el fichero menos la cabecera y se escribe igual, como texto \texttt{\#HHHH\#}. El Código GWC del par del GWI no cambia de formato, pero sí de valor.
-	\item El generador y el lector comparten ahora la misma función (antes el lector repetía el bucle de la suma).
-	\item Los GWC y los GWI generados antes de esta iteración dejan de cuadrar: el lector los rechaza con «el CRC no coincide». Hay que regenerar el par con «Generar GWB+GWI+GWC». No se cambia la versión del formato porque todavía no hay cartuchos en uso fuera del desarrollo.
+	\item Sigue cubriendo todo el fichero menos la cabecera y se escribe igual, como texto \texttt{\#HHHH\#}. El Código GWC del par del GWI no cambia de formato, solo de valor.
+
+	\item El generador y el lector comparten ahora la misma función de cálculo (antes el lector repetía el bucle de la suma dos veces, otro lugar donde se unifica el código).
+
+	\item Los GWC y los GWI generados independientemente y cada uno con un sistema dejan de cuadrar: el lector los rechaza con «el CRC no coincide». Pero solo hay que regenerar el par con «Generar GWB+GWI+GWC». 
+	
+	\item No se cambia la versión del formato de los cartuchos, mantenemos la 1, porque todavía no hay cartuchos en uso fuera del desarrollo.
 \end{itemize}
 
 El \textbf{CRC-16/CCITT-FALSE} es una variante de verificación de redundancia cíclica de 16 bits con polinomio 0x1021, valor inicial 0xFFFF, sin reflexión de bits (refin = false, refout = false) y sin XOR final (xorout = 0x0000). Usa estos parámetros y vectores de prueba:
@@ -70,7 +74,7 @@ El \textbf{CRC-16/CCITT-FALSE} es una variante de verificación de redundancia c
 \subsection{El lector del GWC}
 \label{sec:F5I14Lector}
 
-El lector del GWC era permisivo con los datos incoherentes y fallaba con un \texttt{TypeError} sin explicación, o peor, los disfrazaba. Como ese lector servirá de base al del ESP32, ahora valida y da un error claro en cada caso:
+El lector del GWC era permisivo con los datos incoherentes y fallaba con un \texttt{TypeError} sin explicación, o peor, los disfrazaba. Como ese lector servirá de base al del ESP32, este cambio mejora la validación y da errores más claros en cada caso:
 
 \begin{table}[H]
 	\centering
@@ -95,17 +99,8 @@ En todos los casos el cartucho no se carga a medias: la llamada falla antes de d
 
 \begin{itemize}
 	\item Nuevo módulo \texttt{pruebas/pruebasF5I14.js} (15 comprobaciones): vector del CRC; detección de bytes intercambiados; \texttt{ColorFondo} de ida y vuelta por el GWC (blanco por defecto y \texttt{\#336699}); el color cambia el código del GWC; la ficha lo entrega y el blanco no viaja; un GWB sin \texttt{img\_f} y con \texttt{ColorFondo} se carga y pinta ese color; y las cinco validaciones del lector, corrompiendo el fichero y recalculando el CRC para que solo falle la validación nueva.
+	
 	\item Ampliado \texttt{pruebas/equivalenciaGWC.js}: compara también \texttt{ColorFondo} del GWI con el fondo del GWC, y la variante declara \texttt{\#336699}. Resultado: datos iguales, 32 ticks iguales con GWI y con GWC.
-\end{itemize}
-
-\subsection{Ficheros modificados}
-\label{sec:F5I14Ficheros}
-
-\begin{itemize}
-	\item \texttt{BaseCartucho.js}: \texttt{ColorFondo} (validación, serialización GWB/GWI, Bloque 0), \texttt{imagenBlob} con tamaño opcional (escala de \texttt{img\_f} en el GWI), \texttt{\_crc16} y \texttt{\_codigoDeCRC} (sustituyen a la suma), validaciones del lector y \texttt{\_mecanismoDeFin}.
-	\item \texttt{BaseFicha.js}: selector de color, avisos de resolución y tamaño de \texttt{img\_f}.
-	\item \texttt{BaseDirector.js}: \texttt{colorFondo}, \texttt{\_fondoDeColor} y su uso en la carga y el simulador.
-	\item \texttt{BaseDescomponer.js}: \texttt{ColorFondo} en el GWI y fondo del editor.
 \end{itemize}
 
 \subsection{Mejoras pendientes}

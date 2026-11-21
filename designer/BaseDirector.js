@@ -1339,8 +1339,10 @@ var BaseDirector = (function () {
     const botones = {
       vistaSetup: 'pesSetup',
       vistaSimulador: 'pesSimulador',
-      vistaEditor: 'pesEditor', vistaSprites: 'pesSprites',
-      vistaCartucho: 'pesCartucho'
+      vistaEditor: 'pesEditor',
+      vistaSprites: 'pesSprites',
+      vistaCartucho: 'pesCartucho',
+      vistaPruebas: 'pesPruebas'
     };
     for (const v of Object.keys(botones)) {
       _$(v).classList.toggle('oculto', v !== id);
@@ -1372,6 +1374,7 @@ var BaseDirector = (function () {
     _$('pesEditor').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesSprites').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesSimulador').disabled = !setupGWS;
+    _$('pesPruebas').disabled = enJuego;    // Pruebas: con partida no se toca (GW_DEBUG la descubre pruebas/Pruebas.js)
     for (const id of BOTONES_SETUP) _$(id).disabled = enJuego;
     for (const id of BOTONES_CARTUCHO) _$(id).disabled = enJuego || !setupGWS;
     if (!editable) for (const id of BOTONES_AUTORIA) _$(id).disabled = true;
@@ -1506,15 +1509,17 @@ var BaseDirector = (function () {
    * @returns {boolean} true si el index tiene todo lo necesario.
    */
   function _comprobarSalud() {
-    const necesarios = ['estado', 'pantalla', 'maquina',
+    const necesarios = [
+      'estado', 'pantalla', 'maquina',
       'panelEstado', 'infoMaquina', 'infoDiseno',
       'listaSegmentos', 'zonaMapa', 'mapaSegmentos',
       'panelSegmento', 'ficheroSetup', 'carpetaCartucho',
-      'ficheroGWIZip', 'ficheroGWC',
-      'ficheroGWBZip',
-      'pesSetup', 'pesSimulador', 'pesEditor', 'pesSprites', 'pesCartucho',
-      'vistaSetup', 'vistaSimulador', 'vistaEditor', 'vistaSprites', 'vistaCartucho',
-      'fichaSetup', 'fichaCartucho', 'lienzoEditor']
+      'ficheroGWIZip', 'ficheroGWC', 'ficheroGWBZip',
+      'pesSetup', 'pesSimulador', 'pesEditor',
+      'pesSprites', 'pesCartucho', 'pesPruebas',
+      'vistaSetup', 'vistaSimulador', 'vistaEditor',
+      'vistaSprites', 'vistaCartucho', 'fichaSetup',
+      'fichaCartucho', 'lienzoEditor']
       .concat(BOTONES_SETUP, BOTONES_CARTUCHO, BOTONES_AUTORIA);
     const faltan = necesarios.filter(id => _$(id) === null);
     if (faltan.length > 0) {
@@ -1557,8 +1562,10 @@ var BaseDirector = (function () {
     _$('btnAplicarSetup').addEventListener('click', () => _aplicarDesdeFichaSetup(false));
     _$('btnGuardarSetup').addEventListener('click', () => _aplicarDesdeFichaSetup(true));
     // F5-I12: cada carga tiene un ejemplar por pestaña; todos hacen lo mismo.
-    const entradas = { gwbCarpeta: 'carpetaCartucho', gwbZip: 'ficheroGWBZip',
-      gwi: 'ficheroGWIZip', gwc: 'ficheroGWC' };
+    const entradas = {
+      gwbCarpeta: 'carpetaCartucho', gwbZip: 'ficheroGWBZip',
+      gwi: 'ficheroGWIZip', gwc: 'ficheroGWC'
+    };
     for (const [accion, ids] of Object.entries(BOTONES_ACCION)) {
       for (const id of ids) _$(id).addEventListener('click', () => _$(entradas[accion]).click());
     }
@@ -1573,6 +1580,8 @@ var BaseDirector = (function () {
     _$('pesEditor').addEventListener('click', () => mostrarPestanna('vistaEditor'));
     _$('pesSprites').addEventListener('click', () => mostrarPestanna('vistaSprites'));
     _$('pesCartucho').addEventListener('click', () => mostrarPestanna('vistaCartucho'));
+    _$('pesPruebas').addEventListener('click', () => mostrarPestanna('vistaPruebas'));
+
     _$('btnGuardar').addEventListener('click', _verificarYGuardar);
     // F5-I6: el botón «Generar GWI+GWC» — verificación bloqueante,
     // topes bloqueantes, GWC primero y GWI con el Código GWC del par
@@ -1600,15 +1609,21 @@ var BaseDirector = (function () {
   // BaseDescomponer) y las imágenes en memoria del cartucho (img_f/img_s/
   // img_m), que BaseDescomponer pasa a BaseCartucho.guardarGWI.
   return {
-    inicializar: inicializar, avisar: avisar, avisarError: avisarError,
+    inicializar: inicializar,
+    avisar: avisar,
+    avisarError: avisarError,
     validarSetup: validarSetup,           // F5-I12: la verifica también la ficha del Setup
-    jugar: jugar, finDePartida: finDePartida,
+    datosCartucho: () => cartucho,        // el JSON del cartucho en memoria (lo lee la pestaña Pruebas)
+    jugar: jugar,
+    finDePartida: finDePartida,
     pestanna: mostrarPestanna,            // abrir el Editor desde la lista de segmentos
-    pintarInfo: pintarInfo, informarTamanos: informarTamanos,
+    pintarInfo: pintarInfo,
+    informarTamanos: informarTamanos,
     estiloDeSetup: () => (setupGWS ? String(setupGWS.estilo) : null),
-    pantallaDeSetup: () => (setupGWS && setupGWS.resolucion)
-      ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto } : null,
-    imagenFondo: () => imgF, colorFondo: () => colorFondo, imagenSegmentos: () => imgS,
+    pantallaDeSetup: () => (setupGWS && setupGWS.resolucion) ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto } : null,
+    imagenFondo: () => imgF,
+    colorFondo: () => colorFondo,
+    imagenSegmentos: () => imgS,
     imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
     imagenBlob: (img) => BaseCartucho.imagenBlob(img)
   };

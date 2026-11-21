@@ -79,15 +79,7 @@ como posibles ampliaciones:
 \begin{itemize}
 
 \item Bloque A: formato y fiabilidad del GWC (antes de la documentación y del ESP32)
-	\begin{itemize}
-		\item P01. Subir F5-I13 al repositorio y regenerar con «Generar GWB+GWI+GWC» el par GWI/GWC de ejemplo. El código del par cambia, así que el par actual queda desequilibrado.
-		
-		\item P02. Revisión de resoluciones (P06 antiguo). Decidir qué manda cuando no hay img\_f (propongo img\_s, y que la del setup solo escale) y revisar las comprobaciones de tamaño.
-		
-		\item P03. Suma de verificación aditiva → CRC-16 (\#28). Cambia el formato, así que va junto a P02 y P04 para regenerar los GWC una sola vez.
-		
-		\item P04. Lector del GWC (\#29 y \#30). El \#29 ya está resuelto con F5-I13. Queda el \#30: no disfrazar un código de fin corrupto como 'contador' y validar mejor los registros.
-		
+	\begin{itemize}	
 		\item P05. Ejecutar la prueba de equivalencia con un cartucho completo (fin, secuencia, aceleración y rutas declarados) y con varias semillas.
 		
 		\item P06. Pasar el bit combinar al Bloque 0 (datos generales).

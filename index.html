@@ -35,6 +35,7 @@
     <button id="pesEditor" disabled>Editor</button>
     <button id="pesSprites" disabled>Segmentos y Sprites</button>
     <button id="pesSimulador" disabled>Simulador</button>
+    <button id="pesPruebas" class="oculto" disabled>Pruebas</button>
   </nav>
 
   <!-- Vista SETUP (F5-I12): la ficha del GWS y sus botones. -->
@@ -150,6 +151,15 @@
     <div id="fichaCartucho"></div>
   </div>
 
+  <!-- Vista PRUEBAS: SOLO con GW_DEBUG activo (la pestaña correspondiente la
+       descubre pruebas/Pruebas.js). Sus botones lanzan EN LA PÁGINA las pruebas
+       portadas del directorio pruebas y pintan el resultado en esta vista; no
+       tocan el cartucho en edición. -->
+  <div id="vistaPruebas" class="oculto">
+    <div id="barraPruebas" class="barraBotones"></div>
+    <div id="salidaPruebas"></div>
+  </div>
+
   <!-- Panel de información (F5-I7): Simulador, la máquina y el
        cartucho; Editor, además, los datos del diseño. En Segmentos y
        Sprites no se muestra (lo oculta el CSS). -->
@@ -180,6 +190,7 @@
   <script src="designer/JuegoMotorEstados.js"></script>
   <script src="designer/JuegoMotorGrafico.js"></script>
   <script src="designer/JuegoDirector.js"></script>
+  <script src="pruebas/Pruebas.js"></script> <!-- Para lanzar las Pruebas. -->
 </body>
 
 </html>

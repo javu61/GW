@@ -310,11 +310,18 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
   box-sizing: border-box;
 }
 
-.fichaCampo.multilinea textarea::placeholder {
-  color: #777;             /* Gris tenue, igual que .fichaVacio */
-  opacity: 1;
-}
+.fichaCampo.multilinea textarea::placeholder { color: #777; opacity: 1; }  /* Gris tenue, igual que .fichaVacio */
+.fichaCampo.multilinea textarea:disabled { opacity: 0.4; }              /* Igual que tus input:disabled */
 
-.fichaCampo.multilinea textarea:disabled {
-  opacity: 0.4;              /* Igual que tus input:disabled */
-}
+/* ---------- Pestaña Pruebas (solo con GW_DEBUG) ----------
+ * Pruebas.js crea los botones en #barraPruebas y pinta el resultado
+ * en #salidaPruebas: líneas monoespaciadas, verdes las que pasan y
+ * rojas las que fallan, como en la consola del Node original. */
+#salidaPruebas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; }
+.pruebaTitulo { font-weight: 700; margin: 0 0 8px 0; }
+.pruebaLinea { margin: 2px 0; white-space: pre-wrap; }
+.pruebaOk { color: #9fd89f; }
+.pruebaMal { color: #f0a0a0; font-weight: 700; }
+.pruebaAviso { color: #e8d79f; }
+.pruebaFinOk { color: #9fd89f; font-weight: 700; margin-top: 8px; }
+.pruebaFinMal { color: #f0a0a0; font-weight: 700; margin-top: 8px; }

@@ -78,38 +78,60 @@ como posibles ampliaciones:
 \section*{Temas pendientes}
 \begin{itemize}
 
-	\item P00. al cargar un GWI funciona el juego bien, pero si cargas el GWC no funciona como debe, salen varias rutas a la vez, como si no se hubiese cargado bien los datos de base del cartucho.
+\item Bloque A: formato y fiabilidad del GWC (antes de la documentación y del ESP32)
+\begin{itemize}
+	\item P01. Subir F5-I13 al repositorio y regenerar con «Generar GWB+GWI+GWC» el par GWI/GWC de ejemplo. El código del par cambia, así que el par actual queda desequilibrado.
 	
-	\item P02. Actualizar la documentación
+	\item P02. Revisión de resoluciones (P06 antiguo). Decidir qué manda cuando no hay img\_f (propongo img\_s, y que la del setup solo escale) y revisar las comprobaciones de tamaño.
+	
+	\item P03. Suma de verificación aditiva → CRC-16 (#28). Cambia el formato, así que va junto a P02 y P04 para regenerar los GWC una sola vez.
+	
+	\item P04. Lector del GWC (#29 y #30). El #29 ya está resuelto con F5-I13. Queda el #30: no disfrazar un código de fin corrupto como 'contador' y validar mejor los registros.
+	
+	\item P05. Ejecutar la prueba de equivalencia con un cartucho completo (fin, secuencia, aceleración y rutas declarados) y con varias semillas.
+	
+	\item P06. Pasar el bit combinar al Bloque 0 (datos generales).
+	Ese bloque tiene hoy 35 bytes y ninguno libre, así que habría que añadir un byte de reglas (36 bytes).
+	Cambia el formato, así que va con P02-P04.
+	El valor 08 del Bloque 1 pasaría a libre. Como hoy ya funciona, se hace solo si se toca el formato por P02-P04.
+\end{itemize}
+
+\item Bloque B: motor y editor
+\begin{itemize}
+	\item P07. Motor (#6, #8, #9 y #10): orden de entrada y banderas del tick. Conviene resolverlo antes de portar al ESP32.
+	\item P08. Resto de REVISION_CODIGO: #11-#13, #17, #18 y #20-#27 (editor), y los errores y discrepancias de la sección 2.
+	\item P09. Funciones gigantes y patrones repetidos (§3 de REVISION_CODIGO).
+	\item P10. Ajustar el max de los campos de la UI a los rangos del GWC (#4, lo que queda).
+	\item P11. Aviso al generar si el par GWI/GWC del destino está desequilibrado, y mostrar codigoGWC en la ficha.
+	\item P12. Escalar el GWC a la resolución de la ficha. Va con P02.
+\end{itemize}
+Bloque C: documentación (cuando el código y el formato ya no cambien)
+\begin{itemize}
+	\item P13. F5-I10: correcciones de A/B/R, resolución opcional u obligatoria, y pruebas.
+	\item P14. Cerrar F5-I11 y F5-I12 con las dos decisiones pendientes: Generar pide Aplicar, y el campo descripcion.
+	\item P15. Limpiar el I99: A/B/R ya sale en Cartucho, el generador gráfico del GWB está hecho y el P02 antiguo (F5-I9) también.
+	\item P16. Anexo de formatos como anexo general en los dos documentos, con la tabla del Bloque 1 de 9 valores.
+	\item P17. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los @since.
+\end{itemize}
+\item Bloque D: Fase 6 y ampliaciones
+\begin{itemize}
+	\item P18. Fase 6 (ESP32): capas del motor gráfico, puertos GPIO, LCG portable y firmware C++ que lee el GWC.
+	La estrategia de presentación se decide midiendo en hardware real.
+	\item P19. Selector de cartuchos, donde la portada img_m encuentra uso.
+	\item P20. Ampliaciones sin urgencia:
 	\begin{itemize}
-		\item F5-I10 con las correcciones del LaTeX que apunté (A/B/R, resolución opcional u obligatoria, tests).
-		
-		\item F5-I11, que ya tienes en borrador.
-		
-		\item I99, que tiene líneas que ya no son ciertas: el trío A/B/R sí aparece en la pestaña Cartucho, y “el generador gráfico que pueda definir los cartuchos GWB” es justo lo que hemos hecho.
-		
-		\item P02 de “Temas pendientes” está hecho (F5-I9).
+		Game B con su cuarta ruta.
+		Multi-colisión.
+		Flechas del teclado.
+		Cargar GWI/GWB sin setup.
+		Más de una Secuencia por cartucho.
+		Uniones de segundo nivel.
+		Generador inverso de colores.
+		Deduplicación aproximada de sprites.
+		Fondo del GWC con color calculado.
+		Aviso al aplicar un cartucho sobre un GWI cargado: se pierde la autoría.
 	\end{itemize}
-
-	\item P03. Cabeceras de Juego*.js (P05) y anexo de formatos (P04) 
-	
-	
-	\item P04. Fase 6 (ESP32, P06 y P07): Va después de cerrar el editor. El selector de cartuchos (P07) es donde la portada img\_m encuentra uso.
-		
-	\item P05 — F5-I9: unificación de lectura. Un solo punto de entrada que admita carpeta / ZIP / .gwc (detector de forma) + validarComunes con validarGWB/validarGWI despachadas según el tipo. Diseño primero, luego código; tocará index.html y el anexo.
-	
-	\item P06 — Revisión de resoluciones. Tu primer punto (GWB sin fondo obligatorio): ahora que img\_f es opcional, hay que decidir qué resolución manda cuando no hay fondo (img\_s vs pantalla del setup) y revisar las comprobaciones de tamaño.
-	
-	\item P07 — Anexo de formatos como anexo general en ambos documentos (LaTeX): llevar el A01 a los dos documentos.
-	
-	\item P08 — Ajustar los programas Juego*.js: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES y eliminar @since (era el punto 7 de la lista vieja).
-	
-	\item P09 — Fase 6 (ESP32): capas en el estudio del motor gráfico para el ESP; puertos GPIO ya declarados en el setup, pausas.externo ya en el GWI, LCG portable, firmware C++ leyendo el GWC. La estrategia de presentación (framebuffer 1-bit ~8 KB vs RGB565 ~130 KB con PSRAM vs zonas sucias) se mide en hardware real, no se decide en escritorio, como acordamos.
-	
-	\item P10 — Selector de cartuchos: la portada img\_m ya carga sin usar; aquí encuentra su sitio.
-	
-	\item P11 — Ampliaciones (no bloquean nada): combinar por ejes fuera del proyecto ya decidido, Game B con su cuarta ruta, multi-colisión sobre el mismo jugador, flechas del teclado, generador inverso de colores, uniones de segundo nivel, más de una Secuencia por cartucho, y la deduplicación aproximada de sprites (cerrada como ampliación: ~1% en el Parachute).
-
+\end{itemize}
 
 \end{itemize}
 

@@ -44,7 +44,7 @@
 //
 //  Grabación del GWC
 //   generarGWC              Orquesta el ensamblado del fichero binario.
-//   _montarConfiguracion    Bloque 1: valores del Director y del fin.
+//   _montarConfiguracion    Bloque 1: Director, fin y reglas (lo no declarado, nulo).
 //   _montarSprites          Bloque 2: máscaras de 1 bit escaladas.
 //   _montarSegmentos        Bloque 3: registros fijos de 32 bytes.
 //   _montarSecuencias       Bloque 4: la Secuencia (opcional).
@@ -85,6 +85,8 @@ var BaseCartucho = (function () {
 
   // Tipo numérico de los fantasmas de unión (solo informativos en el GWI).
   const TIPO_FANTASMA = 99;
+  const TIPO_VIDA_GWC = 3;      // iconos de vida y de muerte (ComunListas.tipos)
+  const TIPO_MUERTE_GWC = 4;
 
   // Suma R+G+B a partir de la cual un píxel se considera blanco (transparente).
   const UMBRAL_BLANCO = 384;
@@ -1416,7 +1418,9 @@ var BaseCartucho = (function () {
   const TAM_CABECERA_GWC = 14;
   const TAM_CABECERA_BLOQUE_GWC = 5;          // tipo (1) + tamaño del contenido (4)
   const TAM_CONTENIDO_DATOS_GWC = 35;         // Bloque 0
-  const TAM_CONTENIDO_CONFIG_GWC = 16;        // Bloque 1: 8 valores uint16
+  const TAM_CONTENIDO_CONFIG_GWC = 18;        // Bloque 1: 9 valores uint16 (F5-I13: + reglas)
+  const TAM_MINIMO_CONFIG_GWC = 16;           // los GWC anteriores a F5-I13 (8 valores) se siguen leyendo
+  const BIT_REGLA_COMBINAR_GWC = 0x0001;      // valor 9 (reglas), bit 0: regla «combinar»
   const TAM_REGISTRO_SEGMENTO_GWC = 32;       // Bloque 3
   const TAM_REGISTRO_SECUENCIA_GWC = 6;       // Bloque 4: ticks + 5 índices
   const MAX_SEGMENTOS_SECUENCIA_GWC = 5;
@@ -1714,10 +1718,10 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Bloque 1 Configuración: los 8 valores uint16 del cartucho (el del
-   * diseñador o el por defecto; nunca vacío, determinista). Sin
-   * aceleración declarada, sus tres valores viajan a nulo; el fin ausente
-   * también.
+   * Bloque 1 Configuración: los 9 valores uint16 del cartucho, siempre
+   * presentes y deterministas (F5-I13): pausas (2), aceleración (3), rutas (1),
+   * fin (2) y reglas (1). Lo que el GWI no declara viaja como NULO (0xFFFF),
+   * nunca como un valor por defecto inventado.
    * @param {Object} json - GWI montado.
    * @returns {Uint8Array} El Bloque 1 completo.
    */
@@ -1728,14 +1732,18 @@ var BaseCartucho = (function () {
     const fin = json.fin || {};
 
     const valores = [
-      ..._u16LE(_numeroODefecto(pausas.simulador, 500)),
-      ..._u16LE(_numeroODefecto(pausas.externo, 500)),
+      // F5-I13: lo que el GWI NO declara viaja como NULO (0xFFFF), no como un valor
+      // por defecto inventado: el GWC y el GWI dan la misma partida. El valor por
+      // defecto (500 ms, «sin aumento de rutas»…) lo aplica quien lee, igual en los dos.
+      ..._u16LE(_numeroODefecto(pausas.simulador, NULO16_GWC)),
+      ..._u16LE(_numeroODefecto(pausas.externo, NULO16_GWC)),
       ..._u16LE(aceleracion ? Number(aceleracion.cada) || 1 : NULO16_GWC),
       ..._u16LE(aceleracion ? Number(aceleracion.resta) || 0 : NULO16_GWC),
       ..._u16LE(aceleracion ? Number(aceleracion.minimo) || 0 : NULO16_GWC),
-      ..._u16LE(_numeroODefecto(rutas.aumentarCada, 1)),
+      ..._u16LE(_numeroODefecto(rutas.aumentarCada, NULO16_GWC)),
       ..._u16LE(fin.mecanismo ? FIN_GWC[fin.mecanismo] : NULO16_GWC),
-      ..._u16LE(_numeroODefecto(fin.contador, NULO16_GWC))
+      ..._u16LE(_numeroODefecto(fin.contador, NULO16_GWC)),
+      ..._u16LE(json.combinar ? BIT_REGLA_COMBINAR_GWC : 0)     // F5-I13: reglas del juego
     ];
     return bloque(BLOQUE_CONFIG_GWC, new Uint8Array(valores));
   }
@@ -1810,7 +1818,12 @@ var BaseCartucho = (function () {
       registros.push(..._byteDe(_byteOpcional(segmento.muerteContador, NULO_GWC)));
       registros.push(..._byteDe(_propiedadesDeSegmento(segmento)));
       registros.push(..._byteDe(_byteOpcional(segmento.contadorInterno, NULO_GWC)));
-      registros.push(..._byteDe(_byteOpcional(segmento.valorInicial, 0)));
+      // «Valor inicial / orden»: en un contador es su valor inicial; en un icono de vida o
+      // de muerte, su ORDEN en la familia (1..N), con el que el motor ordena los iconos
+      // (F5-I13: antes no viajaba y el orden dependía solo de la posición en la lista).
+      const valorOOrden = (segmento.tipo === TIPO_VIDA_GWC || segmento.tipo === TIPO_MUERTE_GWC)
+        ? segmento.contador : segmento.valorInicial;
+      registros.push(..._byteDe(_byteOpcional(valorOOrden, 0)));
       registros.push(..._byteDe(_byteOpcional(segmento.ruta, NULO_GWC)));
     }
     return bloque(BLOQUE_SEGMENTOS_GWC, new Uint8Array(registros));
@@ -2053,10 +2066,10 @@ var BaseCartucho = (function () {
     };
   }
 
-  /** Bloque 1: pausas, aceleración, política de rutas y fin (8 uint16; nulo = no aplica). */
+  /** Bloque 1: pausas, aceleración, política de rutas y fin (9 uint16; nulo = no declarado; los GWC de 8 valores se leen con las reglas a 0). */
   function _leerConfiguracionGWC(bytes, lector, posicion) {
     const config = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_CONFIG_GWC, 'Configuración');
-    if (config.tam < TAM_CONTENIDO_CONFIG_GWC) {
+    if (config.tam < TAM_MINIMO_CONFIG_GWC) {
       throw new Error('el Bloque 1 de Configuración está incompleto (' + config.tam +
         ' de ' + TAM_CONTENIDO_CONFIG_GWC + ' bytes).');
     }
@@ -2075,10 +2088,16 @@ var BaseCartucho = (function () {
       aceleracionResta !== NULO16_GWC && aceleracionMinimo !== NULO16_GWC;
 
     return {
-      pausas: { simulador: valor(0), externo: valor(1) },
+      // Nulo = el GWI no lo declaraba (F5-I13): se devuelve null, como el GWI.
+      pausas: (valor(0) === NULO16_GWC && valor(1) === NULO16_GWC) ? null : {
+        simulador: (valor(0) !== NULO16_GWC) ? valor(0) : null,
+        externo: (valor(1) !== NULO16_GWC) ? valor(1) : null
+      },
       aceleracion: aceleracionCompleta
         ? { cada: aceleracionCada, resta: aceleracionResta, minimo: aceleracionMinimo } : null,
-      rutas: { aumentarCada: valor(5) },
+      rutas: (valor(5) !== NULO16_GWC) ? { aumentarCada: valor(5) } : null,
+      combinar: (config.tam >= TAM_CONTENIDO_CONFIG_GWC) &&
+        (valor(8) & BIT_REGLA_COMBINAR_GWC) !== 0,
       fin: (codigoFin !== NULO16_GWC) ? {
         mecanismo: FIN_GWC_INV[codigoFin] || 'contador',
         contador: (contadorFin !== NULO16_GWC) ? contadorFin : undefined
@@ -2163,9 +2182,12 @@ var BaseCartucho = (function () {
 
     const contadorInterno = lector.u8(posicion++);
     if (contadorInterno !== NULO_GWC) segmento.contadorInterno = contadorInterno;
-    const valorInicial = lector.u8(posicion++);
+    const valorInicial = lector.u8(posicion++);       // valor inicial (contador) u orden (vida/muerte)
     const ruta = lector.u8(posicion++);
     if (ruta !== NULO_GWC) segmento.ruta = ruta;
+    if ((segmento.tipo === TIPO_VIDA_GWC || segmento.tipo === TIPO_MUERTE_GWC) && valorInicial !== 0) {
+      segmento.contador = valorInicial;
+    }
 
     if (segmento.tipo === 6) {               // contador: sus propiedades
       segmento.valorInicial = valorInicial;
@@ -2232,6 +2254,7 @@ var BaseCartucho = (function () {
       pausas: configuracion.pausas,
       aceleracion: configuracion.aceleracion,
       rutas: configuracion.rutas,
+      combinar: configuracion.combinar,
       fin: configuracion.fin,
       sprites: sprites,
       segmentos: segmentos,

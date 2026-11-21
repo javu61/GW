@@ -16,7 +16,8 @@
 //                                   CRC-16/CCITT-FALSE (vector, detección de intercambios) y
 //                                   los errores claros del lector ante datos fuera de rango.
 //   ColorFondo en el GWC            Autónoma: fondo por defecto, viaje del ColorFondo y huella
-//                                   en el Código GWC.
+//                                   en el Código GWC; bit «combinar» en el Bloque 0 y tamaños
+//                                   de los Bloques 0 y 1 (F5-I14).
 //   Equivalencia GWC↔GWI (datos)    Pide un GWI cargado: genera el GWC del cartucho en
 //                                   memoria y compara la configuración y cada campo de cada
 //                                   segmento con lo que leerGWC devuelve.
@@ -175,7 +176,7 @@ var Pruebas = (function () {
       ok(nombre, re.test(m), m || '(no falló)');
     };
     const dv = new DataView(g0.bytes.buffer);
-    const dir = (n) => dv.getUint32(14 + 5 + 11 + n * 4, true);
+    const dir = (n) => dv.getUint32(14 + 5 + 12 + n * 4, true);
     const regSeg0 = dir(3) + 5;
     falla('sprite fuera de rango', c => { c[regSeg0 + 5] = 9; }, /sprite 9/);
     falla('enlace fuera de rango', c => { c[regSeg0 + 6] = 50; }, /segmento 50/);
@@ -206,6 +207,13 @@ var Pruebas = (function () {
     ok('ColorFondo viaja al GWC', l1.fondo === '#336699', l1.fondo);
     ok('ColorFondo cambia el código del GWC', g0.codigo !== g1.codigo,
       g0.codigo + ' / ' + g1.codigo);
+    // F5-I14 (P06): el bit «combinar» viaja en el Bloque 0 (36 bytes); el Bloque 1 mide 16.
+    const gc = BaseCartucho.generarGWC(Object.assign({}, j, { combinar: true }), sprites, pant);
+    ok('combinar viaja en el Bloque 0',
+      BaseCartucho.leerGWC(gc.bytes).combinar === true && BaseCartucho.leerGWC(g0.bytes).combinar === false);
+    const dv = new DataView(g0.bytes.buffer);
+    ok('Bloque 0 de 36 bytes y Bloque 1 de 16 bytes',
+      dv.getUint32(14 + 1, true) === 36 && dv.getUint32(14 + 5 + 36 + 1, true) === 16);
     return out;
   }
 

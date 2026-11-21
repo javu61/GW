@@ -59,6 +59,11 @@ const GWI = process.argv[3] || path.join(RAIZ, 'cartucho_gwi.zip');
     const g1 = BaseCartucho.generarGWC(Object.assign({}, j, { ColorFondo: '#336699' }), sprites, pant);
     ok('ColorFondo viaja al GWC', BaseCartucho.leerGWC(g1.bytes).fondo === '#336699', BaseCartucho.leerGWC(g1.bytes).fondo);
     ok('ColorFondo cambia el código del GWC', g0.codigo !== g1.codigo);
+    // P06: el bit «combinar» viaja en el Bloque 0 y el Bloque 1 mide 8 valores
+    const gc = BaseCartucho.generarGWC(Object.assign({}, j, { combinar: true }), sprites, pant);
+    ok('combinar viaja en el Bloque 0', BaseCartucho.leerGWC(gc.bytes).combinar === true && BaseCartucho.leerGWC(g0.bytes).combinar === false);
+    ok('Bloque 0 de 36 bytes', new DataView(g0.bytes.buffer).getUint32(14 + 1, true) === 36);
+    ok('Bloque 1 de 16 bytes', new DataView(g0.bytes.buffer).getUint32(14 + 5 + 36 + 1, true) === 16);
     // (3) lector: reparar CRC tras corromper
     const crc = (bytes) => {
       let c = 0xFFFF;
@@ -78,7 +83,7 @@ const GWI = process.argv[3] || path.join(RAIZ, 'cartucho_gwi.zip');
       ok(nombre, re.test(m), m || '(no falló)');
     };
     const dv = new DataView(g0.bytes.buffer);
-    const dir = (n) => dv.getUint32(14 + 5 + 11 + n * 4, true);   // cabecera 14 + cab. bloque 5 + offset de direcciones
+    const dir = (n) => dv.getUint32(14 + 5 + 12 + n * 4, true);   // cabecera 14 + cab. bloque 5 + offset de direcciones
     const regSeg0 = dir(3) + 5;                                    // inicio del contenido del Bloque 3
     falla('sprite fuera de rango', c => { c[regSeg0 + 5] = 9; }, /sprite 9/);
     falla('enlace fuera de rango', c => { c[regSeg0 + 6] = 50; }, /segmento 50/);

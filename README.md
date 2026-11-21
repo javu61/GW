@@ -27,7 +27,7 @@ Directorio  cartucho          : Cartucho GWB sin comprimir
 Ficheros    cartucho*         : Datos de los cartuchos creados
 Directorio  pruebas           : Pruebas en Node (consola) y del navegador (pestaña 
                                 pruebas, visible solo con GW_DEBUG, el módulo es 
-                                pruebas/Pruebas.js)
+                                pruebas/pruebas.js)
 
 ORDEN DE CAGA DE LOS MODULOS:
   <script src="designer/jszip.min.js"></script>

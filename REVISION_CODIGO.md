@@ -23,6 +23,7 @@ Solo se marcan los puntos comprobados contra el código actual. Lo no citado aqu
 | 29 | Resuelto (F5-I13) | El `contador` de vida y muerte viaja en el byte «valor inicial u orden» del registro de segmento. |
 | 30 | Resuelto (F5-I14) | El lector del GWC valida índices de sprite, enlaces, Secuencia, tabla de sprites y código de fin (error claro, no TypeError ni «contador» por defecto). |
 | 28 | Resuelto (F5-I14) | CRC-16/CCITT-FALSE en lugar de la suma aditiva (`_crc16`), compartido por generador y lector. |
+| 32 | Resuelto (F5-I15) | El tick borraba las banderas `cambiar` DESPUÉS de la entrada, contra la Memoria F2: las marcas del paso del jugador se perdían (el repintado selectivo del ESP32 no pintaría el movimiento; nada del navegador lee `cambiar` aún). Ahora la limpieza es el paso (0) del `tick()` y la entrada el (1); la PRUEBA 5 «Orden del tick (F5-I15)» de la pestaña Pruebas verifica el contrato. |
 
 **Código muerto eliminado:** `avisarEtiquetas`, `BLOQUE_FONDO_GWC`, `cartuchoActual`, `segmentosEnMemoria`, y el bloqueo de img_s de la ficha (`bloquearImgS`, `alCambiarImagen`), que F5-I12 sustituye por el botón Aplicar.
 

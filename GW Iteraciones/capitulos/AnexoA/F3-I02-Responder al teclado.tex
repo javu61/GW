@@ -15,12 +15,12 @@ que la lista dice.
 \label{subsec:QueSeConstruyeF3I2}
 
 \begin{itemize}
-	\item \textbf{La vía del dato: \texttt{pulsar(numero)}}. El \texttt{BaseDirector}
+	\item \textbf{La vía del dato: \texttt{pulsar(numero)}}. El \texttt{baseDirector}
 	cablea la nueva llamada en los dos caminos de entrada de la máquina: el
 	\texttt{pointerdown} del botón físico y la tecla del teclado
 	(\texttt{alPulsarTecla}), siempre con el número físico del botón. El
 	\texttt{JuegoDirector} acepta la pulsación \emph{solo con el juego en marcha} y la
-	reenvía tal cual al motor usando la función: \texttt{JuegoMotorEstados.pulsar}. Sin partida no hay
+	reenvía tal cual al motor usando la función: \texttt{juegoMotorEstados.pulsar}. Sin partida no hay
 	entrada; el Start sigue siendo el Start (relanza, no se encola).
 
 	\item \textbf{El buffer de movimientos pendientes}. El motor posee una cola FIFO con
@@ -37,7 +37,7 @@ que la lista dice.
 	barrido que limpia banderas. Sin límites ni colisiones todavía: el jugador puede
 	salirse por los bordes.
 
-	\item \textbf{La combinación viaja por el puente}. \texttt{ComunListas} gana una
+	\item \textbf{La combinación viaja por el puente}. \texttt{comunListas} gana una
 	casilla de configuración del juego: \texttt{fijarReglas} (la autoría la escribe al
 	cargar el cartucho con el nuevo indicador \texttt{combinar} del JSON) y
 	\texttt{reglas} (el motor la lee en cada tick). Con combinación activa, todo el buffer

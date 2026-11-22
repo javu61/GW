@@ -7,6 +7,7 @@ real, que es más amplio de lo previsto. Cada punto indica fichero
 (ruta completa del repositorio), línea de la versión actual y el texto
 que se sustituye.
 
+
 \subsection{Memoria, capítulo F3 (motor de estados)}
 \label{sec:F5I16F3}
 
@@ -24,7 +25,7 @@ Fichero: \texttt{GW Memoria/capitulos/capitulo5/F3.tex}
 		$\rightarrow$ dirección viaja en el código del motor, \ldots» &
 		«\ldots el director, aduana de la entrada, acepta la pulsación con
 		el juego en marcha (y sin pausa ni Stop pendiente; F5-I10) y la
-		encola en la cola FIFO del puente \texttt{ComunListas} (tapa de
+		encola en la cola FIFO del puente \texttt{comunListas} (tapa de
 		8). El motor de estados es quien la vacía, en el paso (1) del
 		\textit{tick}. \ldots La tabla número $\rightarrow$ dirección
 		sigue en el código del motor, con la misma silueta que tendrá el
@@ -49,7 +50,7 @@ Fichero: \texttt{GW Memoria/capitulos/capitulo5/F3.tex}
 		reglas del cartucho: \ldots» \\
 		\midrule
 		\textbf{[Lin 97--99]} La combinación viaja por el puente (iteración 2) &
-		«\ldots \texttt{ComunListas} gana una casilla de configuración del
+		«\ldots \texttt{comunListas} gana una casilla de configuración del
 		juego que la autoría escribe al cargar el cartucho y el motor lee
 		en cada \textit{tick}» &
 		«\ldots la autoría escribe las reglas del juego en el puente al
@@ -60,7 +61,6 @@ Fichero: \texttt{GW Memoria/capitulos/capitulo5/F3.tex}
 	\end{tabularx}
 	\caption{Cambios en la Memoria F3.}
 \end{table}
-
 
 \subsection{Memoria, capítulo F4 (director del juego)}
 \label{sec:F5I16F4}
@@ -98,6 +98,10 @@ Fichero: \texttt{GW Memoria/capitulos/capitulo5/F4.tex}
 	\caption{Cambios en la Memoria F4.}
 \end{table}
 
+El resto del fichero ya refleja el código (tamaños 36/16 de los
+Bloques 0 y 1 tras F5-I14, regla \emph{combinar} en el byte
+\texttt{p+11}, enlaces como índices de 1 byte con el nulo 0xFF,
+\texttt{codigoGWC} formato \texttt{\#FFFF\#}) y no se toca.
 
 \subsection{Iteración F5-I02 (formato del GWC)}
 \label{sec:F5I16F5I02}
@@ -150,115 +154,6 @@ Fichero: \texttt{GW Iteraciones/capitulos/AnexoA/F5-I02. Formato del Cartucho.te
 	\end{tabularx}
 	\caption{Cambios en el F5-I02.}
 \end{table}
-
-
-El resto del fichero ya refleja el código (tamaños 36/16 de los
-Bloques 0 y 1 tras F5-I14, regla \emph{combinar} en el byte
-\texttt{p+11}, enlaces como índices de 1 byte con el nulo 0xFF,
-\texttt{codigoGWC} formato \texttt{\#FFFF\#}) y no se toca.
-
-\subsection{Iteración F5-I03 (desarrollo del generador)}
-\label{sec:F5I16F5I03}
-
-Fichero: \texttt{GW Iteraciones/capitulos/AnexoA/F5-I03. Desarrollo del generador.tex}
-
-Sustituir la «suma de verificación» por «CRC-16/CCITT-FALSE (polinomio
-0x1021, inicial 0xFFFF, sin reflejar ni \textit{xor} final; F5-I14)»,
-que es lo que el generador (\texttt{\_crc16}) y el lector calculan, en:
-
-\begin{itemize}
-	\item línea 37 («con la misma suma de verificación — el equivalente
-	del \dots»),
-	\item líneas 65--66 («recorre la cabecera y los bloques, valida la
-	suma de \dots»),
-	\item línea 69 («\dots escribe la cabecera con la suma de
-	verificación \dots»),
-	\item línea 143 («\dots y la misma suma de verificación.»),
-	\item línea 145 («\dots toda dirección apunta dentro del fichero;
-	la suma de \dots»).
-\end{itemize}
-
-\subsection{Iteraciones de Fase 3 (erratas y nomenclatura)}
-\label{sec:F5I16F3I06}
-
-\begin{itemize}
-	\item \texttt{GW Iteraciones/capitulos/AnexoA/F3-I06-Analisis
-		Colisiones.tex}, línea 55: «cada uno de estos dos \textbf{camino}»
-	$\rightarrow$ «cada uno de estos dos \textbf{caminos}».
-	\item Mismo fichero, línea 66: «\textbf{Actualziar} un contador»
-	$\rightarrow$ «\textbf{Actualizar} un contador»; y el punto doble
-	final («\dots en esta iteración..») $\rightarrow$ «\dots en esta
-	iteración.»
-	\item Mismo fichero, línea 78: tras «\dots los enlaces por tipo:
-	\texttt{salvado} y \texttt{muerte}», añadir: «La nomenclatura
-	definitiva, la misma que viaja en el registro del GWC (F5-I02): los
-	enlaces del desenlace son \emph{salvado} (con jugador) y
-	\emph{muerte} (sin jugador), y los contadores que cada desenlace
-	toca son \emph{salvadoContador} y \emph{muerteContador}; las piezas
-	de unión llevan los ids \texttt{seg\_F01}/\texttt{img\_F01} y los
-	absorbidos quedan marcados con \texttt{fusionadoPor} (F3-I10).»
-	\item \texttt{GW Iteraciones/capitulos/AnexoA/F3-I10-Unir
-		segmentos.tex}, línea 18: «ni se \textbf{puden} manejar»
-	$\rightarrow$ «ni se \textbf{pueden} manejar».
-\end{itemize}
-
-\subsection{Iteración F2-I02 (preparando la base)}
-\label{sec:F5I16F2I02}
-
-Fichero: \texttt{GW Iteraciones/capitulos/AnexoA/F2-I02-Preparando la base.tex}
-
-\begin{itemize}
-	\item Línea 4: «montaremos \textbf{mejro} el director»
-	$\rightarrow$ «\textbf{mejor} el director».
-	\item Línea 19 (\emph{Ficheros nuevos, nombres definitivos}): los
-	nombres que da no son los finales. Sustituir
-	«(\texttt{DirectorJuego}, \texttt{juegomotorestados},
-	\texttt{JuegoMotorGrafico})» por «(\texttt{BaseDirector},
-	\texttt{JuegoMotorEstados}, \texttt{JuegoMotorGrafico} y el puente
-	\texttt{ComunListas}), nombres que toman en el apartado \emph{Cambios
-		de nombres} de esta misma iteración (líneas 27--34)».
-	\item Línea 22 (\emph{Orden de scripts}): sustituir
-	«\texttt{juegomotorestados.js} y \texttt{JuegoMotorGrafico.js} antes
-	que \texttt{directorjuego.js}» por el orden real de
-	\texttt{index.html} (líneas 180--193): «\texttt{ComunListas.js},
-	\texttt{BaseExtractor.js}, \texttt{BaseGraficos.js},
-	\texttt{BaseDescomponer.js}, \texttt{BasePACK.js},
-	\texttt{BaseCartucho.js}, \texttt{BaseSetup.js},
-	\texttt{BaseFicha.js}, \texttt{BaseDirector.js},
-	\texttt{JuegoMotorEstados.js}, \texttt{JuegoMotorGrafico.js},
-	\texttt{JuegoDirector.js} y \texttt{pruebas/pruebas.js} (esta
-	última solo actúa con \texttt{GW\_DEBUG}; F5-I15)».
-	\item Línea 31: «se \textbf{renombrar} añadiendo» $\rightarrow$ «se
-	\textbf{renombran} añadiendo».
-	\item Línea 33: «creo un nuevo fichero» $\rightarrow$ «creé un nuevo
-	fichero»; y «para mantener en el las listas» $\rightarrow$ «para
-	mantener en él las listas».
-\end{itemize}
-
-\subsection{Fase 4, capítulo de fase}
-\label{sec:F5I16F4Fase}
-
-Fichero: \texttt{GW Iteraciones/capitulos/AnexoA/F4-Fase 4. Director del juego.tex}
-
-\begin{itemize}
-	\item Línea 4: «que lanza los dos motores necesarios y
-	\textbf{poco mas}» $\rightarrow$ «\textbf{poco más}».
-	\item Línea 10: «toda la información necesaria \textbf{para en la
-		siguiente fase, generar} el cartucho compacto» $\rightarrow$ «\dots
-	necesaria para, en la siguiente fase, generar el cartucho
-	compacto».
-	\item Línea 11: suprimir el punto tras el cierre del entorno
-	(«\verb|\end{itemize}|.» $\rightarrow$ «\verb|\end{itemize}|»).
-	\item El primer ítem del \texttt{itemize} (líneas 7--8) repite casi
-	literalmente el párrafo introductorio (línea 4) y además afirma
-	que la «combinación de pulsaciones» pasa al cartucho (cierto desde
-	F5-I14; ver el punto de F4.tex:34--38). Reducir el ítem a: «Esta
-	fase ajusta el Director del juego: la velocidad por plataforma, la
-	aceleración, la política de rutas y la combinación de pulsaciones
-	dejan de ser constantes del código o del \emph{setup} y pasan a
-	ser propiedades del cartucho, editables en el diseñador y visibles
-	para el motor al instante, sin guardar ni recargar.»
-\end{itemize}
 
 \subsection{Hecho y no documentado (nota por iteración)}
 \label{sec:F5I16Hecho}

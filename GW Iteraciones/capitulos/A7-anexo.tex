@@ -11,7 +11,7 @@ y el juego (\texttt{Juego*}). Para cada una se detalla su nombre y una
 s
 \textbf{ESTA LISTA ES PROVISIONAL}. Comprende unas 200 funciones desarrolladas hasta el fin de la fase 4 inclusive, se irá ampliando.
 
-\subsection*{ComunListas.js — el puente de datos}
+\subsection*{comunListas.js — el puente de datos}
 
 \begin{itemize}
 	\item \texttt{cargar}: guarda en el puente el setup y la lista de
@@ -195,7 +195,7 @@ s
 	\item \texttt{cargarAutoria}: carga y reproduce el historial
 	\texttt{autoria.cambios} del GWI.
 	\item \texttt{cargarListas} / \texttt{segmentosEnMemoria}: vuelcan
-	las listas al puente \texttt{ComunListas}.
+	las listas al puente \texttt{comunListas}.
 	\item \texttt{asegurarCartucho}: crea la ficha del cartucho (tipo 7)
 	si el GWI no la trae.
 	\item \texttt{cartuchoDe} / \texttt{esCartucho}: acceso a la ficha
@@ -245,7 +245,7 @@ s
 	tipo 99).
 \end{itemize}
 
-\subsection*{BaseDirector.js — orquestación de máquina y cartucho}
+\subsection*{baseDirector.js — orquestación de máquina y cartucho}
 
 \begin{itemize}
 	\item \texttt{inicializar}: registra los listeners globales
@@ -334,7 +334,7 @@ s
 	en cada múltiplo de \texttt{aumentarCada}, tope el número de rutas).
 \end{itemize}
 
-\subsection*{JuegoMotorEstados.js — el motor de estados del juego}
+\subsection*{juegoMotorEstados.js — el motor de estados del juego}
 
 \textbf{Ciclo de vida:}
 \begin{itemize}
@@ -421,7 +421,7 @@ s
 	pasadas idénticas).
 \end{itemize}
 
-\subsection*{JuegoMotorGrafico.js — el motor gráfico}
+\subsection*{juegoMotorGrafico.js — el motor gráfico}
 
 \begin{itemize}
 	\item \texttt{inicializar}: pinta solo el fondo; avisa si no hay

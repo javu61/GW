@@ -95,7 +95,7 @@ El tipo de un segmento ha viajado siempre como número (0 = jugador, 1 = juego,
 \dots), ya que estos números no cambian nunca, pero por legibilidad, es mejor comparar contra constantes escritas en el código (\texttt{if (segmento.tipo === tipos.jugador)}), es mucho más
 legible que comparar contra dígitos mágicos (\texttt{if (segmento.tipo === 1)}).
 
-La enumeración vive en el \textbf{puente} \texttt{ComunListas}, junto a los demás datos compartidos entre autoría y juego, para que las dos etapas hablen el mismo idioma y ninguna duplique la tabla. El mecanismo de fin se enumera igual (\texttt{fin.vida}, \texttt{fin.muerte}, \texttt{fin.contador}, \texttt{fin.ninguno}).
+La enumeración vive en el \textbf{puente} \texttt{comunListas}, junto a los demás datos compartidos entre autoría y juego, para que las dos etapas hablen el mismo idioma y ninguna duplique la tabla. El mecanismo de fin se enumera igual (\texttt{fin.vida}, \texttt{fin.muerte}, \texttt{fin.contador}, \texttt{fin.ninguno}).
 
 \subsection{Aplicación en el motor de estados}
 \label{subsec:MotorFinF3I11}
@@ -104,7 +104,7 @@ El motor de estados descartaba los segmentos de tipo 7 al arrancar, un resto
 defensivo de cuando ese número no significaba nada. Ese descarte desaparece:
 el tipo 7 \emph{es} el segmento cartucho. Como el fin es ahora una propiedad
 del cartucho, es el \textbf{director} quien fija el campo \texttt{fin} del GWI
-en el puente (\texttt{ComunListas.fijarFin}) al cargar el cartucho, y
+en el puente (\texttt{comunListas.fijarFin}) al cargar el cartucho, y
 \texttt{iniciar()} lee de él (\texttt{finDeCartucho()}) la configuración del
 fin del juego. Se conserva de forma defensiva la lectura del viejo segmento de
 tipo 7, para que los GWI generados por la primera versión de esta iteración

@@ -50,13 +50,13 @@ El traspaso es de mudanza, no de reescritura: los módulos
 afectados pierden las funciones movidas y quedan con su llamada:
 
 \begin{itemize}
-	\item \textbf{BaseDirector} delega en \texttt{BaseCartucho} la
+	\item \textbf{baseDirector} delega en \texttt{BaseCartucho} la
 	carga del GWB tras el setup y la carga del GWI al abrir un
 	cartucho de autoría; su lógica de arrastre de las listas al
 	puente sigue igual. 
 	
 	\begin{itemize}
-		\item Se mudan desde BaseDirector: leerJSON, crearURL, cargarImagen, cargarImagenAux, imagenBlob, construirMapaFicheros, elegirJSONCartucho, validarCartucho, validarTamanoImgS y la apertura del ZIP.
+		\item Se mudan desde baseDirector: leerJSON, crearURL, cargarImagen, cargarImagenAux, imagenBlob, construirMapaFicheros, elegirJSONCartucho, validarCartucho, validarTamanoImgS y la apertura del ZIP.
 	\end{itemize}
 	
 	\item \textbf{BaseDescomponer} delega en \texttt{BaseCartucho}
@@ -77,14 +77,14 @@ gráfico quedan exactamente como están.
 
 La API pública que se crea es:
 \begin{itemize}
-	\item leerCartucho(ficheros, estiloMaquina) → devuelve {nombre, json, mapa, imgF, imgS, imgM}: hace la lectura COMPLETA (mapa, JSON prioritario, validación, las tres imágenes). Es por donde pasará BaseDirector, que luego despacha por tipo como hoy.
+	\item leerCartucho(ficheros, estiloMaquina) → devuelve {nombre, json, mapa, imgF, imgS, imgM}: hace la lectura COMPLETA (mapa, JSON prioritario, validación, las tres imágenes). Es por donde pasará baseDirector, que luego despacha por tipo como hoy.
 	\item leerGWB / leerGWI existen como envoltorios que exigen el tipo (error explícito si no coincide) — útiles para cargar estricto y para el futuro GWC. La lectura común no podía separarse antes de parsear el JSON, de ahí el núcleo compartido.
 	\item abrirZIP(fichero) → los Blobs con .name base, para reusar el mismo flujo de carpeta.
 	\item guardarGWI(json, sprites, imgF, imgS, nAvisos) → devuelve true/false para que BaseDescomponer repinte solo si se guardó.
 	\item revocarURLs() — nueva: las object URLs ahora las crea el módulo, así que limpiarCartucho del director tendrá que llamarla (cambio del fichero 2).
 \end{itemize}
 
-\textbf{Una adaptación necesaria}: \textbf{validarCartucho} recibe el estilo de la máquina por parámetro (antes usaba las variables privadas de BaseDirector \emph{setup} y \emph{ESTILOS}); el mensaje de estilo inválido ya no lista el catálogo de estilos. El resto es copia literal del código original.
+\textbf{Una adaptación necesaria}: \textbf{validarCartucho} recibe el estilo de la máquina por parámetro (antes usaba las variables privadas de baseDirector \emph{setup} y \emph{ESTILOS}); el mensaje de estilo inválido ya no lista el catálogo de estilos. El resto es copia literal del código original.
 
 \subsection{Pruebas del traspaso}
 \label{sec:F5I4Pruebas}

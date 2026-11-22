@@ -34,7 +34,7 @@ Las funciones de lectura y validación del GWC quedan en una \textbf{sección de
 El generador no usa el azar en ninguna parte: recorre las listas
 siempre en el mismo orden y escribe siempre lo mismo. La generación
 es \textbf{determinista}: el mismo GWI produce el mismo GWC byte a
-byte, con la misma suma de verificación — el equivalente del
+byte, con la misma suma de verificación\footnote{En el apartado \ref{sec:F5I14CRC} se reemplaza la suma de verificación simple por un CRC-16} — el equivalente del
 compilador reproducible, y la base de su prueba de regresión.
 
 El descarte también vive aquí: los identificadores legibles, los
@@ -57,16 +57,15 @@ segmento que nadie enciende ni pinta no existe en el GWC.\\\
 		JSON y las imágenes PNG del ZIP, y reconstruye las listas en
 		memoria igual que desde el editor \\
 		
-		& \texttt{guardarGWI} & Graba el cartucho de autoría: el ZIP con el JSON y las
-		imágenes \\
+		& \texttt{guardarGWI} & Graba el cartucho en ZIP con el JSON+imágenes \\
 		\midrule
 		
 		\texttt{GWC} & \texttt{leerGWC(bytes)} & La puerta de entrada de la lectura:
 		recorre la cabecera y los bloques, valida la suma de
-		verificación y reconstruye las listas en memoria con las
+		verificación\footnote{En el apartado \ref{sec:F5I14CRC} se reemplaza la suma de verificación simple por un CRC-16} y reconstruye las listas en memoria con las
 		mismas formas que produce el editor \\
 		
-		& \texttt{guardarGWC(listas)} & Valida los topes, escala, ensambla los bloques, escribe la cabecera con la suma de verificación y devuelve los bytes junto a la estadística de tamaños \\
+		& \texttt{guardarGWC(listas)} & Valida los topes, escala, ensambla los bloques, escribe la cabecera con la suma de verificación\footnote{En el apartado \ref{sec:F5I14CRC} se reemplaza la suma de verificación simple por un CRC-16} y devuelve los bytes junto a la estadística de tamaños \\
 		
 		& \texttt{escalar(sprite, pantalla)} & Convierte un sprite en su
 		máscara de 1 bit escalada a la pantalla declarada, con el
@@ -140,10 +139,10 @@ sintéticas y con el GWI real del Parachute:
 
 \begin{itemize}
 	\item \textbf{Determinismo:} dos generaciones del mismo GWI
-	producen bytes idénticos y la misma suma de verificación.
+	producen bytes idénticos y la misma suma de verificación\footnote{En el apartado \ref{sec:F5I14CRC} se reemplaza la suma de verificación simple por un CRC-16}.
 	\item \textbf{Estructura:} los conteos de la cabecera cuadran con
 	las tablas; toda dirección apunta dentro del fichero; la suma de
-	verificación recomputada coincide; los punteros de los bloques
+	verificación\footnote{En el apartado \ref{sec:F5I14CRC} se reemplaza la suma de verificación simple por un CRC-16} recomputada coincide; los punteros de los bloques
 	opcionales ausentes son nulos.
 	\item \textbf{Contenido:} los enlaces del registro se resuelven
 	contra los índices reales; ningún enlace válido apunta al nulo ni

@@ -16,7 +16,7 @@ La política de rutas del Director (iteración~F4-I2) permite lanzar una nueva r
 
 El generador del GWC, en cambio, escribía \texttt{aumentarCada = 1} cuando el GWI no lo declaraba, y el lector lo devolvía como una política declarada. Con \texttt{aumentarCada = 1} el máximo sube en cada lanzamiento, y a las pocas rutas el simulador juega con varias a la vez.
 
-La comprobación fue directa: tras cargar el GWC, \texttt{ComunListas.rutasDeCartucho()} devolvía \texttt{\{aumentarCada: 1\}}, y tras cargar el GWI devolvía \texttt{null}.
+La comprobación fue directa: tras cargar el GWC, \texttt{comunListas.rutasDeCartucho()} devolvía \texttt{\{aumentarCada: 1\}}, y tras cargar el GWI devolvía \texttt{null}.
 
 \subsection{Por qué no se había detectado}
 \label{sec:F5I13Porque}
@@ -87,7 +87,7 @@ La versión del formato sigue siendo \texttt{GWC1}: el formato todavía no se ha
 
 \begin{itemize}
 	\item \textbf{BaseCartucho.js.} \texttt{montarConfiguracion} escribe nulo en lugar de valores por defecto y añade el noveno valor; \texttt{montarSegmentos} escribe el orden de los iconos en el byte «valor inicial u orden»; \texttt{leerConfiguracionGWC} admite 16 o 18 bytes, devuelve \texttt{null} para lo no declarado y devuelve \texttt{combinar}; el lector del registro devuelve \texttt{contador} para vida y muerte; \texttt{leerGWC} incluye \texttt{combinar} en su resultado.
-	\item \textbf{BaseDirector.js.} Al cargar un GWC la regla \texttt{combinar} sale del propio cartucho y no de un \texttt{false} fijo, como en el flujo del GWI.
+	\item \textbf{baseDirector.js.} Al cargar un GWC la regla \texttt{combinar} sale del propio cartucho y no de un \texttt{false} fijo, como en el flujo del GWI.
 	\item \textbf{pruebas/equivalenciaGWC.js.} Nuevo módulo js para efectuar las pruebas de coherencia entre ambos cartuchos (ver sección siguiente). Este no es un fichero necesario en la distribución final del sistema, ya que solo se utiliza para comparar internamente los cartuchos, pero se mantiene para poder seguir efectuando pruebas en cualquier momento.
 \end{itemize}
 

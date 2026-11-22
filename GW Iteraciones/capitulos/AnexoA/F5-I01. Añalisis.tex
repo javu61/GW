@@ -166,7 +166,7 @@ antiguos:
 
 \begin{itemize}
 	\item \textbf{Cabecera:} identificación (los cuatro bytes
-	«GWC1»), versión del formato y suma de verificación. Es lo único
+	«GWC1»), versión del formato y suma de verificación\footnote{Suma de todos los valores módulo 65535 para que sea un dato entre 0000h y FFFFh, se cambia posteriormente a un CRC-16 que es mas adecuado, ver apartado \ref{sec:F5I14CRC}}. Es lo único
 	que el firmware comprueba: la validación completa ya se hizo al
 	generar.
 	\item \textbf{Tablas con conteo y tamaño de registro fijo:} una

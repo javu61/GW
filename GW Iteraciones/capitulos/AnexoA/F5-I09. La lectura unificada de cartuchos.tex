@@ -51,7 +51,7 @@ solo "GW" podría considerarse solo el prefijo de cualquier otro tipo, al usar
 \label{sec:F5I9Formas}
 
 El nuevo núcleo de carga  usa la función (\texttt{cargarCartucho}, en
-\texttt{BaseDirector.js}), que recibe una lista de ficheros y el tipo
+\texttt{baseDirector.js}), que recibe una lista de ficheros y el tipo
 esperado, sea la lista de una carpeta, de un ZIP descomprimido o de
 una selección de ficheros sueltos, y aplica un detector de forma en
 este orden:
@@ -229,7 +229,7 @@ llevando SIEMPRE todo lo declarado, incluso aunque resulte redundante.
 
 La corrección final hace lo correcto: \texttt{guardarGWI} y
 \texttt{guardarGWIEnDisco} reciben ahora la portada en memoria (nuevo
-acceso \texttt{imagenPortada} en BaseDirector) y la empaquetan en el
+acceso \texttt{imagenPortada} en baseDirector) y la empaquetan en el
 ZIP con el nombre que el JSON referencia; declarada sin imagen en
 memoria, error explícito. El generador del cartucho binario decidirá 
 por su cuenta donde viaja la imagen para su uso en el selector de cartuchos.

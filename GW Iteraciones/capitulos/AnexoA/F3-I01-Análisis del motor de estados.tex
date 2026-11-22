@@ -13,13 +13,13 @@ Antes del código, el análisis de las cuatro decisiones que la entrada del tecl
 \subsection{El canal: la pulsación como dato, no como evento de DOM}
 \label{subsec:CanalEntrada}
 
-Los botones físicos los crea el \texttt{BaseDirector} a partir del \textit{setup}: la
+Los botones físicos los crea el \texttt{baseDirector} a partir del \textit{setup}: la
 máquina es de la autoría. El juego no debe conocer el DOM, igual que el firmware del ESP32
 no conoce ``botones'', solo pines que se ponen a nivel. La silueta es la misma que la del botón 
 Start (\emph{F2-I2}), solo que en el otro sentido:
 
 \begin{itemize}
-	\item El \texttt{BaseDirector}, en sus eventos \texttt{pointerdown} y en
+	\item El \texttt{baseDirector}, en sus eventos \texttt{pointerdown} y en
 	\texttt{alPulsarTecla}, llama a la función \texttt{JuegoDirector.pulsar(numero)} con el
 	\textbf{número físico} del botón. Nada más: ni id del cartucho, ni el evento del DOM.
 	El número físico es el identificador estable de la máquina (el mismo que viajará al
@@ -28,7 +28,7 @@ Start (\emph{F2-I2}), solo que en el otro sentido:
 	\item El \texttt{JuegoDirector} solo acepta pulsaciones \emph{con el juego en marcha};
 	si no está en marcha, la pulsación no existe (y el Start, que ya está cableado, sigue
 	siendo el que relanza). Él se limita a reenviar al motor:
-	\texttt{JuegoMotorEstados.pulsar(numero)}. El director no interpreta entradas, igual
+	\texttt{juegoMotorEstados.pulsar(numero)}. El director no interpreta entradas, igual
 	que no interpreta estados: solo mantiene el bucle.
 
 	\item El director del juego es quien inserta en el buffer de pulsaciones, por tanto es 
@@ -82,7 +82,7 @@ declarada en su JSON como un indicador más, igual que el número de botones que
 	un paso normal: la máquina real no espera a la segunda. Si llegan dos opuestas en la
 	misma ventana (IZQ+DER), se anulan: no se mueve.
 	
-	\item \textbf{El motor no lee el cartucho}: Para conocer el tipo de movimiento del teclado, se usará \texttt{ComunListas}, con una variable booleana de
+	\item \textbf{El motor no lee el cartucho}: Para conocer el tipo de movimiento del teclado, se usará \texttt{comunListas}, con una variable booleana de
 	configuración del juego: la autoría la escribe al cargar el cartucho
 	(\texttt{fijarReglas}) y el motor la lee (\texttt{reglas}). El puente sigue siendo
 	solo datos; el ESP32 hará lo mismo leyendo la configuración del GWC.
@@ -99,7 +99,7 @@ regla que fija esta iteración: \textbf{todo botón declarado por el cartucho de
 (error bloqueante en la barra de estado, no un aviso en consola como hasta ahora). El
 camino inverso ya funcionaba: los botones de la máquina que el juego no usa se eliminan de
 la botonera. Esta comprobación vive en la autoría (validación de carga de
-\texttt{BaseDirector}), no en el juego.
+\texttt{baseDirector}), no en el juego.
 
 \subsection{El jugador: moverse es escribir en la lista}
 \label{subsec:Jugador}

@@ -52,7 +52,7 @@ elemento a partir de ese tick. Para definir correctamente esto, usaremos esta te
 	\item \textbf{Colisión Negativa}: El segmento del jugador NO está visible en el momento de la colisión.
 \end{itemize}
 
-En las colisiones, cada uno de estos dos camino puede hacer tres cosas, 
+En las colisiones, cada uno de estos dos caminos puede hacer tres cosas, 
 definidas por la autoría del cartucho:
 
 \begin{enumerate}
@@ -63,7 +63,7 @@ definidas por la autoría del cartucho:
 	que una ruta: un segmento por tick, por los enlaces
 	\texttt{siguiente} de esa cadena.
 	
-	\item \textbf{Actualziar un contador}: el desenlace lleva un indicador — vida o muerte — que dice qué contador interno se toca: el de vidas o el de muertes. El contador se actualiza UNA sola vez, en el instante de la decisión: no en cada tick de la animación del desenlace, que puede durar varios segmentos. El indicador pertenece a la decisión, no a la cadena. Los segmentos de tipo 3 y 4 del GWI no SON el contador: son su \textbf{presentación} — qué segmentos se encienden para mostrar el valor del contador es una decisión de presentación (dígitos, marcas, secuencia de encendidos) que ya viaja como parámetro del cartucho, y no cambia en esta iteración..
+	\item \textbf{Actualizar un contador}: el desenlace lleva un indicador — vida o muerte — que dice qué contador interno se toca: el de vidas o el de muertes. El contador se actualiza UNA sola vez, en el instante de la decisión: no en cada tick de la animación del desenlace, que puede durar varios segmentos. El indicador pertenece a la decisión, no a la cadena. Los segmentos de tipo 3 y 4 del GWI no SON el contador: son su \textbf{presentación} — qué segmentos se encienden para mostrar el valor del contador es una decisión de presentación (dígitos, marcas, secuencia de encendidos) que ya viaja como parámetro del cartucho, y no cambia en esta iteración.
 	
 	\item \textbf{Nada}: si el desenlace no declara cadena, el
 	elemento simplemente desaparece (igual que muere una ruta al
@@ -75,7 +75,14 @@ definidas por la autoría del cartucho:
 \subsection{Reutilización de los enlaces del GWI}
 
 El GWI ya viaja con dos enlaces pensados para esto desde la iteración 
-en que definimos los enlaces por tipo: \texttt{salvado} y \texttt{muerte}. Esta
+en que definimos los enlaces por tipo: \texttt{salvado} y \texttt{muerte}. La nomenclatura
+definitiva, la misma que viaja en el registro del GWC (F5-I02): los
+enlaces del desenlace son \emph{salvado} (con jugador) y
+\emph{muerte} (sin jugador), y los contadores que cada desenlace
+toca son \emph{salvadoContador} y \emph{muerteContador}; las piezas
+de unión llevan los ids \texttt{seg\_F01}/\texttt{img\_F01} y los
+absorbidos quedan marcados con \texttt{fusionadoPor} (F3-I10)
+Esta
 iteración les da su semántica definitiva, sin crear campos nuevos ni
 romper los cartuchos existentes:
 

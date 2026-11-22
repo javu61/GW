@@ -1,7 +1,7 @@
 \section{Segunda iteración de la Fase 2: Preparando la base}
 \label{sec:PreparandoBase}
 
-El análisis de la iteración anterior definió el sistema reducido con sus tres componentes y las reglas que los separan (un solo escritor de la lista de segmentos, banderas \emph{visible} y \emph{cambiar}, motor gráfico lector puro). Esta iteración comienza el desarrollo, que se desarrollará en \textbf{tres pasos}: primero la base que aquí se presenta, después montaremos mejro el director y el motor de juego mínimo con la secuencia fija, y por último el objetivo real de esta fase, el motor gráfico real. El desarrollo arranca por lo más simple a propósito: montar el \emph{esqueleto completo} ---director, dos motores, bucle, pausa, y el arranque desde la máquina--- con todo su contenido con respuestas fijas, para verificar que el esqueleto en sí funciona antes de nada. Es un paso deliberadamente simple, pero prefiero ir paso a paso con funcionalidad mínima, e ir ampliándola, que lanzarme a un desarrollo de varios temas a la vez, mejor avanzar poco a poco sobre algo que se ha probado.
+El análisis de la iteración anterior definió el sistema reducido con sus tres componentes y las reglas que los separan (un solo escritor de la lista de segmentos, banderas \emph{visible} y \emph{cambiar}, motor gráfico lector puro). Esta iteración comienza el desarrollo, que se desarrollará en \textbf{tres pasos}: primero la base que aquí se presenta, después montaremos mejor el director y el motor de juego mínimo con la secuencia fija, y por último el objetivo real de esta fase, el motor gráfico real. El desarrollo arranca por lo más simple a propósito: montar el \emph{esqueleto completo} ---director, dos motores, bucle, pausa, y el arranque desde la máquina--- con todo su contenido con respuestas fijas, para verificar que el esqueleto en sí funciona antes de nada. Es un paso deliberadamente simple, pero prefiero ir paso a paso con funcionalidad mínima, e ir ampliándola, que lanzarme a un desarrollo de varios temas a la vez, mejor avanzar poco a poco sobre algo que se ha probado.
 
 \subsection{Qué se construye}
 \label{subsec:QueSeConstruyeF2I2}
@@ -16,10 +16,10 @@ El análisis de la iteración anterior definió el sistema reducido con sus tres
 \label{subsec:DetallesF2I2}
 
 \begin{itemize}
-	\item \textbf{Ficheros nuevos, nombres definitivos}: los tres componentes nacen con su nombre final de fichero y de objeto global (\texttt{DirectorJuego}, \texttt{juegomotorestados}, \texttt{JuegoMotorGrafico}), para que las iteraciones siguientes los llenen sin renombres.
+	\item \textbf{Ficheros nuevos, nombres definitivos}: los tres componentes nacen con su nombre final de fichero y de objeto global (\texttt{juegoDirector}, \texttt{juegoMotorEstados}, \texttt{juegoMotorGrafico}), para que las iteraciones siguientes los llenen sin renombres.
 	\item \textbf{El contador en la barra de estado}: el número de tick se muestra con el mecanismo de avisos ya existente, sin crear canales de depuración nuevos. Ver el contador avanzar uno a uno al ritmo de la pausa ES la prueba de que el reloj funciona.
 	\item \textbf{Pausa encadenada}: el director repite con \texttt{setTimeout} encadenado tras cada tick, nunca \texttt{setInterval}, de modo que un tick no empieza antes de que acabe el anterior. El bucle se detiene limpio si se lanza de nuevo (no hay dos relojes simultáneos).
-	\item \textbf{Orden de scripts} en \texttt{index.html}: los ficheros nuevos entran tras los existentes, \texttt{juegomotorestados.js} y \texttt{JuegoMotorGrafico.js} antes que \texttt{directorjuego.js}, manteniendo la convención del script clásico sin módulos, compatible con \texttt{file://}.
+	\item \textbf{Orden de scripts} en \texttt{index.html}: los ficheros nuevos entran tras los existentes en el \texttt{index.html}: \texttt{juegoMotorEstados.js} y \texttt{juegoMotorGrafico.js} se incluyen antes que \texttt{juegoDirector.js}, manteniendo la convención del script clásico sin módulos, compatible con \texttt{file://}.
 \end{itemize}
 
 El resultado de la iteración es observable y modesto: pulsar Start y ver, al ritmo de la pausa, el contador de ticks avanzar en la barra de estado mientras la consola alterna «motor del juego» y «motor gráfico». Con el esqueleto latiendo, la siguiente iteración desarrolla el motor del juego básico, con la secuencia fija de segmentos.
@@ -28,18 +28,18 @@ El resultado de la iteración es observable y modesto: pulsar Start y ver, al ri
  El \texttt{Director} de la Fase 1 (orquestador del editor) puede confundirse con este nuevo director del juego, para evitarlo lo aclararemos usando nuevos nombres de los ficheros:
 
 \begin{itemize}
-  	\item Los elementos para la autoría de los cartuchos se renombrar añadiendo delante del nombre la palabra \textbf{Base}
+  	\item Los elementos para la autoría de los cartuchos se renombran añadiendo delante del nombre la palabra \textbf{Base}
   	\item Los motores del juego usarán delante la palabra \textbf{Juego}
-  	\item Como la parte de creación de cartuchos y la del simulador deben ser independientes, creo un nuevo fichero para mantener en el las listas de objetos que son comunes a ambas partes, de esta manera se independizan al máximo, ya que es un fichero que se comporta como un \emph{INCLUDE} común cuando es necesario.
+  	\item Como la parte de creación de cartuchos y la del simulador deben ser independientes, creé un nuevo fichero para mantener en él las listas de objetos que son comunes a ambas partes, de esta manera se independizan al máximo, ya que es un fichero que se comporta como un \emph{INCLUDE} común cuando es necesario.
 \end{itemize}
   
   De esta manera no hay confusión entre los usos de cada uno.
   
-\subsection{El puente de datos: ComunListas}
-\label{subsec:ComunListas}
+\subsection{El puente de datos: comunListas}
+\label{subsec:comunListas}
   
 Como los motores necesitan utilizar la lista de segmentos, pero la autoría de cartuchos y los motores del simulador no deben verse entre sí, ya que son partes independientes del proyecto, y como ambas etapas necesitan \emph{los mismos datos} del cartucho una vez cargado
-  (la lista de segmentos en memoria y la imagen de fondo), lo separo creando un \textbf{fichero propio que no pertenece a ninguna de las dos etapas}, \texttt{ComunListas.js}, que pueden manejar ambas partes sin conflictos.
+  (la lista de segmentos en memoria y la imagen de fondo), lo separo creando un \textbf{fichero propio que no pertenece a ninguna de las dos etapas}, \texttt{comunListas.js}, que pueden manejar ambas partes sin conflictos.
   
 Este fichero se comporta conceptualmente como un \emph{INCLUDE} en los módulos que lo necesiten utilizar.
   
@@ -51,11 +51,11 @@ Este fichero se comporta conceptualmente como un \emph{INCLUDE} en los módulos 
   	\texttt{segmentos()} (por referencia, viva) y \texttt{fondo()}.
   	
   	\item \textbf{Contrato intacto}: «la lista ES el estado» sigue siendo de los motores, 
-  	 \texttt{ComunListas} solo guarda referencias.
+  	 \texttt{comunListas} solo guarda referencias.
   	
   	\item \textbf{Quién escribe y quién lee en cada etapa}: la autoría escribe (carga del
   	GWI: \texttt{BaseDescomponer.cargarListas} delega en el puente, \texttt{reset} lo
-  	limpia, \texttt{BaseDirector} fija el fondo); el motor de estados escribe las banderas
+  	limpia, \texttt{baseDirector} fija el fondo); el motor de estados escribe las banderas
   	\texttt{visible}/\texttt{cambiar} en los objetos de la lista del puente; el motor
   	gráfico lee fondo, posiciones e imágenes y \emph{nunca} escribe.
   \end{itemize}
@@ -63,16 +63,16 @@ Este fichero se comporta conceptualmente como un \emph{INCLUDE} en los módulos 
 De esta manera independizamos ambas partes y evitamos duplicidad, un fichero común en lugar de copiar el código. Solo hay que tener cuidado de que si en una fase se modifica, en las anteriores debe seguir sirviendo, o estas se deben modificar de manera adecuada.
   
   \begin{itemize}
-  	\item \textbf{\texttt{ComunListas.js} (nuevo)}: API \texttt{cargar}, \texttt{limpiar},
+  	\item \textbf{\texttt{comunListas.js} (nuevo)}: API \texttt{cargar}, \texttt{limpiar},
   	\texttt{fijarFondo}, \texttt{segmentos}, \texttt{sprites}, \texttt{fondo}. Script
   	clásico, compatible con \texttt{file://}, cargado en primer lugar en
   	\texttt{index.html} (tras \texttt{jszip.min.js}).
   	 	
-  	\item \textbf{\texttt{index.html}}: debe ubicar \texttt{<script src="designer/ComunListas.js">} como primer script del proyecto, común a todos.
+  	\item \textbf{\texttt{index.html}}: debe ubicar \texttt{<script src="designer/comunListas.js">} como primer script del proyecto, común a todos.
 
-  	\item \textbf{\texttt{BaseDirector.js}}: junto a
+  	\item \textbf{\texttt{baseDirector.js}}: junto a
 	\texttt{BaseGraficos.fijarFondo(imgF)}, fija también el fondo en el puente
-	(\texttt{ComunListas.fijarFondo}).
+	(\texttt{comunListas.fijarFondo}).
 
   	\item \textbf{\texttt{BaseDescomponer.js}}: \texttt{cargarListas} y
   	\texttt{segmentosEnMemoria} pasan a delegar en el puente, en lugar de usarlos como variables
@@ -80,9 +80,9 @@ De esta manera independizamos ambas partes y evitamos duplicidad, un fichero com
   	aparato dejan de exponerse para el motor (el motor ya no las usa).
   	
  	\item \textbf{\texttt{JuegoMotorEstados.js}}: El futuro motor de estados del juego 
- 	 puede leer y cambiar la información de los segmentos que existen en \texttt{ComunListas}. 
+ 	 puede leer y cambiar la información de los segmentos que existen en \texttt{comunListas}. 
   	
-  	\item \textbf{\texttt{JuegoMotorGrafico.js}}: El futuro motor gráfico leerá la lista desde \texttt{ComunListas}, sin alterarlas. 
+  	\item \textbf{\texttt{juegoMotorGrafico.js}}: El futuro motor gráfico leerá la lista desde \texttt{comunListas}, sin alterarlas. 
   	
   \end{itemize}
   
@@ -99,14 +99,14 @@ De esta manera independizamos ambas partes y evitamos duplicidad, un fichero com
  	.2 designer/.
  	.3 jszip.min.js.
  	.3 estilos.css.
- 	.3 ComunListas.
- 	.3 BaseDirector.js.
+ 	.3 comunListas.
+ 	.3 baseDirector.js.
  	.3 BaseDescomponer.js.
  	.3 BaseExtractor.js.
  	.3 BaseGraficos.js.
  	.3 JuegoDirector.js.
  	.3 JuegoMotorEstados.js.
- 	.3 JuegoMotorGrafico.js.
+ 	.3 juegoMotorGrafico.js.
  	.2 cartucho/.
  	.3 parchute.json.
  	.3 parachuite\_f.png.

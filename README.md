@@ -29,7 +29,7 @@ Directorio  pruebas           : Pruebas en Node (consola) y del navegador (pesta
                                 pruebas, visible solo con GW_DEBUG, el módulo es 
                                 pruebas/pruebas.js)
 
-ORDEN DE CAGA DE LOS MODULOS:
+ORDEN DE CARGA DE LOS MÓDULOS:
   <script src="designer/jszip.min.js"></script>
   <script src="designer/ComunListas.js"></script>
   <script src="designer/BaseExtractor.js"></script>

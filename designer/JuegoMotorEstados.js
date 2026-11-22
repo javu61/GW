@@ -3,7 +3,12 @@
 // Motor de juego (Fase 3): el estado del juego VIVE EN LA LISTA DE
 // SEGMENTOS del puente ComunListas (la que la carga del GWI deja
 // en memoria). El tick hace TRES cosas, en este orden:
-//   0. ENTRADA: vacía la cola de pulsaciones pendientes (la llena
+//   0. Apaga las banderas de cambiado (todo segmento con cambiar
+//      =true pasa a false: el estado anterior ya fue presentado).
+//      F5-I15: la limpieza va ANTES de la entrada (como el
+//      análisis F2 fija): las marcas del propio tick han de
+//      sobrevivir a él.
+//   1. ENTRADA: vacía la cola de pulsaciones pendientes (la llena
 //      la máquina vía JuegoDirector; vive en el puente) y mueve al
 //      JUGADOR según la tabla MOVER. El jugador NO es un segmento
 //      que se desplaza por coordenadas: es un segmento ACTIVO que
@@ -15,8 +20,6 @@
 //      eje resultante da UN paso (dos pulsaciones de la misma
 //      dirección en la misma ventana son UN paso; opuestas se
 //      anulan); sin ella, cada pulsación es un paso en orden.
-//   1. Apaga las banderas de cambiado (todo segmento con cambiar
-//     =true pasa a false: el estado anterior ya fue presentado).
 //   2. RUTAS (F3-I5): los elementos de ruta son los segmentos de
 //      tipo juego (1) e inicio (2) que están VISIBLES. Se toma
 //      una FOTO de los visibles antes de tocar nada y cada uno
@@ -57,11 +60,13 @@
 // jugador encontrado se ENCIENDE (visible=true): la referencia
 // visual de que la entrada funciona.
 //
-// Nota de banderas: la entrada escribe cambiar=true en el
-// jugador apagado y en el encendido, y el paso (1) del MISMO tick
-// lo apaga — sin daño: el motor gráfico lee visible (repinta todos
-// los encendidos), cambiar es suciedad informativa de cara al
-// futuro (vías de hardware).
+// Nota de banderas: la limpieza del tick anterior va ANTES de la
+// entrada (F5-I15): la entrada escribe cambiar=true en el jugador
+// apagado y en el encendido, y esas marcas SOBREVIVEN al fin del
+// tick — las lee el repintado selectivo del ESP32 (vías de
+// hardware; la Memoria F2 lo fija así). El motor gráfico del
+// navegador sigue leyendo visible (repinta todos los encendidos):
+// sin cambio de comportamiento en el editor.
 //
 // Contrato (análisis F2-I1): este módulo es el ÚNICO escritor de
 // las banderas; habla SOLO EN ESTADOS (nunca en órdenes de
@@ -582,7 +587,7 @@ var JuegoMotorEstados = (function () {
   }
 
   /**
-   * El paso (0) del tick: ENTRADA. Vacía la cola de pulsaciones
+   * El paso (1) del tick: ENTRADA. Vacía la cola de pulsaciones
    * pendientes del puente (FIFO; quien la llena es la máquina) y
    * actúa en consecuencia. Con la regla "combinar" activa, todo
    * el buffer se reduce a EJES (dx, dy normalizados a -1, 0 o 1)
@@ -1518,16 +1523,21 @@ var JuegoMotorEstados = (function () {
   }
 
   /**
-   * Un paso del juego. Tres acciones, en este orden:
-   * 0) ENTRADA: vacía la cola de pulsaciones y mueve al jugador;
-   * 1) apaga las banderas de cambiado de TODA la lista (con
-   *    diagnóstico de cuántas apaga);
+   * Un paso del juego. Tres acciones, en este orden (F5-I15: la
+   * LIMPIEZA va antes de la entrada, como el análisis fija — así
+   * las banderas que la entrada marca al mover al jugador
+   * sobreviven al fin del tick; las lee el repintado selectivo
+   * del ESP32):
+   * 0) LIMPIEZA: apaga las banderas de cambiado de TODA la lista
+   *    (con diagnóstico de cuántas apaga);
+   * 1) ENTRADA: vacía la cola de pulsaciones y mueve al jugador;
    * 2) RUTAS: cada elemento de ruta visible AVANZA por su enlace
    *    siguiente o MUERE al final de la cadena (sin colisión);
    *    si no queda ninguna viva, nace una nueva elegida por el
    *    PRNG del director.
    * @returns {void}
-   * @since 2.5 (entrada: 3.2, rutas: 3.5)
+   * @since 2.5 (entrada: 3.2, rutas: 3.5; limpieza antes de la
+   * entrada: F5-I15)
    */
   function tick() {
     // Partida TERMINADA (F3-I11): congelada — nada avanza (el
@@ -1542,9 +1552,10 @@ var JuegoMotorEstados = (function () {
     if (configFin.mecanismo === finEnum.contador && configFin.contador >= 1) {
       prevFin = contadoresInternos[configFin.contador - 1];
     }
-    // 0. ENTRADA: el buffer de pulsaciones, consumido.
-    _aplicarEntrada(segs);
-    // 1. Apagar banderas de cambiado (estado ya presentado).
+    // 0. LIMPIEZA (F5-I15: antes de la entrada): apagar banderas
+    //    de cambiado del tick anterior (estado ya presentado). Las
+    //    marcas que la entrada dé a continuación SOBREVIVEN al
+    //    tick: las lee el repintado selectivo del ESP32.
     var cambiadas = 0;
     segs.forEach(function (seg) {
       if (seg.cambiar) {
@@ -1556,6 +1567,8 @@ var JuegoMotorEstados = (function () {
       console.log('motor del juego. Banderas cambiar: ' +
         (cambiadas === 0 ? 'No modificadas' : cambiadas + ' modificadas'));
     }
+    // 1. ENTRADA: el buffer de pulsaciones, consumido.
+    _aplicarEntrada(segs);
     // 2. RUTAS: foto de los elementos de ruta visibles ANTES de
     //    tocar nada (si un recién encendido avanzara otra vez en
     //    el mismo tick, saltaría doble). Cada uno AVANZA por su

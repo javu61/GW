@@ -66,7 +66,7 @@ Antes de planificar se han vuelto a mirar contra el código actual (tras F5-I12 
 	\caption{Plan para el motor de estados.}
 \end{table}
 
-\textbf{Riesgo.} El punto 9 es el único que puede cambiar partidas reales, porque cambia el orden en que se resuelven los movimientos. Se hará el último y se comparará con las partidas grabadas del Parachute. El punto 6 puede cambiar cuántas rutas se lanzan en cartuchos con «mostrar junto a»; es el comportamiento que el diseño siempre buscó.
+\textbf{Riesgo.} El punto (A3) es el único que puede cambiar partidas reales, porque cambia el orden en que se resuelven los movimientos. Se hará el último y se comparará con las partidas grabadas del Parachute. El punto (A1) puede cambiar cuántas rutas se lanzan en cartuchos con «mostrar junto a»; es el comportamiento que el diseño siempre buscó.
 
 \subsection{Director y carga}
 \label{sec:F5I15Director}
@@ -78,8 +78,7 @@ Antes de planificar se han vuelto a mirar contra el código actual (tras F5-I12 
 	\item \textbf{B2 y B4.} Se confirman con prueba y se marcan como resueltos.
 \end{itemize}
 
-\subsection{Editor}\label
-{sec:F5I15Editor}
+\subsection{Editor}\label{sec:F5I15Editor}
 
 \begin{table}[htbp]
 	\centering
@@ -104,7 +103,7 @@ Antes de planificar se han vuelto a mirar contra el código actual (tras F5-I12 
 \subsection{Divergencias entre el código y el análisis documentado}
 \label{sec:F5I15Docs}
 
-Los desajustes entre las decisiones tomadas durante el análisis e incluidas en la documentación y el código real desarrollado, hay que ajustarlas. Se debe o bien tocar el análisis o tocar el código, la decisión es ajutar el texto para que se adapte al código real desarrollado que es mas amplio de los previsto, salvo en un tema en que debe hacerse el cambio en el código para evitar errores:
+Los desajustes entre las decisiones tomadas durante el análisis e incluidas en la documentación y el código real desarrollado, hay que ajustarlas. Se debe o bien tocar el análisis o tocar el código, la decisión es ajustar el texto para que se adapte al código real desarrollado, que es más amplio de lo previsto, salvo en un tema en que debe hacerse el cambio en el código para evitar errores:
 
 \begin{table}[H]
 	\centering
@@ -112,7 +111,7 @@ Los desajustes entre las decisiones tomadas durante el análisis e incluidas en 
 		\toprule
 		\textbf{Desajuste} & \textbf{Decisión propuesta} \\
 		\midrule
-		Orden del tick: el documento borra las banderas antes de la entrada, el código después & Seguir lo que indica el documento: con el repintado selectivo del ESP32 los movimientos del jugador no se pintarían. Se hace con la red de seguridad del motor. \\
+		Orden del tick: el documento (Memoria F2) borra las banderas antes de la entrada, el código las borraba después & Cambiar el código, siguiendo el documento. La entrada escribe \texttt{cambiar=true} al mover al jugador (el hueco que deja y el que ocupa); si la limpieza va después de ella, esas marcas se pierden y el repintado selectivo del ESP32 no pintaría el paso. Sin conflicto con F2/F3 \\
 		\bottomrule
 	\end{tabularx}
 \caption{Cambios necesarios en el código.}
@@ -139,12 +138,19 @@ Los desajustes en el texto a mejorar para que coincidan con el código son:
 	\caption{Desajustes del texto a mejorar.}
 \end{table}
 
+\subsection{Cambio realizado: orden del tick}
+\label{sec:F5I15OrdenTick}
+
+Conforme al criterio de \emph{reproducir antes de corregir}, primero se escribió la prueba \emph{Orden del tick (F5-I15)} (PRUEBA 5 de la pestaña \emph{Pruebas}, \texttt{pruebas/pruebas.js}): un cartucho de laboratorio de dos segmentos enlazados y el motor movido a mano. Con el código del momento la prueba falla: \texttt{A.cambiar=false B.cambiar=false} — la limpieza, posterior a la entrada, borraba las marcas del paso. Después se movió la limpieza al paso (0) del \texttt{tick()} en \texttt{JuegoMotorEstados.js} (la entrada pasa al paso 1 y las rutas siguen en el 2), actualizando la cabecera, el JSDoc y la nota de banderas del módulo. Re-ejecutada la prueba, las tres comprobaciones pasan: el paso ocurre, las banderas del jugador sobreviven al tick y el tick siguiente las deja limpias.
+
+Sin cambio de comportamiento en el navegador: ningún módulo JavaScript lee todavía \texttt{cambiar} (el motor gráfico repinta todos los encendidos a partir de \texttt{visible}); las banderas son para el repintado selectivo del ESP32. Queda pendiente la red de seguridad del motor (criterio 2): regrabar las partidas de las cinco semillas con \texttt{pruebas/equivalenciaGWC.js} y confirmar que no hay diferencias; el GWC antiguo se regenera a partir del GWI.
+
 \subsection{Decisiones que hay que validar}
 \label{sec:F5I15Decisiones}
 
 \begin{enumerate}
 	\item ¿Se aprueba el orden de trabajo y la regla de «reproducir antes de corregir»?
-	\item Orden del tick: ¿se cambia el código para seguir el documento (propuesta) o se cambia el documento?
+	\item Orden del tick: ¿se cambia el código para seguir el documento (propuesta) o se cambia el documento? Resuelto: se cambia el código (ver~\ref{sec:F5I15OrdenTick}).
 	\item \#26: ¿un PNG con transparencia se trata como fondo blanco?
 	\item \#22: ¿se acepta que cada tipo declare qué campos usa, como tabla única en el código?
 	\item ¿Se corrigen los desajustes de la tabla anterior en esta iteración, o se dejan para una iteración de documentación aparte?

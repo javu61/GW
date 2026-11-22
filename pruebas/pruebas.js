@@ -23,6 +23,9 @@
 //                                   segmento con lo que leerGWC devuelve.
 //   Equivalencia (variante)         Lo mismo declarando además rutas, aceleración, pausas y
 //                                   regla «combinar» (la VARIANTE=1 de equivalenciaGWC.js).
+//   Orden del tick (F5-I15)         Autónoma: la limpieza de las banderas «cambiar» ocurre
+//                                   antes de la entrada, y las marcas del paso del jugador
+//                                   sobreviven al tick (para el repintado selectivo del ESP32).
 //
 // FUNCIONES
 //   _$                         Un elemento del DOM por id.
@@ -46,6 +49,9 @@
 //                              (solo los que viajan: sin tipo 99 ni fusionados).
 //   _pruebaEquivalencia        PRUEBAS 3 y 4 «Equivalencia (datos)» y «(variante
 //                              declarada)»: sin diferencias = IGUALES (F5-I13).
+//   _pruebaOrdenTick           PRUEBA 5 «Orden del tick (F5-I15)»: la limpieza de las
+//                              banderas «cambiar» va ANTES de la entrada; las marcas
+//                              del paso del jugador sobreviven al tick.
 //   PRUEBAS                    El catálogo: id, nombre y ejecutor de cada prueba.
 //   _lanzar                    Lanza una prueba, pinta línea a línea y cierra con el
 //                              resumen (N OK, M fallo(s) y tiempo).
@@ -302,6 +308,66 @@ var Pruebas = (function () {
     return out;
   }
 
+  /* ---------------- PRUEBA 5: orden del tick (F5-I15) ---------------- */
+  /* El análisis (Memoria F2) fija el orden del tick: (0) limpieza de las
+     banderas «cambiar» del tick anterior, (1) ENTRADA, (2) cómputo. La
+     entrada marca «cambiar» al mover al jugador (el hueco que deja y el
+     que ocupa): si la limpieza viniera DESPUÉS de ella, esas marcas se
+     perderían y el repintado selectivo del ESP32 no pintaría el paso.
+     Contrato que se comprueba con un laboratorio de dos segmentos y el
+     motor movido a mano; al final se DEVUELVE el puente como estaba, con
+     el cartucho cargado intacto (si lo había).                    */
+
+  function _pruebaOrdenTick() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const salvado = {
+      sprites: ComunListas.sprites(), segmentos: ComunListas.segmentos(),
+      fondo: ComunListas.fondo(), reglas: ComunListas.reglas(),
+      fin: ComunListas.finDeCartucho(), secuencia: ComunListas.secuenciaDeCartucho(),
+      pausas: ComunListas.pausasDeCartucho(), aceleracion: ComunListas.aceleracionDeCartucho(),
+      rutas: ComunListas.rutasDeCartucho()
+    };
+    try {
+      ComunListas.limpiar();
+      ComunListas.cargar([], [
+        { id: 'jug_a', tipo: 0, primero: true, visible: false, derecha: 'jug_b' },
+        { id: 'jug_b', tipo: 0, visible: false }
+      ]);
+      JuegoMotorEstados.iniciar();
+      let teclaDerecha = '4';
+      for (const [t, d] of Object.entries(JuegoMotorEstados.MOVER))
+        if (d === 'derecha') teclaDerecha = t;
+      JuegoMotorEstados.tick();
+      const segs = ComunListas.segmentos();
+      const a = segs[0];
+      a.visible = true; a.cambiar = true;
+      ComunListas.encolar(teclaDerecha);
+      JuegoMotorEstados.tick();
+      const b = segs[1];
+      ok('el paso del jugador ocurre', (!a.visible && b.visible &&
+        JuegoMotorEstados.jugadorActual && JuegoMotorEstados.jugadorActual() === 1),
+        'A.visible=' + a.visible + ' B.visible=' + b.visible);
+      ok('las banderas del paso SOBREVIVEN al tick (limpieza antes de la entrada)',
+        a.cambiar === true && b.cambiar === true,
+        'A.cambiar=' + a.cambiar + ' B.cambiar=' + b.cambiar);
+      JuegoMotorEstados.tick();
+      ok('el tick siguiente deja las banderas limpias',
+        !a.cambiar && !b.cambiar && !a.visible && b.visible,
+        'A.cambiar=' + a.cambiar + ' B.cambiar=' + b.cambiar);
+    } finally {
+      ComunListas.cargar(salvado.sprites, salvado.segmentos);
+      ComunListas.fijarFondo(salvado.fondo);
+      ComunListas.fijarReglas(salvado.reglas);
+      ComunListas.fijarFin(salvado.fin);
+      ComunListas.fijarSecuencia(salvado.secuencia);
+      ComunListas.fijarPausas(salvado.pausas);
+      ComunListas.fijarAceleracion(salvado.aceleracion);
+      ComunListas.fijarRutas(salvado.rutas);
+    }
+    return out;
+  }
+
   /* ---------------- Catálogo y lanzador ---------------- */
 
   const PRUEBAS = [
@@ -320,6 +386,10 @@ var Pruebas = (function () {
     {
       id: 'equivalenciaVariante', nombre: 'Equivalencia (variante declarada)', necesita: null,
       ejecutar: () => _pruebaEquivalencia(true)
+    },
+    {
+      id: 'ordenTick', nombre: 'Orden del tick (F5-I15)', necesita: null,
+      ejecutar: () => _pruebaOrdenTick()
     }
   ];
 

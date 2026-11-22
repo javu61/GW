@@ -1,0 +1,151 @@
+\section{Decimoquinta iteración de la Fase 5: revisión del motor, del director y del editor}
+\label{sec:F5I15}
+
+Esta iteración revisa temas menores pendientes sobre el motor del juego, el director del juego y el editor.
+
+\subsection{Criterios de trabajo}
+\label{sec:F5I15Criterios}
+
+\begin{enumerate}
+	\item \textbf{Reproducir antes de corregir.} Cada punto empieza con una prueba que falle con el código actual (usando  \texttt{pruebas.js}, con un cartucho de laboratorio mínimo). Los puntos marcados como \emph{posibles} en la revisión solo se corrigen si la prueba demuestra el fallo; si no, se descartan y se documenta.
+	
+	\item \textbf{Red de seguridad del motor.} Antes de tocar el motor se graba la partida del cartucho de ejemplo con las cinco semillas de la prueba de equivalencia. Después de cada corrección se vuelve a jugar: las únicas diferencias admitidas son las que la corrección busca, y se explican una a una.
+	
+	\item \textbf{Sin cambios de formato.} Ninguno de estos puntos toca el formato del GWB, el GWI ni el GWC. Los cartuchos existentes siguen valiendo.
+	
+	\item \textbf{Un cambio, una prueba, una nota.} Cada punto resuelto se marca en \texttt{REVISION\_CODIGO.md} y se anota aquí con su prueba.
+	
+	\item \textbf{Cabeceras al día.} Cada fichero JavaScript modificado revisa su lista de funciones (norma de F5-I14).
+\end{enumerate}
+
+\subsection{Estado comprobado de los puntos}
+\label{sec:F5I15Estado}
+
+Antes de planificar se han vuelto a mirar contra el código actual (tras F5-I12 a F5-I14) los puntos de la revisión:
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{l c >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Módulo} & \textbf{\#} & \textbf{Estado en el código actual} & \textbf{Acción} \\
+		\midrule
+		Motor & A1 & \texttt{\_esDeRuta} y \texttt{\_esCadena} no excluyen a los secundarios de «mostrar junto a» (están en \texttt{mapaComp}) & Corregir \\
+		Motor & A2 & \texttt{\_sincronizarAcompanantes} se ejecuta antes de \texttt{\_sincronizarIconos} & Corregir \\
+		Motor & A3 & El barrido recorre la lista y aplica sobre la marcha & Reproducir y corregir \\
+		Motor & A4 & Tres casos posibles, sin probar & Reproducir uno a uno \\
+		Director & B1 & Tras F5-I12 la pestaña Editor no se habilita con un GWC; falta comprobar el resto del caso (botonera, restos de autoría) & Reproducir \\
+		Director & B2 & \texttt{\_descomponerImagen} ya comprueba el retorno de \texttt{arrancar} y sale sin habilitar los botones & Probablemente resuelto; confirmar con prueba \\
+		Director & B3 & \texttt{\_procesarCartucho} sigue limpiando y asignando el cartucho \textbf{antes} de comprobar la compatibilidad de botones & Corregir \\
+		Director & B4 & \texttt{informarEstadistica} y \texttt{\#infoEstadistica} ya no existen & Resuelto; quitar la mención de la revisión \\
+		Editor & C1 & \texttt{TODOS\_ENLACES} sigue sin incluir \texttt{sec\_1}…\texttt{sec\_5} & Corregir \\
+		Editor & C2–C9 & Sin comprobar todavía & Reproducir uno a uno \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Puntos de la revisión frente al código actual.}
+\end{table}
+
+
+\subsection{Motor de estados}
+\label{sec:F5I15Motor}
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabularx}{\textwidth}{c >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{\#} & \textbf{Qué se hará} & \textbf{Prueba} \\
+		\midrule
+		A1 & Excluir de \texttt{\_esCadena} y \texttt{\_esDeRuta} los segmentos que son secundarios de un «mostrar junto a»: los sincroniza su principal y no son rutas. Así el barrido no los apaga como fin de ruta ni \texttt{\_muereRuta} resta de \texttt{nRutasVivas} & Cartucho de laboratorio con un principal y un secundario: tras N ticks \texttt{nRutasVivas} nunca es negativo ni supera el máximo permitido \\
+		
+		A2 & Ejecutar \texttt{\_sincronizarIconos} antes de \texttt{\_sincronizarAcompanantes}, y también en \texttt{iniciar()}, para que el secundario de un icono se pinte en el mismo tick que su principal y en el tick final & Icono con secundario: ambos cambian en el mismo tick, también en el último \\
+		
+		A3 & Barrido en dos fases: primero se calcula el destino de cada segmento de la cadena sobre una foto del estado, y después se aplican. El resultado deja de depender del orden de la lista cuando dos rutas van seguidas o confluyen, y \texttt{nRutasVivas} se mantiene exacto & Dos rutas seguidas en la misma cadena y dos rutas que confluyen, con la lista en ambos órdenes: mismo resultado y contador correcto \\
+		
+		A4 & Reproducir los tres casos: (a) punto de colisión que se enciende y se apaga en el mismo tick; (b) ruta que entra en un segmento de la Secuencia y desaparece sin \texttt{\_muereRuta}; (c) congelación que no corta el barrido en curso. Corregir solo los que fallen & Una prueba por caso \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Plan para el motor de estados.}
+\end{table}
+
+\textbf{Riesgo.} El punto 9 es el único que puede cambiar partidas reales, porque cambia el orden en que se resuelven los movimientos. Se hará el último y se comparará con las partidas grabadas del Parachute. El punto 6 puede cambiar cuántas rutas se lanzan en cartuchos con «mostrar junto a»; es el comportamiento que el diseño siempre buscó.
+
+\subsection{Director y carga}
+\label{sec:F5I15Director}
+\begin{itemize}
+	\item \textbf{B3 Estado a medias.} \texttt{\_procesarCartucho} hará primero todas las comprobaciones (compatibilidad de estilo y botones) y solo después limpiará el estado anterior y asignará el nuevo, como ya hace la carga del GWC. Prueba: cargar un cartucho incompatible tras uno bueno deja el bueno intacto.
+	
+	\item \textbf{B1 GWC tras GWI.} Se reproduce el caso completo (autoría, botonera, \texttt{Guardar} y \texttt{Generar}); lo que falle se corrige con la misma regla de F5-I12: cargar un GWC limpia la autoría.
+	
+	\item \textbf{B2 y B4.} Se confirman con prueba y se marcan como resueltos.
+\end{itemize}
+
+\subsection{Editor}\label
+{sec:F5I15Editor}
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabularx}{\textwidth}{c >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{\#} & \textbf{Qué se hará} \\
+		\midrule
+		C1 & Añadir \texttt{sec\_1}…\texttt{sec\_5} a \texttt{TODOS\_ENLACES}: al unir se re-apuntan a la raíz, al separar se anulan y \texttt{verificarReferencias} los revisa \\
+		C2 & El historial convierte los ids «F01» al deshacer tras cargar un GWI con piezas de unión \\
+		C3 & «Presentar el cero = false» llega al GWI: \texttt{reconstruir} deja de saltarse los \texttt{false} \\
+		C4 & Al cambiar de tipo se descartan solo los campos que el tipo nuevo no usa, y se limpia \texttt{mostradoJunto} del secundario. Hace falta una tabla «campos válidos por tipo» \\
+		C5 & El alta de la ficha del cartucho deja de ser una acción deshacible \\
+		C6 & Los segmentos absorbidos no cuentan en las familias ni en la numeración de rutas; \texttt{refrescarInfo} numera por \texttt{orden} \\
+		C7 & No se pueden unir dos dígitos ni dos contadores, ni cambiar a dígito o contador una pieza de unión (F3-I10 lo prohíbe) \\
+		C8 & Un píxel con alfa 0 se trata como fondo (blanco) en el extractor \\
+		C9 & La verificación no registra sus inversos como acciones sueltas del historial \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Plan para el editor.}
+\end{table}
+
+\subsection{Divergencias entre el código y el análisis documentado}
+\label{sec:F5I15Docs}
+
+Los desajustes entre las decisiones tomadas durante el análisis e incluidas en la documentación y el código real desarrollado, hay que ajustarlas. Se debe o bien tocar el análisis o tocar el código, la decisión es ajutar el texto para que se adapte al código real desarrollado que es mas amplio de los previsto, salvo en un tema en que debe hacerse el cambio en el código para evitar errores:
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Desajuste} & \textbf{Decisión propuesta} \\
+		\midrule
+		Orden del tick: el documento borra las banderas antes de la entrada, el código después & Seguir lo que indica el documento: con el repintado selectivo del ESP32 los movimientos del jugador no se pintarían. Se hace con la red de seguridad del motor. \\
+		\bottomrule
+	\end{tabularx}
+\caption{Cambios necesarios en el código.}
+\end{table}
+
+Los desajustes en el texto a mejorar para que coincidan con el código son:
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Desajuste} & \textbf{Decisión propuesta} \\
+		\midrule
+
+		«combinar»: tres versiones (setup, casilla, cartucho) & Documentar lo que hay: vive en el cartucho y viaja en el Bloque 0 (F5-I14) \\
+		Pausas y velocidades «desde el setup» & Documentar lo que hay: son del cartucho (Bloque 1) y la aceleración resta milisegundos fijos \\
+		Buffer de pulsaciones y \texttt{JuegoMotorEstados.pulsar} & Documentar: la cola está en \texttt{ComunListas} y la vacía el director \\
+		Variedad de rutas, cadenas por vida y muerte, F3-I06, F3-I10, F3-I11 & Documentar el comportamiento real y la nomenclatura actual (\texttt{salvadoContador}, \texttt{muerteContador}, ids \texttt{F01}) \\
+		Formato GWC (F5-I02): orden de contadores, contador interno 0xFF, direcciones relativas, tamaño del contenido, enlace 0xFF, aceleración ausente, códigos de fin, \texttt{codigoGWC}, alineación & Corregir el \texttt{.tex}, que es lo que está mal. La alineación (struct \texttt{packed} en C) pasa al cuerpo del texto \\
+		F5-I03, A7-anexo (lista de funciones), Memoria F1, F1-I08, F1-I11, F1-I01, C4-disenno & Actualizar cada texto con lo que hace el código \\
+		Erratas (F4 cortado, F2-I02) & Corregir \\
+		Hecho y no documentado (Start reinicia, \texttt{jugar()} oculta la interfaz, etc.) & Añadir un apartado en la iteración correspondiente \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Desajustes del texto a mejorar.}
+\end{table}
+
+\subsection{Decisiones que hay que validar}
+\label{sec:F5I15Decisiones}
+
+\begin{enumerate}
+	\item ¿Se aprueba el orden de trabajo y la regla de «reproducir antes de corregir»?
+	\item Orden del tick: ¿se cambia el código para seguir el documento (propuesta) o se cambia el documento?
+	\item \#26: ¿un PNG con transparencia se trata como fondo blanco?
+	\item \#22: ¿se acepta que cada tipo declare qué campos usa, como tabla única en el código?
+	\item ¿Se corrigen los desajustes de la tabla anterior en esta iteración, o se dejan para una iteración de documentación aparte?
+\end{enumerate}

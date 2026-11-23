@@ -10,7 +10,7 @@ Iteración de cierre de dos pendientes menores, antes de abordar otros temas de 
 	 	\item La autoría se pierde al aplicar un cartucho
 	 	\end{itemize}
 	 	
-	\item \textbf{Cursores} — Las flechas de los cursores del teclado del PC como teclas del simulador, definibles en el setup igual que las letras con letras actuales.
+	\item \textbf{Cursores} — Las flechas de los cursores del teclado del PC como teclas del simulador, definibles en el setup igual que las letras actuales.
 \end{itemize}
 
 \subsection{Criterios de trabajo}
@@ -19,14 +19,14 @@ Iteración de cierre de dos pendientes menores, antes de abordar otros temas de 
 \begin{enumerate}
 	\item Las teclas solo afectan al \textbf{editor y el simulador de PC}: Ya que en el sistema externo no se emplean. La tecla es solo la forma de jugar con el teclado del PC; lo que manda en la máquina real sigue siendo el \texttt{puerto}. Tampoco se toca el simulador del ESP32 ni el firmware futuro.
 	
-	\item \textbf{Sin cambios de formato}: El GWC no cambia byte a byte. El GWS solo cambia en sentido amplio: el campo \texttt{tecla} pasa a admitir, además de un carácter \texttt{A..Z}/\texttt{0..9}, los nombres de cursor (ver \ref{sec:F5I17Flechas}); un GWS con solo letras sigue cargando igual, y un GWS con cursores NO carga en motores anteriores a esta iteración (se acepta: es evolución del proyecto, no un fichero corrupto).
+	\item \textbf{Sin cambios de formato}: El GWC no cambia byte a byte. El GWS solo cambia en sentido amplio: el campo \texttt{tecla} pasa a admitir una letra \texttt{A..Z} o un nombre de cursor (ver \ref{sec:F5I17Flechas}); los dígitos \texttt{0..9} se RETIRAN (los \texttt{1}/\texttt{2}/\texttt{3} quedan para el trío sistema A/B/R) y un GWS que traiga una tecla dígito pasa a NO cargar; un GWS con solo letras sigue cargando igual, y un GWS con cursores NO carga en motores anteriores a esta iteración (se acepta: es evolución del proyecto, no un fichero corrupto).
 	
 	\item \textbf{Avisos con los mismos puntos de salida que F5-I16}: Los avisos nuevos salen en la barra superior \texttt{\#estado} y, si tocan a una ficha, en su zona de mensajes; quedan fuera del alcance del recorte y del silencio de F5-I16: aquí solo se añaden avisos.
 	
 	\item \textbf{Un cambio, una prueba}: Cada punto se anota con su prueba, y cada punto reproduce primero con el código actual.
 \end{enumerate}
 
-\subsection{Tema 1: el ciclo GWI/GWC y su par}
+\subsection{Avisos: el ciclo GWI/GWC y su par}
 \label{sec:F5I17Par}
 
 \subsubsection{Cómo funciona hoy}
@@ -60,7 +60,7 @@ Hoy, cargar cualquier cartucho hace \texttt{BaseDescomponer.reset()} (por tanto 
 
 Aviso (no bloqueante) al cargar un GWB cuando el GWI en memoria tiene al menos una acción de historial: «Has cargado un GWB sobre un GWI con autoría: se descarta el historial (N acciones). Si lo querías conservar, guarda el GWI y empieza de nuevo.» La N la da el propio editor (función pública nueva del editor, p. ej. \texttt{numeroDeCambios()}; alternativa: lo que ya informa \texttt{resumen()} — se decide en la implementación). Queda FUERA del alcance cargar un GWI encima de otro GWI: el nuevo trae su historial, que ES la autoría que el autor pide; no se avisa.
 
-\subsection{Tema 2: flechas del teclado en el PC}
+\subsection{Cursores: flechas del teclado en el PC}
 \label{sec:F5I17Flechas}
 
 Hoy cada botón físico del simulador lleva una tecla de letra: la del setup (\texttt{botones[].tecla}, un carácter validado por \texttt{validarSetup}) o la de la tabla \texttt{TECLAS\_POR\_DEFECTO} (\texttt{BaseDirector.js}). El simulador pulsa el botón asociado comparando \texttt{ev.key} con el \texttt{dataset.tecla} del botón en minúsculas (\texttt{\_buscarBotonPorTecla}), y la pista del botón pinta la letra.
@@ -68,18 +68,18 @@ Hoy cada botón físico del simulador lleva una tecla de letra: la del setup (\t
 Se amplía para que el setup pueda asignar a un botón una \textbf{tecla de cursor} del PC, al lado de la letra (o en su lugar):
 
 \begin{itemize}
-	\item \textbf{Nombres de cursor en el GWS} (lista cerrada, sin distinguir mayúsculas/minúsculas): \texttt{cursor-izq}, \texttt{cursor-der}, \texttt{cursor-arriba}, \texttt{cursor-abajo}. Es lo natural en el vocabulario del proyecto (izquierda/derecha/arriba/abajo como los enlaces del editor).
-	\item \textbf{\texttt{validarSetup}} acepta la tecla si es un carácter \texttt{A..Z}/\texttt{0..9} (la letra va desde F5-I6; el dígito se añadió en F5-I16) O uno de los cuatro nombres de cursor. Sin repetir, como las letras.
+	\item \textbf{Nombres de cursor en el GWS} (lista cerrada, sin distinguir mayúsculas/minúsculas): \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} (se escriben completos, sin abreviar). Es lo natural en el vocabulario del proyecto (izquierda/derecha/arriba/abajo como los enlaces del editor).
+	\item \textbf{\texttt{validarSetup}} acepta la tecla si es una letra \texttt{A..Z} (la letra va desde F5-I6; esta iteración retira los dígitos) O uno de los cuatro nombres de cursor. Sin repetir, como las letras.
 	\item \textbf{El simulador} mapea las teclas de flecha del PC (\texttt{ev.key} \texttt{ArrowLeft}, \texttt{ArrowRight}, \texttt{ArrowUp}, \texttt{ArrowDown}) al nombre de cursor, y \texttt{\_buscarBotonPorTecla} las encuentra en los dos sentidos (pulsar con la flecha, resaltar y soltar igual que una letra). La pista del botón muestra un símbolo ($\leftarrow$/$\rightarrow$/$\uparrow$/$\downarrow$) en lugar de texto largo.
-	\item \textbf{La ficha del setup} (pestaña Setup): el campo \texttt{tecla} de cada botón admite teclear la letra o el nombre de cursor (con la misma validación; alternativa a valorar: un \texttt{<select>} con las letras, los dígitos y los cuatro cursores — punto abierto siguiente).
-	\item \textbf{Las teclas por defecto} (\texttt{Q/A/W/S/P/L/G/B/T}) NO cambian: solo se añade la posibilidad de definirlas; el setup actual del proyecto sigue cargando igual.
+	\item \textbf{La ficha del setup} (pestaña Setup): el campo \texttt{tecla} de cada botón se elige en una lista desplegable con cinco valores: los cuatro cursores y «tecla»; al elegir «tecla» aparece una casilla aparte para escribir la letra ($A \dots Z$). Ya no se admite teclear el nombre a mano.
+	\item \textbf{Las teclas por defecto} (\texttt{Q/A/W/S/P/L/G/B/T}) CAMBIAN por estilo de máquina (ver los puntos definidos); un setup que declare \texttt{tecla} explícita sigue teniendo la última palabra.
 \end{itemize}
 
 \textbf{Puntos definidos}
 \begin{enumerate}
 	\item Nombres de cursor: en español \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba},  \texttt{cursor-abajo}.
 	
-	\item Para ponerlos en la ficha no se admite el nombre a mano, se valida sobre una lista con los 4 valores, y como quinto \texttt{tecla}, si se selecciona este nuevo valor se permite definir la tecla a usar ($A \dots Z$) en una casilla aparte. 
+	\item Para ponerlos en la ficha no se admite el nombre a mano, se valida sobre una lista con los 4 valores, y como quinto \texttt{tecla}, si se selecciona este nuevo valor se permite definir la tecla a usar (una letra $A \dots Z$; sin dígitos) en una casilla aparte. 
 	
 	\item Cambiamos la asignación de las teclas por defecto:
 	\begin{enumerate}
@@ -90,7 +90,7 @@ Se amplía para que el setup pueda asignar a un botón una \textbf{tecla de curs
 		\item Para las de 5 botones \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} y \texttt{Z}.
 	\end{enumerate}
 	
-	\item Mantenemos las teclas para A/B/R como Z/X/C
+	\item El trío sistema A/B/R usa \texttt{1}/\texttt{2}/\texttt{3} (antes \texttt{G}/\texttt{B}/\texttt{T}): separa el sistema de los botones y deja las 26 letras libres para los botones, sin reservas ni colisiones.
 \end{enumerate}
 
 En el sistema externo no influye en nada: ni el GWS cambia su sentido (\texttt{puerto} sigue siendo lo que usa el firmware), ni el ESP32 ve las teclas.
@@ -106,12 +106,13 @@ En el sistema externo no influye en nada: ni el GWS cambia su sentido (\texttt{p
 	BaseFicha & M1 & Campo \texttt{codigoGWC} de solo lectura en la ficha de Cartucho; se rellena al poblar con el del GWI cargado («---» si no trae) y se refresca tras generar & Cargar el GWI de Parachute: la ficha muestra su \texttt{codigoGWC}; cargar un GWB: «---» \\
 	BaseDescomponer & M2 & En \texttt{\_generarPar}: aviso si el GWI cargado traía \#X\# y el nuevo código es \#Y\# $\neq$ \#X\#; en \texttt{verificarYGuardar}: aviso si el guardado suelta un \texttt{codigoGWC} que existía & GWI con \#X\# editado: \texttt{Verificar y Guardar} avisa «queda desparejado (\#X\#)»; \texttt{Generar} con código distinto avisa con ambos códigos \\
 	BaseDirector & M3 & Aviso al cargar un GWB sobre un GWI con autoría (N acciones), antes del \texttt{reset}; N desde función pública nueva del editor & GWI de Parachute cargado, cargar un GWB: aviso visible con el número de acciones; cargar el MISMO GWI de nuevo: sin aviso \\
-	BaseDirector & M4 & \texttt{validarSetup}: la tecla admite letra/dígito o nombre de cursor (lista cerrada, sin repetir); \texttt{\_buscarBotonPorTecla} normaliza \texttt{Arrow*} y la pista del botón muestra el símbolo del cursor & GWS a mano con \texttt{tecla: "cursor-izq"}: carga; la flecha izquierda del PC pulsa ese botón; \texttt{tecla: "cursorziq"}: NO carga \\
-	BaseSetup & M5 & La ficha del setup admite teclear el nombre de cursor en la tecla (validado y pintado como el resto) & Escribir \texttt{cursor-der} en la tecla del botón derecho y aplicar: el botón del simulador lleva $\rightarrow$ y la flecha derecha del PC lo pulsa \\
+	BaseDirector & M4 & \texttt{validarSetup}: la tecla admite letra o nombre de cursor (lista cerrada, sin repetir; los dígitos se retiran); \texttt{\_buscarBotonPorTecla} normaliza \texttt{Arrow*} y la pista del botón muestra el símbolo del cursor & GWS a mano con \texttt{tecla: "cursor-izquierda"}: carga; la flecha izquierda del PC pulsa ese botón; \texttt{tecla: "cursorziq"}: NO carga; \texttt{tecla: "1"}: NO carga \\
+	BaseSetup & M5 & La ficha del setup elige la tecla en la lista desplegable (los cuatro cursores y «tecla», con casilla de letra aparte cuando toca) & Elegir \texttt{cursor-derecha} para el botón derecho y aplicar: el botón del simulador lleva $\rightarrow$ y la flecha derecha del PC lo pulsa; elegir «tecla», escribir M y aplicar: el botón lleva M \\
+	BaseDirector & M6 & \texttt{TECLAS\_POR\_DEFECTO} pasa a depender del estilo: 2 botones 0/4 $\to$ cursor-izquierda/derecha; 4 botones 0/1 $\to$ W/S y 4/5 $\to$ O/K; 5 botones cruceta 0--3 $\to$ los cuatro cursores y 4 $\to$ Z; trío sistema 6/7/8 $\to$ 1/2/3 & Cargar cada estilo sin setup de teclas: en el de 5 la cruceta responde a las flechas del PC; en todos, el trío A/B/R responde a 1/2/3 \\
 	\bottomrule
 \end{xltabular}
 
 \subsection{Pruebas}
 \label{sec:F5I17Pruebas}
 
-En la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): una caja por punto (M1: poblar la ficha con un GWI con y sin \texttt{codigoGWC}; M2: comprobar los dos avisos leyendo \texttt{\#estado}; M3: carga de GWB sobre GWI con cambios; M4/M5: GWS a mano con \texttt{cursor-izq}/\texttt{cursor-der}, pulsación con \texttt{KeyboardEvent} de flecha desde Playwright, y un nombre de cursor mal escrito que no carga). En \texttt{pruebasGWI\_GWC} la equivalencia con los ficheros del par debe seguir en verde (los avisos no tocan bytes). Al cierre se re-lanzan las cuatro suites; los avisos nuevos no tocan el orden del tick ni el formato del GWC.
+En la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): una caja por punto (M1: poblar la ficha con un GWI con y sin \texttt{codigoGWC}; M2: comprobar los dos avisos leyendo \texttt{\#estado}; M3: carga de GWB sobre GWI con cambios; M4/M5/M6: GWS a mano con \texttt{cursor-izquierda}/\texttt{cursor-derecha}, pulsación con \texttt{KeyboardEvent} de flecha desde Playwright, un nombre de cursor mal escrito que no carga, una tecla dígito que no carga, y los defaults por estilo (cruceta con flechas y trío 1/2/3). En \texttt{pruebasGWI\_GWC} la equivalencia con los ficheros del par debe seguir en verde (los avisos no tocan bytes). Al cierre se re-lanzan las cuatro suites; los avisos nuevos no tocan el orden del tick ni el formato del GWC.

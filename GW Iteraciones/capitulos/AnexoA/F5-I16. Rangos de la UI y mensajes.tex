@@ -66,7 +66,7 @@ En los campos de 1 byte el generador ya recorta (\texttt{BaseCartucho.js} escrib
 \subsection{Detalles importantes}
 \label{sec:F5I16Mensajes}
 
-Hay dos detalles que limitan el manejo de estos valores máximos para el GWI:
+Hay algunos detalles que considerar al limitar el manejo de estos valores máximos para el GWI:
 \begin{itemize}
 	\item  El atributo \texttt{max} del HTML no impide escribir a mano un valor mayor (solo gobierna las flechas del campo y la validación de formulario). Hoy los manejadores \texttt{change} recortan por abajo (\texttt{Math.max(minimo, ...)}) pero no por arriba, así que un valor teclado puede quedar en la propiedad sin recortar. Cada punto incluye el recorte superior en el manejador, no solo el atributo.
 
@@ -75,9 +75,24 @@ Hay dos detalles que limitan el manejo de estos valores máximos para el GWI:
 	\item Un GWI editado a mano con \texttt{pausaSim} de 5000 debe ser válido y generable. El paso a GWC al menos verifica que los límites del formato (255 y 65534) no se sobrepasen como red de seguridad, pero se deben limitar a los valores máximos definidos para el GWI.
 		
 	
-	\item ¿La limpieza de mensajes (R4) cubre solo la zona de la ficha o también la barra superior \texttt{\#estado}?
+	\item La limpieza de mensajes cubre la zona de la ficha y también la barra superior \texttt{\#estado}.
+\end{itemize}
+
+\subsection{Manejo de los límites}
+\label{sec:F5I16Manejo}
+
+Para poder manejar estos límites, se deben implementar estos proceso:
+\begin{itemize}
+	\item Al cagar un GWI manual y sobre todo al guardarlo limitaremos los valores a los establecidos como máximos para los campos. Al guardar un GWC limitaremos los valores a los máximos del GWI, peo además limiteremos a los valores máximos del tamaño del campo, 1 o 2 bytes, por seguridad deben usarse ambas verificaciones. 
+	
+	\item Para limitar correctamente, crearemos una nueva función \textbf{revisarValores} que los limite en memoria, que admita como parámetros \textbf{tipo} que podrá ser uno de los tipos de cartucho, así para un cartucho GWI se limita a los valores máximos de los campos, y si es un cartucho GWC se limita a los valores según el tamaño del campo. Para valorar un campo se llamarán a una función auxiliar \textbf{limitarValor}, con tres parámetros, \textbf{valor} a limitar, se retorna el valor ajustado, \textbf{maximo} que admite el campo, y \textbf{minimo} que admie el campo (opcional si no se indica es cero) que permita ajustar los valores en memoria, de forma que cuando se llama a las funciones que generan los cartuchos los valores ya sean siempre correctos y limitados.
+	
+	\item Esta función se la llamará después de cargar cualquier cartucho, y siempre antes de guardar cualquier cartucho, de esta manera nos aseguramos de que los valores en memoria sean siempre coherentes en la pantalla tras cargar, y correctos siempre al generar. Los valores de los cartuchos GWS y GWB actualmente no tiene campos limitados, pero al tener valores numéricos se limitarán igualmente los posibles valores del tamaño de la pantalla, puertos para botones, etc. 
+	
+	\item Para hacer esto se debe crear una tabla interna que indique cartucho, campo y valor máximo del mismo, de forma que el proceso sea sencillo de ampliar.
 	
 \end{itemize}
+
 
 \subsection{La zona de mensajes}
 \label{sec:F5I16Mensajes}

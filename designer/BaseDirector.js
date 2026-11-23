@@ -307,6 +307,15 @@ var BaseDirector = (function () {
       res.ancho <= 0 || res.alto <= 0) {
       return 'el setup necesita una "resolucion" con "ancho" y "alto" enteros positivos.';
     }
+    // F5-I16 (M5): fuera del rango de pantallas es ERROR bloqueante
+    // (se conserva el setup anterior), no un aviso.
+    if (res.ancho < BaseCartucho.PANTALLA_MIN.ancho || res.alto < BaseCartucho.PANTALLA_MIN.alto ||
+      res.ancho > BaseCartucho.PANTALLA_MAX.ancho || res.alto > BaseCartucho.PANTALLA_MAX.alto) {
+      return 'la "resolucion" del setup (' + res.ancho + 'x' + res.alto +
+        ') está fuera del rango de pantallas (' + BaseCartucho.PANTALLA_MIN.ancho + 'x' +
+        BaseCartucho.PANTALLA_MIN.alto + ' a ' + BaseCartucho.PANTALLA_MAX.ancho + 'x' +
+        BaseCartucho.PANTALLA_MAX.alto + ').';
+    }
     if (!Array.isArray(jsonGWS.botones)) {
       return 'el setup necesita un array "botones".';
     }
@@ -1119,6 +1128,17 @@ var BaseDirector = (function () {
       if (setupGWS && Number(leido.estilo) > Number(setupGWS.estilo)) {
         throw new Error('el GWC es de estilo ' + leido.estilo +
           ' y la máquina cargada es de estilo ' + setupGWS.estilo + ' (menos botones).');
+      }
+      // F5-I16 (M5): la resolución del GWC es BLOQUEANTE (fuera de
+      // rango no se carga, se conserva el cartucho anterior).
+      if (leido.resolucion.ancho < BaseCartucho.PANTALLA_MIN.ancho ||
+        leido.resolucion.alto < BaseCartucho.PANTALLA_MIN.alto ||
+        leido.resolucion.ancho > BaseCartucho.PANTALLA_MAX.ancho ||
+        leido.resolucion.alto > BaseCartucho.PANTALLA_MAX.alto) {
+        throw new Error('la "resolucion" del GWC (' + leido.resolucion.ancho + 'x' +
+          leido.resolucion.alto + ') está fuera del rango de pantallas (' +
+          BaseCartucho.PANTALLA_MIN.ancho + 'x' + BaseCartucho.PANTALLA_MIN.alto + ' a ' +
+          BaseCartucho.PANTALLA_MAX.ancho + 'x' + BaseCartucho.PANTALLA_MAX.alto + ').');
       }
     } catch (e) {
       avisarError('Cartucho NO cargado: ' + e.message +

@@ -8,38 +8,36 @@
 Temas fuera del alcance del proyecto actual (solo lo no resuelto):
 
 \begin{itemize}
-	\item Unificar los 3 botones de carga de cartuchos en uno solo.
-
-	\item Poder cargar un GWI/GWB sin haber cargado un Setup antes (la resolución del cartucho es informativa; el Setup manda).
-
+	\item Poder cargar un GWI/GWB sin haber cargado un Setup antes (la resolución del cartucho es informativa; el Setup manda); valorar si PB4 lo absorbe.
+	
 	\item Al cargar imágenes \textbf{img\_s}, poder cargar cualquier imagen y convertirla a blanco y negro.
-
+	
 	\item En la pestaña del cartucho, poder cambiar el estilo de la máquina, con las limitaciones necesarias.
-
+	
 	\item \textbf{Game B}: el segundo juego de las máquinas reales depende del diseño de cada máquina.
 	En el Parachute existe una cuarta ruta que hace oscilar un tiempo a un paracaidista en el extremo derecho; en otro juego puede ser lanzar las rutas más rápido, aumentar la velocidad de salida o añadir segmentos con obstáculos.
 	La política de rutas ya viaja en el cartucho, así que Game B sería un segundo conjunto de parámetros de lanzamiento, más la oscilación temporal del paracaidista (bucles temporales).
-
+	
 	\item \textbf{Multi-colisión}: que un mismo segmento de jugador sea punto de colisión de varios elementos; hoy «un jugador, un punto de colisión» es bloqueante en el diseñador.
-
+	
 	\item \textbf{Más de una Secuencia}: el cartucho admite una sola animación de fondo.
-
+	
 	\item \textbf{Flechas del teclado en el PC}: asignarlas a los botones además de las teclas por defecto.
-
+	
 	\item \textbf{Generador inverso de colores} (F1): graficar el GWI como imagen con colores por rol, útil como visualización del cartucho.
-
+	
 	\item \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría.
-
+	
 	\item \textbf{Cambios en las secuencias}: en Donkey Kong un barril puede cambiar su secuencia de caída según el tiempo de juego y la dificultad; sería una regla del cartucho para bifurcaciones de ruta según el progreso.
-
+	
 	\item \textbf{Uniones de segundo nivel}.
-
+	
 	\item \textbf{Sonido}.
-
+	
 	\item \textbf{Tamaño máximo del cartucho}: avisar si no cabe en la memoria del ESP32 (falta decidir el valor y dónde guardarlo).
-
+	
 	\item \textbf{Deduplicación de imágenes aproximadas}: aporta poco, pero es abordable.
-
+	
 	\item \textbf{Aviso al aplicar un cartucho sobre un GWI cargado}: se pierde la autoría.
 \end{itemize}
 
@@ -49,34 +47,33 @@ Temas fuera del alcance del proyecto actual (solo lo no resuelto):
 
 \section*{Temas pendientes}
 \begin{itemize}
-
-\item Bloque A: Pruebas
+	
+	\item Bloque B: motor y editor (detalle en \texttt{REVISION\_CODIGO.md}; descripción y orden en F5-I15)
 	\begin{itemize}
-		\item P19. Mejorar la pestaña de pruebas con todas las que se han desarrollado, con botones o lista de comandos que se pueda copiar y pegar en un PowerShell.
+		\item PB1. Ajustar el \texttt{max} de los campos de la UI a los rangos del GWC, y vaciar el \texttt{\#infoMensaje} al aplicar de nuevo (hoy conserva errores viejos; §1.4 de REVISION\_CODIGO).
+		\item PB2. Aviso al generar si el par GWI/GWC del destino está desequilibrado, y mostrar \texttt{codigoGWC} en la ficha.
+		\item PB3. Unificar la carga de cartuchos: un panel para pegar los ficheros o un campo para cargar un directorio, en lugar de los 3 botones actuales (absorbe «unificar los 3 botones de carga»).
+		\item PB4. Funciones gigantes y patrones repetidos (§3 de REVISION\_CODIGO). Último del bloque: no cambia comportamiento, y las suites Playwright detectan regresiones.
 	\end{itemize}
-
-\item Bloque B: motor y editor (detalle en \texttt{REVISION\_CODIGO.md}; descripción y orden en F5-I15)
+	
+	\item Bloque A: pruebas
 	\begin{itemize}
-		\item P07. Motor: \#6 (secundarios de «mostrar junto a» fuera de rutas), \#8 (iconos antes que acompañantes), \#9 (barrido en dos fases), \#10 (reproducir tres casos). Antes de portar al ESP32.
-		\item P08. Director: \#11 (GWC tras GWI), \#13 (comprobar antes de limpiar). Editor: \#18, \#20-\#27.
-		\item P09. Funciones gigantes y patrones repetidos (§3 de REVISION\_CODIGO).
-		\item P10. Ajustar el \texttt{max} de los campos de la UI a los rangos del GWC.
-		\item P11. Aviso al generar si el par GWI/GWC del destino está desequilibrado, y mostrar \texttt{codigoGWC} en la ficha.
-		\item P21. Regenerar el par GWI/GWC de ejemplo con el cartucho completo (los GWC antiguos no validan con el CRC-16).
+		\item PA1. Mejorar la pestaña de pruebas con todas las que se han desarrollado, con botones o lista de comandos que se pueda copiar y pegar en un PowerShell.
+		\item PA2. Mientras PA1 duerme: mantener las 4 suites Playwright (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}) en ejecución y en verde; son la red de seguridad de PB1.
 	\end{itemize}
-
-\item Bloque C: documentación (cuando el código y el formato ya no cambien)
+	
+	\item Bloque C: documentación (cuando el código y el formato ya no cambien)
 	\begin{itemize}
-		\item P12. Integrar en los textos los cambios de F5-I16 (decide el autor cómo).
-		\item P13. F5-I10: correcciones de A/B/R, resolución opcional u obligatoria, y pruebas.
-		\item P14. Cerrar F5-I11 y F5-I12 con las dos decisiones pendientes: Generar pide Aplicar, y el campo \texttt{descripcion}.
-		\item P15. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
-		\item P16. Anexo de formatos como anexo general en los dos documentos, con el Bloque 1 de 8 valores y el Bloque 0 de 36 bytes (ColorFondo y reglas).
+		\item PC1. Cerrar F5-I11 y F5-I12 con las dos decisiones pendientes: Generar pide Aplicar, y el campo \texttt{descripcion}.
+		\item PC2. F5-I10: correcciones de A/B/R, resolución opcional u obligatoria, y pruebas.
+		\item PC3. Integrar en los textos los cambios de F5-I16 (decide el autor cómo).
+		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
+		\item PC5. Anexo de formatos como anexo general en los dos documentos, con el Bloque 1 de 8 valores y el Bloque 0 de 36 bytes (ColorFondo y reglas).
 	\end{itemize}
-
-\item Bloque D: Fase 6
+	
+	\item Bloque D: Fase 6
 	\begin{itemize}
-		\item P18. Fase 6 (ESP32): capas del motor gráfico, puertos GPIO, LCG portable y firmware C++ que lee el GWC. La estrategia de presentación se decide midiendo en hardware real.
+		\item PD1. Fase 6 (ESP32): capas del motor gráfico, puertos GPIO, LCG portable y firmware C++ que lee el GWC. La estrategia de presentación se decide midiendo en hardware real.
 	\end{itemize}
-
+	
 \end{itemize}

@@ -54,9 +54,7 @@ Los puntos de código de las secciones 1.1-1.3 están descritos para su implemen
 | 27 | `BaseCartucho.js` | **[P]** La verificación registra los inversos como acciones sueltas del historial: los primeros Ctrl+Z tras «Verificar» deshacen cálculos invisibles. |
 
 ### 1.4 Menores de interfaz y datos
-- **Rangos de la UI (P10):** ajustar el `max` de los `input` a los rangos del GWC (valorInicial y ticks de Secuencia ≤ 255; pausas y aceleración ≤ 65534). La verificación ya bloquea.
-- **Par desequilibrado (P11):** avisar al generar si el par GWI/GWC del destino está desequilibrado y mostrar `codigoGWC` en la ficha.
-- **`#infoMensaje`** conserva errores viejos (el `#infoEstadistica` ya no existe).
+- **Par desequilibrado (P11):** avisar al generar si el par GWI/GWC del destino está desequilibrado y mostrar `codigoGWC` en la ficha. Presentado en F5-I17.
 
 ## 2. Texto frente a código (corrección de la Memoria; propuestas en F5-I16)
 - **Orden del tick (F3-I01, Memoria F3, C4-disenno):** el código ya hace (0) limpieza, (1) entrada, (2) rutas; el texto y el comentario del motor («TRES cosas») siguen con el orden antiguo.

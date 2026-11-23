@@ -124,7 +124,7 @@
 //   revisarValores          Limita en memoria los campos de un fichero (GWB, GWI, GWC o GWS) con su tabla y devuelve los avisos.
 //   limitarValor            Un valor numérico acotado a [mínimo, máximo]; no toca nulos ni no numéricos.
 //   _aplicarLimite          Aplica un límite de la tabla a un campo de un objeto y compone el aviso.
-//   _avisosDeResolucion     Avisos de resolución fuera de 320×240..1024×600 (solo aviso, no recorta).
+//   _avisosDeResolucion     Validación BLOQUEANTE de la resolución (M5, F5-I16): fuera de 320×240..1024×600 el fichero no carga ni se genera.
 // ====================================================================================================
 
 var BaseCartucho = (function () {
@@ -374,6 +374,15 @@ var BaseCartucho = (function () {
       const entero = v => Number.isInteger(v) && v > 0;
       if (typeof r !== 'object' || Array.isArray(r) || !entero(r.ancho) || !entero(r.alto)) {
         return 'la "resolucion" del cartucho debe ser {ancho, alto} con enteros positivos.';
+      }
+      // F5-I16 (M5): fuera del rango de pantallas es ERROR bloqueante
+      // (se conserva el fichero anterior): una resolución mala arrastra
+      // el problema a todo lo construido sobre ella.
+      if (r.ancho < PANTALLA_MIN.ancho || r.alto < PANTALLA_MIN.alto ||
+        r.ancho > PANTALLA_MAX.ancho || r.alto > PANTALLA_MAX.alto) {
+        return 'la "resolucion" del cartucho (' + r.ancho + 'x' + r.alto +
+          ') está fuera del rango de pantallas (' + PANTALLA_MIN.ancho + 'x' +
+          PANTALLA_MIN.alto + ' a ' + PANTALLA_MAX.ancho + 'x' + PANTALLA_MAX.alto + ').';
       }
       const ps = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
         ? BaseDirector.pantallaDeSetup() : null;
@@ -1730,27 +1739,26 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Avisos de resolución fuera de la pantalla recomendada (320×240 a
-   * 1024×600). SOLO avisa, no recorta: fuera del rango el fichero
-   * sigue siendo válido (F5-I16).
-   * @param {?{ancho: number, alto: number}} resolucion - Resolución declarada.
-   * @param {string} nombre - Cómo llamamos al fichero en el aviso.
-   * @returns {string[]} Avisos (vacío si está en rango o sin declarar).
+   * Valida el rango de la resolución (F5-I16, M5): fuera de 320×240 a
+   * 1024×600 (siempre ancho×alto) es un ERROR bloqueante, no un aviso:
+   * una resolución mala arrastra el problema a todo lo que se construye
+   * sobre ella. Sin declarar (o incompleta) no es error aquí: cada
+   * validador ya regula su obligatoriedad.
+   * @param {?{ancho: *, alto: *}} resolucion - Resolución declarada.
+   * @returns {?string} null si está en rango (o sin declarar), o el error.
    */
-  function _avisosDeResolucion(resolucion, nombre) {
-    if (!resolucion || !Number.isInteger(Number(resolucion.ancho)) ||
-      !Number.isInteger(Number(resolucion.alto))) return [];
-    const avisos = [];
-    const texto = 'la resolución ' + Number(resolucion.ancho) + '×' + Number(resolucion.alto);
-    if (Number(resolucion.ancho) < PANTALLA_MIN.ancho || Number(resolucion.alto) < PANTALLA_MIN.alto) {
-      avisos.push(nombre + ': ' + texto + ' es menor que la recomendada (' +
-        PANTALLA_MIN.ancho + '×' + PANTALLA_MIN.alto + ').');
+  function _avisosDeResolucion(resolucion) {
+    if (!resolucion || resolucion.ancho === undefined || resolucion.alto === undefined) return null;
+    const a = Number(resolucion.ancho), l = Number(resolucion.alto);
+    if (!Number.isInteger(a) || !Number.isInteger(l)) return null;
+    const texto = 'la resolución ' + a + '×' + l +
+      ' está fuera del rango de pantallas (' + PANTALLA_MIN.ancho + '×' + PANTALLA_MIN.alto +
+      ' a ' + PANTALLA_MAX.ancho + '×' + PANTALLA_MAX.alto + ').';
+    if (a < PANTALLA_MIN.ancho || l < PANTALLA_MIN.alto ||
+      a > PANTALLA_MAX.ancho || l > PANTALLA_MAX.alto) {
+      return texto;
     }
-    if (Number(resolucion.ancho) > PANTALLA_MAX.ancho || Number(resolucion.alto) > PANTALLA_MAX.alto) {
-      avisos.push(nombre + ': ' + texto + ' es mayor que la recomendada (' +
-        PANTALLA_MAX.ancho + '×' + PANTALLA_MAX.alto + ').');
-    }
-    return avisos;
+    return null;
   }
 
   /**
@@ -1777,7 +1785,6 @@ var BaseCartucho = (function () {
         avisos.push('el puerto del botón ' + b.numero + ' (' + String(original) +
           ') limitado a ' + ajustado + '.');
       }
-      avisos.push(..._avisosDeResolucion(json.resolucion, 'el setup'));
       return avisos;
     }
     const tope = (tipo === 'GWC') ? 'maxGWC' : 'maxGWI';
@@ -1792,7 +1799,6 @@ var BaseCartucho = (function () {
         }
       }
     }
-    avisos.push(..._avisosDeResolucion(json.resolucion, 'la resolución'));
     return avisos;
   }
 
@@ -1882,6 +1888,13 @@ var BaseCartucho = (function () {
     const avisosLimites = revisarValores('GWI', json)
       .concat(revisarValores('GWC', json));
     if (avisosLimites.length > 0) BaseDirector.avisar(avisosLimites.join(' '));
+
+    // F5-I16 (M5): la resolución es BLOQUEANTE también al generar (red
+    // de seguridad: al cargar y aplicar ya lo estaba).
+    const fueraDeRango = _avisosDeResolucion(pantalla || (json && json.resolucion));
+    if (fueraDeRango) {
+      throw new Error('no se genera el GWC: ' + fueraDeRango);
+    }
 
     // Lo que VIAJA y las tablas de índices: todos los bloques montan sobre ellas.
     const viaja = _viajanEnGWC(json);

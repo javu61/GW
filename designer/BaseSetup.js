@@ -245,6 +245,10 @@ const BaseSetup = (function () {
     contenedor.appendChild(mensajes);
 
     campos.estilo.addEventListener('change', _pintarTablaBotones);
+    // F5-I16 (M5): la resolución se verifica AL TECLEAR (y al aplicar y
+    // al guardar, que pasan por verificar): fuera de rango, error visible.
+    campos.ancho.addEventListener('change', () => verificar({ mostrar: true }));
+    campos.alto.addEventListener('change', () => verificar({ mostrar: true }));
     contenedor.addEventListener('input', () => _marcarCambios(true));
     contenedor.addEventListener('change', () => _marcarCambios(true));
     _pintarTablaBotones();
@@ -401,8 +405,9 @@ const BaseSetup = (function () {
       }
     }
     // F5-I16: límites asentados al verificar (y por tanto al guardar y
-    // al aplicar): puertos fuéra de rango se limitan y la resolución
-    // fuera de 320×240..1024×600 avisa sin bloquear.
+    // al aplicar): puertos fuera de rango se limitan; la resolución
+    // fuera de 320×240..1024×600 es ERROR bloqueante (M5) — la pesca
+    // validarSetup, que verificar llama aquí arriba.
     avisos.push(...BaseCartucho.revisarValores('GWS', json));
     if (opt.mostrar) _pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos, json: json };

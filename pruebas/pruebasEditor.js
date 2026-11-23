@@ -48,6 +48,13 @@ fs.writeFileSync(COPIA + '/setup_puerto5.json', JSON.stringify(setupPuerto, null
 const setupTecla = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
 setupTecla.botones[0].tecla = 'AA';
 fs.writeFileSync(COPIA + '/setup_teclaAA.json', JSON.stringify(setupTecla, null, 2));
+const setupRes = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
+setupRes.resolucion = { ancho: 100, alto: 100 };
+fs.writeFileSync(COPIA + '/setup_res100.json', JSON.stringify(setupRes, null, 2));
+const jsonRes = JSON.parse(fs.readFileSync(fGwiMano, 'utf8'));
+jsonRes.resolucion = { ancho: 4000, alto: 2000 };
+fs.writeFileSync(dirMano + '/cartucho_GWI.json', JSON.stringify(jsonRes, null, 2));
+cp.execFileSync('zip', ['-q', '-r', COPIA + '/gwi_res4k.zip', '.'], { cwd: dirMano });
 
 const res = [];
 const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
@@ -429,6 +436,35 @@ const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
     await pg.waitForTimeout(600);
     const rTecla = await pg.evaluate(() => document.getElementById('estado').textContent);
     ok('M4: un GWS a mano con tecla «AA» NO se carga', /Setup NO cargado/.test(rTecla), rTecla);
+  }
+
+  // ---- M5 (F5-I16): la resolución fuera de 320×240..1024×600 es ERROR bloqueante ----
+  {
+    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup_res100.json');
+    await pg.waitForTimeout(600);
+    const rGws = await pg.evaluate(() => document.getElementById('estado').textContent);
+    ok('M5: un GWS a mano con resolucion 100×100 NO se carga (bloqueante)',
+      /Setup NO cargado/.test(rGws) && /fuera del rango de pantallas/.test(rGws), rGws);
+    const rFicha = await pg.evaluate(() => {
+      const inpA = document.querySelector('#fichaSetup input[placeholder="ancho"]');
+      const inpL = document.querySelector('#fichaSetup input[placeholder="alto"]');
+      inpA.value = '10'; inpL.value = '15';
+      inpA.dispatchEvent(new Event('change'));
+      const zona = document.querySelector('#fichaSetup .fichaMensajes');
+      const texto = zona ? zona.textContent : '';
+      return { texto, visible: texto.length > 0 };
+    });
+    ok('M5: teclear 10×15 en la ficha de setup muestra el error al change',
+      rFicha.visible && /fuera del rango de pantallas/.test(rFicha.texto), JSON.stringify(rFicha).slice(0, 300));
+    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup4.json');
+    await pg.waitForTimeout(600);
+    await pg.setInputFiles('#ficheroGWIZip', COPIA + '/gwi_res4k.zip');
+    await pg.waitForTimeout(2500);
+    const rGwi = await pg.evaluate(() => document.getElementById('estado').textContent);
+    ok('M5: un GWI a mano con resolucion 4000×2000 NO se carga (bloqueante)',
+      /Cartucho NO cargado/.test(rGwi) && /fuera del rango de pantallas/.test(rGwi), rGwi);
+    await pg.setInputFiles('#ficheroGWIZip', path.join(COPIA, 'p/cartucho_gwi.zip'));
+    await pg.waitForTimeout(3000);
   }
 
   ok('sin errores de página', errPag.length === 0, errPag.join(' | '));

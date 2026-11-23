@@ -1,0 +1,79 @@
+\section{Decimosexta iteración de la Fase 5: rangos de la UI y mensajes}
+\label{sec:F5I16}
+
+Esta iteración resuelve el punto PA1 de los temas pendientes: los campos numéricos de la UI admiten hoy valores mayores de lo que el GWC puede guardar, y es la verificación quien bloquea cuando ya se ha escrito. Los \texttt{max} de la UI pasan a ser los rangos exactos del formato, y la zona de mensajes se revisa para que no conserve errores de una comprobación anterior.
+
+\subsection{Criterios de trabajo}
+\label{sec:F5I16Criterios}
+
+\begin{enumerate}
+	\item \textbf{El rango manda dos veces.} El \texttt{max} de cada entrada es exactamente el máximo que admite el GWC para ese campo (255 en los campos de 1 byte; 65534 en los de 2 bytes, porque \texttt{0xFFFF} significa «sin valor»). La verificación sigue bloqueando igual: los \texttt{max} evitan el error de antemano en la UI, no la sustituyen.
+
+	\item \textbf{Reproducir antes de corregir.} Prueba que falle con el código actual (la entrada admite el valor fuera de rango) y pase con el corregido. El punto de los mensajes solo se toca si la prueba reproduce la retención; si no, se descarta y se documenta, como marca el criterio del F5-I15.
+
+	\item \textbf{Sin cambios de formato.} No se toca el GWB, el GWI ni el GWC: solo los atributos \texttt{min}/\texttt{max} de la UI, el recorte de los manejadores y la limpieza de mensajes. Los cartuchos existentes siguen valiendo.
+
+	\item \textbf{Un cambio, una prueba, una nota.} Cada punto se anota aquí con su prueba y al cerrar la iteración se retira el punto PA1 del I99 y su línea §1.4 de \texttt{REVISION\_CODIGO.md}.
+
+	\item \textbf{Cabeceras al día.} Los ficheros JavaScript modificados revisan su lista de funciones (norma de F5-I14); no debería cambiar ninguna firma.
+\end{enumerate}
+
+\subsection{Cambios necesarios en el código}
+\label{sec:F5I16Codigo}
+
+\begin{xltabular}{\textwidth}{l c >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+	\toprule
+	\textbf{Módulo} & \textbf{\#} & \textbf{Qué se hará} & \textbf{Prueba / estado} \\
+	\midrule
+	\endhead
+	Editor & R1 & Campo «Valor inicial» de los contadores: \texttt{max} pasa de 9999 a 255 y el manejador \texttt{change} recorta por arriba. El GWC lo guarda en 1 byte y la verificación ya lo bloquea & Escribir 256 en el campo deja el valor en 255 (hoy se acepta y el GWC recortaría) \\
+	Editor & R2 & Campo «Ticks entre lanzamientos» de la Secuencia: \texttt{max} pasa de 999 a 255, con recorte en el manejador. El generador ya lo recorta a \texttt{0xFF} & Escribir 300 deja 255 \\
+	Editor & R3 & Campos de 2 bytes del panel del reloj (\texttt{pausaSim}, \texttt{pausaEsp}, \texttt{accCada}, \texttt{accResta}, \texttt{accMinimo}, \texttt{aumentarCada}, construidos por \texttt{campoNumero}): \texttt{max} pasa de 9999 a 65534, con recorte en el manejador & Escribir 70000 deja 65534 \\
+	Editor & R4 & La zona de mensajes no conserva errores viejos: al aplicar la ficha del cartucho con éxito (y al generar) lo mostrado corresponde al estado actual. \textbf{Punto condicional}: solo se corrige si la prueba reproduce la retención & Prueba: forzar un error, aplicar bien, y comprobar que no queda error anterior visible \\
+	\bottomrule
+\end{xltabular}
+
+\subsection{Los rangos del GWC, campo a campo}
+\label{sec:F5I16Rangos}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{l l l l l}
+		\toprule
+		\textbf{Campo} & \textbf{Uso} & \textbf{GWC} & \textbf{max hoy} & \textbf{max nuevo} \\
+		\midrule
+		\texttt{valorInicial} & Valor de arranque del contador y órdenes vida/muerte & 1 byte & 9999 & 255 \\
+		\texttt{secTicks} & Ticks entre lanzamientos de la Secuencia & 1 byte & 999 & 255 \\
+		\texttt{pausaSim} & Pausa del simulador (ms) & 2 bytes & 9999 & 65534 \\
+		\texttt{pausaEsp} & Pausa del sistema externo (ms) & 2 bytes & 9999 & 65534 \\
+		\texttt{accCada} & Ticks entre reducciones de la aceleración & 2 bytes & 9999 & 65534 \\
+		\texttt{accResta} & Reducción de la aceleración (ms) & 2 bytes & 9999 & 65534 \\
+		\texttt{accMinimo} & Pausa mínima de la aceleración (ms) & 2 bytes & 9999 & 65534 \\
+		\texttt{aumentarCada} & Número para aumentar rutas & 2 bytes & 9999 & 65534 \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Rangos de la UI frente al almacenamiento del GWC.}
+\end{table}
+
+En los campos de 1 byte el generador ya recorta (\texttt{BaseCartucho.js} escribe \texttt{secTicks} con \texttt{Math.min(0xFF, ...)}) y la verificación ya lo bloquea con error («el valor inicial no cabe en 1 byte», «los ticks no caben en 1 byte»). En los de 2 bytes, \texttt{0xFFFF} es «sin valor» y la verificación marca como error todo lo que pase de 65534. Los \texttt{max} de hoy (999 y 9999) no corresponden a ningún límite del formato: el navegador permite escribir valores que solo la verificación caza después.
+
+Detalle importante: el atributo \texttt{max} del HTML no impide escribir a mano un valor mayor (solo gobierna las flechas del campo y la validación de formulario). Hoy los manejadores \texttt{change} recortan por abajo (\texttt{Math.max(minimo, ...)}) pero no por arriba, así que un valor teclado puede quedar en la propiedad sin recortar. Cada punto incluye el recorte superior en el manejador, no solo el atributo.
+
+\subsection{La zona de mensajes}
+\label{sec:F5I16Mensajes}
+
+El punto del I99 habla de \texttt{\#infoMensaje}, que ya no existe como elemento: los mensajes viven hoy en la barra superior \texttt{\#estado} (\texttt{BaseDirector.avisar}/\texttt{avisarError}) y en la zona de mensajes de la ficha (\texttt{BaseFicha.\_pintarMensajes}), que se repinta en cada verificación y se limpia al poblar o reiniciar la ficha. El caso a reproducir: un error de una verificación fallida que siga visible después de que una aplicación posterior con éxito lo haya dejado sin sentido. Si la prueba no llega a reproducir retención alguna, el punto se descarta y se documenta aquí mismo (criterio 2).
+
+\subsection{Pruebas}
+\label{sec:F5I16Pruebas}
+
+Una caja por bloque de campos en la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): cada caja escribe un valor fuera de rango en el campo real del panel y comprueba el valor que queda tras el \texttt{change} (255, 255 y 65534 respectivamente). Para R4, la caja fuerza un error de ficha, aplica con éxito y comprueba la zona de mensajes. Al cierre se re-lanzan las cuatro suites (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}); no hace falta red de seguridad de partidas: la UI no toca el motor ni el formato.
+
+\subsection{Decisiones que hay que validar}
+\label{sec:F5I16Decisiones}
+
+\begin{enumerate}
+	\item ¿El techo de los campos de 2 bytes es 65534 (\texttt{0xFFFF} reservado como «sin valor») o debe admitirse 65535?
+	\item ¿El recorte superior en el manejador (escribir un valor mayor lo trunca al máximo) es la UX aceptada, o se prefiere rechazar el valor y reponer el anterior?
+	\item ¿La limpieza de mensajes (R4) cubre solo la zona de la ficha o también la barra superior \texttt{\#estado}?
+\end{enumerate}

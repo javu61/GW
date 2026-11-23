@@ -286,8 +286,11 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 .fichaMensajes ul { margin: 6px 0 0 0; padding-left: 20px; }
 .fichaError { color: #f0a0a0; }
 .fichaAviso { color: #e8c76a; }
-/* Tabla de botones de la ficha del Setup (F5-I12): columnas estrechas */
-#fichaSetup input.colTecla { min-width: 0; width: 3em; text-align: center; text-transform: uppercase; }
+/* Tabla de botones de la ficha del Setup (F5-I12): columnas estrechas.
+   F5-I17 (M5): la tecla es una lista (cursores + «Propia») con casilla
+   de letra aparte; el texto de la casilla va en mayúscula como antes. */
+#fichaSetup select.colTeclaLista { min-width: 0; width: 13em; }
+#fichaSetup input.colTeclaLetra { min-width: 0; width: 3em; text-align: center; text-transform: uppercase; }
 #fichaSetup input.colAlias { min-width: 0; width: 8em; }
 
 /* Para manejar campo multilínea */

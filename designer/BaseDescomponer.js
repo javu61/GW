@@ -135,6 +135,8 @@
 //   _guardarGWI             Validaciones de contexto y delega en
 //                          BaseCartucho.guardarGWI.
 //   cargarAutoria         Reproduce el historial de un GWI (precarga).
+//   numeroDeCambios       F5-I17 (M3): acciones de la autoría en curso (sin contar
+//                          el alta de la ficha del cartucho).
 //
 //  Otras funciones internas (lista completada en F5-I14)
 //   _esBarraDeDigito              ¿Es este grupo una BARRA de un dígito (F4-I9)? Las barras se agrupa…
@@ -4899,6 +4901,17 @@ const BaseDescomponer = (() => {
     // «Verificar y Guardar» guarda sin codigoGWC, el GWI no lleva
     // sobras).
     json.codigoGWC = gwc.codigo;
+    BaseFicha.actualizarCodigoGWC(gwc.codigo);   // F5-I17 (M1): la ficha enseña el código nuevo
+    // F5-I17 (M2): si el GWI cargado traía codigoGWC (#X#) y el código
+    // nuevo del par es #Y# distinto, el GWC #X# de la carpeta queda
+    // desfasado: aviso explícito con los dos códigos (si el GWI no
+    // traía código, no hay nada que desparejar).
+    const codigoAnterior = (typeof BaseDirector !== 'undefined' && BaseDirector.codigoGWCCargado)
+      ? BaseDirector.codigoGWCCargado() : null;
+    const avisoPar = (codigoAnterior && codigoAnterior !== gwc.codigo)
+      ? ' Atención: el GWC anterior (' + codigoAnterior + ') de la carpeta queda desfasado: sustitúyelo por el nuevo (' + gwc.codigo + ').'
+      : '';
+    if (avisoPar) console.warn('[par] ' + avisoPar.trim());
     BaseDirector.avisar('Guardando GWI…');
     const tamGWI = await BaseCartucho.guardarGWI(json, sprites,
       imagenesFicha.img_f, imagenesFicha.img_s,
@@ -4908,7 +4921,7 @@ const BaseDescomponer = (() => {
     if (tamGWI) {
       _descargarGWC(gwc.bytes);   // el GWC se descarga SOLO cuando el GWI se ha guardado (sin GWC huérfano)
       const gwbOk = await BaseFicha.guardar();
-      if (gwbOk) BaseDirector.avisar('Generados GWC, GWI y GWB (' + json.nombre + ').');
+      if (gwbOk) BaseDirector.avisar('Generados GWC, GWI y GWB (' + json.nombre + '].' + avisoPar);
     }
     // F5-I7: los dos tamaños del par, a la vista en el Editor
     // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del
@@ -5073,6 +5086,18 @@ const BaseDescomponer = (() => {
       // guardar: fondo + TODOS los segmentos en negro (look LCD).
       componerPantalla = true;
       pintarPantallaAutoria();
+      // F5-I17 (M2): el GWI guardado a secas viaja SIN codigoGWC (F5-I6);
+      // si el GWI cargado traía uno, el GWC de la carpeta queda
+      // desparejado: aviso no bloqueante («Generar GWI+GWC» lo repara).
+      const codigoAnterior = (typeof BaseDirector !== 'undefined' && BaseDirector.codigoGWCCargado)
+        ? BaseDirector.codigoGWCCargado() : null;
+      if (codigoAnterior) {
+        console.warn('[gwi] el GWI se guarda sin codigoGWC: el GWC ' + codigoAnterior +
+          ' del destino queda desparejado.');
+        BaseDirector.avisar('GWI guardado SIN codigoGWC: el GWC del destino (' +
+          codigoAnterior + ') queda desparejado; usa Generar GWI+GWC para mantener el par.');
+        BaseFicha.actualizarCodigoGWC(null);   // el guardado suelta el código: la ficha lo refleja
+      }
       // Aviso de topes (F5-I6): al guardar el GWI es NO bloqueante
       // — el diseñador decide si seguir; «Generar GWI+GWC» bloquea.
       _avisoTopes();
@@ -5235,6 +5260,23 @@ const BaseDescomponer = (() => {
   }
 
   /**
+   * F5-I17 (M3): número de ACCIONES de la autoría en curso, contadas
+   * por bloques del historial (nº de acción distinto); el alta de la
+   * ficha del cartucho NO cuenta (no es acción del autor, F5-I15 E5).
+   * La usa BaseDirector para el aviso «se descarta el historial (N
+   * acciones)» al cargar un GWB sobre un GWI con autoría.
+   * @returns {number} Acciones de la autoría (0 si no hay historial).
+   */
+  function numeroDeCambios() {
+    if (cambios.length === 0) return 0;
+    let acciones = 0;
+    for (const n of new Set(cambios.map(c => c.n))) {
+      if (!_esBloqueDeFicha(cambios.filter(c => c.n === n))) acciones++;
+    }
+    return acciones;
+  }
+
+  /**
    * Deja en memoria las listas de un GWI para el motor. Las
    * listas viven en ComunListas (el puente de datos entre la
    * autoría y el juego, fichero propio): esta función es solo el
@@ -5275,6 +5317,7 @@ const BaseDescomponer = (() => {
     segmentos: segmentos,
     sprites: () => sprites,
     listar: listar,
+    numeroDeCambios: numeroDeCambios,            // F5-I17 (M3): acciones de la autoría en curso
     reset: reset,
     inicializar: inicializar
   };

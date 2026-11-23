@@ -38,7 +38,7 @@
 //     _asegurar              _crearElemento      _campo
 //     _descargar             _marcarCambios      _nombreFichero    
 //     _pintarTablaBotones    _pintarMensajes     _entrada
-//     _construir
+//     _teclaDeFila           _construir
 // ====================================================================================================
 
 const BaseSetup = (function () {
@@ -48,6 +48,9 @@ const BaseSetup = (function () {
 
   const TRIO_SISTEMA = [6, 7, 8];
   const NOMBRE_SISTEMA = { 6: 'A', 7: 'B', 8: 'R' };
+  // F5-I17 (M5): los cuatro nombres de cursor admitidos como tecla
+  // (misma lista cerrada que valida BaseDirector.validarSetup).
+  const CURSORES_GWS = ['cursor-izquierda', 'cursor-derecha', 'cursor-arriba', 'cursor-abajo'];
   const BOTONES_POR_ESTILO = {
     '2': [0, 4, ...TRIO_SISTEMA],
     '4': [0, 1, 4, 5, ...TRIO_SISTEMA],
@@ -146,6 +149,21 @@ const BaseSetup = (function () {
   }
 
   /**
+   * F5-I17 (M5): la tecla efectiva de una fila de la tabla: el nombre
+   * de cursor elegido en la lista, o la letra de la casilla cuando la
+   * lista está en «tecla». Sin tecla, ''.
+   * @param {HTMLTableRowElement} tr - Fila del botón.
+   * @returns {string} La tecla tal como va al JSON del GWS.
+   */
+  function _teclaDeFila(tr) {
+    const lista = tr.querySelector('.colTeclaLista');
+    if (!lista) return '';
+    if (lista.value !== 'tecla') return lista.value;
+    const letra = tr.querySelector('.colTeclaLetra');
+    return letra ? letra.value : '';
+  }
+
+  /**
    * Vuelca a datosBoton lo escrito en la tabla (para que sobreviva al cambio de estilo) 
    * y la vuelve a pintar con los botones del estilo elegido.
    * @returns {void}
@@ -153,7 +171,7 @@ const BaseSetup = (function () {
   function _pintarTablaBotones() {
     for (const tr of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
       const q = (c) => tr.querySelector('.' + c).value;
-      datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: q('colTecla'), alias: q('colAlias') };
+      datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: _teclaDeFila(tr), alias: q('colAlias') };
     }
     cuerpoBotones.textContent = '';
     const numeros = botonesDelEstilo(campos.estilo.value);
@@ -182,8 +200,28 @@ const BaseSetup = (function () {
             ' limitado a ' + ajustado + '.');
         }
       });
-      const tecla = _entrada('text', { className: 'colTecla', maxLength: 1, value: d.tecla });
-      tecla.style.width = '3em';
+      // F5-I17 (M5): la tecla se elige en una lista cerrada (los cuatro
+      // cursores y «Propia»); al elegir «Propia» aparece la casilla de
+      // letra (A..Z). Ya no se teclea el nombre a mano.
+      const lista = _crearElemento('select', 'colTeclaLista');
+      for (const [valor, texto] of [['', '(sin tecla)'], ...CURSORES_GWS.map(c => [c, c]),
+        ['tecla', 'Propia (letra)']]) {
+        const o = document.createElement('option');
+        o.value = valor; o.textContent = texto;
+        lista.appendChild(o);
+      }
+      const nombre = String(d.tecla || '').trim().toLowerCase();
+      if (CURSORES_GWS.includes(nombre)) lista.value = nombre;
+      else if (/^[a-zA-Z]$/.test(nombre)) lista.value = 'tecla';
+      else lista.value = '';
+      const tecla = _entrada('text', { className: 'colTeclaLetra', maxLength: 1,
+        value: lista.value === 'tecla' ? String(d.tecla || '').toUpperCase() : '' });
+      tecla.classList.toggle('oculto', lista.value !== 'tecla');
+      tecla.placeholder = 'A..Z';
+      lista.addEventListener('change', () => {
+        tecla.classList.toggle('oculto', lista.value !== 'tecla');
+        if (lista.value !== 'tecla') tecla.value = '';
+      });
       const alias = _entrada('text', { className: 'colAlias', value: d.alias });
       alias.style.minWidth = '8em';
       for (const c of [puerto, tecla, alias]) {
@@ -237,7 +275,8 @@ const BaseSetup = (function () {
     tabla.append(cab, cuerpoBotones);
     seccionBot.appendChild(tabla);
     seccionBot.appendChild(_crearElemento('p', 'fichaNota',
-      'Puerto: pin del botón en la máquina real. Tecla: letra del teclado para probar en el simulador. ' +
+      'Puerto: pin del botón en la máquina real. Tecla: cursor o letra del teclado del PC para probar en el simulador ' +
+      '(elige en la lista; «Propia (letra)» abre la casilla A..Z). Sin tecla se usa la de por defecto del estilo. ' +
       'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
     contenedor.appendChild(seccionBot);
 
@@ -340,7 +379,13 @@ const BaseSetup = (function () {
       if (!d) continue;
       const b = { numero: String(n) };
       if (String(d.puerto).trim() !== '') b.puerto = Number(d.puerto);
-      if (d.tecla.trim() !== '') b.tecla = d.tecla.trim().toUpperCase();
+      const teclaFila = d.tecla.trim();
+      if (teclaFila !== '') {
+        // F5-I17 (M5): los cursores en minúscula (nombre canónico); las
+        // letras, en mayúscula como siempre.
+        b.tecla = CURSORES_GWS.includes(teclaFila.toLowerCase())
+          ? teclaFila.toLowerCase() : teclaFila.toUpperCase();
+      }
       if (d.alias.trim() !== '') b.alias = d.alias.trim();
       json.botones.push(b);
     }

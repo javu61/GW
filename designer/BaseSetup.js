@@ -170,7 +170,18 @@ const BaseSetup = (function () {
       const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
       const tdN = _crearElemento('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
-      const puerto = _entrada('number', { className: 'colPuerto', min: 0, step: 1, value: d.puerto });
+      const puerto = _entrada('number', { className: 'colPuerto', min: 0, step: 1,
+        max: BaseCartucho.MAX_PUERTO_GWS, value: d.puerto });
+      puerto.addEventListener('change', () => {
+        if (puerto.value === '') return;
+        const ajustado = BaseCartucho.limitarValor(Number(puerto.value),
+          BaseCartucho.MAX_PUERTO_GWS, 0);
+        if (typeof ajustado === 'number' && ajustado !== Number(puerto.value)) {
+          puerto.value = String(ajustado);
+          BaseDirector.avisar('El puerto del botón ' + tr.dataset.numero +
+            ' limitado a ' + ajustado + '.');
+        }
+      });
       const tecla = _entrada('text', { className: 'colTecla', maxLength: 1, value: d.tecla });
       tecla.style.width = '3em';
       const alias = _entrada('text', { className: 'colAlias', value: d.alias });
@@ -208,8 +219,8 @@ const BaseSetup = (function () {
     }
     campos.estilo = _campo(rejilla, 'Estilo', estilo);
     const par = _crearElemento('div', 'fichaPar');
-    campos.ancho = _entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
-    campos.alto = _entrada('number', { min: 1, step: 1, placeholder: 'alto' });
+    campos.ancho = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.ancho, step: 1, placeholder: 'ancho' });
+    campos.alto = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.alto, step: 1, placeholder: 'alto' });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par, 'Píxeles de la pantalla.');
     datos.appendChild(rejilla);
@@ -389,6 +400,10 @@ const BaseSetup = (function () {
         else if (b.tecla === undefined) avisos.push('El botón ' + n + ' no tiene tecla: se usará la de por defecto.');
       }
     }
+    // F5-I16: límites asentados al verificar (y por tanto al guardar y
+    // al aplicar): puertos fuéra de rango se limitan y la resolución
+    // fuera de 320×240..1024×600 avisa sin bloquear.
+    avisos.push(...BaseCartucho.revisarValores('GWS', json));
     if (opt.mostrar) _pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos, json: json };
   }

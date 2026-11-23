@@ -321,12 +321,15 @@ var BaseDirector = (function () {
       if (vistos.has(b.numero)) console.warn('Botón repetido en el setup: ' + b.numero);
       vistos.add(b.numero);
       if (b.tecla !== undefined) {
-        if (typeof b.tecla !== 'string' || !/^[a-zA-Z]$/.test(b.tecla)) {
-          return 'la "tecla" del botón ' + b.numero + ' debe ser una sola letra.';
+        if (typeof b.tecla !== 'string' || !/^[a-zA-Z0-9]$/.test(b.tecla)) {
+          return 'la "tecla" del botón ' + b.numero + ' debe ser un carácter A..Z o 0..9.';
         }
         b.tecla = b.tecla.toUpperCase();
         if (teclasVistas.has(b.tecla)) console.warn('Tecla repetida en el setup: ' + b.tecla);
         teclasVistas.add(b.tecla);
+      }
+      if (b.puerto !== undefined && (!Number.isInteger(b.puerto) || b.puerto < 0)) {
+        return 'el "puerto" del botón ' + b.numero + ' debe ser un entero positivo.';
       }
     }
     return null;
@@ -587,7 +590,7 @@ var BaseDirector = (function () {
    * el canvas, construye la botonera y deja el panel listo.
    * @returns {void}
    */
-  function _aplicarSetup() {
+  function _aplicarSetup(avisosLimites) {
     // Cada estilo es un DISEÑO INDEPENDIENTE: se muestra solo su
     // esqueleto y la pantalla se cuelga en el hueco de ese diseño.
     const estilo = ESTILOS[setupGWS.estilo];
@@ -608,8 +611,10 @@ var BaseDirector = (function () {
     // el siguiente paso. Las demás se habilitan según haya cartucho.
     _actualizarPestanas();
     mostrarPestanna('vistaCartucho');
-    // Arriba indica la última operación realizada
-    avisar('Setup cargado: ' + (setupGWS.nombre || '(sin nombre)'));
+    // Arriba indica la última operación realizada, con los avisos de
+    // límites F5-I16 si el setup los trajo
+    avisar('Setup cargado: ' + (setupGWS.nombre || '(sin nombre)') +
+      (avisosLimites && avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
   }
 
   /**
@@ -651,6 +656,9 @@ var BaseDirector = (function () {
   function _aplicarJSONSetup(json) {
     const error = validarSetup(json);
     if (error) throw new Error(error);
+    // F5-I16: límites asentados al validar el setup (puertos fuera de
+    // rango se limitan aquí; la resolución solo avisa).
+    const avisosLimites = BaseCartucho.revisarValores('GWS', json);
     _limpiarCartucho();                       // aplicar un setup limpia el cartucho actual
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
@@ -660,7 +668,7 @@ var BaseDirector = (function () {
     BaseFicha.reiniciar();
     BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion });
     BaseSetup.poblar(json);
-    _aplicarSetup();
+    _aplicarSetup(avisosLimites);
   }
 
   /**
@@ -920,6 +928,10 @@ var BaseDirector = (function () {
       const json = leido.json;
       const mapa = leido.mapa;
 
+      // F5-I16: límites asentados al cargar (aviso junto al mensaje de
+      // carga; lo que arrastra al puente y a las fichas ya es lo justo).
+      const avisosLimites = BaseCartucho.revisarValores(json.tipo, json);
+
       // F5-I15 (D3): TODAS las comprobaciones antes de tocar nada: si el
       // cartucho no es compatible con la máquina, el anterior se conserva.
       const incompatible = _botonesInexistentes(json);
@@ -1010,8 +1022,10 @@ var BaseDirector = (function () {
 
       pintarInfo();
       // Arriba indica la última operación realizada (con el tipo de
-      // cartucho cargado, F5-I9)
-      avisar('Cartucho cargado (' + tipo + '): ' + (json.nombre || '(sin nombre)'));
+      // cartucho cargado, F5-I9), y los avisos de límites F5-I16
+      // ajustados en memoria al cargar.
+      avisar('Cartucho cargado (' + tipo + '): ' + (json.nombre || '(sin nombre)') +
+        (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
       return tipo;
     } catch (e) {
       pintarInfo();
@@ -1112,6 +1126,8 @@ var BaseDirector = (function () {
       return;
     }
     BaseCartucho.revocarURLs();    // object URLs del cartucho anterior, fuera
+    // F5-I16: límites asentados también en el GWC binario cargado.
+    const avisosLimites = BaseCartucho.revisarValores('GWC', leido);
     // F5-I15 (D1): el GWC es pura ejecución y no se edita: la autoría del
     // cartucho anterior (GWB/GWI) se descarta entera, con sus botones.
     BaseDescomponer.reset();
@@ -1176,7 +1192,8 @@ var BaseDirector = (function () {
     console.info('[cartucho] GWC cargado: ' + leido.sprites.length +
       ' sprite(s), ' + leido.segmentos.length +
       ' segmento(s) en memoria, listos para el motor.');
-    avisar('Cartucho cargado (GWC): ' + fichero.name);
+    avisar('Cartucho cargado (GWC): ' + fichero.name +
+      (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
     _actualizarPestanas();       // solo Simulador: el GWC no se edita
     // El GWC es PURA EJECUCIÓN: al cargarlo, la máquina queda delante,
     // lista para pulsar Start (de venga de la pestaña que venga).

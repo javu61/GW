@@ -119,6 +119,12 @@
 //   _propiedadesDeSegmento        Byte de propiedades de un segmento:
 //   _idDeSegmentoGWC              Id legible de un segmento a partir de su índice.
 //   _leerRegistroDeSegmentoGWC    Un registro de segmento del Bloque 3 como objeto con la forma del e…
+//
+//  Límites de campos por fichero (F5-I16)
+//   revisarValores          Limita en memoria los campos de un fichero (GWB, GWI, GWC o GWS) con su tabla y devuelve los avisos.
+//   limitarValor            Un valor numérico acotado a [mínimo, máximo]; no toca nulos ni no numéricos.
+//   _aplicarLimite          Aplica un límite de la tabla a un campo de un objeto y compone el aviso.
+//   _avisosDeResolucion     Avisos de resolución fuera de 320×240..1024×600 (solo aviso, no recorta).
 // ====================================================================================================
 
 var BaseCartucho = (function () {
@@ -741,6 +747,8 @@ var BaseCartucho = (function () {
    *          de los bytes del JSON y de los PNG que contiene, no el paquete.
    */
   async function _guardarGWIEnDisco(json, sprites, imgF, imgS, imgM, nAvisos) {
+    // F5-I16: límites asentados antes de escribir (doble filtro deliberado).
+    const avisosLimites = revisarValores('GWI', json);
     const entradas = [];                  // {nombre, contenido} del paquete
 
     for (const sprite of sprites) {
@@ -794,7 +802,8 @@ var BaseCartucho = (function () {
 
     BaseDirector.avisar('GWI guardado en ' + BasePACK.nombreFichero('cartucho_GWI') + ': ' + sprites.length +
       ' imagen(es) en segmentos/ + cartucho_GWI.json en la raíz' +
-      (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.');
+      (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.' +
+      (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
     return tamano;
   }
 
@@ -1519,6 +1528,27 @@ var BaseCartucho = (function () {
   const NULO16_GWC = 0xFFFF;
   const NULO32_GWC = 0xFFFFFFFF;
 
+  // Límites de campos por fichero (F5-I16): la UI recorta al práctico
+  // (Max.GWI) y la verificación conserva lo del formato (Max.GWC) como
+  // red de seguridad. Como al cargar ya se recorta al práctico, el
+  // filtro del guardado no debería activarse nunca: es la red ante un
+  // cambio futuro que no contemple los límites (duplicidad DELIBERADA).
+  const MAX_PUERTO_GWS = 99;                 // pin de botón del setup (F5-I16)
+  const PANTALLA_MIN = { ancho: 320, alto: 240 };   // fuera de este rango:
+  const PANTALLA_MAX = { ancho: 1024, alto: 600 };  // solo aviso, no recorte
+  const TABLA_LIMITES = [
+    { campo: 'pausas.simulador', ruta: ['pausas', 'simulador'], min: 1, maxGWI: 999, maxGWC: 65534 },
+    { campo: 'pausas.externo', ruta: ['pausas', 'externo'], min: 1, maxGWI: 999, maxGWC: 65534 },
+    { campo: 'aceleracion.cada', ruta: ['aceleracion', 'cada'], min: 1, maxGWI: 99, maxGWC: 65534 },
+    { campo: 'aceleracion.resta', ruta: ['aceleracion', 'resta'], min: 1, maxGWI: 999, maxGWC: 65534 },
+    { campo: 'aceleracion.minimo', ruta: ['aceleracion', 'minimo'], min: 0, maxGWI: 999, maxGWC: 65534 },
+    { campo: 'rutas.aumentarCada', ruta: ['rutas', 'aumentarCada'], min: 1, maxGWI: 99, maxGWC: 65534 },
+    { campo: 'fin.contador', ruta: ['fin', 'contador'], min: 1, maxGWI: 4, maxGWC: 4 },
+    { campo: 'secuencia.ticks', ruta: ['secuencia', 'ticks'], min: 1, maxGWI: 99, maxGWC: 255 },
+    { campo: 'valorInicial', segmento: 'valorInicial', min: 0, maxGWI: 255, maxGWC: 255 },
+    { campo: 'contadorInterno', segmento: 'contadorInterno', min: 1, maxGWI: 4, maxGWC: 4 }
+  ];
+
   // Tipos de bloque.
   const BLOQUE_DATOS_GWC = 0;        // Datos Generales (SIEMPRE)
   const BLOQUE_CONFIG_GWC = 1;       // Configuración (SIEMPRE)
@@ -1665,6 +1695,107 @@ var BaseCartucho = (function () {
       numeroSecuencias <= TOPE_GWC;
   }
 
+  // ---------------- Límites de campos (F5-I16) ----------------
+
+  /**
+   * Acota un valor numérico a [minimo, maximo]. Los especiales se
+   * respetan tal cual: el nulo («sin valor», NO es un cero legal) y lo
+   * que no sea un número finito (lo caza después la verificación).
+   * @param {*} valor - Valor a limitar.
+   * @param {number} maximo - Máximo que admite el campo.
+   * @param {number} [minimo] - Mínimo que admite el campo (0 si falta).
+   * @returns {*} El valor ajustado (o el original si era nulo/no numérico).
+   */
+  function limitarValor(valor, maximo, minimo) {
+    const min = (minimo === undefined || minimo === null) ? 0 : minimo;
+    if (valor === null || valor === undefined || valor === '') return valor;
+    const n = Number(valor);
+    if (!Number.isFinite(n)) return valor;
+    return Math.max(min, Math.min(maximo, Math.round(n)));
+  }
+
+  /**
+   * Aplica un límite de la tabla a un campo de un objeto y compone el
+   * aviso si el valor cambia. No inventa campos ausentes: lo no declarado
+   * sigue sin declarar (el nulo no es cero).
+   * @returns {void}
+   */
+  function _aplicarLimite(obj, campo, maximo, minimo, nombre, avisos) {
+    if (!obj || typeof obj !== 'object' || !(campo in obj)) return;
+    const original = obj[campo];
+    const ajustado = limitarValor(original, maximo, minimo);
+    if (typeof ajustado !== 'number' || ajustado === original) return;
+    obj[campo] = ajustado;
+    avisos.push(nombre + ': ' + String(original) + ' limitado a ' + String(ajustado) + '.');
+  }
+
+  /**
+   * Avisos de resolución fuera de la pantalla recomendada (320×240 a
+   * 1024×600). SOLO avisa, no recorta: fuera del rango el fichero
+   * sigue siendo válido (F5-I16).
+   * @param {?{ancho: number, alto: number}} resolucion - Resolución declarada.
+   * @param {string} nombre - Cómo llamamos al fichero en el aviso.
+   * @returns {string[]} Avisos (vacío si está en rango o sin declarar).
+   */
+  function _avisosDeResolucion(resolucion, nombre) {
+    if (!resolucion || !Number.isInteger(Number(resolucion.ancho)) ||
+      !Number.isInteger(Number(resolucion.alto))) return [];
+    const avisos = [];
+    const texto = 'la resolución ' + Number(resolucion.ancho) + '×' + Number(resolucion.alto);
+    if (Number(resolucion.ancho) < PANTALLA_MIN.ancho || Number(resolucion.alto) < PANTALLA_MIN.alto) {
+      avisos.push(nombre + ': ' + texto + ' es menor que la recomendada (' +
+        PANTALLA_MIN.ancho + '×' + PANTALLA_MIN.alto + ').');
+    }
+    if (Number(resolucion.ancho) > PANTALLA_MAX.ancho || Number(resolucion.alto) > PANTALLA_MAX.alto) {
+      avisos.push(nombre + ': ' + texto + ' es mayor que la recomendada (' +
+        PANTALLA_MAX.ancho + '×' + PANTALLA_MAX.alto + ').');
+    }
+    return avisos;
+  }
+
+  /**
+   * Limita EN MEMORIA los campos de un fichero según su tipo (F5-I16):
+   * al cargar, para que lo que ve el editor y arrastra el motor sea
+   * coherente; al guardar, para que lo escrito sea siempre correcto
+   * (la redundancia es deliberada: ver F5-I16, Manejo de los límites).
+   * No toca nulos ni campos ausentes, y devuelve los avisos de lo
+   * recortado para que el llamante los pinte donde corresponda.
+   * @param {string} tipo - 'GWB' o 'GWI' (límites prácticos) o 'GWC'/'GWS' (límites del formato).
+   * @param {Object} json - El JSON del fichero (mutado en memoria).
+   * @returns {string[]} Avisos de los valores recortados.
+   */
+  function revisarValores(tipo, json) {
+    const avisos = [];
+    if (!json || typeof json !== 'object') return avisos;
+    if (tipo === 'GWS') {
+      for (const b of (Array.isArray(json.botones) ? json.botones : [])) {
+        if (!b || typeof b !== 'object' || b.puerto === undefined) continue;
+        const original = b.puerto;
+        const ajustado = limitarValor(original, MAX_PUERTO_GWS, 0);
+        if (typeof ajustado !== 'number' || ajustado === original) continue;
+        b.puerto = ajustado;
+        avisos.push('el puerto del botón ' + b.numero + ' (' + String(original) +
+          ') limitado a ' + ajustado + '.');
+      }
+      avisos.push(..._avisosDeResolucion(json.resolucion, 'el setup'));
+      return avisos;
+    }
+    const tope = (tipo === 'GWC') ? 'maxGWC' : 'maxGWI';
+    for (const f of TABLA_LIMITES) {
+      if (f.ruta) {
+        const padre = f.ruta.slice(0, -1)
+          .reduce((o, k) => (o && typeof o === 'object') ? o[k] : null, json);
+        _aplicarLimite(padre, f.ruta[f.ruta.length - 1], f[tope], f.min, f.campo, avisos);
+      } else if (f.segmento && Array.isArray(json.segmentos)) {
+        for (const seg of json.segmentos) {
+          _aplicarLimite(seg, f.segmento, f[tope], f.min, f.campo, avisos);
+        }
+      }
+    }
+    avisos.push(..._avisosDeResolucion(json.resolucion, 'la resolución'));
+    return avisos;
+  }
+
   /** Escala por eje de la imagen fuente a la pantalla declarada. */
   function _escalasDePantalla(pantalla) {
     return {
@@ -1744,6 +1875,13 @@ var BaseCartucho = (function () {
       throw new Error('el cartucho supera los topes del GWC (' +
         TOPE_GWC + ' sprites/segmentos/secuencias por índice de 1 byte).');
     }
+
+    // F5-I16: límites asentados antes de generar. Doble filtro DELIBERADO
+    // (práctico + formato): aunque al cargar ya se ajustó, la generación
+    // no confía en ello. Los avisos salen por #estado.
+    const avisosLimites = revisarValores('GWI', json)
+      .concat(revisarValores('GWC', json));
+    if (avisosLimites.length > 0) BaseDirector.avisar(avisosLimites.join(' '));
 
     // Lo que VIAJA y las tablas de índices: todos los bloques montan sobre ellas.
     const viaja = _viajanEnGWC(json);
@@ -2396,6 +2534,12 @@ var BaseCartucho = (function () {
     guardarGWB: guardarGWB,
     // Verificación del diseñador
     verificarCartucho: verificarCartucho,
+    // Límites de campos por fichero (F5-I16)
+    revisarValores: revisarValores,
+    limitarValor: limitarValor,
+    MAX_PUERTO_GWS: MAX_PUERTO_GWS,
+    PANTALLA_MIN: PANTALLA_MIN,
+    PANTALLA_MAX: PANTALLA_MAX,
     // GWC: grabación, lectura y validación
     leerGWC: leerGWC,
     generarGWC: generarGWC,

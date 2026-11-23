@@ -1,4 +1,4 @@
-// pruebas/pruebasEditor.js — F5-I15, bloque Editor (E1-E9)
+// pruebas/pruebasEditor.js — F5-I15, bloque Editor (E1-E9) + F5-I16: límites de la UI (L1, M2-M4, R4)
 // ================================================================================================
 // Las funciones del editor viven dentro de un cierre (BaseDescomponer es una IIFE): para probarlas sin
 // ensuciar el código de producción, la prueba trabaja sobre una COPIA temporal del proyecto en la que
@@ -30,6 +30,24 @@ for (const f of funciones) t += "      " + f + ': (typeof ' + f + " === 'functio
 t += '    },\n    arrancar: arrancar,';
 src = src.replace(marca, t);
 fs.writeFileSync(fDesc, src);
+
+// Ficheros «a mano» para F5-I16 (M2/M3/M4, sobres COPIA/p): un GWI con pausaSim 5000
+// y secuencia.ticks 300; un GWS con puerto 65000 y tecla «5»; y un GWS con tecla «AA».
+const dirMano = fs.mkdtempSync(path.join(os.tmpdir(), 'gwM_'));
+cp.execFileSync('unzip', ['-o', '-q', RAIZ + '/cartucho_gwi.zip', '-d', dirMano]);
+const fGwiMano = dirMano + '/cartucho_GWI.json';
+const jsonMano = JSON.parse(fs.readFileSync(fGwiMano, 'utf8'));
+jsonMano.pausas.simulador = 5000;
+jsonMano.secuencia.ticks = 300;
+fs.writeFileSync(fGwiMano, JSON.stringify(jsonMano, null, 2));
+cp.execFileSync('zip', ['-q', '-r', COPIA + '/gwi_limites.zip', '.'], { cwd: dirMano });
+const setupPuerto = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
+setupPuerto.botones[0].puerto = 65000;
+setupPuerto.botones[0].tecla = '5';
+fs.writeFileSync(COPIA + '/setup_puerto5.json', JSON.stringify(setupPuerto, null, 2));
+const setupTecla = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
+setupTecla.botones[0].tecla = 'AA';
+fs.writeFileSync(COPIA + '/setup_teclaAA.json', JSON.stringify(setupTecla, null, 2));
 
 const res = [];
 const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
@@ -288,7 +306,130 @@ const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
     ok('E9: y se lleva con ella los inversos derivados (B.izquierda), sin dejar acciones invisibles', r.izquierda === null && r.nDespues === r.nAntes - 1, JSON.stringify(r));
   }
 
-  //@@PRUEBAS@@
+  await recargar();
+  // ---- L1 (F5-I16): la ficha del cartucho ajusta el max y recorta por arriba con aviso ----
+  {
+    const r = await pg.evaluate(() => {
+      const t = BaseDescomponer._t;
+      const cart = t._cartuchoDe();
+      const casos = [['Ticks entre lanzamientos', 'secTicks', 300],
+        ['Pausa simulador', 'pausaSim', 1000],
+        ['Ticks entre reducciones', 'accCada', 100],
+        ['Reducción (ms)', 'accResta', 2000],
+        ['Pausa mínima (ms)', 'accMinimo', 5000],
+        ['Nº para aumentar rutas', 'aumentarCada', 123]];
+      const detalle = {};
+      for (const [etiqueta, campo, escribir] of casos) {
+        t._sel(t._grupoDeComp(cart.raiz)); t._mostrarPanel();
+        const fila = [...document.querySelectorAll('#panelSegmento .filaProp')]
+          .find(f => f.querySelector('label') && f.querySelector('label').textContent === etiqueta);
+        if (!fila) { detalle[campo] = 'sin campo'; continue; }
+        const inp = fila.querySelector('input');
+        inp.value = String(escribir);
+        inp.dispatchEvent(new Event('change'));
+        detalle[campo] = { max: inp.max, valor: t._propsDe(cart.raiz)[campo],
+          estado: document.getElementById('estado').textContent };
+      }
+      return detalle;
+    });
+    ok('L1: los campos numéricos de la ficha del cartucho llevan el max de F5-I16',
+      r.secTicks.max === '99' && r.pausaSim.max === '999' && r.accCada.max === '99' &&
+      r.accResta.max === '999' && r.accMinimo.max === '999' && r.aumentarCada.max === '99', JSON.stringify(r));
+    ok('L1: escribir fuera de rango recorta en memoria al máximo práctico',
+      r.secTicks.valor === 99 && r.pausaSim.valor === 999 && r.accCada.valor === 99 &&
+      r.accResta.valor === 999 && r.accMinimo.valor === 999 && r.aumentarCada.valor === 99, JSON.stringify(r));
+    ok('L1: cada recorte avisa por la barra de estado',
+      ['secTicks', 'pausaSim', 'accCada', 'accResta', 'accMinimo', 'aumentarCada']
+        .every(c => /limitado/.test(r[c].estado || r[c] || '')), JSON.stringify(r));
+  }
+
+  // ---- L1 (F5-I16 R1): el «Valor inicial» de un contador recorta a 255 con aviso ----
+  {
+    const r = await pg.evaluate(() => {
+      const t = BaseDescomponer._t;
+      const dj = t.grupos().filter(g => g.prop.tipo === 'juego' && g.raiz >= 0 && !g.absorbido && g.miembros.length === 1);
+      t._propsDe(dj[0].raiz).tipo = 'dígito'; t._propsDe(dj[1].raiz).tipo = 'dígito';
+      t._reconstruir();
+      t.marcados().clear();
+      t.marcados().add(t._grupoDeComp(dj[0].raiz));
+      t.marcados().add(t._grupoDeComp(dj[1].raiz));
+      t._hacerContador();
+      const cont = t.grupos().find(g => g.prop.tipo === 'contador');
+      if (!cont) return { error: 'no se creó el contador' };
+      t._sel(cont); t._mostrarPanel();
+      const fila = [...document.querySelectorAll('#panelSegmento .filaProp')]
+        .find(f => f.querySelector('label') && f.querySelector('label').textContent === 'Valor inicial');
+      if (!fila) return { error: 'sin campo Valor inicial' };
+      const inp = fila.querySelector('input');
+      const maxAttr = inp.max;
+      inp.value = '256';
+      inp.dispatchEvent(new Event('change'));
+      return { maxAttr, valor: t._propsDe(cont.raiz).valorInicial, estado: document.getElementById('estado').textContent };
+    });
+    ok('L1 (R1): el «Valor inicial» del contador lleva max 255', r.maxAttr === '255', JSON.stringify(r));
+    ok('L1 (R1): escribir 256 recorta el valor a 255 con aviso', r.valor === 255 && /limitado/.test(r.estado || ''), JSON.stringify(r));
+  }
+
+  // ---- M2/M3 (F5-I16): un GWI a mano con valores fuera de rango se limita al cargar; el GWC lleva lo limitado ----
+  {
+    await pg.setInputFiles('#ficheroGWIZip', COPIA + '/gwi_limites.zip');
+    await pg.waitForTimeout(3000);
+    const r = await pg.evaluate(() => {
+      const t = BaseDescomponer._t;
+      const p = t._propsDe(t._cartuchoDe().raiz);
+      return { pausaSim: p.pausaSim, secTicks: p.secTicks, estado: document.getElementById('estado').textContent };
+    });
+    ok('M2: un GWI a mano con pausaSim 5000 se limita a 999 en memoria, con aviso',
+      r.pausaSim === 999 && /limitado/.test(r.estado), JSON.stringify(r));
+    ok('M2: un GWI a mano con secuencia.ticks 300 se limita a 99',
+      r.secTicks === 99 && /limitado/.test(r.estado), JSON.stringify(r));
+    const l = await pg.evaluate(() => {
+      const pantalla = { ancho: 320, alto: 240, fuente: { ancho: 320, alto: 240 } };
+      const gwi = BaseDescomponer._t._montarGWI();
+      const gwc = BaseCartucho.generarGWC(gwi, BaseDescomponer.sprites(), pantalla);
+      return BaseCartucho.leerGWC(gwc.bytes);
+    });
+    ok('M3: el GWC generado desde el GWI a mano lleva pausaSim 999 (dentro del formato)',
+      l.pausas && l.pausas.simulador === 999, JSON.stringify(l.pausas));
+    ok('M3: el GWC generado lleva ticks de Secuencia 99',
+      l.secuencia && l.secuencia.ticks === 99, JSON.stringify(l.secuencia));
+  }
+
+  // ---- R4 (F5-I16, condicional): la ficha no conserva errores de una verificación anterior ----
+  {
+    const r = await pg.evaluate(() => {
+      const inpNombre = document.querySelector('#fichaCartucho input[placeholder="Nombre del cartucho"]');
+      const antes = BaseFicha.estado().nombre;
+      const zona = () => {
+        const z = document.querySelector('#fichaCartucho .fichaMensajes');
+        return { nErrores: z ? z.querySelectorAll('.fichaError').length : -1,
+          texto: z ? z.textContent.slice(0, 200) : null };
+      };
+      inpNombre.value = '';
+      BaseFicha.verificar({ mostrar: true });
+      const conError = zona();
+      inpNombre.value = antes;
+      BaseFicha.verificar({ mostrar: true });
+      return { conError, sinError: zona() };
+    });
+    ok('R4: un error de la ficha se pinta en .fichaMensajes',
+      r.conError.nErrores > 0 && /Falta el nombre/.test(r.conError.texto || ''), JSON.stringify(r.conError));
+    ok('R4: corregir y re-verificar deja la zona sin el error anterior',
+      r.sinError.nErrores === 0 && !/Falta el nombre/.test(r.sinError.texto || ''), JSON.stringify(r.sinError));
+  }
+
+  // ---- M4 (F5-I16): GWS a mano — puerto 65000 se limita a 99; tecla «AA» no carga ----
+  {
+    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup_puerto5.json');
+    await pg.waitForTimeout(600);
+    const rPuerto = await pg.evaluate(() => document.getElementById('estado').textContent);
+    ok('M4: un GWS a mano con puerto 65000 y tecla «5» carga, y el puerto queda 99 con aviso',
+      /Setup cargado/.test(rPuerto) && /limitado a 99/.test(rPuerto), rPuerto);
+    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup_teclaAA.json');
+    await pg.waitForTimeout(600);
+    const rTecla = await pg.evaluate(() => document.getElementById('estado').textContent);
+    ok('M4: un GWS a mano con tecla «AA» NO se carga', /Setup NO cargado/.test(rTecla), rTecla);
+  }
 
   ok('sin errores de página', errPag.length === 0, errPag.join(' | '));
   for (const [n, c, x] of res) console.log((c ? 'OK    ' : 'FALLO ') + n + (c ? '' : '  -> ' + x));

@@ -8,15 +8,23 @@
 	\item Bloque A: motor y editor (detalle en \texttt{REVISION\_CODIGO.md}; descripción en F5-I15)
 	\begin{itemize}
 		\item PA1. Ajustar el \texttt{max} de los campos de la UI a los rangos del GWC, y vaciar el \texttt{\#infoMensaje} al aplicar de nuevo (hoy conserva errores viejos; ver punto §1.4 de REVISION\_CODIGO).
-		\item PA2. Aviso al generar si el par GWI/GWC del destino está desequilibrado, y mostrar \texttt{codigoGWC} en la ficha.
-		\item PA3. Unificar la carga de cartuchos: un panel para pegar los ficheros o un campo para cargar un directorio, en lugar de los 3 botones actuales (absorbe «unificar los 3 botones de carga»).
-		\item PA4. Funciones gigantes y patrones repetidos (§3 de REVISION\_CODIGO). Último del bloque: no cambia comportamiento, y las suites Playwright detectan regresiones.
+		
+		\item PA2. Dos avisos: 
+			\begin{itemize}
+			\item Aviso al generar si el par GWI/GWC del destino está desequilibrado, y mostrar \texttt{codigoGWC} en la ficha.
+			\item Aviso al aplicar un cartucho sobre un GWI cargado: se pierde la autoría.
+			\end{itemize}
+		\item PA3 Flechas del teclado en el PC: asignarlas a los botones además de las teclas por defecto.
+		
+		\item PA4. Unificar la carga de cartuchos: un panel para pegar los ficheros o un campo para cargar un directorio, en lugar de los 3 botones actuales (absorbe «unificar los 3 botones de carga»).
+		
+		\item PA5. Funciones gigantes y patrones repetidos (§3 de REVISION\_CODIGO). Último del bloque: no cambia comportamiento, y las suites Playwright detectan regresiones.
 	\end{itemize}
 	
 	\item Bloque B: pruebas
 	\begin{itemize}
 		\item PB1. Mejorar la pestaña de pruebas con todas las que se han desarrollado, con botones o lista de comandos que se pueda copiar y pegar en un PowerShell. 
-		Mientras tanto: mantener las 4 suites Playwright (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}) en ejecución y en verde; son la red de seguridad del bloque B.
+		Mientras tanto: mantener las 4 suites Playwright (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}) en ejecución y en verde; «son la red de seguridad de PA4».
 	\end{itemize}
 	
 	\item Bloque C: documentación (cuando el código y el formato ya no cambien)
@@ -47,14 +55,14 @@
 \begin{itemize}
 	\item Bloque A: Mejoras a incluir en el desarrollo cuando sea posible
 		\begin{itemize}
-		\item MA01 \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría.
+		\item MA01 \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría. Es necesario «decidir el transporte de nombre+portada antes de cerrar el anexo de formatos (PC5)»
 		
 		\item MA02 \textbf{Tamaño máximo del cartucho}: avisar si no cabe en la memoria del ESP32 (falta decidir el valor y dónde guardarlo).
 		\end{itemize}
 
 	\item Bloque B: Mejoras interesantes que se pueden incluir
 		\begin{itemize}
-		\item MB01 Poder cargar un GWI/GWB sin haber cargado un Setup antes (la resolución del cartucho es informativa; el Setup manda); valorar si PB4 lo absorbe.
+		\item MB01 Poder cargar un GWI/GWB sin haber cargado un Setup antes (la resolución del cartucho es informativa; el Setup manda); valorar si PA4 lo absorbe.
 
 		\item MB02 Al cargar imágenes \textbf{img\_s}, poder cargar cualquier imagen y convertirla a blanco y negro.
 		
@@ -62,7 +70,7 @@
 		\end{itemize}
 
 
-	\item Temas fuera del alcance del proyecto actual:	
+	\item Bloque C: Temas fuera del alcance del proyecto actual:	
 		\begin{itemize}
 		
 		\item MC01 \textbf{Game B}: el segundo juego de las máquinas reales depende del diseño de cada máquina.
@@ -72,8 +80,6 @@
 		\item MC02 \textbf{Multi-colisión}: que un mismo segmento de jugador sea punto de colisión de varios elementos; hoy «un jugador, un punto de colisión» es bloqueante en el diseñador.
 		
 		\item MC03 \textbf{Más de una Secuencia}: el cartucho admite una sola animación de fondo.
-		
-		\item MC04 \textbf{Flechas del teclado en el PC}: asignarlas a los botones además de las teclas por defecto.
 		
 		\item MC05 \textbf{Generador inverso de colores} (F1): graficar el GWI como imagen con colores por rol, útil como visualización del cartucho.
 		
@@ -85,6 +91,5 @@
 		
 		\item MC09 \textbf{Deduplicación de imágenes aproximadas}: aporta poco, pero es abordable.
 		
-		\item MC10 \textbf{Aviso al aplicar un cartucho sobre un GWI cargado}: se pierde la autoría.
 		\end{itemize}
 \end{itemize}

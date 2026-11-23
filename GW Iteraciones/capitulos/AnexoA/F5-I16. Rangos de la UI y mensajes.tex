@@ -8,13 +8,13 @@ Esta iteración resuelve algunas validaciones pendientes: los campos numéricos 
 
 \begin{enumerate}
 	\item \textbf{El rango manda dos veces.} Cada campo tiene dos límites (ver la tabla   \ref{sec:F5I16Manejo}): el \texttt{Max.GWI} práctico del editor (999 en milisegundos y rangos amplios, 99 en cuentas de ticks y lanzamientos, 255 en el valor inicial de los contadores) y el \texttt{Max.GWC} del formato (255 en los campos de 1 byte; 65534 en los de 2 bytes, porque \texttt{0xFFFF} significa «sin valor»). Siempre \texttt{Max.GWI} $\leq$ \texttt{Max.GWC}: la UI recorta al práctico y la verificación conserva los del formato como red de seguridad.
-
+	
 	\item \textbf{Reproducir antes de corregir.} Prueba que falle con el código actual (la entrada admite el valor fuera de rango) y pase con el corregido. El punto de los mensajes solo se toca si la prueba reproduce la retención; si no, se descarta y se documenta, como marca el criterio del F5-I15.
-
+	
 	\item \textbf{Ningún recorte silencioso.} Toda limitación que cambie un valor en memoria se anuncia: cuando se recorta un valor se informa de modo que el aviso llegue a la pantalla (zona de mensajes de la ficha y barra superior \texttt{\#estado}). El autor siempre sabe que su fichero va a cambiar al guardar.
-
+	
 	\item \textbf{Sin cambios de formato.} No se toca el formato de los cartuchos GWB, GWI ni el GWC binario: solo los límites en la UI, el recorte de los manejadores y el asentamiento de límites al cargar y al guardar. Los cartuchos existentes siguen valiendo.
-
+	
 	\item \textbf{Un cambio, una prueba, una nota.} Cada punto se anota con su prueba.
 \end{enumerate}
 
@@ -29,11 +29,11 @@ Para poder manejar estos límites se implementan estos procesos:
 	\item \textbf{Redundancia deliberada.} Los dos filtros anteriores se solapan a propósito como decisión de diseño: al cargar ya se recorta a los máximos del GWI, así que el filtro del guardado no debería activarse nunca; se conserva para que un cambio futuro, una ampliación o una mejora del sistema que no contemple los límites no pueda saltárselos. Se documenta aquí para que no se «arregle» esa duplicidad.
 	
 	\item \textbf{Nueva función \texttt{revisarValores}} que limita los valores en memoria. Admite un parámetro \texttt{tipo}, uno de los tipos de fichero del proyecto, de modo que un GWS se limita con sus máximos, un GWI con los suyos prácticos y un GWC con los del tamaño de sus campos. Para valorar cada campo llamará a la función auxiliar \texttt{limitarValor} con tres parámetros:
-		\begin{itemize}
+	\begin{itemize}
 		\item \texttt{valor} a limitar (devuelve el valor ajustado).
 		\item \texttt{maximo} que admite el campo
 		\item \texttt{minimo} que admite (opcional; si no se indica, es cero).
-		\end{itemize}
+	\end{itemize}
 	
 	\item \textbf{\texttt{revisarValores}} se llama después de cargar cualquier fichero y siempre antes de guardar cualquier fichero, de manera que los valores en memoria sean coherentes en pantalla tras cargar y correctos siempre al generar. Vale para los tres tipos: el GWS no puede manejar un puerto 65000 para un botón, una pantalla de 10$\times$15 o teclas fuera del rango \texttt{A..Z} \texttt{0..9}.
 	\item \textbf{El nulo no es cero.} Los campos opcionales del Bloque 1 distinguen «sin valor» (memoria: \texttt{null}; en pantalla: campo vacío, mostrado como \texttt{-1} o \texttt{FFFFh} donde se presente en crudo; en el GWC: \texttt{0xFFFF}) de un valor legal \texttt{0}. \texttt{limitarValor} respeta esa diferencia: no toca un \texttt{null} y no lo convierte jamás en \texttt{0}.
@@ -82,7 +82,7 @@ Hay un límite en el \textbf{tamaño de la pantalla}: para que sea visible debe 
 		\texttt{resolucion} & Pantalla del hardware \{ancho, alto\}\footnotemark & $320\times240$ & $1024\times600$ \\
 		\texttt{botones[].numero} & Número de botón (fijo por estilo) & --- & --- \\
 		\texttt{botones[].puerto} & Pin del botón en la máquina real & 0 & 99 \\
-	    \texttt{botones[].tecla} & Tecla del simulador (\texttt{A..Z} + \texttt{0..9}) & --- & --- \\
+		\texttt{botones[].tecla} & Tecla del simulador (\texttt{A..Z} + \texttt{0..9}) & --- & --- \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Límites para los ficheros de sistema GWS.}
@@ -157,4 +157,4 @@ En la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): una caja
 \subsection{Ampliación posible: tabla de resoluciones usuales}
 \label{sec:F5I16Resoluciones}
 
-Como ampliación a esta iteración: el campo libre de la resolución pasa a ser una \textbf{tabla de resoluciones usuales} en estas pantallas (p. ej. 320×240, 480×320, 800×480, 1024×600). La ficha del setup ofrecería esas opciones en un \texttt{<select>}, el GWS solo aceptaría las de la lista (la misma validación bloqueante de M5, pero por lista en \texttt{validarSetup}) y el campo libre desaparecería de la ficha: la resolución mala queda IMPOSIBLE de teclear, no solo bloqueada a la hora de aplicar. Se reserva su lugar en la pestaña de mejoras y la lista concreta se definiría al abrirla, con las pantallas reales del proyecto (ESP32-S3 con interfaz serie y MIPI-DSI para las grandes).
+Como ampliación a esta iteración: el campo libre de la resolución se plantea que pueda pasar a ser una \textbf{tabla de resoluciones usuales} en estas pantallas (p. ej. 320×240, 480×320, 800×480, 1024×600). La ficha del setup ofrecería esas opciones en un \texttt{<select>}, el GWS solo aceptaría las de la lista (la misma validación bloqueante de M5, pero por lista en \texttt{validarSetup}) y el campo libre desaparecería de la ficha: la resolución mala queda IMPOSIBLE de teclear, no solo bloqueada a la hora de aplicar. Se reserva su lugar en la pestaña de mejoras y la lista concreta se definiría al abrirla, con las pantallas reales del proyecto (ESP32-S3 con interfaz serie y MIPI-DSI para las grandes).

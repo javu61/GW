@@ -3548,13 +3548,18 @@ const BaseDescomponer = (() => {
         const inpT = document.createElement('input');
         inpT.type = 'number';
         inpT.min = '1';
-        inpT.max = '999';
+        inpT.max = '99';
         inpT.value = (p.secTicks === null) ? '' : String(p.secTicks);
         inpT.placeholder = 'sin Secuencia';
         inpT.addEventListener('change', () => {
           let nuevo = null;
           if (inpT.value !== '') {
             nuevo = Math.max(1, Math.floor(Number(inpT.value) || 0));
+            if (nuevo > 99) {            // F5-I16 (R2): recorte por arriba, con aviso
+              nuevo = 99;
+              inpT.value = String(nuevo);
+              BaseDirector.avisar('Ticks entre lanzamientos limitados a 99.');
+            }
           }
           if (nuevo === p.secTicks) return;
           const viejo = p.secTicks;
@@ -3615,7 +3620,7 @@ const BaseDescomponer = (() => {
       // comparten comportamiento: entero positivo, historial
       // (deshacer/rehacer) y refresco con reconstrucción, que
       // sincroniza el puente en vivo.
-      const campoNumero = (etiqueta, campo, ayuda, minimo) => {
+      const campoNumero = (etiqueta, campo, ayuda, minimo, maximo) => {
         const fila = document.createElement('div');
         fila.className = 'filaProp';
         const et = document.createElement('label');
@@ -3623,14 +3628,20 @@ const BaseDescomponer = (() => {
         et.title = ayuda || '';
         const inp = document.createElement('input');
         inp.type = 'number';
-        inp.min = String(minimo || 1);
-        inp.max = '9999';
+        inp.min = String((minimo === undefined || minimo === null) ? 1 : minimo);
+        inp.max = String(maximo || 9999);   // F5-I16: máximos prácticos por campo
         inp.value = (p[campo] === null) ? '' : String(p[campo]);
         inp.placeholder = 'sin definir';
         inp.addEventListener('change', () => {
           let nuevo = null;
           if (inp.value !== '') {
-            nuevo = Math.max(minimo || 1, Math.floor(Number(inp.value) || 0));
+            nuevo = Math.max((minimo === undefined || minimo === null) ? 1 : minimo,
+              Math.floor(Number(inp.value) || 0));
+            if (maximo && nuevo > maximo) {   // F5-I16 (R3): recorte por arriba, con aviso
+              nuevo = maximo;
+              inp.value = String(nuevo);
+              BaseDirector.avisar(etiqueta + ': limitado a ' + maximo + '.');
+            }
           }
           if (nuevo === p[campo]) return;
           const viejo = p[campo];
@@ -3654,9 +3665,9 @@ const BaseDescomponer = (() => {
         'Sin valor: 500 ms, el histórico.';
       panel.appendChild(subP);
       campoNumero('Pausa simulador', 'pausaSim',
-        'Milisegundos entre ticks en el simulador de PC.', 1);
+        'Milisegundos entre ticks en el simulador de PC.', 1, 999);
       campoNumero('Pausa externo', 'pausaEsp',
-        'Milisegundos entre ticks en el ESP32.', 1);
+        'Milisegundos entre ticks en el ESP32.', 1, 999);
 
       // ACELERACIÓN (F4-I2): los tres valores o ninguno.
       const subA = document.createElement('div');
@@ -3666,11 +3677,11 @@ const BaseDescomponer = (() => {
         'valores: pausa fija toda la partida.';
       panel.appendChild(subA);
       campoNumero('Ticks entre reducciones', 'accCada',
-        'Cada cuántos ticks de partida baja la pausa.', 1);
+        'Cada cuántos ticks de partida baja la pausa.', 1, 99);
       campoNumero('Reducción (ms)', 'accResta',
-        'Cuántos ms baja la pausa en cada reducción.', 1);
+        'Cuántos ms baja la pausa en cada reducción.', 1, 999);
       campoNumero('Pausa mínima (ms)', 'accMinimo',
-        'La pausa nunca baja de este valor.', 1);
+        'La pausa nunca baja de este valor.', 0, 999);
 
       // POLÍTICA DE RUTAS (F4-I2).
       const subR = document.createElement('div');
@@ -3682,7 +3693,7 @@ const BaseDescomponer = (() => {
       panel.appendChild(subR);
       campoNumero('Nº para aumentar rutas', 'aumentarCada',
         'Cada cuántas rutas lanzadas sube el máximo de ' +
-        'simultáneas.', 1);
+        'simultáneas.', 1, 99);
 
       return;
     }
@@ -4516,10 +4527,15 @@ const BaseDescomponer = (() => {
         const inp = document.createElement('input');
         inp.type = 'number';
         inp.min = '0';
-        inp.max = '9999';
+        inp.max = '255';
         inp.value = String(p.valorInicial || 0);
         inp.addEventListener('change', () => {
           let nuevo = Math.max(0, Math.floor(Number(inp.value) || 0));
+          if (nuevo > 255) {            // F5-I16 (R1): recorte por arriba, con aviso
+            nuevo = 255;
+            inp.value = String(nuevo);
+            BaseDirector.avisar('Valor inicial limitado a 255.');
+          }
           if (nuevo === p.valorInicial) return;
           const viejo = p.valorInicial;
           p.valorInicial = nuevo;

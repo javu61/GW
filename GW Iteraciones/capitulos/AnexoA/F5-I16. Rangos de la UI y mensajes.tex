@@ -1,18 +1,89 @@
 \section{Decimosexta iteración de la Fase 5: rangos de la UI y mensajes}
 \label{sec:F5I16}
 
-Esta iteración resuelve algunas validaciones pendientes: los campos numéricos de la UI admiten hoy valores mayores de lo que razonablemente admite el juego, y es la verificación quien bloquea cuando ya se ha escrito. Los \texttt{max} de la UI pasan a límites prácticos por campo, separados de lo que admite el formato del GWC, y la zona de mensajes se revisa para que no conserve errores de una comprobación anterior.
+Esta iteración resuelve algunas validaciones pendientes: los campos numéricos de la UI admiten hoy valores mayores de lo que razonablemente admite el juego, y es la verificación quien bloquea cuando ya se ha escrito. Los \texttt{max} de la UI pasan a límites prácticos por campo, separados de lo que admite el formato del GWC; además, los límites se asientan al cargar y al guardar cualquier fichero del proyecto, y la zona de mensajes se revisa para que no conserve errores de una comprobación anterior.
 
 \subsection{Criterios de trabajo}
 \label{sec:F5I16Criterios}
 
 \begin{enumerate}
-	\item \textbf{El rango manda dos veces.} Cada campo tiene dos límites (ver la tabla  \S\ref{sec:F5I16Rangos}): el \texttt{Max.GWI} práctico del editor (999 en milisegundos y rangos amplios, 99 en cuentas de ticks y lanzamientos, 255 en el valor inicial de los contadores) y el \texttt{Max.GWC} del formato (255 en los campos de 1 byte; 65534 en los de 2 bytes, porque \texttt{0xFFFF} significa «sin valor»). Siempre \texttt{Max.GWI} $\leq$ \texttt{Max.GWC}: la UI recorta al práctico y la verificación conserva los del formato como red de seguridad.
+	\item \textbf{El rango manda dos veces.} Cada campo tiene dos límites (ver la tabla de \S\ref{sec:F5I16Manejo}): el \texttt{Max.GWI} práctico del editor (999 en milisegundos y rangos amplios, 99 en cuentas de ticks y lanzamientos, 255 en el valor inicial de los contadores) y el \texttt{Max.GWC} del formato (255 en los campos de 1 byte; 65534 en los de 2 bytes, porque \texttt{0xFFFF} significa «sin valor»). Siempre \texttt{Max.GWI} $\leq$ \texttt{Max.GWC}: la UI recorta al práctico y la verificación conserva los del formato como red de seguridad.
 
 	\item \textbf{Reproducir antes de corregir.} Prueba que falle con el código actual (la entrada admite el valor fuera de rango) y pase con el corregido. El punto de los mensajes solo se toca si la prueba reproduce la retención; si no, se descarta y se documenta, como marca el criterio del F5-I15.
 
-	\item \textbf{Sin cambios de formato.} No se toca el GWB, el GWI ni el GWC: solo los atributos \texttt{min}/\texttt{max} de la UI, el recorte de los manejadores y la limpieza de mensajes. Los cartuchos existentes siguen valiendo.
+	\item \textbf{Ningún recorte silencioso.} Toda limitación que cambie un valor en memoria se anuncia: \texttt{limitarValor} informa de cada valor recortado de modo que el aviso llegue a la pantalla (zona de mensajes de la ficha y barra superior \texttt{\#estado}). El autor siempre sabe que su fichero va a cambiar al guardar.
+
+	\item \textbf{Sin cambios de formato.} No se toca el GWB, el GWI ni el GWC binario: solo los límites en la UI, el recorte de los manejadores y el asentamiento de límites al cargar y al guardar. Los cartuchos existentes siguen valiendo.
+
+	\item \textbf{Un cambio, una prueba, una nota.} Cada punto se anota aquí con su prueba y al cerrar la iteración se retira el punto PA1 del I99 y se actualiza su línea \S1.4 de \texttt{REVISION\_CODIGO.md}.
+
+	\item \textbf{Cabeceras al día.} Los ficheros JavaScript modificados revisan su lista de funciones (norma de F5-I14); no debería cambiar ninguna firma.
 \end{enumerate}
+
+\subsection{Manejo de los límites}
+\label{sec:F5I16Manejo}
+
+Para poder manejar estos límites se implementan estos procesos:
+
+\begin{itemize}
+	\item \textbf{Al cargar} cualquier fichero del proyecto, y \textbf{al guardar} cualquiera de ellos, se limitan los valores a los máximos establecidos de sus campos. Al cargar, el recorte deja un aviso en pantalla con lo limitado (criterio 3); al guardar un GWC se limita a los máximos del GWI y, además, a los máximos del tamaño del campo (1 o 2 bytes).
+	\item \textbf{Redundancia deliberada.} Los dos filtros anteriores se solapan a propósito y así se declara como decisión de diseño: al cargar ya se recorta a los máximos del GWI, así que el filtro del guardado no debería activarse nunca; se conserva para que un cambio futuro del sistema que no contemple los límites no pueda saltárselos. Se documenta aquí para que nadie «arregle» esa duplicidad.
+	\item \textbf{Nueva función \texttt{revisarValores}} que limita los valores en memoria. Admite un parámetro \texttt{tipo}, uno de los tipos de fichero del proyecto, de modo que un GWS se limita con sus máximos, un GWI con los suyos prácticos y un GWC con los del tamaño de sus campos. Para valorar cada campo llama a la función auxiliar \texttt{limitarValor} con tres parámetros: \texttt{valor} a limitar (devuelve el valor ajustado), \texttt{maximo} que admite el campo y \texttt{minimo} que admite (opcional; si no se indica, es cero).
+	\item \textbf{\texttt{revisarValores}} se llama después de cargar cualquier fichero y siempre antes de guardar cualquier fichero, de manera que los valores en memoria sean coherentes en pantalla tras cargar y correctos siempre al generar. Vale para los tres tipos: tampoco el GWS puede manejar un puerto 65000 para un botón, una pantalla de 10$\times$15 o teclas fuera de \texttt{A..Z} + \texttt{0..9}.
+	\item \textbf{El nulo no es cero.} Los campos opcionales del Bloque 1 distinguen «sin valor» (memoria: \texttt{null}; en pantalla: campo vacío, mostrado como \texttt{-1} o \texttt{FFFFh} donde se presente en crudo; en el GWC: \texttt{0xFFFF}) de un valor legal \texttt{0}. \texttt{limitarValor} respeta esa diferencia: no toca un \texttt{null} y no lo convierte jamás en \texttt{0}.
+	\item \textbf{Una sola tabla de límites.} Mantenemos una tabla interna única con \texttt{campo} $\rightarrow$ \{ \texttt{min}, \texttt{maxGWI}, \texttt{maxGWC} \}, de forma que \texttt{revisarValores(tipo, valores)} solo elige columna y el proceso sea sencillo de ampliar. La tabla completa es esta:
+\end{itemize}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{l l X l l l}
+		\toprule
+		\textbf{Fichero} & \textbf{Campo} & \textbf{Uso} & \textbf{min} & \textbf{\makecell[l]{Max.\\GWI}} & \textbf{\makecell[l]{Max.\\GWC}} \\
+		\midrule
+		GWI/GWC & \texttt{valorInicial} & Valor de arranque del contador y órdenes vida/muerte & 0 & 255 & 255 \\
+		GWI/GWC & \texttt{secTicks} & Ticks entre lanzamientos de la Secuencia & 1 & 99 & 255 \\
+		GWI/GWC & \texttt{pausaSim} & Pausa del simulador (ms) & 1 & 999 & 65534 \\
+		GWI/GWC & \texttt{pausaEsp} & Pausa del sistema externo (ms) & 1 & 999 & 65534 \\
+		GWI/GWC & \texttt{accCada} & Ticks entre reducciones de la aceleración & 1 & 99 & 65534 \\
+		GWI/GWC & \texttt{accResta} & Reducción de la aceleración (ms) & 1 & 999 & 65534 \\
+		GWI/GWC & \texttt{accMinimo} & Pausa mínima de la aceleración (ms) & 0 & 999 & 65534 \\
+		GWI/GWC & \texttt{aumentarCada} & Lanzamientos entre ampliaciones de rutas & 1 & 99 & 65534 \\
+		\midrule
+		GWI/GWC & \texttt{fin.mecanismo} & Mecanismo de fin (lista) & --- & --- & \makecell[l]{0--3 \\ \texttt{nulo}} \\
+		GWI/GWC & \texttt{fin.contador} & Contador interno del fin (lista) & 1 & 4 & 4 \\
+		GWI/GWC & \texttt{contadorInterno} & Contador interno de un segmento contador & 1 & 4 & 4 \\
+		GWI/GWC & \texttt{resolucion} & Pantalla declarada \{ancho, alto\} & 1 & 999 & 65534 \\
+		GWI/GWC & \texttt{nSprites}, \texttt{nSegmentos} & Conteos del Bloque 0 & 0 & 255 & 255 \\
+		GWI/GWC & \texttt{x}, \texttt{y} de segmento & Posición dentro de la resolución & 0 & \makecell[l]{999 \\ (resol.)} & 65534 \\
+		\midrule
+		GWS & \texttt{estilo} & Estilo de máquina (lista 2/4/5) & --- & --- & --- \\
+		GWS & \texttt{resolucion} & Pantalla del hardware \{ancho, alto\} & 1 & 999 & hardware \\
+		GWS & \texttt{botones[].numero} & Número de botón (fijo por estilo) & --- & --- & --- \\
+		GWS & \texttt{botones[].puerto} & Pin del botón en la máquina real & 0 & 255 & 255 \\
+		GWS & \texttt{botones[].tecla} & Tecla del simulador (lista \texttt{A..Z} + \texttt{0..9}) & --- & --- & --- \\
+		\midrule
+		GWB & \texttt{resolucion} & Pantalla opcional del arte & 1 & 999 & 65534 \\
+		GWB & \texttt{ColorFondo} & Color \texttt{\#RRGGBB} (lista/validado) & --- & --- & --- \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Tabla única de límites: \texttt{Max.GWI} es el práctico del editor y \texttt{Max.GWC} el del formato binario (o del hardware, en el GWS). Los campos de lista no admiten recorte: son \texttt{<select>} o validación. Los máximos del nulo (\texttt{0xFFFF} en 2 bytes, \texttt{0xFF} en 1) no se alcanzan con estos límites.}
+\end{table}
+
+En la columna \texttt{Max.GWC}: los campos de 2 bytes admiten 65534 porque \texttt{0xFFFF} está reservado como «sin valor»; los de 1 byte admiten 255 con \texttt{0xFF} para los opcionales del Bloque 3. En \texttt{valorInicial} el límite práctico coincide con el del formato. En el GWS, «hardware» anticipa el límite que impondrá el firmware de la Fase 6 (1 byte por puerto); donde hoy no se valida nada, \texttt{revisarValores} pasa a hacerlo.
+
+En los campos de 1 byte el generador ya recorta (\texttt{BaseCartucho.js} escribe \texttt{secTicks} con \texttt{Math.min(0xFF, ...)}). Los \texttt{max} de hoy (999 y 9999) no corresponden a ningún límite del formato ni a una decisión práctica: el navegador permite escribir valores que solo la verificación caza después. Fuera de esta tabla quedan los demás campos de lista, que ya hoy son \texttt{<select>} y no admiten tecleo; no hay \texttt{max} que ajustar.
+
+\subsection{Detalles importantes}
+\label{sec:F5I16Detalles}
+
+Hay algunos detalles que considerar al limitar el manejo de estos valores máximos:
+
+\begin{itemize}
+	\item El atributo \texttt{max} del HTML no impide escribir a mano un valor mayor (solo gobierna las flechas del campo y la validación de formulario). Hoy los manejadores \texttt{change} recortan por abajo (\texttt{Math.max(minimo, ...)}) pero no por arriba, así que un valor teclado puede quedar en la propiedad sin recortar. Cada punto incluye el recorte superior en el manejador, no solo el atributo.
+	\item El recorte superior en el manejador (escribir un valor mayor lo trunca al máximo, con su aviso) es la opción utilizada en el manejo del interfaz.
+	\item Un GWI editado a mano con \texttt{pausaSim} de 5000 debe ser válido y generable. El paso a GWC verifica que los límites del formato (255 y 65534) no se sobrepasen como red de seguridad, pero los valores en memoria se limitan a los máximos definidos para el GWI (con su aviso), y lo hace de forma redundante con el guardado: decisión de diseño del apartado anterior.
+	\item La limpieza de mensajes cubre la zona de la ficha y también la barra superior \texttt{\#estado}.
+\end{itemize}
 
 \subsection{Cambios necesarios en el código}
 \label{sec:F5I16Codigo}
@@ -22,87 +93,23 @@ Esta iteración resuelve algunas validaciones pendientes: los campos numéricos 
 	\textbf{Módulo} & \textbf{\#} & \textbf{Qué se hará} & \textbf{Prueba / estado} \\
 	\midrule
 	\endhead
-	Editor & R1 & Campo «Valor inicial» de los contadores: \texttt{max} pasa de 9999 a 255 y el manejador \texttt{change} recorta por arriba. El GWC lo guarda en 1 byte y la verificación ya lo bloquea & Escribir 256 en el campo deja el valor en 255 (hoy se acepta y el GWC recortaría) \\
-	Editor & R2 & Campo «Ticks entre lanzamientos» de la Secuencia: \texttt{max} pasa de 999 a 99 (cuenta ticks), con recorte en el manejador. El generador ya lo recorta a \texttt{0xFF} y la verificación bloquea por encima de 255 & Escribir 100 deja 99; escribir 300 en un GWI a mano genera igual \\
-	Editor & R3 & Campos de 2 bytes del panel del reloj (construidos por \texttt{campoNumero}): \texttt{pausaSim}, \texttt{pausaEsp}, \texttt{accResta} y \texttt{accMinimo} (milisegundos) pasan de 9999 a 999; \texttt{accCada} (ticks entre reducciones) y \texttt{aumentarCada} (lanzamientos entre ampliaciones de rutas) pasan de 9999 a 99. Recorte en el manejador en todos & Escribir 1000 deja 999 en las pausas; escribir 100 deja 99 en las cuentas de ticks \\
-	Editor & R4 & La zona de mensajes no conserva errores viejos: al aplicar la ficha del cartucho con éxito (y al generar) lo mostrado corresponde al estado actual. \textbf{Punto condicional}: solo se corrige si la prueba reproduce la retención & Prueba: forzar un error, aplicar bien, y comprobar que no queda error anterior visible \\
+	BaseCartucho & M1 & Nueva tabla de límites (\texttt{campo} $\rightarrow$ \texttt{min}/\texttt{maxGWI}/\texttt{maxGWC}) y funciones \texttt{revisarValores(tipo, valores)} y \texttt{limitarValor(valor, maximo, minimo)}; \texttt{limitarValor} informa de cada valor recortado & Caja con \texttt{pausaSim} 5000: la memoria queda en 999 y aparece el aviso \\
+	BaseCartucho y BaseDirector & M2 & Llamar a \texttt{revisarValores} tras cargar cada fichero del cartucho (GWB/GWI/GWC) y al validar el setup (GWS) & Cargar un GWS a mano con \texttt{puerto} 65000: queda 255 con aviso; cargar un GWI a mano con \texttt{pausaSim} 5000: queda 999 con aviso \\
+	BaseCartucho y BaseSetup & M3 & Llamar a \texttt{revisarValores} antes de guardar GWI y GWC (BaseCartucho) y GWS (BaseSetup); el filtro del GWC aplica máximo GWI y máximo de tamaño de campo & Guardar el GWC de un GWI a mano con \texttt{pausaSim} 5000: el GWC lleva 999 y la equivalencia en memoria sigue verde \\
+	BaseSetup/BaseDirector & M4 & GWS: \texttt{puerto} limitado a 0--255 (hoy sin validación), \texttt{tecla} ampliada a \texttt{A..Z} + \texttt{0..9} (hoy solo letra en \texttt{validarSetup}) y \texttt{resolucion} con tope 999 & Puerto 65000 queda 255; la tecla «5» se acepta y «AA» se rechaza \\
+	Editor & R1 & Campo «Valor inicial» de los contadores: \texttt{max} pasa de 9999 a 255 y el manejador \texttt{change} recorta por arriba & Escribir 256 en el campo deja el valor en 255 \\
+	Editor & R2 & Campo «Ticks entre lanzamientos» de la Secuencia: \texttt{max} pasa de 999 a 99 (cuenta ticks), con recorte en el manejador & Escribir 100 deja 99 \\
+	Editor & R3 & Campos de 2 bytes del panel del reloj (construidos por \texttt{campoNumero}): \texttt{pausaSim}, \texttt{pausaEsp}, \texttt{accResta} y \texttt{accMinimo} (milisegundos) pasan de 9999 a 999; \texttt{accCada} y \texttt{aumentarCada} (ticks/lanzamientos) pasan de 9999 a 99. Recorte en el manejador en todos & Escribir 1000 deja 999 en las pausas; escribir 100 deja 99 en las cuentas de ticks \\
+	Editor & R4 & La zona de mensajes no conserva errores viejos: al aplicar la ficha del cartucho con éxito (y al generar) lo mostrado corresponde al estado actual, en la ficha y en \texttt{\#estado}. \textbf{Punto condicional}: solo se corrige si la prueba reproduce la retención & Prueba: forzar un error, aplicar bien, y comprobar que no queda error anterior visible \\
 	\bottomrule
 \end{xltabular}
-
-\subsection{Los rangos de la UI y del GWC, campo a campo}
-\label{sec:F5I16Rangos}
-
-\begin{table}[H]
-	\centering
-	\begin{tabularx}{\textwidth}{l X l l}
-		\toprule
-		\textbf{Campo} & \textbf{Uso} & \textbf{\makecell[l]{Max.\\GWI}} & \textbf{\makecell[l]{Max.\\GWC}} \\
-		\midrule
-		\texttt{valorInicial} & Valor de arranque del contador y órdenes vida/muerte & 255 & 255 \\
-		\texttt{secTicks} & Ticks entre lanzamientos de la Secuencia & 99 & 255 \\
-		\texttt{pausaSim} & Pausa del simulador (ms) & 999 & 65534 \\
-		\texttt{pausaEsp} & Pausa del sistema externo (ms) & 999 & 65534 \\
-		\texttt{accCada} & Ticks entre reducciones de la aceleración & 99 & 65534 \\
-		\texttt{accResta} & Reducción de la aceleración (ms) & 999 & 65534 \\
-		\texttt{accMinimo} & Pausa mínima de la aceleración (ms) & 999 & 65534 \\
-		\texttt{aumentarCada} & Lanzamientos entre ampliaciones de rutas & 99 & 65534 \\
-		\bottomrule
-	\end{tabularx}
-	\caption{Límites prácticos de la UI.}
-\end{table}
-
-Los dos máximos no son el mismo límite y no deben confundirse:
-
-\begin{itemize}
-	\item \textbf{\texttt{Max.GWC}} es el valor máximo que el formato admite: 255 en los campos de 1 byte y 65534 en los de 2 bytes (uint16 con \texttt{0xFFFF} reservado como «sin valor»). La verificación sigue bloqueando con error todo lo que pase de ahí; es la red de seguridad para un GWI editado a mano, que la UI no puede recortar.
-	
-	\item \textbf{\texttt{Max.GWI}} es el límite práctico del editor con valores lógico: 999 milisegundos en pausas y reducciones (el valor por defecto es 500 ms y una pausa superior al segundo no tiene sentido en un Game \& Watch) y 99 en las cuentas de ticks y lanzamientos (\texttt{secTicks}, \texttt{accCada}, \texttt{aumentarCada}: es un ritmo de juego, no una cifra técnica) que normalmente serán valores muy pequeños. En \texttt{valorInicial} el valor práctico coincide con el del formato, 255, porque es el valor de arranque de un contador de 1 byte.
-\end{itemize}
-
-Fuera de esta tabla quedan los dos campos de lista del Bloque 1, que ya hoy son \texttt{<select>} y no admiten tecleo: \texttt{fin.mecanismo} (ninguno, vida, muerte, contador; códigos 1--3 en el GWC, \texttt{0xFFFF} si ninguno) y \texttt{fin.contador} (contador interno 1--4). Por tanto no hay un valor \texttt{max} que ajustar.
-
-En los campos de 1 byte el generador ya recorta (\texttt{BaseCartucho.js} escribe \texttt{secTicks} con \texttt{Math.min(0xFF, ...)}). Los \texttt{max} de hoy (999 y 9999) no corresponden a ningún límite del formato ni a una decisión práctica: el navegador permite escribir valores que solo la verificación caza después.
-
-\subsection{Detalles importantes}
-\label{sec:F5I16Mensajes}
-
-Hay algunos detalles que considerar al limitar el manejo de estos valores máximos para el GWI:
-\begin{itemize}
-	\item  El atributo \texttt{max} del HTML no impide escribir a mano un valor mayor (solo gobierna las flechas del campo y la validación de formulario). Hoy los manejadores \texttt{change} recortan por abajo (\texttt{Math.max(minimo, ...)}) pero no por arriba, así que un valor teclado puede quedar en la propiedad sin recortar. Cada punto incluye el recorte superior en el manejador, no solo el atributo.
-
-	\item El recorte superior en el manejador (escribir un valor mayor lo trunca al máximo) es la opción utilizada en el manejo del Interfaz.
-
-	\item Un GWI editado a mano con \texttt{pausaSim} de 5000 debe ser válido y generable. El paso a GWC al menos verifica que los límites del formato (255 y 65534) no se sobrepasen como red de seguridad, pero se deben limitar a los valores máximos definidos para el GWI.
-		
-	
-	\item La limpieza de mensajes cubre la zona de la ficha y también la barra superior \texttt{\#estado}.
-\end{itemize}
-
-\subsection{Manejo de los límites}
-\label{sec:F5I16Manejo}
-
-Para poder manejar estos límites, se deben implementar estos proceso:
-\begin{itemize}
-	\item Al cagar un GWI manual y sobre todo al guardarlo limitaremos los valores a los establecidos como máximos para los campos. Al guardar un GWC limitaremos los valores a los máximos del GWI, peo además limiteremos a los valores máximos del tamaño del campo, 1 o 2 bytes, por seguridad deben usarse ambas verificaciones. 
-	
-	\item Para limitar correctamente, crearemos una nueva función \textbf{revisarValores} que los limite en memoria, que admita como parámetros \textbf{tipo} que podrá ser uno de los tipos de cartucho, así para un cartucho GWI se limita a los valores máximos de los campos, y si es un cartucho GWC se limita a los valores según el tamaño del campo. Para valorar un campo se llamarán a una función auxiliar \textbf{limitarValor}, con tres parámetros, \textbf{valor} a limitar, se retorna el valor ajustado, \textbf{maximo} que admite el campo, y \textbf{minimo} que admie el campo (opcional si no se indica es cero) que permita ajustar los valores en memoria, de forma que cuando se llama a las funciones que generan los cartuchos los valores ya sean siempre correctos y limitados.
-	
-	\item Esta función se la llamará después de cargar cualquier cartucho, y siempre antes de guardar cualquier cartucho, de esta manera nos aseguramos de que los valores en memoria sean siempre coherentes en la pantalla tras cargar, y correctos siempre al generar. Los valores de los cartuchos GWS y GWB actualmente no tiene campos limitados, pero al tener valores numéricos se limitarán igualmente los posibles valores del tamaño de la pantalla, puertos para botones, etc. 
-	
-	\item Para hacer esto se debe crear una tabla interna que indique cartucho, campo y valor máximo del mismo, de forma que el proceso sea sencillo de ampliar.
-	
-\end{itemize}
-
 
 \subsection{La zona de mensajes}
 \label{sec:F5I16Mensajes}
 
-Los mensajes viven hoy en la barra superior \texttt{\#estado} (\texttt{BaseDirector.avisar}/\texttt{avisarError}) y en la zona de mensajes de la ficha (\texttt{BaseFicha.\_pintarMensajes}), que se repinta en cada verificación y se limpia al poblar o reiniciar la ficha. El caso a reproducir: un error de una verificación fallida que siga visible después de que una aplicación posterior con éxito lo haya dejado sin sentido. Si la prueba no llega a reproducir retención alguna, el punto se descarta y se documenta.
-
-La limpieza de mensajes cubre la zona de la ficha y también la barra superior \texttt{\#estado}
+Los mensajes viven hoy en la barra superior \texttt{\#estado} (\texttt{BaseDirector.avisar}/\texttt{avisarError}) y en la zona de mensajes de la ficha (\texttt{BaseFicha.\_pintarMensajes}), que se repinta en cada verificación y se limpia al poblar o reiniciar la ficha. El caso a reproducir: un error de una verificación fallida que siga visible después de que una aplicación posterior con éxito lo haya dejado sin sentido. Si la prueba no llega a reproducir retención alguna, el punto se descarta y se documenta. La limpieza cubre la zona de la ficha y también la barra superior, y es también por ahí donde deben salir los avisos de \texttt{limitarValor} (criterio 3).
 
 \subsection{Pruebas}
 \label{sec:F5I16Pruebas}
 
-Una caja por bloque de campos en la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): cada caja escribe un valor fuera de rango en el campo real del panel y comprueba el valor que queda tras el \texttt{change} (255 en \texttt{valorInicial}; 99 en \texttt{secTicks}, \texttt{accCada} y \texttt{aumentarCada}; 999 en \texttt{pausaSim}, \texttt{pausaEsp}, \texttt{accResta} y \texttt{accMinimo}). Para R4, la caja fuerza un error de ficha, aplica con éxito y comprueba la zona de mensajes. Al cierre se re-lanzan las cuatro suites (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}); no hace falta red de seguridad de partidas: la UI no toca el motor ni el formato.
-
+En la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): una caja por bloque de campos, cada una escribe un valor fuera de rango en el campo real del panel y comprueba el valor que queda tras el \texttt{change} (255 en \texttt{valorInicial}; 99 en \texttt{secTicks}, \texttt{accCada} y \texttt{aumentarCada}; 999 en \texttt{pausaSim}, \texttt{pausaEsp}, \texttt{accResta} y \texttt{accMinimo}), y que el aviso de recorte es visible. Para R4, la caja fuerza un error de ficha, aplica con éxito y comprueba ficha y \texttt{\#estado}. Para M2/M3, cargas de ficheros ajustados a mano (GWI con \texttt{pausaSim} 5000, GWS con puerto 65000 y teclas con dígitos): memoria limitada, aviso en pantalla y GWC guardado dentro del formato. En la suite \texttt{pruebasGWI\_GWC} la equivalencia con los ficheros limitados debe seguir en verde. Al cierre se re-lanzan las cuatro suites (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}); no hace falta red de seguridad de partidas: los límites no tocan el orden del tick.

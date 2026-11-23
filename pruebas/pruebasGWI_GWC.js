@@ -1,4 +1,4 @@
-// pruebas/equivalenciaGWC.js — F5-I13 (+ cartucho completo y semillas, F5-I14)
+// pruebas/pruebasGWI_GWC.js — F5-I13 (+ cartucho completo y semillas, F5-I14)
 // ================================================================================================
 // PROPÓSITO
 //   Comprueba que un GWC generado desde un GWI es EQUIVALENTE a él: mismos datos de configuración

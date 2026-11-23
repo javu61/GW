@@ -134,7 +134,7 @@ La prueba de equivalencia de F5-I13 jugaba una sola partida con un cartucho que 
 \label{sec:F5I14Pruebas}
 
 \begin{itemize}
-	\item Nuevo módulo \texttt{pruebas/pruebasF5I14.js} (15 comprobaciones): vector del CRC; detección de bytes intercambiados; \texttt{ColorFondo} de ida y vuelta por el GWC (blanco por defecto y \texttt{\#336699}); el color cambia el código del GWC; la ficha lo entrega y el blanco no viaja; un GWB sin \texttt{img\_f} y con \texttt{ColorFondo} se carga y pinta ese color; y las cinco validaciones del lector, corrompiendo el fichero y recalculando el CRC para que solo falle la validación nueva.
+	\item Nuevo módulo \texttt{pruebas/pruebasGenerales.js} (15 comprobaciones): vector del CRC; detección de bytes intercambiados; \texttt{ColorFondo} de ida y vuelta por el GWC (blanco por defecto y \texttt{\#336699}); el color cambia el código del GWC; la ficha lo entrega y el blanco no viaja; un GWB sin \texttt{img\_f} y con \texttt{ColorFondo} se carga y pinta ese color; y las cinco validaciones del lector, corrompiendo el fichero y recalculando el CRC para que solo falle la validación nueva.
 	
 	\item Ampliado \texttt{pruebas/equivalenciaGWC.js}: compara también \texttt{ColorFondo} del GWI con el fondo del GWC (la variante y el cartucho completo declaran \texttt{\#336699}), juega con cinco semillas y admite \texttt{COMPLETO=1} y \texttt{DEPURAR=1} (ver sección~\ref{sec:F5I14Equivalencia}).
 
@@ -148,7 +148,7 @@ La prueba de equivalencia de F5-I13 jugaba una sola partida con un cartucho que 
 	\item \texttt{baseCartucho.js}: \texttt{ColorFondo}, \texttt{\_crc16} y \texttt{\_codigoDeCRC}, validaciones del lector, y el byte de reglas en el Bloque 0 (el Bloque 1 vuelve a 8 valores).
 	\item \texttt{baseFicha.js}, \texttt{baseDirector.js} y \texttt{baseDescomponer.js}: selector de color, fondo plano y avisos de resolución.
 	\item \texttt{juegoDirector.js}: \texttt{fijarSemilla(valor)}.
-	\item \texttt{pruebas/pruebas.js}, \texttt{pruebas/pruebasF5I14.js} y \texttt{pruebas/equivalenciaGWC.js}.
+	\item \texttt{pruebas/pruebas.js}, \texttt{pruebas/pruebasGenerales.js} y \texttt{pruebas/equivalenciaGWC.js}.
 \end{itemize}
 
 \subsection{Mejoras pendientes}

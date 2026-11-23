@@ -31,27 +31,27 @@ Esta es la lista de elementos que se han revisado y visto que hay diferencias en
 	\midrule
 	\endhead
 	Motor & M0 & Orden del tick: la limpieza de banderas \texttt{cambiar} pasa al paso (0) y la entrada al (1). La entrada escribe \texttt{cambiar=true} al mover al jugador; si la limpieza va después, esas marcas se pierden y el repintado selectivo del ESP32 no pintaría el paso & \textbf{Hecho} (ver~\ref{sec:F5I15OrdenTick}); PRUEBA 5 de la pestaña Pruebas \\
-	Motor & M1 & Excluir de \texttt{\_esCadena} y \texttt{\_esDeRuta} los segmentos secundarios de un «mostrar junto a» (están en \texttt{mapaComp}): los sincroniza su principal y no son rutas. Así el barrido no los apaga como fin de ruta ni \texttt{\_muereRuta} resta de \texttt{nRutasVivas} & Cartucho de laboratorio con un principal y un secundario: tras N ticks \texttt{nRutasVivas} nunca es negativo ni supera el máximo \\
-	Motor & M2 & Ejecutar \texttt{\_sincronizarIconos} antes de \texttt{\_sincronizarAcompanantes}, y también en \texttt{iniciar()}, para que el secundario de un icono se pinte en el mismo tick que su principal y en el tick final & Icono con secundario: ambos cambian en el mismo tick, también en el último \\
-	Motor & M3 & Barrido en dos fases: primero se calcula el destino de cada segmento sobre una foto del estado y después se aplican. El resultado deja de depender del orden de la lista y \texttt{nRutasVivas} se mantiene exacto. \textbf{Es el único que puede cambiar partidas reales: se hace el último} y se compara con las partidas grabadas & Dos rutas seguidas en la misma cadena y dos que confluyen, con la lista en ambos órdenes: mismo resultado y contador correcto \\
-	Motor & M4 & Reproducir tres casos y corregir solo los que fallen: (a) punto de colisión que se enciende y apaga en el mismo tick; (b) ruta que entra en un segmento de la Secuencia y desaparece sin \texttt{\_muereRuta}; (c) congelación que no corta el barrido en curso & Una prueba por caso \\
-	Director & D1 & GWC tras GWI: reproducir el caso completo (autoría, botonera, Guardar y Generar); lo que falle se corrige con la regla de F5-I12: cargar un GWC limpia la autoría & Prueba del caso completo \\
-	Director & D2 & \texttt{\_descomponerImagen} ya comprueba el retorno de \texttt{arrancar} y sale sin habilitar los botones & Probablemente resuelto; confirmar con prueba \\
-	Director & D3 & \texttt{\_procesarCartucho} hace primero todas las comprobaciones (estilo y botones) y solo después limpia el estado y asigna el cartucho, como ya hace el GWC & Cargar un cartucho incompatible tras uno bueno deja el bueno intacto \\
-	Director & D4 & \texttt{informarEstadistica} y \texttt{\#infoEstadistica} ya no existen & Resuelto; sin cambio de código \\
-	Editor & E1 & Añadir \texttt{sec\_1}…\texttt{sec\_5} a \texttt{TODOS\_ENLACES}: al unir se re-apuntan a la raíz, al separar se anulan y \texttt{verificarReferencias} los revisa & Reproducir con una Secuencia que enciende un absorbido \\
-	Editor & E2 & El historial convierte los ids «F01» al deshacer tras cargar un GWI con piezas de unión & Reproducir \\
-	Editor & E3 & «Presentar el cero = false» llega al GWI: \texttt{reconstruir} deja de saltarse los \texttt{false} & Reproducir \\
-	Editor & E4 & Al cambiar de tipo se descartan solo los campos que el tipo nuevo no usa y se limpia \texttt{mostradoJunto} del secundario. Hace falta una tabla única «campos válidos por tipo» & Reproducir juego$\to$inicio \\
-	Editor & E5 & El alta de la ficha del cartucho deja de ser una acción deshacible & Reproducir: Ctrl+Z tras cargar un GWB \\
-	Editor & E6 & Los absorbidos no cuentan en las familias ni en la numeración de rutas; \texttt{refrescarInfo} numera por \texttt{orden} & Reproducir: unir 2 inicios \\
-	Editor & E7 & No se pueden unir dos dígitos ni dos contadores, ni cambiar a dígito o contador una pieza de unión (F3-I10 lo prohíbe) & Reproducir \\
-	Editor & E8 & Un píxel con alfa 0 se trata como fondo (blanco) en el extractor & PNG transparente \\
-	Editor & E9 & La verificación no registra sus inversos como acciones sueltas del historial & Reproducir: Ctrl+Z tras Verificar \\
+	Motor & M1 & Excluir de \texttt{\_esCadena} y \texttt{\_esDeRuta} los segmentos secundarios de un «mostrar junto a» (están en \texttt{mapaComp}): los sincroniza su principal y no son rutas. Así el barrido no los apaga como fin de ruta ni \texttt{\_muereRuta} resta de \texttt{nRutasVivas} & \textbf{Corregido.} \texttt{pruebasMotorF5I15.js} (M1): principal con secundario; con el código anterior \texttt{nRutasVivas} bajaba de cero. Ahora nunca es negativo \\
+	Motor & M2 & Ejecutar \texttt{\_sincronizarIconos} antes de \texttt{\_sincronizarAcompanantes}, y también en \texttt{iniciar()}, para que el secundario de un icono se pinte en el mismo tick que su principal y en el tick final & \textbf{Corregido.} \texttt{pruebasMotorF5I15.js} (M2a, M2b): fallaba; el secundario cambia en el mismo tick que su principal y en el último \\
+	Motor & M3 & Barrido en dos fases: primero se calcula el destino de cada segmento sobre una foto del estado y después se aplican. El resultado deja de depender del orden de la lista y \texttt{nRutasVivas} se mantiene exacto. \textbf{Es el único que puede cambiar partidas reales: se hace el último} y se compara con las partidas grabadas & \textbf{Corregido.} \texttt{pruebasMotorF5I15.js} (M3a, M3b, M3c): cadena de dos rutas y confluencia, con la lista en ambos órdenes; mismo resultado y contador exacto. Partidas grabadas: ver~\ref{sec:F5I15Cambios} \\
+	Motor & M4 & Reproducir tres casos y corregir solo los que fallen: (a) punto de colisión que se enciende y apaga en el mismo tick; (b) ruta que entra en un segmento de la Secuencia y desaparece sin \texttt{\_muereRuta}; (c) congelación que no corta el barrido en curso & (a) \textbf{Descartado: es el diseño}, sin cambio. (b) y (c) \textbf{reproducidos y corregidos} (M4b, M4c en \texttt{pruebasMotorF5I15.js}) \\
+	Director & D1 & GWC tras GWI: reproducir el caso completo (autoría, botonera, Guardar y Generar); lo que falle se corrige con la regla de F5-I12: cargar un GWC limpia la autoría & \textbf{Corregido.} \texttt{pruebasDirectorF5I15.js} (D1): GWI y después GWC; el GWC limpia la autoría y la edición \\
+	Director & D2 & \texttt{\_descomponerImagen} ya comprueba el retorno de \texttt{arrancar} y sale sin habilitar los botones & \textbf{Resuelto}, confirmado con prueba (D2); sin cambio de código \\
+	Director & D3 & \texttt{\_procesarCartucho} hace primero todas las comprobaciones (estilo y botones) y solo después limpia el estado y asigna el cartucho, como ya hace el GWC & \textbf{Corregido.} Prueba D3: un cartucho incompatible tras uno bueno lo deja intacto \\
+	Director & D4 & \texttt{informarEstadistica} y \texttt{\#infoEstadistica} ya no existen & \textbf{Resuelto}, confirmado con prueba; sin cambio de código \\
+	Editor & E1 & Añadir \texttt{sec\_1}…\texttt{sec\_5} a \texttt{TODOS\_ENLACES}: al unir se re-apuntan a la raíz, al separar se anulan y \texttt{verificarReferencias} los revisa & \textbf{Corregido.} \texttt{pruebasEditorF5I15.js} (E1): al unir se re-apunta a la raíz, al separar se anula \\
+	Editor & E2 & El historial convierte los ids «F01» al deshacer tras cargar un GWI con piezas de unión & \textbf{Corregido.} E2: deshacer tras cargar un GWI con ids «F01» convierte a ids negativos \\
+	Editor & E3 & «Presentar el cero = false» llega al GWI: \texttt{reconstruir} deja de saltarse los \texttt{false} & \textbf{Corregido.} E3: el \texttt{false} de «presentar el cero» llega al GWI \\
+	Editor & E4 & Al cambiar de tipo se descartan solo los campos que el tipo nuevo no usa y se limpia \texttt{mostradoJunto} del secundario. Hace falta una tabla única «campos válidos por tipo» & \textbf{Corregido.} E4: se descartan solo los campos que el tipo nuevo no usa (tabla \texttt{\_camposDe}) y se limpia \texttt{mostradoJunto} \\
+	Editor & E5 & El alta de la ficha del cartucho deja de ser una acción deshacible & \textbf{Corregido.} E5: Ctrl+Z tras cargar un GWB responde «Nada que deshacer.» \\
+	Editor & E6 & Los absorbidos no cuentan en las familias ni en la numeración de rutas; \texttt{refrescarInfo} numera por \texttt{orden} & \textbf{Corregido.} E6: unir 2 inicios; los absorbidos no cuentan \\
+	Editor & E7 & No se pueden unir dos dígitos ni dos contadores, ni cambiar a dígito o contador una pieza de unión (F3-I10 lo prohíbe) & \textbf{Corregido.} E7: unión de dígitos o contadores y cambio de tipo de una pieza de unión, rechazados con motivo \\
+	Editor & E8 & Un píxel con alfa 0 se trata como fondo (blanco) en el extractor & \textbf{Corregido.} E8: el PNG transparente se lee como blanco \\
+	Editor & E9 & La verificación no registra sus inversos como acciones sueltas del historial & \textbf{Corregido.} E9: un solo Ctrl+Z deshace la acción y sus inversos derivados (\texttt{auto}); Ctrl+Y los rehace \\
 	\bottomrule
 \end{xltabular}
 
-\textbf{Orden de trabajo.} Red de seguridad (regrabar las partidas de las cinco semillas), M1, M2, M4, D, E y por último M3.
+\textbf{Orden de trabajo seguido.} Red de seguridad (partidas de las cinco semillas), M1, M2, M4, D, E y por último M3. Resultado y detalle en~\ref{sec:F5I15Cambios}.
 
 \subsection{Divergencias entre el código y el análisis documentado}
 \label{sec:F5I15Docs}
@@ -78,21 +78,61 @@ Durante el desarrollo es normal encontrar puntos a mejorar o cambios necesario n
 	\caption{Desajustes del texto a mejorar.}
 \end{table}
 
+\subsection{Decisiones en temas que se han ajustado}
+\label{sec:F5I15Decisiones}
+
+\begin{enumerate}
+	\item Orden del tick: Se cambia el código para seguir el documento  (ver~\ref{sec:F5I15OrdenTick}).
+	\item E8: Un PNG con transparencia (alfa 0) se trata como fondo blanco.
+	\item E4: Cada tipo declara qué campos usa, como tabla única en el código (\texttt{\_camposDe}).
+\end{enumerate}
 
 \subsection{Cambio importante realizado: orden del tick}
 \label{sec:F5I15OrdenTick}
 
 Conforme al criterio de \emph{reproducir antes de corregir}, primero se escribió la prueba \emph{Orden del tick (F5-I15)} (PRUEBA 5 de la pestaña \emph{Pruebas}, \texttt{pruebas/pruebas.js}): un cartucho de laboratorio de dos segmentos enlazados y el motor movido a mano. Con el código del momento la prueba falla: \texttt{A.cambiar=false B.cambiar=false} — la limpieza, posterior a la entrada, borraba las marcas del paso. Después se movió la limpieza al paso (0) del \texttt{tick()} en \texttt{JuegoMotorEstados.js} (la entrada pasa al paso 1 y las rutas siguen en el 2), actualizando la cabecera, el JSDoc y la nota de banderas del módulo. Re-ejecutada la prueba, las tres comprobaciones pasan: el paso ocurre, las banderas del jugador sobreviven al tick y el tick siguiente las deja limpias.
 
-Sin cambio de comportamiento en el navegador: ningún módulo JavaScript lee todavía \texttt{cambiar} (el motor gráfico repinta todos los encendidos a partir de \texttt{visible}); las banderas son para el repintado selectivo del ESP32. Queda pendiente la red de seguridad del motor (criterio 2): regrabar las partidas de las cinco semillas con \texttt{pruebas/equivalenciaGWC.js} y confirmar que no hay diferencias; el GWC antiguo se regenera a partir del GWI.
+Sin cambio de comportamiento en el navegador: ningún módulo JavaScript lee todavía \texttt{cambiar} (el motor gráfico repinta todos los encendidos a partir de \texttt{visible}); las banderas son para el repintado selectivo del ESP32. La red de seguridad del motor (criterio 2) se ejecutó después de todos los cambios; ver~\ref{sec:F5I15Cambios}.
 
-\subsection{Decisiones que hay que validar}
-\label{sec:F5I15Decisiones}
+\subsection{Cambios de código realizados y pruebas}
+\label{sec:F5I15Cambios}
 
-\begin{enumerate}
-	\item ¿Se aprueba el orden de trabajo y la regla de «reproducir antes de corregir»?
-	\item Orden del tick: ¿se cambia el código para seguir el documento (propuesta) o se cambia el documento? Resuelto: se cambia el código (ver~\ref{sec:F5I15OrdenTick}).
-	\item \#26: ¿un PNG con transparencia se trata como fondo blanco?
-	\item \#22: ¿se acepta que cada tipo declare qué campos usa, como tabla única en el código?
-	\item ¿Se corrigen los desajustes de la tabla anterior en esta iteración, o se dejan para una iteración de documentación aparte?
-\end{enumerate}
+Cada punto se reprodujo con una prueba que fallaba con el código anterior y pasa con el corregido. Las pruebas están en \texttt{pruebas/pruebasMotorF5I15.js}, \texttt{pruebas/pruebasDirectorF5I15.js} y \texttt{pruebas/pruebasEditorF5I15.js}. Las del editor se ejecutan sobre una copia temporal en la que \texttt{BaseDescomponer.js} exporta su interior; el código de producción no cambia por ello.
+
+\textbf{Motor} (\texttt{JuegoMotorEstados.js}).
+\begin{itemize}
+	\item \textbf{M1.} Los secundarios de «mostrar junto a» se guardan en \texttt{idsSecundarios} y se excluyen de \texttt{\_esDeRuta} y \texttt{\_esCadena}.
+	\item \textbf{M2.} \texttt{\_sincronizarIconos} se ejecuta antes de \texttt{\_sincronizarAcompanantes}, y ambas también en \texttt{iniciar()}.
+	\item \textbf{M3.} El barrido va en dos fases: la primera apaga todos los segmentos vivos (libera los huecos y marca \texttt{cambiar}); la segunda los procesa, primero los que deciden (con \texttt{colision} o destino con \texttt{colision}) y luego el resto. El resultado ya no depende del orden de la lista.
+	\item \textbf{M4.} (a) Es el diseño y no se toca. (b) \texttt{\_muereRuta} desaparece: \texttt{nRutasVivas} se recalcula desde la pantalla con \texttt{\_contarRutasVivas} antes de lanzar una ruta, por lo que no puede desviarse. (c) Con el juego congelado el barrido no avanza las rutas: esperan, salvo las del desenlace.
+\end{itemize}
+
+\textbf{Director} (\texttt{BaseDirector.js}).
+\begin{itemize}
+	\item \textbf{D1.} Cargar un GWC llama a \texttt{BaseDescomponer.reset()} y deja \texttt{editable=false} y \texttt{tamGWI=null}.
+	\item \textbf{D3.} La función pura \texttt{\_botonesInexistentes(json)} se comprueba antes de \texttt{\_limpiarCartucho()}; si falla se lanza el error «se conserva el cartucho anterior».
+	\item \textbf{D2 y D4.} Ya estaban resueltos; las pruebas lo confirman.
+\end{itemize}
+
+\textbf{Editor} (\texttt{BaseDescomponer.js}, \texttt{BaseCartucho.js}, \texttt{BaseExtractor.js}).
+\begin{itemize}
+	\item \textbf{E1.} \texttt{CAMPOS\_SECUENCIA} se añade a \texttt{TODOS\_ENLACES}.
+	\item \textbf{E2.} \texttt{\_reproducirCambios} convierte «F01» a $-1$ en segmento, altas, bajas, \texttt{antes} y enlaces, y registra la entrada ya convertida.
+	\item \textbf{E3.} \texttt{\_reconstruir} solo se salta los \texttt{false} distintos de \texttt{presentarCero}.
+	\item \textbf{E4.} Al cambiar de tipo se descartan los campos de \texttt{\_camposDe(anterior)} que no están en \texttt{\_camposDe(nuevo)}, y se limpia \texttt{mostradoJunto} del secundario en la misma acción.
+	\item \textbf{E5.} \texttt{\_esBloqueDeFicha} impide deshacer el alta de la ficha.
+	\item \textbf{E6.} Numeración, familias y GWI ignoran los absorbidos.
+	\item \textbf{E7.} \texttt{\_motivoNoUnible} rechaza unir dos dígitos o dos contadores y cambiar a dígito o contador una pieza de unión.
+	\item \textbf{E8.} \texttt{\_leerImagen} pinta el lienzo de blanco antes de dibujar: alfa 0 es blanco.
+	\item \textbf{E9.} \texttt{\_registrarCambios} marca con \texttt{auto:true} las entradas derivadas (\texttt{registrarCambioDerivado}, usado en 4 puntos de \texttt{BaseCartucho.js}). \texttt{deshacer} encadena los bloques \texttt{auto}; \texttt{rehacer} los reaplica.
+\end{itemize}
+
+\textbf{Formato.} \texttt{auto} es un campo opcional nuevo de las entradas del historial del GWI. Es la única adición: los GWI antiguos se cargan igual y no cambian ni el GWB ni el GWC.
+
+\textbf{Red de seguridad.} Con el cartucho de ejemplo y las cinco semillas:
+\begin{itemize}
+	\item Comparado con la grabación del GWI de referencia: \textbf{IGUAL} en las cinco semillas.
+	\item GWI frente a GWC (juego completo): \textbf{IGUAL tick a tick} en las cinco.
+	\item Variante completa frente a la grabación anterior: diferencias en tres semillas (1, 4660 y 6699), explicadas por M3 y M4c. En la grabación anterior se perdía una ruta por el orden de la lista (M3), y las rutas ahora esperan durante la congelación (M4c). No hay más diferencias.
+\end{itemize}
+

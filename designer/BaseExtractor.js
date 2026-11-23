@@ -57,12 +57,19 @@ const BaseExtractor = (() => {
     return '#' + h(r) + h(g) + h(b);
   }
 
-  /* Lee la imagen a un canvas y devuelve {datos, ancho, alto}. */
+  /* Lee la imagen a un canvas y devuelve {datos, ancho, alto}.
+   * F5-I15 (E8): el lienzo se pinta antes de BLANCO: un píxel
+   * transparente (alfa 0) se lee como blanco, no como negro (0,0,0,0)
+   * — un PNG con el fondo transparente daba una componente negra del
+   * tamaño de toda la imagen. Los semitransparentes se mezclan con el
+   * blanco y salen grises: la verificación B/N los rechaza. */
   function _leerImagen(img) {
     const c = document.createElement('canvas');
     c.width = img.naturalWidth;
     c.height = img.naturalHeight;
     const ctx = c.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, c.width, c.height);
     ctx.drawImage(img, 0, 0);
     return {
       datos: ctx.getImageData(0, 0, c.width, c.height),

@@ -867,7 +867,7 @@ var BaseCartucho = (function () {
   // props, sus helpers y las constantes de los enlaces. No guarda estado.
   // OJO: no es de solo lectura — CALCULA los inversos que falten
   // (direcciones, colisionDe, mostradoJunto) y los registra en el
-  // historial a través de ctx.registrarCambio.
+  // historial (marcados «auto») a través de ctx.registrarCambioDerivado.
   //
   // Cada regla vive en su propia función (grupos: ctx.grupos, hallazgos:
   // {errores, avisos} que cada regla va rellenando).
@@ -964,7 +964,7 @@ var BaseCartucho = (function () {
       propsDestino[inverso] = origen.raiz;
       // El inverso calculado también entra en el historial: es un cambio
       // real y el GWI no guarda estado final (se perdería al recargar).
-      ctx.registrarCambio(destino.raiz, { [inverso]: origen.raiz }, { [inverso]: null });
+      ctx.registrarCambioDerivado(destino.raiz, { [inverso]: origen.raiz }, { [inverso]: null });
       console.info('[verificar] ' + ctx.segId(destino) + '.' + inverso + ' = ' +
         ctx.segId(origen) + ' (inverso calculado).');
     } else if (propsDestino[inverso] !== origen.raiz) {
@@ -992,7 +992,7 @@ var BaseCartucho = (function () {
 
       if (propsJugador.colisionDe === null) {
         propsJugador.colisionDe = grupo.raiz;
-        ctx.registrarCambio(jugador.raiz, { colisionDe: grupo.raiz }, { colisionDe: null });
+        ctx.registrarCambioDerivado(jugador.raiz, { colisionDe: grupo.raiz }, { colisionDe: null });
         console.info('[verificar] ' + ctx.segId(jugador) + '.colisionDe = ' +
           ctx.segId(grupo) + ' (inverso de colisión calculado).');
       } else if (propsJugador.colisionDe !== grupo.raiz) {
@@ -1236,7 +1236,7 @@ var BaseCartucho = (function () {
     const propsSecundario = ctx.propsDe(secundario.raiz);
     if (propsSecundario.mostradoJunto === null) {
       propsSecundario.mostradoJunto = principal.raiz;
-      ctx.registrarCambio(secundario.raiz, { mostradoJunto: principal.raiz }, { mostradoJunto: null });
+      ctx.registrarCambioDerivado(secundario.raiz, { mostradoJunto: principal.raiz }, { mostradoJunto: null });
       console.info('[verificar] ' + ctx.segId(secundario) + '.mostradoJunto = ' +
         ctx.segId(principal) + ' (calculado).');
     } else if (propsSecundario.mostradoJunto !== principal.raiz) {
@@ -1274,7 +1274,7 @@ var BaseCartucho = (function () {
 
       const principalAnterior = ctx.grupoDeComp(grupo.prop.mostradoJunto);
       ctx.propsDe(grupo.raiz).mostradoJunto = null;
-      ctx.registrarCambio(grupo.raiz, { mostradoJunto: null },
+      ctx.registrarCambioDerivado(grupo.raiz, { mostradoJunto: null },
         { mostradoJunto: principalAnterior ? principalAnterior.raiz : null });
       console.info('[verificar] ' + ctx.segId(grupo) + '.mostradoJunto retirado ' +
         '(su principal ya no lo apunta).');

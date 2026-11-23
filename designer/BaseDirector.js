@@ -32,6 +32,7 @@
 //   _crearBotonFisico         Un botón físico: hueco, tecla, etiqueta.
 //   _construirBotonera        La botonera del estilo del setup.
 //   _normalizarNumeroBoton    Número o alias → botón físico canónico.
+//   _botonesInexistentes      ¿Usa el cartucho botones que la máquina no tiene? (pura)
 //   _aplicarBotonesCartucho   Botones del cartucho sobre la botonera.
 //   _montarBotonesSistema     Activa el trío A/B/R en modo sistema (GWI/GWC).
 //   _etiquetarSistema         Etiquetas del trío según el estado: fuera de
@@ -512,6 +513,29 @@ var BaseDirector = (function () {
   }
 
   /**
+   * F5-I15 (D3): ¿usa el cartucho algún botón que la máquina no tiene?
+   * Comprobación PURA (no toca el DOM ni el estado): se hace ANTES de
+   * limpiar nada, para que un cartucho incompatible no destruya el que
+   * ya estaba cargado. Setup >= cartucho (F3-I1): jugar con menos
+   * botones que la máquina ofrece está bien; usar uno que no tiene, no.
+   * @param {Object} json - JSON del cartucho.
+   * @returns {?string} El mensaje de error, o null si todo es compatible.
+   */
+  function _botonesInexistentes(json) {
+    if (!json || json.botones === undefined || !setupGWS) return null;
+    const existentes = ESTILOS[setupGWS.estilo].botones;
+    const faltan = [];
+    for (const b of json.botones) {
+      if (!existentes[_normalizarNumeroBoton(b.numero)]) faltan.push(String(b.numero));
+    }
+    if (faltan.length === 0) return null;
+    return 'el cartucho usa ' + (faltan.length === 1 ?
+      'el botón ' + faltan[0] + ', que no existe' :
+      'los botones ' + faltan.join(', ') + ', que no existen') +
+      ' en la máquina de estilo ' + setupGWS.estilo + '.';
+  }
+
+  /**
    * Aplica los botones del cartucho sobre la botonera física:
    * - restaura primero TODOS los botones del setup (por si el cartucho
    *   anterior había eliminado o renombrado),
@@ -531,15 +555,12 @@ var BaseDirector = (function () {
       console.warn('El cartucho no declara botones; se dejan los del setup.');
       return true;
     }
+    const faltan = _botonesInexistentes(json);
+    if (faltan) return faltan;
     const usados = new Set();
-    const inexistentes = [];
     for (const b of json.botones) {
       const numero = _normalizarNumeroBoton(b.numero);
       const el = document.querySelector('.botonFisico[data-numero="' + numero + '"]');
-      if (!el) {
-        inexistentes.push(String(b.numero));
-        continue;
-      }
       const et = el.querySelector('.etiqueta');   // renombra sin perder la pista de tecla
       if (et) et.textContent = b.id || numero;    // sin "id" se queda el número
       // El botón que el cartucho llama "Start" es el que enciende el
@@ -548,15 +569,6 @@ var BaseDirector = (function () {
         numeroStart = numero;
       }
       usados.add(numero);
-    }
-    // Setup >= cartucho (F3-I1): jugar con MENOS botones que la
-    // máquina ofrece está bien (los no usados se eliminan); usar un
-    // botón que la máquina no tiene, NO: el cartucho no carga.
-    if (inexistentes.length > 0) {
-      return 'el cartucho usa ' + (inexistentes.length === 1 ?
-        'el botón ' + inexistentes[0] + ', que no existe' :
-        'los botones ' + inexistentes.join(', ') + ', que no existen') +
-        ' en la máquina de estilo ' + setupGWS.estilo + '.';
     }
     // En un GWI el trío A/B/R es del SISTEMA (F5-I10): no lo toca el
     // cartucho, se conserva aunque no lo use.
@@ -908,6 +920,11 @@ var BaseDirector = (function () {
       const json = leido.json;
       const mapa = leido.mapa;
 
+      // F5-I15 (D3): TODAS las comprobaciones antes de tocar nada: si el
+      // cartucho no es compatible con la máquina, el anterior se conserva.
+      const incompatible = _botonesInexistentes(json);
+      if (incompatible) throw new Error(incompatible + ' (se conserva el cartucho anterior).');
+
       _limpiarCartucho();                       // fuera el cartucho anterior
       cartucho = json;
       const tipo = json.tipo;                  // obligatorio: sin tipo no se carga
@@ -1095,6 +1112,11 @@ var BaseDirector = (function () {
       return;
     }
     BaseCartucho.revocarURLs();    // object URLs del cartucho anterior, fuera
+    // F5-I15 (D1): el GWC es pura ejecución y no se edita: la autoría del
+    // cartucho anterior (GWB/GWI) se descarta entera, con sus botones.
+    BaseDescomponer.reset();
+    editable = false;
+    tamGWI = null;
     // El fondo del GWC es un COLOR (v1: sin bloque de fondo): se
     // fabrica un canvas plano del color del Bloque 0 — el mismo
     // camino que img_f (pintado, motor gráfico y puente).

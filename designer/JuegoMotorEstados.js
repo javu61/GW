@@ -2,7 +2,7 @@
 // ====================================================================================================
 // Motor de juego (Fase 3): el estado del juego VIVE EN LA LISTA DE
 // SEGMENTOS del puente ComunListas (la que la carga del GWI deja
-// en memoria). El tick hace TRES cosas, en este orden:
+// en memoria). El tick hace, en este orden:
 //   0. Apaga las banderas de cambiado (todo segmento con cambiar
 //      =true pasa a false: el estado anterior ya fue presentado).
 //      F5-I15: la limpieza va ANTES de la entrada (como el
@@ -22,9 +22,14 @@
 //      anulan); sin ella, cada pulsación es un paso en orden.
 //   2. RUTAS (F3-I5): los elementos de ruta son los segmentos de
 //      tipo juego (1) e inicio (2) que están VISIBLES. Se toma
-//      una FOTO de los visibles antes de tocar nada y cada uno
-//      AVANZA por su enlace "siguiente" (se apaga y se enciende
-//      el siguiente); si no tiene "siguiente" (el final de la
+//      una FOTO de los visibles antes de tocar nada y el barrido
+//      va EN DOS FASES (F5-I15): primero todos dejan su casilla y
+//      después cada uno AVANZA por su enlace "siguiente" (se
+//      enciende el siguiente), de modo que el resultado no depende
+//      del orden de la lista (actúan antes los que deciden una
+//      colisión: si congelan el juego, el resto de rutas esperan);
+//      el contador de rutas vivas se recalcula mirando la pantalla
+//      (_contarRutasVivas); si no tiene "siguiente" (el final de la
 //      cadena, sin colisión), la ruta MUERE: el elemento se
 //      apaga y desaparece. Después, si no queda NINGÚN elemento
 //      de ruta visible, el motor pide un número de ruta al PRNG
@@ -148,6 +153,10 @@ var JuegoMotorEstados = (function () {
     // política de lanzamiento contaba como «ruta viva» y NUNCA
     // nacía ninguna (bug cazado por la simulación de F3-I11).
     if (idsBarras[seg.id]) return false;
+    // F5-I15 (A1): el SECUNDARIO de un «mostrar junto a» no es una
+    // ruta: lo sincroniza su principal. Contado como ruta, el barrido
+    // lo apagaba como fin de cadena y restaba una viva de más.
+    if (idsSecundarios[seg.id]) return false;
     return true;
   }
 
@@ -194,6 +203,7 @@ var JuegoMotorEstados = (function () {
       return false;
     }
     if (idsBarras[seg.id]) return false;   // barra de un dígito: la enciende el contador
+    if (idsSecundarios[seg.id]) return false;   // F5-I15 (A1): lo sincroniza su principal
     return true;
   }
 
@@ -355,6 +365,7 @@ var JuegoMotorEstados = (function () {
   // (siempre, en cualquier contexto); el secundario encendido por
   // la SECUENCIA (solo, sin su principal) no altera al principal.
   var mapaComp = {};
+  var idsSecundarios = {};   // F5-I15 (A1): ids de los secundarios de «mostrar junto a»
 
   /**
    * Tabla fija del display de SIETE SEGMENTOS: qué barras (a-g)
@@ -716,18 +727,26 @@ var JuegoMotorEstados = (function () {
   }
 
   /**
-   * F4-I2: MUERE una ruta — una viva menos. La llama el barrido en
-   * los cuatro finales de un recorrido (final sin siguiente,
-   * enlace roto, aterrizaje en familia y llegada a un punto de
-   * colisión). Guarda doble: los ESLABONES de un desenlace (van
-   * marcados) NO son rutas — mueren sin tocar el contador; y solo
-   * los elementos de juego/inicio cuentan.
-   * @param {Object} seg - El elemento que acaba de morir.
+   * F5-I15 (A3, A4b): cuenta las RUTAS VIVAS mirando la pantalla,
+   * no apuntando nacimientos y muertes. Es viva toda ruta encendida
+   * (juego o inicio) que no sea eslabón de un desenlace ni la tenga
+   * encendida la Secuencia. Antes cada final de recorrido restaba
+   * una (_muereRuta) y bastaba que un segmento se apagara por otra
+   * vía (la Secuencia, dos rutas que se funden) para que el contador
+   * se quedara de más y no naciera ninguna ruta más. Se recalcula
+   * tras el barrido, antes de decidir el lanzamiento.
+   * @param {Array<Object>} segs - Lista de segmentos.
    * @returns {void}
-   * @since 4.2
+   * @since 4.2 (como cuenta: F5-I15)
    */
-  function _muereRuta(seg) {
-    if (_esDeRuta(seg) && !marcaDesenlace[seg.id]) nRutasVivas--;
+  function _contarRutasVivas(segs) {
+    var n = 0;
+    for (var i = 0; i < segs.length; i++) {
+      var seg = segs[i];
+      if (seg.visible && _esDeRuta(seg) && !marcaDesenlace[seg.id] &&
+        !animados[seg.id]) n++;
+    }
+    nRutasVivas = n;
   }
 
   /**
@@ -1441,12 +1460,14 @@ var JuegoMotorEstados = (function () {
     // segmentos del GWI (el «mostradoJunto» del secundario es
     // informativo: el motor solo lee el lado del principal).
     mapaComp = {};
+    idsSecundarios = {};
     for (var c3 = 0; c3 < segs.length; c3++) {
       var idComp = segs[c3].mostrarJunto;
       if (!idComp) continue;
       var iComp = _indiceDe(segs, idComp);
       if (iComp < 0) continue;
       mapaComp[segs[c3].id] = { principal: segs[c3], comp: segs[iComp] };
+      idsSecundarios[segs[iComp].id] = true;
     }
     // Contadores internos (F4-I9): cada uno arranca con el VALOR
     // INICIAL que declara su segmento de contador (0 si el cartucho
@@ -1511,6 +1532,7 @@ var JuegoMotorEstados = (function () {
     _prepararContadores(segs);              // las presentaciones jerárquicas nacen
     _presentaContadores();                  // el valor inicial, en pantalla
     _sincronizarIconos(segs);               // las familias de iconos, en pantalla
+    _sincronizarAcompanantes();             // F5-I15 (A2): y sus secundarios, ya al nacer
     contadoresSucios = false;
     var j = jugador === null ? null : segs[jugador];
     if (j) { j.visible = true; j.cambiar = true; }
@@ -1596,22 +1618,45 @@ var JuegoMotorEstados = (function () {
         (!animados[seg.id] || marcaDesenlace[seg.id]) &&
         (!congelada || marcaDesenlace[seg.id])) vivos.push(seg);
     });
+    // F5-I15 (A3): BARRIDO EN DOS FASES. Fase 1: TODOS los de la
+    // foto dejan su casilla a la vez (cada uno se mueve, muere o
+    // decide, así que ninguno sigue encendido). Fase 2: cada uno
+    // actúa sobre las casillas ya libres. Así el resultado no depende
+    // del orden de la lista: dos rutas seguidas en una cadena avanzan
+    // las dos, y la que llega a un final donde otra muere sobrevive.
     vivos.forEach(function (seg) {
+      seg.visible = false;
+      seg.cambiar = true;
+    });
+    // Dentro de la fase 2 actúan PRIMERO las que deciden (un punto de
+    // colisión, o una ruta que llega a uno): si alguna congela el
+    // juego, esperan TODAS las demás, estén donde estén en la lista.
+    var deciden = [], resto = [];
+    vivos.forEach(function (seg) {
+      var iDest = seg.siguiente ? _indiceDe(segs, seg.siguiente) : -1;
+      var decide = !!seg.colision || (iDest >= 0 && !!segs[iDest].colision);
+      (decide ? deciden : resto).push(seg);
+    });
+    deciden.concat(resto).forEach(function (seg) {
+      // F5-I15 (A4c): si una decisión de ESTA pasada congeló el
+      // juego, las rutas que quedan por mover esperan (siguen donde
+      // estaban): solo avanza la cadena del desenlace.
+      if (congelada && !marcaDesenlace[seg.id]) {
+        seg.visible = true;
+        return;
+      }
       // ¿Es un PUNTO DE COLISIÓN? (F3-I8): si declara colision,
       // NO avanza por siguiente — DECIDE, leyendo la bandera del
       // jugador señalado (positiva o negativa, con su contador y
       // su cadena de desenlace). La decisión ocurre el mismo tick
       // en que el punto se enciende: sin un tick de espera.
       if (seg.colision) {
-        _muereRuta(seg);                      // F4-I2: la ruta acaba aquí
         _decidirColision(segs, seg);
         return;
       }
       var idSiguiente = seg.siguiente;
       if (!idSiguiente) {
-        seg.visible = false;                  // el final sin colisión: la ruta muere
-        seg.cambiar = true;
-        _muereRuta(seg);                      // F4-I2
+        // el final sin colisión: la ruta muere (su casilla ya quedó libre en la fase 1)
         if (_debug()) {
           console.log('motor del juego: ' + (seg.id || '?') +
             ' murió al final de la ruta');
@@ -1628,9 +1673,6 @@ var JuegoMotorEstados = (function () {
             (seg.id || '?') + ' apunta a ' + idSiguiente +
             ', que no existe: la ruta muere.');
         }
-        seg.visible = false;
-        seg.cambiar = true;
-        _muereRuta(seg);                      // F4-I2
         return;
       }
       // ¿El destino es un ICONO de familia? (corrección del
@@ -1639,9 +1681,6 @@ var JuegoMotorEstados = (function () {
       // contador de su familia y la sincronización enciende el que
       // toque (en muerte, acumulativo desde el último).
       if (_esIconoFamilia(segs[idxSiguiente])) {
-        seg.visible = false;
-        seg.cambiar = true;
-        _muereRuta(seg);                      // F4-I2
         _contarAterrizaje(segs, segs[idxSiguiente]);
         if (_debug()) {
           console.log('motor del juego: ruta aterriza en ' +
@@ -1650,9 +1689,8 @@ var JuegoMotorEstados = (function () {
         }
         return;
       }
-      seg.visible = false;                    // el hueco que se deja...
-      seg.cambiar = true;
-      segs[idxSiguiente].visible = true;     // ...y el que se ocupa
+      // el hueco que se deja ya está libre (fase 1); se ocupa el destino:
+      segs[idxSiguiente].visible = true;
       segs[idxSiguiente].cambiar = true;
       // CONGELACIÓN (duodécima iteración): la marca del desenlace
       // se PROPAGA por siguiente — cada eslabón nuevo de la cadena
@@ -1670,11 +1708,11 @@ var JuegoMotorEstados = (function () {
       // tick de espera (el barrido siguiente no volvería a verlo:
       // el punto ya está decidido y apagado).
       if (segs[idxSiguiente].colision) {
-        _muereRuta(segs[idxSiguiente]);     // F4-I2: la ruta acaba aquí
         _decidirColision(segs, segs[idxSiguiente]);
       }
     });
     // 3. ¿Queda alguna ruta viva? Si no, nace una nueva (F3-I5).
+    _contarRutasVivas(segs);                 // F5-I15: el contador sale de la pantalla
     _lanzarRuta(segs);
     // 3b. ADICIONALES (duodécima iteración): los elementos fuera
     //     del juego avanzan SIEMPRE en su bucle propio (helicóptero,
@@ -1707,11 +1745,6 @@ var JuegoMotorEstados = (function () {
     //     ticks; interrumpida con cada colisión y mientras dura un
     //     desenlace (contador a cero en ambos casos).
     _avanzarSecuencia(segs);
-    // 3e. ACOMPAÑANTES (13.ª iteración): el pase final — el
-    //     secundario copia SIEMPRE el visible de su principal,
-    //     salvo cuando la SECUENCIA lo tiene encendido sola (la
-    //     Secuencia manda entonces; ver sincronizarAcompanantes).
-    _sincronizarAcompanantes();
     // 4. CONTADORES EN PANTALLA (F4-I9): solo si una decisión tocó
     //    algún contador (nada periódico); el refresco enciende y
     //    apaga las barras de los dígitos según su valor.
@@ -1720,6 +1753,11 @@ var JuegoMotorEstados = (function () {
       _sincronizarIconos(segs);   // las familias de iconos, con sus contadores
       contadoresSucios = false;
     }
+    // 4b. ACOMPAÑANTES (13.ª iteración; F5-I15: tras los iconos): el pase final — el
+    //     secundario copia SIEMPRE el visible de su principal,
+    //     salvo cuando la SECUENCIA lo tiene encendido sola (la
+    //     Secuencia manda entonces; ver sincronizarAcompanantes).
+    _sincronizarAcompanantes();
     // 5. FIN DE PARTIDA (F3-I11): por iconos, con la familia en su
     //    estado final; por contador, en la transición >0→0 del
     //    interno elegido. Al cumplirse, el estado «terminada»

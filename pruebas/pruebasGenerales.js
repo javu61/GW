@@ -1,11 +1,11 @@
-// pruebas/pruebasF5I14.js — F5-I14 «Cambios menores»
+// pruebas/pruebasGenerales.js — F5-I14 «Cambios menores»
 // ================================================================================================
 // Comprueba: (1) CRC-16/CCITT del GWC (vector «123456789» = 0x29B1 y detección de intercambios);
 // (2) ColorFondo: ida y vuelta GWC, JSON del GWB/GWI y pintado del simulador sin img_f;
 // (3) lector GWC: errores claros ante índices fuera de rango y mecanismo de fin desconocido
 //     (con el CRC recalculado, para que lo único que falle sea la validación nueva);
 // (4) img_f del GWI escalada al tamaño del Setup.
-// USO: NODE_PATH=$(npm root -g) node pruebas/pruebasF5I14.js [setup.json] [gwi.zip]
+// USO: NODE_PATH=$(npm root -g) node pruebas/pruebasGenerales.js [setup.json] [gwi.zip]
 // ================================================================================================
 'use strict';
 const { chromium } = require('playwright');

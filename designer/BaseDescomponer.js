@@ -54,6 +54,12 @@
 //  Historial (deshacer/rehacer)
 //   registrarCambio / registrarCambios
 //                          Registra una acción (atómica, con «antes»).
+//   registrarCambioDerivado
+//                          Igual, marcada auto:true (inversa derivada de la
+//                          verificación): se deshace y rehace con su acción.
+//   _esBloqueDeFicha        El alta de la ficha del cartucho no se deshace.
+//   _deshacerBloque / _rehacerBloque
+//                          Deshacen o rehacen un bloque del historial.
 //   _reproducirCambios      Reproduce un historial sobre el estado de
 //                          nacimiento (carga de GWI y fallback legacy).
 //   quitarParUnion / invertirEntrada
@@ -61,6 +67,8 @@
 //   deshacer / rehacer    Deshace y rehace la última acción atómica.
 //
 //  Reconstrucción y listas
+//   _motivoNoUnible         Por qué una lista de piezas no puede unirse
+//                          (dígitos, contadores); null si se puede.
 //   _reconstruir            Re-agrupa con las uniones vigentes y fusiona
 //                          las props de los miembros.
 //   refrescar / refrescarInfo
@@ -275,9 +283,12 @@ const BaseDescomponer = (() => {
   // Todos los campos que apuntan a otro segmento: los revisan las
   // uniones (re-apuntado a la raíz resultante), la verificación de
   // referencias colgantes y el descarte al cambiar de tipo.
+  // F5-I15 (E1): incluye los sec_1..sec_5 de la Secuencia (viven en la
+  // ficha del cartucho): sin ellos, unir un segmento de la Secuencia
+  // dejaba su enlace apuntando a un absorbido y separarlo no lo anulaba.
   const TODOS_ENLACES = [...ENLACES_JUEGO, ...ENLACES_JUGADOR,
   ...ENLACES_COLISION, ...ENLACES_DIGITO, 'mostradoJunto',
-  ...ENLACES_CONTADOR];
+  ...ENLACES_CONTADOR, ...CAMPOS_SECUENCIA];
   // Campos de una prop que pueden viajar en una entrada del historial
   // (para deshacer/rehacer por inversión). 'primero' es la marca de
   // jugador inicial (solo tipo jugador): la que el motor busca al
@@ -809,14 +820,34 @@ const BaseDescomponer = (() => {
    *   ni relacionados: se añaden aquí).
    * @returns {void}
    */
-  function _registrarCambios(entradas) {
+  function _registrarCambios(entradas, derivada) {
     rehacibles = [];          // acción nueva: nada que rehacer
     ultimoOp++;
     const n = ultimoOp;
     const relacionados = (entradas.length > 1) ? n : 0;
     for (const e of entradas) {
-      cambios.push(Object.assign({ n: n, relacionados: relacionados }, e));
+      const entrada = Object.assign({ n: n, relacionados: relacionados }, e);
+      if (derivada) entrada.auto = true;
+      cambios.push(entrada);
     }
+  }
+
+  /**
+   * F5-I15 (E9): registra un cambio DERIVADO, calculado por la
+   * verificación (los inversos de direcciones, de colisión y de
+   * «mostrar junto a»). Entra en el historial (el GWI no guarda estado
+   * final: sin él se perdería al recargar) pero marcado «auto»: no es
+   * una acción del autor, y deshacer lo retira junto con la acción
+   * del autor anterior (ver deshacer), no como un paso invisible.
+   * @param {number} comp - Componente.
+   * @param {Object} campos - Valores nuevos.
+   * @param {Object} antes - Valores anteriores.
+   * @returns {void}
+   */
+  function _registrarCambioDerivado(comp, campos, antes) {
+    const e = Object.assign({ segmento: comp }, campos);
+    if (antes !== undefined) e.antes = antes;
+    _registrarCambios([e], true);
   }
 
   /**
@@ -834,35 +865,45 @@ const BaseDescomponer = (() => {
     cambios = [];
     ficticios = [];
     ficticioSeq = 0;
-    for (const c of lista) {
-      const copia = Object.assign({}, c);
-      delete copia.n;
-      delete copia.relacionados;
-      delete copia.antes;      // el replay aplica el valor NUEVO
-      // Ids legibles (v4): el GWI guarda los ficticios como F01,
-      // F02... (mismos ids que sus sprites); el replay los vuelve
-      // a convertir en su raíz negativa. Los GWIs antiguos con el
-      // número negativo crudo siguen cargando igual.
-      const idLegible = (v) =>
-        (typeof v === 'string' && /^F\d+$/.test(v)) ? -Number(v.slice(1)) : v;
-      if (Array.isArray(copia.altaFicticio)) {
-        copia.altaFicticio = copia.altaFicticio.slice();
-        copia.altaFicticio[0] = idLegible(copia.altaFicticio[0]);
+    // Ids legibles (v4): el GWI guarda los ficticios como F01, F02...
+    // (mismos ids que sus sprites); en memoria son su raíz negativa.
+    // F5-I15 (E2): el HISTORIAL que queda en memoria también se guarda
+    // con las raíces numéricas; antes conservaba los «F01» del fichero
+    // y deshacer no encontraba la pieza (la acción se «deshacía» sin
+    // efecto y el historial quedaba desalineado). Los GWIs antiguos con
+    // el número negativo crudo siguen cargando igual.
+    const idLegible = (v) =>
+      (typeof v === 'string' && /^F\d+$/.test(v)) ? -Number(v.slice(1)) : v;
+    const aNumerico = (e) => {
+      const o = Object.assign({}, e);
+      if (o.segmento !== undefined) o.segmento = idLegible(o.segmento);
+      if (Array.isArray(o.altaFicticio)) {
+        o.altaFicticio = o.altaFicticio.slice();
+        o.altaFicticio[0] = idLegible(o.altaFicticio[0]);
       }
-      if (Array.isArray(copia.bajaFicticio)) {
-        copia.bajaFicticio = copia.bajaFicticio.slice();
-        copia.bajaFicticio[0] = idLegible(copia.bajaFicticio[0]);
+      if (Array.isArray(o.bajaFicticio)) {
+        o.bajaFicticio = o.bajaFicticio.slice();
+        o.bajaFicticio[0] = idLegible(o.bajaFicticio[0]);
       }
-      if (copia.segmento !== undefined) {
-        copia.segmento = idLegible(copia.segmento);
+      if (o.antes && typeof o.antes === 'object') {
+        o.antes = Object.assign({}, o.antes);
+        for (const k of Object.keys(o.antes)) o.antes[k] = idLegible(o.antes[k]);
       }
       // Los VALORES de los enlaces también pueden llevar F01 (un
       // enlace re-apuntado a una pieza de unión): misma conversión.
       for (const campoE of TODOS_ENLACES) {
-        if (copia[campoE] !== undefined && copia[campoE] !== null) {
-          copia[campoE] = idLegible(copia[campoE]);
+        if (o[campoE] !== undefined && o[campoE] !== null) {
+          o[campoE] = idLegible(o[campoE]);
         }
       }
+      return o;
+    };
+    for (const c of lista) {
+      const entrada = aNumerico(c);          // lo que queda en el historial
+      const copia = aNumerico(c);            // lo que se reproduce
+      delete copia.n;
+      delete copia.relacionados;
+      delete copia.antes;      // el replay aplica el valor NUEVO
       if (Array.isArray(copia.unir)) {
         uniones.push([copia.unir[0], copia.unir[1]]);
       } else if (Array.isArray(copia.altaFicticio)) {
@@ -888,7 +929,7 @@ const BaseDescomponer = (() => {
         delete copia.segmento;
         Object.assign(_propsDe(comp), copia);
       }
-      cambios.push(Object.assign({}, c));
+      cambios.push(entrada);
     }
     ultimoOp = (cambios.length > 0) ? cambios[cambios.length - 1].n : 0;
   }
@@ -942,6 +983,22 @@ const BaseDescomponer = (() => {
   }
 
   /**
+   * F5-I15 (E5): ¿es este bloque del historial el ALTA de la ficha del
+   * cartucho (el ficticio de tipo «cartucho» y su tipo)? Esa acción la
+   * hace la autoría sola al arrancar; deshacerla dejaría el editor sin
+   * ficha del cartucho.
+   * @param {Array<Object>} bloque - Entradas de una acción del historial.
+   * @returns {boolean} true si el bloque solo da de alta la ficha.
+   */
+  function _esBloqueDeFicha(bloque) {
+    return bloque.length > 0 && bloque.every(e => {
+      const alta = Array.isArray(e.altaFicticio);
+      const p = props.get(alta ? e.altaFicticio[0] : e.segmento);
+      return !!p && p.tipo === 'cartucho' && (alta || e.tipo === 'cartucho');
+    });
+  }
+
+  /**
    * DESHACE la última acción del historial, ATÓMICA: todas las
    * entradas con el nº de la última comparten acción (unir con sus
    * re-apuntados/anulaciones, intercambio de Subir/Bajar, etc.) y se
@@ -958,13 +1015,32 @@ const BaseDescomponer = (() => {
       BaseDirector.avisar('Nada que deshacer: no hay autoría en curso.');
       return;
     }
+    // F5-I15 (E9): los bloques «auto» (inversos derivados por la
+    // verificación) no son del autor: se retiran con el paso siguiente.
+    let hecho;
+    do {
+      hecho = _deshacerBloque();
+    } while (hecho && hecho.auto && cambios.length > 0);
+  }
+
+  /**
+   * Deshace UN bloque del historial (ver deshacer).
+   * @returns {?{auto:boolean}} null si no había nada que deshacer.
+   */
+  function _deshacerBloque() {
     if (cambios.length === 0) {
       BaseDirector.avisar('Nada que deshacer.');
-      return;
+      return null;
     }
     const nUlt = cambios[cambios.length - 1].n;
     const bloque = cambios.filter(c => c.n === nUlt);
     const resto = cambios.filter(c => c.n !== nUlt);
+    // F5-I15 (E5): el alta de la ficha del cartucho NO es una acción del
+    // autor (la crea la propia autoría al arrancar): no se deshace.
+    if (_esBloqueDeFicha(bloque)) {
+      BaseDirector.avisar('Nada que deshacer.');
+      return null;
+    }
     const invertible = bloque.every(e =>
       Array.isArray(e.unir) || Array.isArray(e.separar) ||
       Array.isArray(e.altaFicticio) || Array.isArray(e.bajaFicticio) ||
@@ -988,6 +1064,7 @@ const BaseDescomponer = (() => {
     _$('panelSegmento').replaceChildren();
     BaseDirector.avisar('Deshecha la acción ' + nUlt + ' (' +
       bloque.length + ' cambio(s)).');
+    return { auto: !!bloque[0].auto };
   }
 
   /**
@@ -1007,6 +1084,19 @@ const BaseDescomponer = (() => {
       BaseDirector.avisar('Nada que rehacer.');
       return;
     }
+    // F5-I15 (E9): se rehace el bloque del autor y, tras él, los
+    // derivados («auto») que se retiraron con él.
+    _rehacerBloque();
+    while (rehacibles.length > 0 && rehacibles[rehacibles.length - 1][0].auto) {
+      _rehacerBloque();
+    }
+  }
+
+  /**
+   * Rehace UN bloque (ver rehacer).
+   * @returns {void}
+   */
+  function _rehacerBloque() {
     const bloque = rehacibles.pop();
     for (const e of bloque) {
       if (Array.isArray(e.unir)) {
@@ -1199,7 +1289,10 @@ const BaseDescomponer = (() => {
         if (!p) continue;
         for (const campo of Object.keys(g.prop)) {
           const nuevo = p[campo];
-          if (nuevo === null || nuevo === false) continue;
+          // F5-I15 (E3): el false de «presentarCero» es un valor FIJADO
+          // (el defecto es true); saltarlo lo devolvía a true al
+          // reconstruir y el GWI nunca lo llevaba.
+          if (nuevo === null || (nuevo === false && campo !== 'presentarCero')) continue;
           if (fijados.has(campo)) {
             if (nuevo !== g.prop[campo]) {
               console.warn('[autoría] conflicto de "' + campo + '" al unir ' +
@@ -1275,7 +1368,9 @@ const BaseDescomponer = (() => {
    * @returns {number} Posición 1..N en la familia.
    */
   function _numeroDe(g, familia) {
-    const grupoF = grupos.filter(x => x.prop.tipo === familia);
+    // F5-I15 (E6): los ABSORBIDOS por una unión no cuentan en la familia
+    // (la pieza que los absorbe ya cuenta por ellos).
+    const grupoF = grupos.filter(x => x.prop.tipo === familia && !x.absorbido);
     grupoF.sort((a, b) => ((a.prop.orden || 0) - (b.prop.orden || 0)) ||
       (grupos.indexOf(a) - grupos.indexOf(b)));
     return grupoF.indexOf(g) + 1;
@@ -1291,7 +1386,9 @@ const BaseDescomponer = (() => {
    */
   function _moverNumero(g, delta) {
     const familia = g.prop.tipo;
-    const grupoF = grupos.filter(x => x.prop.tipo === familia);
+    // F5-I15 (E6): los ABSORBIDOS por una unión no cuentan en la familia
+    // (la pieza que los absorbe ya cuenta por ellos).
+    const grupoF = grupos.filter(x => x.prop.tipo === familia && !x.absorbido);
     grupoF.sort((a, b) => ((a.prop.orden || 0) - (b.prop.orden || 0)) ||
       (grupos.indexOf(a) - grupos.indexOf(b)));
     const i = grupoF.indexOf(g);
@@ -1635,8 +1732,9 @@ const BaseDescomponer = (() => {
       // Las componentes absorbidas por una unión NO viajan aquí como
       // "unidos" (redundante con el historial de cambios): aparecen
       // como fantasmas tipo 99 al final de la lista.
-      if (g.prop.tipo === 'inicio') seg.ruta = _numRuta(g);
-      if (g.prop.tipo === 'vida' || g.prop.tipo === 'muerte') {
+      // F5-I15 (E6): los absorbidos no llevan número de ruta ni de contador.
+      if (!g.absorbido && g.prop.tipo === 'inicio') seg.ruta = _numRuta(g);
+      if (!g.absorbido && (g.prop.tipo === 'vida' || g.prop.tipo === 'muerte')) {
         seg.contador = _numContador(g);
       }
       return seg;
@@ -2307,6 +2405,22 @@ const BaseDescomponer = (() => {
   }
 
   /**
+   * F5-I15 (E7): motivo por el que unos grupos NO se pueden unir, o
+   * null. El dígito y el contador son piezas indivisibles (F3-I10):
+   * unirlos entre sí no tiene sentido y rompería sus enlaces de barras
+   * o de dígitos.
+   * @param {Array<Object>} lista - Grupos que se quieren unir.
+   * @returns {?string} El mensaje de error, o null si se pueden unir.
+   */
+  function _motivoNoUnible(lista) {
+    if (lista.some(g => g.prop.tipo === 'dígito' || g.prop.tipo === 'contador')) {
+      return 'El dígito y el contador son piezas indivisibles: no se unen ' +
+        'con otros segmentos (se crean con «Hacer dígito» / «Hacer contador»).';
+    }
+    return null;
+  }
+
+  /**
    * Une TODOS los grupos marcados por recuadro en UNO: cada marcado
    * (menos el primero) se une al primero y luego se re-apuntan los
    * enlaces que referencien a un miembro absorbido (igual que la
@@ -2339,6 +2453,12 @@ const BaseDescomponer = (() => {
     if (tipos.size > 1) {
       BaseDirector.avisarError('No se pueden unir segmentos de tipos distintos (' +
         [...tipos].join(', ') + '): ponlos todos del mismo tipo antes de unir.');
+      return;
+    }
+    // F5-I15 (E7): dígitos y contadores no se unen.
+    const noUnible = _motivoNoUnible(lista);
+    if (noUnible) {
+      BaseDirector.avisarError(noUnible);
       return;
     }
     // UNIR de un «8» = DÍGITO (F4-I9 v4): si lo marcado son exacta-
@@ -2941,6 +3061,12 @@ const BaseDescomponer = (() => {
         _refrescar();
         return;
       }
+      const noUnible = _motivoNoUnible([origen, destino]);   // F5-I15 (E7)
+      if (noUnible) {
+        BaseDirector.avisarError(noUnible);
+        _refrescar();
+        return;
+      }
       // ABSORCIÓN (v4): la unión crea una PIEZA NUEVA que absorbe a
       // los dos — mismo sistema que unirMarcados. La pieza nueva
       // hereda las props y los enlaces externos re-apuntados.
@@ -3307,8 +3433,8 @@ const BaseDescomponer = (() => {
       // contador solo si NO hay iconos — excluyentes, no se
       // permite definir el contador de vidas con vida/muerte en
       // el cartucho).
-      const hayVida = grupos.some(x => x.prop.tipo === 'vida');
-      const hayMuerte = grupos.some(x => x.prop.tipo === 'muerte');
+      const hayVida = grupos.some(x => x.prop.tipo === 'vida' && !x.absorbido);
+      const hayMuerte = grupos.some(x => x.prop.tipo === 'muerte' && !x.absorbido);
       const filaFin = document.createElement('div');
       filaFin.className = 'filaProp';
       const etFin = document.createElement('label');
@@ -3637,6 +3763,17 @@ const BaseDescomponer = (() => {
         selTipo.value = p.tipo;
         return;
       }
+      // F5-I15 (E7): una pieza de UNIÓN no puede pasar a dígito ni a
+      // contador (F3-I10): esos tipos nacen solo de «Hacer dígito» y
+      // «Hacer contador», con sus barras y dígitos, no de una unión.
+      if (fSel && fSel.miembros &&
+        (selTipo.value === 'dígito' || selTipo.value === 'contador')) {
+        BaseDirector.avisarError('Una pieza de unión no puede ser ' +
+          selTipo.value + ': el dígito y el contador nacen de «Hacer ' +
+          'dígito» y «Hacer contador».');
+        selTipo.value = p.tipo;
+        return;
+      }
       const anterior = p.tipo;
       p.tipo = selTipo.value;
       // Enlaces excluyentes: al cambiar de tipo se descartan AQUÍ, en
@@ -3647,7 +3784,12 @@ const BaseDescomponer = (() => {
       const descartes = {};
       const previos = { tipo: anterior };
       if (anterior !== p.tipo) {
+        // F5-I15 (E4): solo se descartan los campos que el tipo NUEVO no
+        // usa (juego→inicio comparten siguiente/salvado/muerte/mostrarJunto:
+        // antes se perdían todos al cambiar).
+        const camposNuevos = _camposDe(p.tipo);
         for (const campo of _camposDe(anterior)) {
+          if (camposNuevos.indexOf(campo) >= 0) continue;
           if (p[campo] !== null) {
             console.warn('[autoría] ' + _segId(g) + ' pasa a ' + p.tipo +
               ': se descarta su enlace "' + campo + '" (' +
@@ -3741,7 +3883,7 @@ const BaseDescomponer = (() => {
       if ((anterior === 'vida' || anterior === 'muerte') &&
         p.tipo !== anterior && pCart &&
         pCart.finJuego === anterior) {
-        const quedan = grupos.some(x => x !== g && x.prop.tipo === anterior);
+        const quedan = grupos.some(x => x !== g && !x.absorbido && x.prop.tipo === anterior);
         if (!quedan) {
           pCart.finJuego = null;
           entradasAccion.push({
@@ -3764,6 +3906,18 @@ const BaseDescomponer = (() => {
         });
         BaseDirector.avisar('Fin de partida asociado a los iconos de ' +
           p.tipo + ' (primer segmento de la familia).');
+      }
+      // F5-I15 (E4): si se descartó el «mostrar junto a», el SECUNDARIO
+      // pierde su mostradoJunto (el enlace es simétrico) — misma acción.
+      if (previos.mostrarJunto !== undefined) {
+        const sec = _grupoDeComp(previos.mostrarJunto);
+        if (sec && _propsDe(sec.raiz).mostradoJunto === g.raiz) {
+          entradasAccion.push({
+            segmento: sec.raiz, mostradoJunto: null,
+            antes: { mostradoJunto: g.raiz }
+          });
+          _propsDe(sec.raiz).mostradoJunto = null;
+        }
       }
       // INVERSAS AUTOMÁTICAS (duodécima iteración): al dejar de ser
       // jugador, los DESTINOS de sus direcciones pierden su inverso
@@ -4565,6 +4719,7 @@ const BaseDescomponer = (() => {
       numRuta: _numRuta, resolverEnlace: _resolverEnlace,
       camposDe: _camposDe, reconstruir: _reconstruir,
       registrarCambio: _registrarCambio,
+      registrarCambioDerivado: _registrarCambioDerivado,
       ENLACES_JUGADOR: ENLACES_JUGADOR, ENLACES_JUEGO: ENLACES_JUEGO,
       ENLACES_COLISION: ENLACES_COLISION, ENLACES_DIGITO: ENLACES_DIGITO,
       ENLACES_CONTADOR: ENLACES_CONTADOR,

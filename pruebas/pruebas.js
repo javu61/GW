@@ -3,7 +3,7 @@
 // PROPÓSITO
 //   Reúne en una pestaña del navegador (VISIBLE SOLO CON GW_DEBUG, index.html) comprobaciones
 //   que hasta ahora solo se lanzaban por consola con Node+Playwright: la parte de CRC/lector
-//   GWC de pruebas/pruebasF5I14.js y la parte de DATOS de pruebas/equivalenciaGWC.js. Cada
+//   GWC de pruebas/pruebasGenerales.js y la parte de DATOS de pruebas/equivalenciaGWC.js. Cada
 //   prueba es un botón que corre AQUÍ, sobre los módulos ya cargados, y pinta el resultado
 //   en la propia pestaña; nada toca el cartucho en edición, todo es de solo lectura.
 //
@@ -94,7 +94,7 @@ var Pruebas = (function () {
   /* ---------------- Montaje de un cartucho mínimo de laboratorio ---------------- */
 
   /**
-   * Cartucho de laboratorio (montaje de pruebas/pruebasF5I14.js): 2 sprites y
+   * Cartucho de laboratorio (montaje de pruebas/pruebasGenerales.js): 2 sprites y
    * 3 segmentos, pantalla 100×80 sin escalar. Lo usan las pruebas que no
    * dependen del cartucho cargado, sin tocar nada del diseñador.
    * @returns {{json:Object, sprites:Array, pantalla:Object}} Los tres argumentos
@@ -144,7 +144,7 @@ var Pruebas = (function () {
   }
 
   /* ---------------- PRUEBA 1: CRC y lector del GWC (F5-I14) ---------------- */
-  /* Portada de pruebas/pruebasF5I14.js: (1) se genera y se lee; (2) el CRC detecta
+  /* Portada de pruebas/pruebasGenerales.js: (1) se genera y se lee; (2) el CRC detecta
      el intercambio de dos bytes del cuerpo con la misma suma aditiva; (3) el CRC del
      módulo coincide con el cálculo independiente y con el vector «123456789»;
      (4) corrompiendo campo a campo (con el CRC reparado, para que lo único que
@@ -197,7 +197,7 @@ var Pruebas = (function () {
   }
 
   /* ---------------- PRUEBA 2: ColorFondo en el GWC (F5-I14) ---------------- */
-  /* Portada de pruebas/pruebasF5I14.js: el fondo por defecto es blanco, el
+  /* Portada de pruebas/pruebasGenerales.js: el fondo por defecto es blanco, el
      ColorFondo viaja al GWC y cambia el Código GWC. Solo la parte del GWC:
      lo que toca la ficha o el canvas pertenece al diseñador y aquí no se toca. */
 

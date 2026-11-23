@@ -7,6 +7,8 @@
 	
 	\item Bloque A: motor y editor (detalle en \texttt{REVISION\_CODIGO.md}; descripción en F5-I15)
 	\begin{itemize}
+		\item PA1. Ajustar el \texttt{max} de los campos de la UI a los rangos del GWC, y vaciar el \texttt{\#infoMensaje} al aplicar de nuevo (hoy conserva errores viejos; ver punto §1.4 de REVISION\_CODIGO).
+		
 		\item PA2. Dos avisos: 
 			\begin{itemize}
 			\item Aviso al generar si el par GWI/GWC del destino está desequilibrado, y mostrar \texttt{codigoGWC} en la ficha.
@@ -18,7 +20,7 @@
 		
 		\item PA5. Funciones gigantes y patrones repetidos (§3 de REVISION\_CODIGO). Último del bloque: no cambia comportamiento, y las suites Playwright detectan regresiones.
 		
-		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetreo Campo que retorne nombre en el json, valor min y valor max, y que la lectura dle json la haga con json[nombre] en lugar de como json.nombre
+		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetro Campo que retorne nombre en el json, valor min y valor max, y que la lectura del json la haga con json[nombre] en lugar de como json.nombre, recorriendo la lista de valores. Cuidado que esto es bueno para lectura y grabación, pero no para los ajustes al vuelo de los valores máximos de los campos en el interface. Hay que pensarlo bien.
 	\end{itemize}
 	
 	\item Bloque B: pruebas

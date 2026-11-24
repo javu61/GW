@@ -29,9 +29,10 @@
 //                              con el resumen (N OK, M fallo(s) y tiempo).
 //   _panelConsola              Panel «Desde consola»: una línea por grupo (y «todas») con el
 //                              comando que lo lanza y un botón para copiarlo.
-//   inicializar                Con GW_DEBUG activo: descubre la pestaña, crea un botón por
-//                              prueba (salvo las soloConsola) y el panel de comandos. Público: lo llama index.html tras cargar los ficheros
-//                              de pruebas.
+//   inicializar                Con GW_DEBUG activo: descubre la pestaña, crea una línea por
+//                              grupo (título + un botón por prueba, salvo las soloConsola) y el
+//                              panel de comandos. Público: lo llama index.html tras cargar los
+//                              ficheros de pruebas.
 //   util                       Utilidades que comparten los ficheros de pruebas:
 //     igual / nz / nn            Comparación JSON y normalización de lo indefinido a null.
 //     esperar                    Espera en milisegundos.
@@ -310,14 +311,19 @@ var Pruebas = (function () {
     }
     _$(ID_PESTANA).classList.remove('oculto');
     let grupo = null;
+    let lineaGrupo = null;
     for (const p of CATALOGO) {
       if (p.soloConsola) continue;
+      // Un grupo por línea: su título y sus botones en un bloque propio
       if (p.grupo !== grupo) {
         grupo = p.grupo;
+        lineaGrupo = document.createElement('div');
+        lineaGrupo.className = 'pruebaGrupo';
         const t = document.createElement('span');
         t.textContent = grupo;
-        t.style.cssText = 'font-weight:bold;margin:0 .4em 0 1em';
-        _$(ID_BARRA).appendChild(t);
+        t.style.cssText = 'font-weight:bold;margin:0 .4em 0 0';
+        lineaGrupo.appendChild(t);
+        _$(ID_BARRA).appendChild(lineaGrupo);
       }
       const btn = document.createElement('button');
       btn.textContent = p.nombre;
@@ -326,7 +332,7 @@ var Pruebas = (function () {
       if (p.destructiva) aviso.push('Sustituye el cartucho cargado');
       if (aviso.length) btn.title = aviso.join('. ');
       btn.addEventListener('click', () => _lanzar(p));
-      _$(ID_BARRA).appendChild(btn);
+      lineaGrupo.appendChild(btn);
     }
     _panelConsola();
   }

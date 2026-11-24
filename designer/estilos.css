@@ -323,6 +323,9 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 #salidaPruebas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; }
 .pruebaTitulo { font-weight: 700; margin: 0 0 8px 0; }
 .pruebaLinea { margin: 2px 0; white-space: pre-wrap; }
+/* Un grupo de pruebas por línea (F5-I17): título y botones en bloque propio */
+.pruebaGrupo { flex-basis: 100%; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pruebaGrupo + .pruebaGrupo { margin-top: 8px; }
 .pruebaOk { color: #9fd89f; }
 .pruebaMal { color: #f0a0a0; font-weight: 700; }
 .pruebaAviso { color: #e8d79f; }

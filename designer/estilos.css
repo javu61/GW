@@ -332,15 +332,6 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 #barraPruebas button:hover:not(:disabled) { background: #3d5f50; }
 /* Título de grupo con ancho fijo: el primer botón de cada grupo alinea en vertical */
 .pruebaGrupoTitulo { font-weight: 700; margin-right: .4em; min-width: 9ch; }
-/* Página abierta por file:// (pestaña Pruebas oculta) */
-.avisoFileLocal {
-  background: #5a2b2b;
-  color: #f0c0c0;
-  border: 1px solid #7a4040;
-  border-radius: 6px;
-  padding: .5em .8em;
-  margin: 0 0 14px 0;
-}
 .pruebaOk { color: #9fd89f; }
 .pruebaMal { color: #f0a0a0; font-weight: 700; }
 .pruebaAviso { color: #e8d79f; }

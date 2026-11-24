@@ -999,9 +999,10 @@ var BaseDirector = (function () {
       const incompatible = _botonesInexistentes(json);
       if (incompatible) throw new Error(incompatible + ' (se conserva el cartucho anterior).');
 
-      // F5-I17 (M3): la cuenta de acciones de la autoría en curso va ANTES
-      // de _limpiarCartucho: su reset vacía el historial y después el
-      // contador daría siempre 0 (el aviso de descarte nunca saldría).
+      // F5-I17 (M3): ¿cuántas acciones tiene la autoría en curso? Hay que
+      // contarlas ANTES de limpiar (la limpieza resetea la autoría). Si encima
+      // viene un GWB (no un GWI, que trae la SUYA), se descartan sin que el
+      // autor diga nada: hay que avisar (no bloqueante).
       const accionesPrevias = BaseDescomponer.numeroDeCambios();
 
       _limpiarCartucho();                       // fuera el cartucho anterior

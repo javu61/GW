@@ -115,4 +115,8 @@ En el sistema externo no influye en nada: ni el GWS cambia su sentido (\texttt{p
 \subsection{Pruebas}
 \label{sec:F5I17Pruebas}
 
-En la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): una caja por punto (M1: poblar la ficha con un GWI con y sin \texttt{codigoGWC}; M2: comprobar los dos avisos leyendo \texttt{\#estado}; M3: carga de GWB sobre GWI con cambios; M4/M5/M6: GWS a mano con \texttt{cursor-izquierda}/\texttt{cursor-derecha}, pulsación con \texttt{KeyboardEvent} de flecha desde Playwright, un nombre de cursor mal escrito que no carga, una tecla dígito que no carga, y los defaults por estilo (cruceta con flechas y trío 1/2/3). En \texttt{pruebasGWI\_GWC} la equivalencia con los ficheros del par debe seguir en verde (los avisos no tocan bytes). Al cierre se re-lanzan las cuatro suites; los avisos nuevos no tocan el orden del tick ni el formato del GWC.
+En la suite del editor (\texttt{pruebas/pruebasEditor.js}, Playwright): una caja por punto (M1: poblar la ficha con un GWI con y sin \texttt{codigoGWC}; M2: comprobar los dos avisos leyendo \texttt{\#estado}; M3: carga de GWB sobre GWI con cambios.
+
+M4 / M5 / M6: con un GWS a mano con \texttt{cursor-izquierda} / \texttt{cursor-derecha}, pulsación con \texttt{KeyboardEvent} de flecha desde Playwright, un nombre de cursor mal escrito que no carga, una tecla dígito que no carga, y los defaults por estilo (cruceta con flechas y trío 1/2/3). 
+
+En \texttt{pruebasGWI\_GWC} la equivalencia con los ficheros del par debe seguir en verde (los avisos no tocan bytes). Al cierre se re-lanzan las cuatro suites; los avisos nuevos no tocan el orden del tick ni el formato del GWC.

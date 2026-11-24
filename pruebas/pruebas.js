@@ -30,13 +30,11 @@
 //                              con el resumen (N OK, M fallo(s) y tiempo).
 //   _panelConsola              Panel «Desde consola»: una línea por grupo (y «todas») con el
 //                              comando que lo lanza y un botón para copiarlo.
-//   _avisarFile                Si la página se abrió por file://: deja la pestaña oculta, un
-//                              aviso arriba de la página y el motivo en consola (las pruebas
-//                              que leen ficheros del proyecto fallarían).
 //   inicializar                Por http y con GW_DEBUG activo: descubre la pestaña, crea una
 //                              línea por grupo (título + un botón por prueba, salvo las
-//                              soloConsola) y el panel de comandos. Con file:// no construye
-//                              nada. Público: lo llama index.html tras cargar los ficheros de
+//                              soloConsola) y el panel de comandos. Por file:// la página no
+//                              cambia: aviso en consola (F12) y la pestaña sigue oculta.
+//                              Público: lo llama index.html tras cargar los ficheros de
 //                              pruebas.
 //   util                       Utilidades que comparten los ficheros de pruebas:
 //     igual / nz / nn            Comparación JSON y normalización de lo indefinido a null.
@@ -267,25 +265,6 @@ var Pruebas = (function () {
   }
 
   /**
-   * Si index.html se abrió por fichero (file://) deja la pestaña oculta: las pruebas que
-   * leen ficheros del proyecto por URL (G3 y todas las que cargan cartuchos de
-   * pruebas/cartuchos) fallan con «Failed to fetch», así que no se pueden lanzar desde ahí.
-   * Aviso arriba de la página con la solución y el mismo motivo en consola.
-   * @returns {boolean} true si la página está por file:// (no se construye la pestaña).
-   */
-  function _avisarFile() {
-    if (location.protocol !== 'file:') return false;
-    const aviso = document.createElement('div');
-    aviso.className = 'avisoFileLocal';
-    aviso.textContent = 'Página abierta por fichero (file://): la pestaña Pruebas queda ' +
-      'desactivada y las cargas de cartuchos por URL fallan. Ejecuta pruebas\\Servidor.bat ' +
-      'en la carpeta del proyecto para abrirla por http.';
-    document.body.insertBefore(aviso, document.body.firstChild);
-    console.warn('[Pruebas] ' + aviso.textContent);
-    return true;
-  }
-
-  /**
    * Panel «Desde consola»: la línea de comando de cada grupo (y la de todos) con un botón
    * «copiar». Se pegan en CMD o PowerShell, en la carpeta del proyecto. Se coloca debajo
    * de la salida de la pestaña.
@@ -330,7 +309,12 @@ var Pruebas = (function () {
    */
   function inicializar() {
     if (!(typeof GW_DEBUG !== 'undefined' && GW_DEBUG)) return;
-    if (_avisarFile()) return;
+    if (location.protocol === 'file:') {
+      console.warn('[Pruebas] Página abierta por fichero (file://): la pestaña Pruebas queda ' +
+        'oculta y las pruebas que leen ficheros del proyecto (G3 y las que cargan cartuchos de ' +
+        'pruebas/cartuchos) fallarían. Ejecuta pruebas\\Servidor.bat para abrirla por http.');
+      return;
+    }
     if (!(_$(ID_PESTANA) && _$(ID_BARRA) && _$(ID_SALIDA))) {
       console.error('[Pruebas] index.html desactualizado: faltan ' + ID_PESTANA +
         ', ' + ID_BARRA + ' o ' + ID_SALIDA + '.');

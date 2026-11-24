@@ -7,18 +7,18 @@
 //   anterior (F5-I15) y pasan con el corregido.
 //
 // PRUEBAS (un botón cada una en la pestaña «Pruebas», grupo «motor»)
-//   Orden del tick        La limpieza de las banderas «cambiar» va antes de la entrada y las
+//   M0 orden del tick     La limpieza de las banderas «cambiar» va antes de la entrada y las
 //                         marcas del paso del jugador sobreviven al tick (M0).
 //   M1                    El secundario de «mostrar junto a» no es una ruta ni resta rutas vivas.
 //   M2                    El secundario de un icono cambia en el mismo tick que su principal y ya
 //                         coincide al iniciar.
 //   M3                    El barrido no depende del orden de la lista y nRutasVivas es exacto.
 //   M4                    Punto de colisión (a), ruta que cruza la Secuencia (b) y congelación (c).
-//   Jugador               El cambio del jugador llega al pintado (bandera «cambiar»).
+//   M5 jugador            El cambio del jugador llega al pintado (bandera «cambiar»).
 //
 // FUNCIONES
 //   _conMotor             Ejecuta una prueba y deja las listas del motor como estaban.
-//   _pruebaOrdenTick      Prueba «Orden del tick».
+//   _pruebaOrdenTick      Prueba «M0 orden del tick».
 //   _pruebaM1 / _pruebaM2 / _pruebaM3 / _pruebaM4 / _pruebaJugador
 //                         Las pruebas de cada punto; cada una monta sus cartuchos de laboratorio.
 //
@@ -36,7 +36,7 @@
     try { return f(); } finally { restaurar(); }
   };
 
-  /* ---------------- Orden del tick (M0) ---------------- */
+  /* ---------------- M0 orden del tick ---------------- */
   /* El análisis (Memoria F2) fija el orden del tick: (0) limpieza de las banderas «cambiar» del
      tick anterior, (1) ENTRADA, (2) cómputo. La entrada marca «cambiar» al mover al jugador: si la
      limpieza viniera DESPUÉS de ella, esas marcas se perderían y el repintado selectivo del ESP32
@@ -363,7 +363,7 @@
     };
     const visibles = (segs) => segs.map(s => s.visible ? s.id : '').filter(Boolean).join(',');
 
-    // ---- Orden del tick: el cambio del jugador llega al pintado ----
+    // ---- M0 orden del tick: el cambio del jugador llega al pintado ----
     {
       const segs = [
         S('jug', T.jugador, { primero: true, derecha: 'j2' }),
@@ -376,19 +376,19 @@
       ComunListas.encolar(4);                      // derecha
       JuegoMotorEstados.tick();
       const j2 = segs.find(s => s.id === 'j2');
-      ok('Orden del tick: tras mover, el jugador nuevo queda con la bandera «cambiar»', j2.visible && j2.cambiar === true, 'j2=' + j2.visible + '/' + j2.cambiar);
+      ok('M0 orden del tick: tras mover, el jugador nuevo queda con la bandera «cambiar»', j2.visible && j2.cambiar === true, 'j2=' + j2.visible + '/' + j2.cambiar);
     }
       return out;
     });
   }
 
   Pruebas.registrar([
-    { id: 'ordenTick', grupo: 'motor', nombre: 'Orden del tick', ejecutar: () => _pruebaOrdenTick() },
+    { id: 'ordenTick', grupo: 'motor', nombre: 'M0 orden del tick', ejecutar: () => _pruebaOrdenTick() },
     { id: 'm1', grupo: 'motor', nombre: 'M1 secundarios', ejecutar: () => _pruebaM1() },
     { id: 'm2', grupo: 'motor', nombre: 'M2 iconos', ejecutar: () => _pruebaM2() },
     { id: 'm3', grupo: 'motor', nombre: 'M3 barrido', ejecutar: () => _pruebaM3() },
     { id: 'm4', grupo: 'motor', nombre: 'M4 colisión, secuencia y congelación', ejecutar: () => _pruebaM4() },
-    { id: 'jugador', grupo: 'motor', nombre: 'Jugador', ejecutar: () => _pruebaJugador() }
+    { id: 'jugador', grupo: 'motor', nombre: 'M5 jugador', ejecutar: () => _pruebaJugador() }
   ]);
 })();
 

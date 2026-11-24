@@ -10,25 +10,25 @@
 //       que mueve izquierda y derecha) y compara, tick a tick, qué segmentos están encendidos.
 //
 // PRUEBAS (grupo «gwi_gwc»)
-//   Equivalencia (datos)        Pide un GWI cargado.
-//   Equivalencia (variante)     Lo mismo declarando además rutas, aceleración, pausas y «combinar».
-//   Equivalencia (juego)        Partidas del cartucho de ejemplo con cada semilla (cinco por
+//   C1 equivalencia (datos)     Pide un GWI cargado.
+//   C2 equivalencia (variante)  Lo mismo declarando además rutas, aceleración, pausas y «combinar».
+//   C3 equivalencia (juego)     Partidas del cartucho de ejemplo con cada semilla (cinco por
 //                               defecto). Vuelve a cargar el GWI de ejemplo al terminar.
-//   Equivalencia (completa)     Partidas con un GWI al que se declara además rutas, aceleración,
+//   C4 equivalencia (completa)  Partidas con un GWI al que se declara además rutas, aceleración,
 //                               pausas y «combinar» (los declara en el historial de autoría, que es
 //                               de donde los reconstruye la carga del GWI).
 //   Las dos de juego dejan sus partidas en Pruebas.datos: en Node, GRABAR=fichero las guarda y
 //   COMPARAR=fichero las compara con las guardadas (red de seguridad del motor).
-//   P1/P2/P3 (F5-I17)         El par GWI/GWC: el codigoGWC en la ficha de Cartucho (P1), el aviso
-//                              al guardar el GWI a secas (P2) y al generar el par (P3). Las dos
-//                              últimas solo en consola: el paso descarga los ficheros.
+//   C5/C6/C7 el par (F5-I17)    El codigoGWC del GWI en la ficha de Cartucho (C5), el aviso al
+//                               guardar el GWI a secas (C6) y al generar el par (C7). Las dos
+//                               últimas solo en consola: el paso descarga los ficheros.
 //
 // FUNCIONES
 //   _codigoEnFicha              (F5-I17) El campo solo lectura «Código GWC» de la ficha de Cartucho.
 //   _codigoDeGWI               (F5-I17) El codigoGWC declarado en el JSON del GWI.
-//   _pruebaParFicha            (F5-I17) Prueba «Par: ficha codigoGWC».
-//   _pruebaParGuardar          (F5-I17) Prueba «Par: guardar despareja» (solo consola).
-//   _pruebaParGenerar          (F5-I17) Prueba «Par: generar desfasado» (solo consola).
+//   _pruebaParFicha            (F5-I17) Prueba «C5 par: ficha codigoGWC».
+//   _pruebaParGuardar          (F5-I17) Prueba «C6 par: guardar despareja» (solo consola).
+//   _pruebaParGenerar          (F5-I17) Prueba «C7 par: generar desfasado» (solo consola).
 //   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
 //   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
 //   _pruebaEquivalencia         Pruebas de datos (normal y variante).
@@ -118,7 +118,7 @@
     const preparado = _prepararEquivalencia(variante);
     if (!preparado) return null;           // lo avisa el lanzador, sin fallo
     const difs = _diferenciasEquivalencia(preparado.json, preparado.leido);
-    out.push(['equivalencia de datos' + (variante ? ' (variante)' : ''),
+    out.push([((variante ? 'C2' : 'C1') + ': equivalencia de datos') + (variante ? ' (variante)' : ''),
     difs.length === 0,
     difs.slice(0, 40).join(' || ')]);
     if (difs.length > 40) out.push(['(resto de diferencias omitidas)', true,
@@ -182,7 +182,7 @@
     const esperado = (await _codigoDeGWI(await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip')))
       || '---';
     const enFicha = _codigoEnFicha();
-    ok('P1: el GWI cargado muestra su codigoGWC en la ficha de Cartucho',
+    ok('C5: el GWI cargado muestra su codigoGWC en la ficha de Cartucho',
       enFicha === esperado, enFicha + ' (esperado ' + esperado + ')');
     return out;
   }
@@ -197,15 +197,15 @@
     if (!j0 || j0.tipo !== 'GWI') return null;
     const antes = _codigoEnFicha();
     if (!antes || antes === '---') {
-      out.push(['P2: (omitida: el GWI cargado no trae codigoGWC)', true, '']);
+      out.push(['C6: (omitida: el GWI cargado no trae codigoGWC)', true, '']);
       return out;
     }
     document.getElementById('btnGuardar').click();
     await U.esperar(2500);
     const estado = document.getElementById('estado').textContent;
-    ok('P2: guardar el GWI a secas avisa de que el GWC del destino queda desparejado',
+    ok('C6: guardar el GWI a secas avisa de que el GWC del destino queda desparejado',
       /queda desparejado/.test(estado) && estado.includes(antes), estado);
-    ok('P2: la ficha de Cartucho vuelve a «---» al soltar el código',
+    ok('C6: la ficha de Cartucho vuelve a «---» al soltar el código',
       _codigoEnFicha() === '---', _codigoEnFicha());
     return out;
   }
@@ -216,7 +216,7 @@
     const bytes = await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip');
     const codigoCargado = await _codigoDeGWI(bytes);
     if (!codigoCargado) {
-      out.push(['P3: (omitida: el GWI no trae codigoGWC)', true, '']);
+      out.push(['C7: (omitida: el GWI no trae codigoGWC)', true, '']);
       return out;
     }
     // Empezar del cartucho tal cual (para que la ficha traiga su código) y
@@ -226,7 +226,7 @@
     const setup = await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json');
     await _cargarGWI(setup, bytes);
     const enFichaInicio = _codigoEnFicha();
-    ok('P3 (previo): el GWI cargado mantiene su codigoGWC declarado en la ficha',
+    ok('C7 (previo): el GWI cargado mantiene su codigoGWC declarado en la ficha',
       enFichaInicio === codigoCargado, enFichaInicio);
     const zip = await JSZip.loadAsync(bytes);
     const nombreJson = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
@@ -243,10 +243,10 @@
     document.getElementById('btnGenerar').click();
     await U.esperar(6000);
     const estado = document.getElementById('estado').textContent;
-    ok('P3: generar avisa de que el GWC anterior queda desfasado (los dos códigos)',
+    ok('C7: generar avisa de que el GWC anterior queda desfasado (los dos códigos)',
       /queda desfasado/.test(estado) && estado.includes(codigoCargado), estado);
     const codigoNuevo = _codigoEnFicha();
-    ok('P3: la ficha muestra el codigoGWC NUEVO del par',
+    ok('C7: la ficha muestra el codigoGWC NUEVO del par',
       !!codigoNuevo && codigoNuevo !== '---' && codigoNuevo !== codigoCargado, codigoNuevo);
     return out;
   }
@@ -326,13 +326,13 @@
   }
 
   Pruebas.registrar([
-    { id: 'equivalencia', grupo: 'gwi_gwc', nombre: 'Equivalencia (datos)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(false) },
-    { id: 'equivalenciaVariante', grupo: 'gwi_gwc', nombre: 'Equivalencia (variante)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(true) },
-    { id: 'equivalenciaJuego', grupo: 'gwi_gwc', nombre: 'Equivalencia (juego)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaJuego', false, o) },
-    { id: 'equivalenciaCompleta', grupo: 'gwi_gwc', nombre: 'Equivalencia (completa)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaCompleta', true, o) },
-    { id: 'parFicha', grupo: 'gwi_gwc', nombre: 'Par: ficha codigoGWC', necesita: 'gwi', ejecutar: (o) => _pruebaParFicha(o) },
-    { id: 'parGuardar', grupo: 'gwi_gwc', nombre: 'Par: guardar despareja', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaParGuardar() },
-    { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'Par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) }
+    { id: 'equivalencia', grupo: 'gwi_gwc', nombre: 'C1 equivalencia (datos)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(false) },
+    { id: 'equivalenciaVariante', grupo: 'gwi_gwc', nombre: 'C2 equivalencia (variante)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(true) },
+    { id: 'equivalenciaJuego', grupo: 'gwi_gwc', nombre: 'C3 equivalencia (juego)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaJuego', false, o) },
+    { id: 'equivalenciaCompleta', grupo: 'gwi_gwc', nombre: 'C4 equivalencia (completa)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaCompleta', true, o) },
+    { id: 'parFicha', grupo: 'gwi_gwc', nombre: 'C5 par: ficha codigoGWC', necesita: 'gwi', ejecutar: (o) => _pruebaParFicha(o) },
+    { id: 'parGuardar', grupo: 'gwi_gwc', nombre: 'C6 par: guardar despareja', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaParGuardar() },
+    { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'C7 par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) }
   ]);
 })();
 

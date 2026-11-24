@@ -28,8 +28,8 @@
 //   ejecutar                   Ejecuta una prueba por id y devuelve su resultado, para Node.
 //   _lanzar                    Lanza una prueba desde su botón: pinta línea a línea y cierra
 //                              con el resumen (N OK, M fallo(s) y tiempo).
-//   _panelConsola              Panel «Desde consola»: una línea por grupo (y «todas») con el
-//                              comando que lo lanza y un botón para copiarlo.
+//   _panelConsola              Panel «Desde consola»: una línea por suite S1..S6 (y «todas»),
+//                              con el comando que la lanza y un botón para copiarlo.
 //   inicializar                Por http y con GW_DEBUG activo: descubre la pestaña, crea una
 //                              línea por grupo (título + un botón por prueba, salvo las
 //                              soloConsola) y el panel de comandos. Por file:// la página no
@@ -264,15 +264,20 @@ var Pruebas = (function () {
     }
   }
 
+  /** Las suites de consola con su código Sx, en el orden de Lanzar.bat y
+   * pruebasTodas.ps1 (el .ps1 de cada suite coincide). «todas» no lleva código. */
+  const SUITES_CONSOLA = [
+    ['S1', 'motor'], ['S2', 'director'], ['S3', 'editor'],
+    ['S4', 'generales'], ['S5', 'gwi_gwc'], ['S6', 'teclas']
+  ];
+
   /**
-   * Panel «Desde consola»: la línea de comando de cada grupo (y la de todos) con un botón
-   * «copiar». Se pegan en CMD o PowerShell, en la carpeta del proyecto. Se coloca debajo
-   * de la salida de la pestaña.
+   * Panel «Desde consola»: una línea por suite S1..S6 (y «todas») con el comando
+   * que la lanza y un botón «copiar». Se pegan en CMD o PowerShell, en la carpeta
+   * del proyecto. Se coloca debajo de la salida de la pestaña.
    * @returns {void}
    */
   function _panelConsola() {
-    const grupos = [];
-    for (const p of CATALOGO) if (!grupos.includes(p.grupo)) grupos.push(p.grupo);
     const panel = document.createElement('div');
     panel.id = 'panelConsolaPruebas';
     panel.style.cssText = 'margin-top:1em';
@@ -280,10 +285,14 @@ var Pruebas = (function () {
     t.style.cssText = 'font-weight:bold;margin-bottom:.3em';
     t.textContent = 'Desde consola (copiar y pegar en CMD o PowerShell, en la carpeta del proyecto):';
     panel.appendChild(t);
-    for (const g of grupos.concat(['todas'])) {
+    for (const [sx, g] of SUITES_CONSOLA.concat([['', 'todas']])) {
       const cmd = 'pruebas\\Lanzar.bat ' + g;
       const fila = document.createElement('div');
       fila.style.cssText = 'margin:.15em 0';
+      const s = document.createElement('span');
+      s.className = 'pruebaSuite';
+      s.textContent = sx;
+      fila.appendChild(s);
       const b = document.createElement('button');
       b.textContent = 'Copiar';
       b.addEventListener('click', async () => {

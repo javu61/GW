@@ -46,7 +46,7 @@ if (typeof module !== 'undefined') {
     // Las comprobaciones se escribieron para dirigirse desde fuera con pg.evaluate; aquí ya
     // estamos dentro de la página, y pg.evaluate solo llama a la función.
     const pg = { evaluate: async (f) => f() };
-    const recargar = async () => { await U.cargarEn('ficheroGWIZip', [U.fichero('cartucho.zip', gwiBytes)], 3000); };
+    const recargar = async () => { await U.cargarEn('ficheroCartucho', [U.fichero('cartucho.zip', gwiBytes)], 3000); };
 
   await recargar();
   // ---- E2: el historial cargado de un GWI usa los ids internos (los de las piezas, números negativos) ----

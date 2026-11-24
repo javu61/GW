@@ -10,27 +10,25 @@
     content="Generador de juegos de tipo Game&Watch, genera un 'cartucho' que puede simular directamente, y un programa para su uso en un ESP32." />
 </head>
 
-<body data-vista="vistaSetup">
+<body data-vista="vistaCarga">
   <h1>Simulador Game &amp; Watch</h1>
 
-  <!-- Línea de estado (F5-I12): los botones viven ahora dentro de su
-       pestaña; aquí solo quedan los inputs de fichero (ocultos, uno por
-       tipo de carga: los botones de todas las pestañas los comparten) y
-       la línea de estado, siempre visible. -->
+  <!-- Línea de estado (F5-I12): aquí solo quedan los DOS inputs de la
+       carga unificada (F5-I19: los comparten ficheros sueltos y carpeta)
+       y la línea de estado, siempre visible. -->
   <div id="controles">
-    <input type="file" id="ficheroSetup" accept=".json,application/json" class="oculto">
+    <input type="file" id="ficheroCartucho" accept=".json,.zip,.gwc,application/json,application/zip" multiple class="oculto">
     <input type="file" id="carpetaCartucho" webkitdirectory class="oculto">
-    <input type="file" id="ficheroGWBZip" accept=".zip,application/zip" class="oculto">
-    <input type="file" id="ficheroGWIZip" accept=".zip,application/zip" class="oculto">
-    <input type="file" id="ficheroGWC" accept=".gwc" class="oculto">
     <span id="estado">Sin setup cargado.</span>
   </div>
 
-  <!-- Pestañas (F5-I12), en el orden del trabajo: Setup, Cartucho,
-       Editor, Sprites, Simulador. Al inicio solo Setup; cada una se
-       activa cuando hay los datos que necesita (actualizarPestanas). -->
+  <!-- Pestañas (F5-I12), en el orden del trabajo: Carga, Setup,
+       Cartucho, Editor, Sprites, Simulador. Al inicio solo Carga (F5-I19:
+       la puerta única); cada una se activa cuando hay los datos que
+       necesita (actualizarPestanas). -->
   <nav id="pestanas">
-    <button id="pesSetup" class="pestActiva">Setup</button>
+    <button id="pesCarga" class="pestActiva">Carga</button>
+    <button id="pesSetup">Setup</button>
     <button id="pesCartucho" disabled>Cartucho</button>
     <button id="pesEditor" disabled>Editor</button>
     <button id="pesSprites" disabled>Segmentos y Sprites</button>
@@ -38,10 +36,27 @@
     <button id="pesPruebas" class="oculto" disabled>Pruebas</button>
   </nav>
 
+  <!-- Vista CARGA (F5-I19): el panel único de carga. Admite GWS (.json),
+       GWB (carpeta o ZIP), GWI (ZIP) y GWC (.gwc): el tipo lo decide el
+       contenido (núcleo F5-I9), no el botón. Siempre está activa, salvo
+       durante la partida. Sin setup no hay orden predefinido: un GWB/GWI
+       con estilo trae su máquina (GWB/GWI manda) y puebla Setup y
+       Cartucho; el GWC binario sí exige una máquina previa (de un setup
+       o de un cartucho ya cargado). -->
+  <div id="vistaCarga">
+    <div class="barraBotones">
+      <button id="btnCargarFicheros" title="Abre el selector: .json (GWS), .zip (GWB/GWI) o .gwc">Cargar ficheros</button>
+      <button id="btnCargarCarpeta" title="Carga la carpeta de un cartucho de autoría (GWB)">Cargar carpeta</button>
+    </div>
+    <div id="panelCarga">
+      <p>Arrastra aquí ficheros o una carpeta, o pega con Ctrl+V. El tipo lo decide el contenido (F5-I9): un GWS pobla Setup; un GWB o un GWI
+        poblan Setup y Cartucho y traen su máquina; un GWC solo juega con la máquina ya construida.</p>
+    </div>
+  </div>
+
   <!-- Vista SETUP (F5-I12): la ficha del GWS y sus botones. -->
   <div id="vistaSetup">
     <div class="barraBotones">
-      <button id="btnCargarSetup" title="Carga un setup (.json)">Cargar GWS</button>
       <button id="btnAplicarSetup" title="Aplica el setup de la ficha (limpia el cartucho)">Aplicar</button>
       <button id="btnGuardarSetup" title="Guarda el setup de la ficha como .json y lo aplica">Guardar GWS</button>
     </div>
@@ -51,10 +66,6 @@
 
   <!-- Vista SIMULADOR: la carcasa con la pantalla y los botones físicos -->
   <div id="vistaSimulador" class="oculto">
-    <div class="barraBotones">
-      <button id="btnSimGWI" disabled title="Carga un cartucho_gwi.zip">Cargar GWI</button>
-      <button id="btnSimGWC" disabled title="Carga el cartucho de ejecución cartucho_gwc.gwc">Cargar GWC</button>
-    </div>
 
     <!-- Carcasa: solo visible tras cargar un setup correcto.
          Hay UN DISEÑO INDEPENDIENTE por cada estilo de máquina; el motor
@@ -108,9 +119,6 @@
        Los botones están en la barra contextual superior. -->
   <div id="vistaEditor" class="oculto">
     <div class="barraBotones">
-      <button id="btnEdGWB" disabled title="Carga la carpeta del cartucho de autoría (GWB)">Cargar GWB</button>
-      <button id="btnEdGWBZip" disabled title="Carga el cartucho de autoría en ZIP">Cargar GWB (ZIP)</button>
-      <button id="btnEdGWI" disabled title="Carga un cartucho_gwi.zip">Cargar GWI</button>
       <button id="btnGuardar" disabled>Verificar y Guardar</button>
       <button id="btnGenerar" disabled
         title="Genera cartucho_GWB.zip, cartucho_gwi.zip y cartucho_gwc.gwc, con el Código GWC del par">Generar
@@ -140,10 +148,6 @@
        botones. Nace en blanco y editable; la construye BaseFicha.pintar. -->
   <div id="vistaCartucho" class="oculto">
     <div class="barraBotones">
-      <button id="btnCargarCartucho" disabled title="Carga la carpeta del cartucho de autoría (GWB)">Cargar GWB</button>
-      <button id="btnCargarGWBZip" disabled title="Carga el cartucho de autoría en ZIP (cartucho_GWB.zip)">Cargar GWB
-        (ZIP)</button>
-      <button id="btnCargarGWIZip" disabled title="Carga un cartucho_gwi.zip">Cargar GWI</button>
       <button id="btnAplicarCartucho" disabled
         title="Aplica la ficha: descarta los datos del Editor y de Sprites y los extrae de nuevo">Aplicar</button>
       <button id="btnGuardarGWB" disabled title="Verifica la ficha y guarda cartucho_GWB.zip">Guardar GWB</button>

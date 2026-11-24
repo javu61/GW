@@ -20,20 +20,19 @@
 //   _construirMapaFicheros  Mapa nombre → fichero de la carpeta o del paquete.
 //   _elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
 //   validarComunes          Contrato de ENTRADA común a GWB y GWI (img_s
-//                           obligatoria; img_f e img_m opcionales; teclas
-//                           de botones válidas, 1/2/3 solo en el trío
-//                           A/B/R; F5-I17 M8).
+//                           obligatoria; img_f e img_m opcionales; estilo:
+//                           el cartucho manda, heredado del setup si falta;
+//                           teclas de botones válidas, 1/2/3 solo en el
+//                           trío A/B/R; F5-I17 M8 + F5-I19).
 //   validarGWB              Validación ESPECÍFICA, llama a validarComunes
 //   validarGWI              Validación ESPECÍFICA, llama a validarComunes
-//   cargarDelMapa           Carga una imagen referenciada por el JSON.
 //   _esColorRGB             ¿Es un color «#RRGGBB»? (ColorFondo, F5-I14).
 //   _bytesDeColor           Bytes R, G, B de un «#RRGGBB» (blanco por defecto).
 //   _validarTamanoImgS      Avisa si img_s y img_f difieren de tamaño.
 //   leerCartucho            Lectura completa: JSON, validación despachada
-//                           por tipo, tipo esperado e imágenes.
+//                           por tipo e imágenes (F5-I19: sin tipo esperado;
+//                           estilo nullable si no hay setup).
 //   abrirPACK               Abre un paquete de cartucho (delega en BasePACK.leerPACK).
-//   leerGWB / leerGWI       Lectura específica: delegan en leerCartucho
-//                           con el tipo esperado.
 //
 //  Grabación del GWI
 //   _formatearGWI           Serializa el GWI en JSON compacto.
@@ -136,7 +135,9 @@ var BaseCartucho = (function () {
   let urlsCreadas = [];  // object URLs creadas al cargar, para revocarlas
 
   // Tipos de JSON de cartucho. El autor declara en qué estado está cada fichero.
-  const TIPOS_CARTUCHO = ['GWB', 'GWI', 'GWC'];
+  // F5-I19 (R07-B): 'GWC' fuera de los tipos JSON: un GWC es un fichero
+  // binario (.gwc), nunca un JSON validable aquí.
+  const TIPOS_CARTUCHO = ['GWB', 'GWI'];
 
   // Orden de prioridad al elegir qué .json cargar de una carpeta.
   const PRIORIDAD_TIPOS = ['GWC', 'GWI', 'GWB'];
@@ -319,14 +320,19 @@ var BaseCartucho = (function () {
   /**
    * Contrato de ENTRADA común a GWB y GWI (F5-I9: antes
    * validarCartucho). Tipo y versión son OBLIGATORIOS: sin
-   * tipo no se asume nada. El estilo debe coincidir con la máquina cargada
-   * (se recibe por parámetro: el módulo no conoce el setup). Contrato
-   * común de GWB y GWI en las imágenes de pantalla: img_s OBLIGATORIA
-   * (y su fichero presente); img_f e img_m OPCIONALES, pero si se
-   * declaran sus ficheros deben estar (el GWC se valida en leerGWC).
+   * tipo no se asume nada. F5-I19: el cartucho cargado MANDA — si
+   * declara "estilo"/"resolucion", la máquina se re-ajusta a él
+   * (la comparación con el estilo del setup se RETIRA); si no lo
+   * declara, heredan del setup vigente, y para eso SÍ importa si
+   * hay una máquina previa: sin ella, un GWB debe declararlas.
+   * Contrato común de GWB y GWI en las imágenes de pantalla: img_s
+   * OBLIGATORIA (y su fichero presente); img_f e img_m OPCIONALES,
+   * pero si se declaran sus ficheros deben estar (el GWC se valida
+   * en leerGWC).
    * @param {Object} json - JSON del cartucho.
    * @param {Map<string,File>} mapa - Mapa nombre → File de la carpeta.
-   * @param {string} estiloMaquina - Estilo del setup cargado.
+   * @param {?string} estiloMaquina - Estilo del setup cargado, o null
+   *   si no hay máquina previa (F5-I19: carga sin setup).
    * @returns {?string} null si es válido, o el mensaje de error.
    */
   function validarComunes(json, mapa, estiloMaquina) {
@@ -339,22 +345,21 @@ var BaseCartucho = (function () {
     if (json.version === undefined || typeof json.version !== 'number') {
       return 'el cartucho necesita una "version" numérica (p.ej. 1).';
     }
-    // estilo: OPCIONAL en el GWB (si falta se usa el del setup cargado);
-    // en el GWI viaja siempre (el GWI es autosuficiente). Si viene,
-    // debe coincidir con el del setup.
+    // estilo: OPCIONAL en el GWB (si falta, se HEREDA del setup vigente:
+    // el cartucho manda, la máquina se re-ajusta, F5-I19); en el GWI viaja
+    // siempre (el GWI es autosuficiente). Sin setup previo, un GWB debe
+    // declararlo: es lo que construye la máquina derivada.
     if (json.estilo === undefined || json.estilo === null) {
       if (json.tipo === 'GWI') {
         return 'el GWI necesita un "estilo" de máquina válido.';
       }
+      if (estiloMaquina === undefined || estiloMaquina === null) {
+        return 'el GWB necesita declarar "estilo" si no hay una máquina ' +
+          'previa: cargue un setup (GWS) o un cartucho que lo incluya (F5-I19).';
+      }
     } else {
       if (typeof json.estilo !== 'string' || json.estilo === '') {
         return 'el "estilo" del cartucho no es válido.';
-      }
-      // Un cartucho de MENOS botones se juega en una máquina con más
-      // (un juego de 2 botones en una máquina de 4); al revés, no.
-      if (Number(json.estilo) > Number(estiloMaquina)) {
-        return 'el cartucho es para una máquina de estilo ' + json.estilo +
-          ' y el setup es de estilo ' + estiloMaquina + ' (menos botones).';
       }
     }
     // ColorFondo (F5-I14): OPCIONAL, '#RRGGBB'. Es el fondo de la pantalla
@@ -370,6 +375,10 @@ var BaseCartucho = (function () {
     if (json.resolucion === undefined || json.resolucion === null) {
       if (json.tipo === 'GWI') {
         return 'el GWI necesita "resolucion" {ancho, alto}.';
+      }
+      if (estiloMaquina === undefined || estiloMaquina === null) {
+        return 'el GWB necesita declarar "resolucion" si no hay una máquina ' +
+          'previa: cargue un setup (GWS) o un cartucho que la incluya (F5-I19).';
       }
     } else {
       const r = json.resolucion;
@@ -482,18 +491,8 @@ var BaseCartucho = (function () {
     return null;
   }
 
-  /**
-   * Carga una imagen del cartucho referenciada por una ruta del GWI
-   * ("segmentos/img_NNN.png"), resolviendo también por el nombre base
-   * (el mapa de ficheros es plano: nombre → File).
-   * @param {Map<string,File>} mapa - Mapa nombre → File.
-   * @param {string} rutaFichero - Nombre referenciado, con o sin carpeta.
-   * @returns {Promise<HTMLImageElement>} Imagen cargada.
-   */
-  async function cargarDelMapa(mapa, rutaFichero) {
-    const fichero = mapa.get(rutaFichero) || mapa.get(rutaFichero.split('/').pop());
-    return cargarImagen(fichero);
-  }
+  // (F5-I19, R07-B: se retira cargarDelMapa: era solo una resolución de
+  // ruta de dos líneas, muerta fuera de aquí.)
 
   /**
    * ¿Es un color «#RRGGBB»?
@@ -534,19 +533,20 @@ var BaseCartucho = (function () {
 
   /**
    * Lectura COMPLETA de un cartucho JSON (GWB o GWI): mapa de ficheros,
-   * JSON prioritario, validación DESPACHADA por tipo contra la máquina y
-   * las imágenes (img_f OPCIONAL: null si el cartucho no la declara;
-   * img_s e img_m si están). Cada fichero solo necesita
-   * ".name" y comportarse como Blob.
+   * JSON prioritario, validación DESPACHADA por tipo y las imágenes
+   * (img_f OPCIONAL: null si el cartucho no la declara; img_s e img_m
+   * si están). Cada fichero solo necesita ".name" y comportarse como
+   * Blob. F5-I19: sin tipo esperado (el contenido manda) y el estilo de
+   * la máquina es nullable (null: no hay setup; la validación exige que
+   * el cartucho sea autosuficiente).
    * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o paquete).
-   * @param {string} estiloMaquina - Estilo del setup cargado.
-   * @param {string} [tipoEsperado] - Tipo que espera el botón ('GWB' o
-   *   'GWI', F5-I9): si el contenido detectado es otro, error BLOQUEANTE.
+   * @param {?string} estiloMaquina - Estilo del setup vigente, o null si
+   *   no hay máquina previa (F5-I19).
    * @returns {Promise<{nombre:string, json:Object, mapa:Map,
    *                     imgF:?HTMLImageElement, imgS:?HTMLImageElement,
    *                     imgM:Promise<?HTMLImageElement>}>} Cartucho leído.
    */
-  async function leerCartucho(ficheros, estiloMaquina, tipoEsperado) {
+  async function leerCartucho(ficheros, estiloMaquina) {
     const mapa = _construirMapaFicheros(ficheros);
     const elegido = await _elegirJSONCartucho(mapa);
     const json = elegido.json;
@@ -565,13 +565,8 @@ var BaseCartucho = (function () {
     const error = validar(json, mapa, estiloMaquina);
     if (error) throw new Error('[' + elegido.nombre + '] ' + error);
 
-    // Tipo esperado (F5-I9): el botón declara qué espera; si el
-    // contenido es otro tipo, error BLOQUEANTE (el cartucho no se
-    // carga). Sin tipoEsperado, cualquier tipo válido carga.
-    if (tipoEsperado && json.tipo !== tipoEsperado) {
-      throw new Error('[' + elegido.nombre + '] se esperaba un cartucho ' +
-        tipoEsperado + ' y el contenido es de tipo ' + json.tipo + '.');
-    }
+    // F5-I19: sin "tipo esperado": cualquier tipo válido carga — la
+    // pestaña de carga admite todo y el tipo lo decide el contenido.
 
     // img_f: OPCIONAL (punto 8 de la Fase 5). Sin fondo: imgF null y el
     // simulador pinta la pantalla en blanco.
@@ -585,10 +580,9 @@ var BaseCartucho = (function () {
       console.log('[cartucho] img_f: (sin fondo: el cartucho no declara img_f)');
     }
 
-    // img_s: base de la geometría. En un GWI puede venir como fichero
-    // propio (copiado al guardar); si no, la de pantalla.
-    const imgS = (await _cargarImagenAux(mapa, json.imagenes.img_s)) ||
-      (await _cargarImagenAux(mapa, json.img_s));
+    // img_s: base de la geometría (F5-I19, R07-B: se retira el fantasma
+    // "json.img_s" de la raíz — solo vale "imagenes.img_s").
+    const imgS = await _cargarImagenAux(mapa, json.imagenes.img_s);
     _validarTamanoImgS(imgS, imgF, json.imagenes ? json.imagenes.img_s : '(gwi)');
 
     // img_m (portada): se carga en paralelo, sin bloquear; aún no se muestra.
@@ -611,29 +605,8 @@ var BaseCartucho = (function () {
     return BasePACK.leerPACK(fichero);
   }
 
-  /**
-   * Carga un cartucho GWB (base dibujada) exigiendo ese tipo (F5-I9):
-   * delega en leerCartucho con el tipo esperado, que valida con la
-   * específica validarGWB y bloquea si el contenido es otro tipo.
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o paquete).
-   * @param {string} estiloMaquina - Estilo del setup cargado.
-   * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
-   */
-  function leerGWB(ficheros, estiloMaquina) {
-    return leerCartucho(ficheros, estiloMaquina, 'GWB');
-  }
-
-  /**
-   * Carga un cartucho GWI (autoría hecha) exigiendo ese tipo (F5-I9):
-   * delega en leerCartucho con el tipo esperado, que valida con la
-   * específica validarGWI y bloquea si el contenido es otro tipo.
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho (carpeta o paquete).
-   * @param {string} estiloMaquina - Estilo del setup cargado.
-   * @returns {Promise<Object>} Cartucho leído (ver leerCartucho).
-   */
-  function leerGWI(ficheros, estiloMaquina) {
-    return leerCartucho(ficheros, estiloMaquina, 'GWI');
-  }
+  // (F5-I19, R07-B: se retiran leerGWB y leerGWI: solo delegaban en
+  // leerCartucho con el "tipo esperado" de un botón que ya no existe.)
 
   // ---------------- Grabación del GWI ----------------
 
@@ -2557,15 +2530,13 @@ var BaseCartucho = (function () {
   // ---------------- API pública ----------------
 
   return {
-    // Lectura (GWB / GWI / genérico por tipo)
+    // Lectura (GWB / GWI: el tipo lo decide el contenido; F5-I19)
     leerCartucho: leerCartucho,
+    abrirPACK: abrirPACK,
     // Validación despachada por tipo (F5-I9), exportada para prueba aislada
     validarComunes: validarComunes,
     validarGWB: validarGWB,
     validarGWI: validarGWI,
-    leerGWB: leerGWB,
-    leerGWI: leerGWI,
-    abrirPACK: abrirPACK,
     // Grabación (GWI)
     guardarGWI: guardarGWI,
     guardarGWB: guardarGWB,
@@ -2581,14 +2552,9 @@ var BaseCartucho = (function () {
     leerGWC: leerGWC,
     generarGWC: generarGWC,
     validarTopes: validarTopes,
-    escalar: escalar,
-    indiceDe: indiceDe,
-    bloque: bloque,
     estadistica: estadistica,
     // Utilidades compartidas
-    leerJSON: leerJSON,
     cargarImagen: cargarImagen,
-    cargarDelMapa: cargarDelMapa,
     imagenBlob: imagenBlob,
     revocarURLs: revocarURLs
   };

@@ -110,7 +110,7 @@ var Pruebas = (function () {
   /**
    * Entrega ficheros a un input del diseñador como si el usuario los hubiera elegido
    * y espera a que el diseñador los procese.
-   * @param {string} idInput - Id del input (p. ej. 'ficheroGWIZip').
+   * @param {string} idInput - Id del input (p. ej. 'ficheroCartucho').
    * @param {File[]} ficheros
    * @param {number} [ms=1500] - Espera tras el evento.
    * @returns {Promise<void>}

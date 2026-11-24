@@ -21,12 +21,16 @@
 //  Utilidades y avisos
 //   $                        Atajo de getElementById
 //   avisar / avisarError     Mensajes de la barra.
-//   _leerJSON                 Lee el setup (copia local mínima).
+//   _leerJSON                 Lee un .json a objeto (setup o cartucho; F5-I19).
 //
 //  Setup
 //   validarSetup             Valida el JSON del hardware.
 //   _aplicarSetup             Esqueleto del estilo, canvas y botonera.
-//   _alSeleccionarSetup       Evento del input: valida, limpia y aplica.
+//   _fijarHardware            Hardware visible: esqueleto, canvas, botonera
+//                            y panel (la parte de _aplicarSetup sin pestañas;
+//                            F5-I19: también la llama la derivación en caliente).
+//   _setupDerivadoDe          F5-I19: deriva el GWS (la máquina) del cartucho
+//                            cargado, heredando puertos/alias/teclas del previo.
 //
 //  Botonera
 //   _crearBotonFisico         Un botón físico: hueco, tecla, etiqueta.
@@ -54,14 +58,17 @@
 //   _sumarGWI                 Tamaño aproximado de un GWI cargado.
 //
 //  Carga del cartucho (delegada en BaseCartucho)
-//   _alSeleccionarCartucho    Evento de la carpeta (copia los File).
-//   _alSeleccionarGWBZip      Botón «Cargar GWB (ZIP)» (F5-I10): doble
-//                            vía de entrada del GWB hasta el panel único.
+//   _alSeleccionarFicheros    Input multiple de la pestaña Carga (F5-I19):
+//                            GWS, GWB (ZIP), GWI (ZIP) y GWC por el mismo sitio.
+//   _alSeleccionarCarpeta     Input de carpeta (webkitdirectory, F5-I19).
+//   _entradasAFicheros        F5-I19: aplana entradas de arrastre (ficheros
+//                            y carpetas, recursivo) a una lista de File.
+//   _alSoltarPanel            Zona de arrastre del panel de carga: drop.
+//   _alPegarPanel             Ctrl+V con ficheros DENTRO de la pestaña Carga.
 //   _cargarCartucho           Núcleo UNIFICADO (F5-I9): detector de forma
-//                            por el CONTENIDO + tipo esperado del botón.
+//                            por el CONTENIDO (F5-I19: sin tipo esperado;
+//                            un GWS pobla Setup, el resto es cartucho).
 //   _procesarCartucho         Flujo de carpeta: lectura, puente y flujo.
-//   _alSeleccionarGWIZip      Botón «Cargar GWI»: el .zip viaja solo.
-//   _alSeleccionarGWC         Botón «Cargar GWC»: el .gwc viaja solo.
 //
 //  Presentación del GWC
 //   _volcarAlPuente           Fondo, reglas y campos del Director al puente
@@ -91,7 +98,6 @@
 // objeto público BaseDirector.
 //
 //  Otras funciones internas (lista completada en F5-I14)
-//   _procesarSetup                Proceso del setup GWS dentro del núcleo unificado (F5-I10):
 //   _aplicarJSONSetup             Valida y APLICA un setup ya leído (de fichero o de la ficha de la p…
 //   _aplicarDesdeFichaSetup       Botón «Aplicar» de la pestaña Setup (F5-I12):
 //   _aplicarDesdeFichaCartucho    Botón «Aplicar» de la pestaña Cartucho (F5-I12):
@@ -123,7 +129,7 @@ var BaseDirector = (function () {
 
   let setupGWS = null;                       // JSON del hardware leído
   let cartucho = null;                    // JSON del cartucho leído
-  let pestanaVista = 'vistaSetup';        // vista activa (la fija mostrarPestanna; F5-I12: arranca en Setup)
+  let pestanaVista = 'vistaCarga';        // vista activa (la fija mostrarPestanna; F5-I19: arranca en Carga)
   let imgM = null;                        // portada (img_m): cargada pero aún sin uso visual
   let colorFondo = '#FFFFFF';             // ColorFondo del cartucho (fondo si no hay img_f; F5-I14)
   let imgF = null;                        // fondo (img_f): guardado en memoria para el motor gráfico
@@ -135,30 +141,21 @@ var BaseDirector = (function () {
   let tamGWI = null;                      // bytes del GWI generado o cargado (JSON + PNG, aproximado)
   let tamGWC = null;                      // bytes del GWC generado o cargado (exacto)
   let deduplicacion = null;               // línea de deduplicación del último «Generar GWI+GWC»
+  let setupDerivado = false;              // F5-I19: el setup mostrado se derivó del cartucho, no es un GWS cargado
 
-  // Botones de carga de cartucho (los que aparecen al cargar el setup) y
-  // todos los de carga (el setup incluido): se deshabilitan durante la partida
-  // F5-I12: los botones viven dentro de su pestaña y un mismo botón puede
-  // estar en varias (un id HTML no se repite: cada ejemplar tiene el suyo
-  // y comparten manejador). Setup: btnCargarSetup, btnAplicarSetup,
-  // btnGuardarSetup. Cartucho: btnCargarCartucho (GWB carpeta),
-  // btnCargarGWBZip, btnCargarGWIZip, btnAplicarCartucho, btnGuardarGWB.
-  // Editor: btnEdGWB, btnEdGWBZip, btnEdGWI + los de autoría. Simulador:
-  // btnSimGWI, btnSimGWC.
-  const BOTONES_SETUP = ['btnCargarSetup', 'btnAplicarSetup', 'btnGuardarSetup'];
+  // F5-I19: desaparecen los botones de carga repartidos por las pestañas:
+  // la pestaña Carga y su panel (btnCargarFicheros + btnCargarCarpeta)
+  // son la ÚNICA puerta. Setup y Cartucho conservan solo sus botones de
+  // Aplicar/Guardar, y la autoría el suyo (F5-I12: se deshabilitan en
+  // la partida; las fichas se repueblan al cargar).
+  const BOTONES_SETUP = ['btnAplicarSetup', 'btnGuardarSetup'];
   // Botones que necesitan un setup aplicado (se deshabilitan en la partida)
-  const BOTONES_CARTUCHO = ['btnCargarCartucho', 'btnCargarGWBZip', 'btnCargarGWIZip',
-    'btnAplicarCartucho', 'btnGuardarGWB', 'btnEdGWB', 'btnEdGWBZip', 'btnEdGWI',
-    'btnSimGWI', 'btnSimGWC'];
+  const BOTONES_CARTUCHO = ['btnAplicarCartucho', 'btnGuardarGWB'];
+  // Botones de la pestaña Carga (F5-I19): activa en cualquier estado,
+  // salvo durante la partida.
+  const BOTONES_CARGA = ['btnCargarFicheros', 'btnCargarCarpeta'];
   // Botones de autoría: deshabilitados mientras no hay cartucho editable
   const BOTONES_AUTORIA = ['btnGuardar', 'btnGenerar', 'btnDeshacer', 'btnRehacer'];
-  // Cada acción de carga, con TODOS sus ejemplares (uno por pestaña)
-  const BOTONES_ACCION = {
-    gwbCarpeta: ['btnCargarCartucho', 'btnEdGWB'],
-    gwbZip: ['btnCargarGWBZip', 'btnEdGWBZip'],
-    gwi: ['btnCargarGWIZip', 'btnEdGWI', 'btnSimGWI'],
-    gwc: ['btnSimGWC']
-  };
 
   const COLOR_FONDO_NEUTRO = '#888888';
 
@@ -578,13 +575,18 @@ var BaseDirector = (function () {
   /**
    * Convierte el "numero" del botón del cartucho a la clave canónica del
    * layout: acepta 0-8 (con o sin comillas) y los alias A/B/R declarados
-   * en el setup (se resuelven a su botón físico).
+   * en el setup (se resuelven a su botón físico). F5-I19: la máquina de
+   * referencia puede pasarse por parámetro (la derivada del cartucho,
+   * cuando aún no hay setup en memoria).
    * @param {string|number} numero - Número o alias del botón del cartucho.
+   * @param {?Object} [maquina] - El setup (GWS) que declara los alias;
+   *        por defecto el setup en memoria.
    * @returns {string} Clave canónica del botón físico.
    */
-  function _normalizarNumeroBoton(numero) {
+  function _normalizarNumeroBoton(numero, maquina) {
+    const m = maquina || setupGWS;
     const n = String(numero);
-    for (const b of setupGWS.botones) {
+    for (const b of m.botones) {
       if (b.alias === n) return b.numero;
     }
     return n;
@@ -596,21 +598,26 @@ var BaseDirector = (function () {
    * limpiar nada, para que un cartucho incompatible no destruya el que
    * ya estaba cargado. Setup >= cartucho (F3-I1): jugar con menos
    * botones que la máquina ofrece está bien; usar uno que no tiene, no.
+   * F5-I19: la máquina contra la que se comprueba puede ser la QUE VENDRÁ
+   * (la derivada del cartucho), no la actual: se pasa por parámetro.
    * @param {Object} json - JSON del cartucho.
+   * @param {?Object} [maquina] - El setup (GWS) contra el que comprobar;
+   *        por defecto el setup en memoria.
    * @returns {?string} El mensaje de error, o null si todo es compatible.
    */
-  function _botonesInexistentes(json) {
-    if (!json || json.botones === undefined || !setupGWS) return null;
-    const existentes = ESTILOS[setupGWS.estilo].botones;
+  function _botonesInexistentes(json, maquina) {
+    const m = maquina || setupGWS;
+    if (!json || json.botones === undefined || !m) return null;
+    const existentes = ESTILOS[m.estilo].botones;
     const faltan = [];
     for (const b of json.botones) {
-      if (!existentes[_normalizarNumeroBoton(b.numero)]) faltan.push(String(b.numero));
+      if (!existentes[_normalizarNumeroBoton(b.numero, m)]) faltan.push(String(b.numero));
     }
     if (faltan.length === 0) return null;
     return 'el cartucho usa ' + (faltan.length === 1 ?
       'el botón ' + faltan[0] + ', que no existe' :
       'los botones ' + faltan.join(', ') + ', que no existen') +
-      ' en la máquina de estilo ' + setupGWS.estilo + '.';
+      ' en la máquina de estilo ' + m.estilo + '.';
   }
 
   /**
@@ -661,11 +668,14 @@ var BaseDirector = (function () {
   // ---------------- Aplicación del setup ----------------
 
   /**
-   * Aplica el setup validado: muestra el esqueleto del estilo, dimensiona
-   * el canvas, construye la botonera y deja el panel listo.
+   * Fija el hardware visible del setup (F5-I19: extraído de _aplicarSetup
+   * para REUSARLO al derivar la máquina de un cartucho, en caliente):
+   * muestra el esqueleto del estilo, dimensiona el canvas, construye la
+   * botonera y repinta el panel. Sin pestañas ni avisos: de eso deciden
+   * los que lo llaman (pues el siguiente paso del usuario es distinto).
    * @returns {void}
    */
-  function _aplicarSetup(avisosLimites) {
+  function _fijarHardware() {
     // Cada estilo es un DISEÑO INDEPENDIENTE: se muestra solo su
     // esqueleto y la pantalla se cuelga en el hueco de ese diseño.
     const estilo = ESTILOS[setupGWS.estilo];
@@ -682,6 +692,16 @@ var BaseDirector = (function () {
     _$('maquina').classList.remove('oculto');
     _$('panelEstado').classList.remove('oculto');
     pintarInfo();
+  }
+
+  /**
+   * Aplica el setup validado: fija el hardware (fijarHardware) y deja
+   * delante la pestaña Cartucho, el siguiente paso del flujo.
+   * @param {Array<string>} [avisosLimites] - Avisos de límites F5-I16.
+   * @returns {void}
+   */
+  function _aplicarSetup(avisosLimites) {
+    _fijarHardware();
     // El setup aplicado deja delante la pestaña Cartucho (F5-I12): es
     // el siguiente paso. Las demás se habilitan según haya cartucho.
     _actualizarPestanas();
@@ -693,31 +713,56 @@ var BaseDirector = (function () {
   }
 
   /**
-   * Evento del input de setup: el fichero viaja solo hasta el núcleo
-   * unificado con el tipo esperado 'GWS' (F5-I10), que lo despacha a
-   * procesarSetup: un solo punto de entrada de cara al panel único.
-   * @returns {Promise<void>}
+   * F5-I19 (PA4): el cartucho cargado MANDA. Deriva el setup (el GWS de
+   * la máquina) a partir de un GWB/GWI cargado: estilo y resolución del
+   * cartucho, y de un botón a otro del estilo, con la tecla del cartucho
+   * si la declara; si no, la del setup previo y, en su defecto, la de
+   * por defecto del estilo (precedencia M8). Los puertos y alias del
+   * ESP32 no viajan en el cartucho: se heredan del setup previo, botón
+   * a botón (vacíos si no hay setup). FUNCION PURA: no toca el estado
+   * ni el DOM (el llamador decide cuándo se aplica).
+   * @param {Object} json - JSON del cartucho cargado (GWB o GWI).
+   * @param {?Object} previo - El setup anterior (o null).
+   * @returns {Object} El GWS derivado.
+   * @throws {Error} Si no hay estilo conocido ni setup del que heredarlo.
    */
-  async function _alSeleccionarSetup() {
-    const fichero = _$('ficheroSetup').files[0];
-    _$('ficheroSetup').value = '';              // permite recargar el mismo fichero
-    if (!fichero) return;
-    console.log('[setup] fichero seleccionado: ' + fichero.name);
-    await _cargarCartucho([fichero], 'GWS');
-  }
-
-  /**
-   * Proceso del setup GWS dentro del núcleo unificado (F5-I10): lee y
-   * valida el fichero; si es correcto limpia el cartucho anterior (y
-   * sus object URLs) y aplica el nuevo hardware. Si falla, se conserva
-   * la máquina anterior (si la había): el error sube al try/catch del
-   * núcleo, que lo presenta con el rótulo «Setup NO cargado».
-   * @param {File} fichero - El .json del setup.
-   * @returns {Promise<void>}
-   */
-  async function _procesarSetup(fichero) {
-    const json = await _leerJSON(fichero);
-    _aplicarJSONSetup(json);
+  function _setupDerivadoDe(json, previo) {
+    const estilo = (json.estilo !== undefined && json.estilo !== null)
+      ? String(json.estilo)
+      : (previo ? String(previo.estilo) : null);
+    if (!estilo || !ESTILOS[estilo]) {
+      throw new Error('el cartucho necesita declarar un "estilo" de máquina ' +
+        'conocido, o haber un setup previo del que heredarlo (F5-I19).');
+    }
+    const previos = new Map((previo && Array.isArray(previo.botones))
+      ? previo.botones.map(b => [String(b.numero), b]) : []);
+    const delCartucho = (Array.isArray(json.botones))
+      ? json.botones.filter(b => b && b.tecla !== undefined &&
+        b.tecla !== null && b.tecla !== '') : [];
+    const defecto = TECLAS_POR_DEFECTO[estilo] || {};
+    const botones = Object.keys(ESTILOS[estilo].botones).map(numero => {
+      const p = previos.get(numero) || {};
+      const delCr = delCartucho.find(b => String(b.numero) === numero);
+      const tecla = delCr ? normalizarTecla(delCr.tecla) :
+        (p.tecla ? normalizarTecla(p.tecla) : defecto[numero]);
+      const boton = { numero: numero };
+      if (tecla) boton.tecla = tecla;
+      if (p.puerto !== undefined && p.puerto !== null) boton.puerto = p.puerto;
+      if (p.alias !== undefined && p.alias !== null) boton.alias = p.alias;
+      return boton;
+    });
+    const resolucion = json.resolucion || (previo && previo.resolucion);
+    if (!resolucion) {
+      throw new Error('el cartucho no declara "resolucion" y no hay un setup ' +
+        'previo del que heredarla (F5-I19).');
+    }
+    return {
+      tipo: GWS_TIPO, version: GWS_VERSION,
+      nombre: json.nombre || 'Derivado del cartucho',
+      estilo: estilo,
+      resolucion: { ancho: resolucion.ancho, alto: resolucion.alto },
+      botones: botones
+    };
   }
 
   /**
@@ -737,6 +782,7 @@ var BaseDirector = (function () {
     _limpiarCartucho();                       // aplicar un setup limpia el cartucho actual
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
+    setupDerivado = false;                   // F5-I19: un GWS aplicado es REAL, no derivado
     // La ficha del cartucho recibe del GWS el estilo y la resolución
     // (los ids de botón son del cartucho: quedan vacíos); la del setup,
     // todos sus datos.
@@ -794,7 +840,7 @@ var BaseDirector = (function () {
       return;
     }
     const ficheros = await BaseFicha.ficherosGWB();
-    await _cargarCartucho(ficheros, 'GWB');
+    await _cargarCartucho(ficheros);   // F5-I19: sin tipo esperado
   }
 
   // ---------------- Panel de información (F5-I7) ----------------
@@ -861,88 +907,176 @@ var BaseDirector = (function () {
   // ---------------- Carga del cartucho (delegada en BaseCartucho) ----------------
   // La LECTURA (mapa de ficheros, JSON prioritario, validación e imágenes)
   // vive en BaseCartucho.js (traspaso F5-I4); el director conserva la
-  // orquestación: eventos de los inputs, el detector de forma (F5-I9),
-  // el flujo automático por tipo y el arrastre de las listas al puente.
+  // orquestación: eventos del panel de carga (F5-I19), el detector de
+  // forma (F5-I9) y el flujo automático por tipo.
 
   /**
-   * Evento del botón «Cargar GWB» (input de carpeta): copia inmediata de
-   * los File (al vaciar el input, su FileList muere) y llamada al núcleo
-   * unificado con el tipo esperado.
+   * Evento del input «Cargar ficheros» de la pestaña Carga (F5-I19): cada
+   * entrada vale para TODO —.json GWS, .zip GWB/GWI, .gwc, un JSON suelto
+   * de cartucho, o varias selecciones PARA UNA CARPETA—: copia los File
+   * (al vaciar el input, su FileList muere) y llama al núcleo unificado
+   * SIN tipo esperado: el tipo lo decide el contenido (F5-I9).
    * @returns {Promise<void>}
    */
-  async function _alSeleccionarCartucho() {
+  async function _alSeleccionarFicheros() {
     // Copia inmediata de los File a un array ANTES de limpiar el value:
     // al vaciar el input, su FileList queda vacía y una referencia directa
     // a ella moriría a cero ficheros, sin mostrar mensaje alguno.
+    const ficheros = Array.from(_$('ficheroCartucho').files);
+    _$('ficheroCartucho').value = '';           // permite recargar la misma selección
+    if (ficheros.length === 0) return;
+    console.log('[carga] ficheros seleccionados: ' + ficheros.length + ' fichero(s)');
+    await _cargarCartucho(ficheros);
+  }
+
+  /**
+   * Evento del input «Cargar carpeta» (webkitdirectory, F5-I19): copia
+   * los File de la carpeta y entra en el núcleo unificado sin tipo.
+   * @returns {Promise<void>}
+   */
+  async function _alSeleccionarCarpeta() {
     const ficheros = Array.from(_$('carpetaCartucho').files);
     _$('carpetaCartucho').value = '';           // permite recargar la misma carpeta
     if (ficheros.length === 0) {
       avisarError('No se ha leído ningún fichero de la carpeta seleccionada.');
       return;
     }
-    console.log('[cartucho] carpeta seleccionada: ' + ficheros.length + ' fichero(s)');
-    await _cargarCartucho(ficheros, 'GWB');
+    console.log('[carga] carpeta seleccionada: ' + ficheros.length + ' fichero(s)');
+    await _cargarCartucho(ficheros);
   }
 
   /**
-   * Evento del botón «Cargar GWB (ZIP)» (F5-I10): la doble vía de
-   * entrada del GWB hasta el panel único de carga. El ZIP viaja solo
-   * hasta el núcleo unificado, que lo descomprime en memoria y entra
-   * en el flujo de carpeta con el tipo esperado 'GWB': un GWB
-   * empaquetado carga IGUAL que la carpeta (la forma la detecta el
-   * programa por el contenido).
+   * F5-I19: aplana una entrada de arrastre (fichero o carpeta) a una
+   * lista de File, navegando recursivamente las carpetas con la API
+   * webkitGetAsEntry (los File de un directorio que viajan en
+   * dataTransfer.files llegan vacíos: no tienen contenido leíble).
+   * @param {FileSystemEntry} entrada - La entrada del arrastre (o null).
+   * @returns {Promise<Array<File>>} Los ficheros contenidos.
+   */
+  function _entradasAFicheros(entrada) {
+    return new Promise(resuelve => {
+      if (!entrada) return resuelve([]);
+      if (entrada.isFile) {
+        entrada.file(f => resuelve([f]), () => resuelve([]));
+        return;
+      }
+      if (entrada.isDirectory) {
+        const lector = entrada.createReader();
+        const pendientes = [];
+        const leerLote = () => lector.readEntries(async entradas => {
+          if (entradas.length === 0) {
+            const listas = await Promise.all(pendientes.map(_entradasAFicheros));
+            resuelve([].concat(...listas));
+            return;
+          }
+          pendientes.push(...entradas);
+          leerLote();
+        }, () => resuelve([]));
+        leerLote();
+        return;
+      }
+      resuelve([]);
+    });
+  }
+
+  /**
+   * Zona de arrastre del panel de carga (F5-I19): ficheros sueltos o
+   * carpetas (recursivas). Las ENTRADAS de dataTransfer.items se leen
+   * SINCRONAMENTE, antes de cualquier await: al salir del evento mueren.
+   * @param {DragEvent} ev - El evento drop.
    * @returns {Promise<void>}
    */
-  async function _alSeleccionarGWBZip() {
-    const fichero = _$('ficheroGWBZip').files[0];
-    _$('ficheroGWBZip').value = '';            // permite recargar el mismo ZIP
-    if (!fichero) return;
-    console.log('[cartucho] ZIP de GWB seleccionado: ' + fichero.name);
-    await _cargarCartucho([fichero], 'GWB');
+  async function _alSoltarPanel(ev) {
+    ev.preventDefault();
+    const panel = _$('panelCarga');
+    panel.classList.remove('sobre');
+    const dt = ev.dataTransfer;
+    if (!dt) return;
+    let ficheros = Array.from(dt.files || []);
+    if (dt.items && dt.items.length > 0) {
+      const entradas = [];
+      for (const it of dt.items) {
+        const entrada = it.webkitGetAsEntry && it.webkitGetAsEntry();
+        if (entrada) entradas.push(entrada);
+      }
+      if (entradas.some(e => e.isDirectory)) {
+        const listas = await Promise.all(entradas.map(_entradasAFicheros));
+        ficheros = [].concat(...listas);
+      }
+    }
+    if (ficheros.length === 0) {
+      avisarError('Arrastre NO cargado: no se ha leído ningún fichero.');
+      return;
+    }
+    console.log('[carga] arrastre: ' + ficheros.length + ' fichero(s)');
+    await _cargarCartucho(ficheros);
   }
 
   /**
-   * Núcleo UNIFICADO de carga (F5-I9): un solo flujo para las tres
-   * formas del cartucho, decididas por el CONTENIDO de la selección y
-   * no por el botón. El botón declara el tipo ESPERADO; el código
-   * detecta el tipo real y, si no coincide, error BLOQUEANTE (el
-   * cartucho no se carga). Detector de forma, en este orden:
+   * Ctrl+V cuando la pestaña Carga está delante (F5-I19): si el portapapeles
+   * trae ficheros, sube al núcleo; si trae texto, NO interfiere (se escribe
+   * en la ficha y demás). Solo actúa en su pestaña, como las teclas de
+   * la máquina solo valen en el Simulador.
+   * @param {ClipboardEvent} ev - El evento paste.
+   * @returns {void}
+   */
+  function _alPegarPanel(ev) {
+    if (pestanaVista !== 'vistaCarga') return;
+    const ficheros = ev.clipboardData && ev.clipboardData.files;
+    if (!ficheros || ficheros.length === 0) return;    // texto: no interfiere
+    ev.preventDefault();
+    console.log('[carga] pegado: ' + ficheros.length + ' fichero(s)');
+    _cargarCartucho(Array.from(ficheros));
+  }
+
+  /**
+   * Núcleo UNIFICADO de carga (F5-I9): un solo flujo para todas las
+   * formas, decididas por el CONTENIDO de la selección. F5-I19: sin
+   * tipo esperado —la pestaña Carga admite todo y cualquier orden—.
+   * Detector de forma, en este orden (un solo fichero):
+   *   0. UN .json: si es de tipo GWS, es el SETUP (PESTAÑA Setup, sin
+   *      tocar el cartucho); si no, cartucho por flujo de carpeta.
    *   1. UN fichero de paquete → se descomprime (abrirPACK) y el resultado
    *      vuelve a entrar aquí (un paquete es una carpeta en memoria).
-   *   2. UN fichero .gwc → carga binaria (procesarGWC).
+   *   2. UN fichero .gwc → carga binaria (procesarGWC), que exige
+   *      máquina previa (F5-I19: el GWC no viaja la configuración).
    *   3. Resto → flujo de carpeta (procesarCartucho), que resuelve el
    *      JSON prioritario por tipo (GWC > GWI > GWB).
-   * @param {Array<Blob>} ficheros - Ficheros del cartucho.
-   * @param {string} tipoEsperado - 'GWB', 'GWI' o 'GWC' según el botón.
-   * @returns {Promise<?string>} El tipo de cartucho cargado (o null si
+   * @param {Array<Blob>} ficheros - Ficheros de la selección.
+   * @returns {Promise<?string>} El tipo de fichero cargado (o null si
    *   no se cargó nada).
    */
-  async function _cargarCartucho(ficheros, tipoEsperado) {
+  async function _cargarCartucho(ficheros) {
+    // Rótulo del mensaje de error único de la carga (F5-I9/F5-I19):
+    // «Setup NO cargado» para el GWS y «Cartucho NO cargado» para el resto.
+    let rotulo = 'Cartucho';
     try {
-      // GWS (F5-I10): el setup entra por el MISMO núcleo que los
-      // cartuchos (un solo punto de entrada de cara al panel único de
-      // carga). Un setup es SIEMPRE UN .json: otra forma no es un setup.
-      if (tipoEsperado === 'GWS') {
-        if (ficheros.length !== 1 || !/\.json$/i.test(ficheros[0].name || '')) {
-          throw new Error('un setup es un único fichero .json.');
-        }
-        await _procesarSetup(ficheros[0]);
-        return 'GWS';
-      }
       if (ficheros.length === 1) {
         const nombre = ficheros[0].name || '';
+        // UN .json: setup (GWS) o cartucho de un solo fichero.
+        if (/\.json$/i.test(nombre)) {
+          const json = await _leerJSON(ficheros[0]);
+          if (json.tipo === GWS_TIPO) {
+            rotulo = 'Setup';                // el error, con su propio rótulo
+            _aplicarJSONSetup(json);         // los objetos o validación, al try/catch
+            return 'GWS';
+          }
+          return await _procesarCartucho(ficheros);
+        }
         // UN .zip: carpeta empaquetada; se descomprime en memoria y el
-        // resultado vuelve a entrar en el detector, con el MISMO tipo
-        // esperado (la forma no cambia al descomprimir).
+        // resultado vuelve a entrar en el detector (la forma no cambia
+        // al descomprimir).
         if (BasePACK.esPACK(nombre)) {
           return await _cargarCartucho(
-            await BaseCartucho.abrirPACK(ficheros[0]), tipoEsperado);
+            await BaseCartucho.abrirPACK(ficheros[0]));
         }
-        // UN .gwc: el cartucho de ejecución binario viaja solo.
+        // UN .gwc: el cartucho de ejecución binario viaja solo; SIN la
+        // configuración de la máquina (estilo y botones no viajan en el
+        // GWC) no se carga.
         if (/\.gwc$/i.test(nombre)) {
-          if (tipoEsperado !== 'GWC') {
-            throw new Error('se esperaba un cartucho ' + tipoEsperado +
-              ' y el fichero es un GWC binario.');
+          if (!setupGWS) {
+            throw new Error('falta la configuración de la máquina, defínala ' +
+              'o cargue un cartucho que la incluya (F5-I19).');
           }
           await _procesarGWC(ficheros[0]);
           return 'GWC';
@@ -950,13 +1084,10 @@ var BaseDirector = (function () {
       }
       // En cualquier otro caso: flujo de carpeta (GWB, GWI en carpeta o
       // en ZIP ya descomprimido, o una carpeta que trae un .gwc).
-      return await _procesarCartucho(ficheros, tipoEsperado);
+      return await _procesarCartucho(ficheros);
     } catch (e) {
-      // Mensaje de error ÚNICO de la carga (F5-I9): desaparecen los
-      // «ZIP GWI NO cargado» y «GWC NO cargado» por botón. El setup
-      // conserva su propio rótulo (F5-I10).
-      avisarError((tipoEsperado === 'GWS' ? 'Setup NO cargado: ' :
-        'Cartucho NO cargado: ') + e.message);
+      // Mensaje de error ÚNICO de la carga (F5-I9).
+      avisarError(rotulo + ' NO cargado: ' + e.message);
       return null;
     }
   }
@@ -968,22 +1099,24 @@ var BaseDirector = (function () {
    * director DELEGA la lectura en BaseCartucho (mapa de ficheros, JSON
    * prioritario, validación despachada por tipo e imágenes, F5-I4) y
    * orquesta lo demás: flujo automático por tipo y arrastre de las
-   * listas al puente. Cada fichero solo necesita ".name" y
-   * comportarse como Blob (File ya lo es).
+   * listas al puente. F5-I19: el cartucho cargado MANDA — la máquina
+   * se re-ajusta en caliente derivando el setup del cartucho
+   * (pestañas Setup y Cartucho se repoblan); el error implica conservar
+   * el cartucho Y la máquina anteriores. Cada fichero solo necesita
+   * ".name" y comportarse como Blob (File ya lo es).
    * @param {Array<Blob>} ficheros - Ficheros del cartucho.
-   * @param {string} tipoEsperado - Tipo que espera el botón (F5-I9).
    * @returns {Promise<?string>} El tipo de cartucho cargado (o null).
    */
-  async function _procesarCartucho(ficheros, tipoEsperado) {
+  async function _procesarCartucho(ficheros) {
     // El GWC (F5-I6) es BINARIO: no hay JSON que leer. Si la carpeta
     // trae un .gwc, se carga por su propio flujo (leerGWC) y el JSON
-    // prioritario ni se mira; pero el tipo esperado del botón manda
-    // (F5-I9): una carpeta con .gwc en «Cargar GWB» no carga.
+    // prioritario ni se mira; F5-I19: sin máquina previa no se carga
+    // (el GWC no viaja estilo ni botonera).
     const gwc = ficheros.find(f => /\.gwc$/i.test(f.name || ''));
     if (gwc) {
-      if (tipoEsperado !== 'GWC') {
-        throw new Error('se esperaba un cartucho ' + tipoEsperado +
-          ' y la selección trae un GWC binario.');
+      if (!setupGWS) {
+        throw new Error('falta la configuración de la máquina, defínala ' +
+          'o cargue un cartucho que la incluya (F5-I19).');
       }
       await _procesarGWC(gwc);
       return 'GWC';
@@ -996,10 +1129,11 @@ var BaseDirector = (function () {
       // necesita su URL).
       BaseCartucho.revocarURLs();
       // Lectura completa en el módulo: JSON prioritario, validación
-      // despachada por tipo con el tipo esperado del botón (F5-I9)
-      // contra la máquina (estilo del setup) e imágenes img_f/img_s.
-      const leido = await BaseCartucho.leerCartucho(ficheros, setupGWS.estilo,
-        tipoEsperado);
+      // despachada por tipo (F5-I19: sin tipo esperado) e imágenes
+      // img_f/img_s. F5-I19: el estilo de la máquina NI SE PASA como
+      // requisito: el cartucho manda y puede cambiar de máquina.
+      const leido = await BaseCartucho.leerCartucho(ficheros,
+        setupGWS ? setupGWS.estilo : null);
       const json = leido.json;
       const mapa = leido.mapa;
 
@@ -1007,9 +1141,15 @@ var BaseDirector = (function () {
       // carga; lo que arrastra al puente y a las fichas ya es lo justo).
       const avisosLimites = BaseCartucho.revisarValores(json.tipo, json);
 
+      // F5-I19: el cartucho cargado MANDA — la máquina se re-ajusta en
+      // caliente derivando el setup del cartucho. Primero SIMULADO:
+      // todas las comprobaciones se hacen contra la máquina que VENDRÁ,
+      // para que un cartucho incompatible conserve el cartucho Y la
+      // máquina anteriores (nada se toca hasta que todo es correcto).
+      const candidato = _setupDerivadoDe(json, setupGWS);
       // F5-I15 (D3): TODAS las comprobaciones antes de tocar nada: si el
-      // cartucho no es compatible con la máquina, el anterior se conserva.
-      const incompatible = _botonesInexistentes(json);
+      // cartucho no es compatible con SU máquina, el anterior se conserva.
+      const incompatible = _botonesInexistentes(json, candidato);
       if (incompatible) throw new Error(incompatible + ' (se conserva el cartucho anterior).');
 
       // F5-I17 (M3): ¿cuántas acciones tiene la autoría en curso? Hay que
@@ -1021,11 +1161,18 @@ var BaseDirector = (function () {
       _limpiarCartucho();                       // fuera el cartucho anterior
       cartucho = json;
       const tipo = json.tipo;                  // obligatorio: sin tipo no se carga
+      // F5-I19: la máquina derivada YA ES el setup (setupDerivado=true:
+      // #estado avisará de que el GWS mostrado viene del cartucho) y el
+      // hardware visible se re-fija EN CALIENTE (esqueleto, canvas,
+      // botonera y panel), poblando la pestaña Setup con sus datos.
+      setupGWS = candidato;
+      setupDerivado = true;
+      _fijarHardware();
+      BaseSetup.poblar(setupGWS);
       // Tamaño del GWI cargado (aproximado: JSON + PNG); un GWB no tiene
       tamGWI = tipo === 'GWI' ? _sumarGWI(ficheros) : null;
-      // Setup >= cartucho (F3-I1): si el cartucho pide un botón que
-      // la máquina no tiene, NO carga (error bloqueante, no un
-      // aviso en consola como antes).
+      // F5-I19 (ya F3-I1): si el cartucho pide un botón que SU máquina
+      // no tiene, NO carga (error bloqueante).
       const compat = _aplicarBotonesCartucho(json);   // renombra usados, elimina el resto
       if (compat !== true) throw new Error(compat);
       // GWI (F5-I10): trío de sistema en modo partida (A=Start, B, R),
@@ -1084,10 +1231,12 @@ var BaseDirector = (function () {
       // F5-I10: la ficha del cartucho se rellena con TODO lo que trae
       // el GWB/GWI (la portada, cuando termine de cargar).
       BaseFicha.reiniciar();
+      // F5-I19: estilo y resolución vienen del cartucho, o de la
+      // máquina derivada si el cartucho no los declara (heredados).
       BaseFicha.poblar({
         nombre: json.nombre,
-        estilo: json.estilo,
-        resolucion: json.resolucion,
+        estilo: json.estilo !== undefined ? json.estilo : setupGWS.estilo,
+        resolucion: json.resolucion || setupGWS.resolucion,
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
         botones: (json.botones || []).map(b => ({
@@ -1112,6 +1261,7 @@ var BaseDirector = (function () {
           ' acción(es)); si lo querías conservar, guarda el GWI antes de cargar otro cartucho.'
         : '';
       avisar('Cartucho cargado (' + tipo + '): ' + (json.nombre || '(sin nombre)') +
+        (setupDerivado ? ' Setup derivado del cartucho.' : '') +
         (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : '') + descarteHistorial);
       return tipo;
     } catch (e) {
@@ -1121,34 +1271,9 @@ var BaseDirector = (function () {
     }
   }
 
-  /**
-   * Evento del botón «Cargar GWI» (input de ficheros .zip, F5-I9): el
-   * ZIP viaja solo hasta el núcleo unificado, que lo descomprime en
-   * memoria y entra en el flujo de carpeta con el MISMO tipo esperado.
-   * @returns {Promise<void>}
-   */
-  async function _alSeleccionarGWIZip() {
-    const fichero = _$('ficheroGWIZip').files[0];
-    _$('ficheroGWIZip').value = '';            // permite recargar el mismo ZIP
-    if (!fichero) return;
-    console.log('[cartucho] ZIP seleccionado: ' + fichero.name);
-    await _cargarCartucho([fichero], 'GWI');
-  }
-
-  /**
-   * Evento del botón «Cargar GWC» (F5-I9): el .gwc viaja solo hasta el
-   * núcleo unificado, que lo reconoce por el CONTENIDO y ejecuta la
-   * carga binaria: procesarGWC valida, fabrica fondo y sprites y deja
-   * el juego LISTO para el Start.
-   * @returns {Promise<void>}
-   */
-  async function _alSeleccionarGWC() {
-    const fichero = _$('ficheroGWC').files[0];
-    _$('ficheroGWC').value = '';             // permite recargar el mismo GWC
-    if (!fichero) return;
-    console.log('[cartucho] GWC seleccionado: ' + fichero.name);
-    await _cargarCartucho([fichero], 'GWC');
-  }
+  // (F5-I19: los eventos _alSeleccionarGWIZip y _alSeleccionarGWC se
+  // RETIRAN con sus botones: la pestaña Carga y su panel son la
+  // única puerta; el detector de forma (cargarCartucho) decide el flujo.)
 
   /**
    * Vuelca al puente (ComunListas) lo que el motor lee del cartucho:
@@ -1491,6 +1616,7 @@ var BaseDirector = (function () {
   function mostrarPestanna(id) {
     pestanaVista = id;
     const botones = {
+      vistaCarga: 'pesCarga',
       vistaSetup: 'pesSetup',
       vistaSimulador: 'pesSimulador',
       vistaEditor: 'pesEditor',
@@ -1514,21 +1640,25 @@ var BaseDirector = (function () {
 
   /**
    * Habilita las pestañas y los botones según los datos que hay (F5-I12):
-   * Setup siempre (menos en partida); Cartucho y Simulador con un setup
-   * aplicado; Editor y Sprites con un cartucho editable (GWB o GWI) y
-   * sin GWC cargado (el GWC, ejecución pura, no se edita). Durante la
-   * partida, solo el Simulador. Los botones de carga y de aplicar
-   * siguen la misma regla; los de autoría los habilita la autoría.
+   * Carga SIEMPRE (F5-I19: es la puerta en cualquier estado, con setup o
+   * sin él; salvo en partida); Setup siempre (menos en partida);
+   * Cartucho y Simulador con un setup aplicado (cargado o derivado);
+   * Editor y Sprites con un cartucho editable (GWB o GWI) y sin GWC
+   * cargado (el GWC, ejecución pura, no se edita). Durante la partida,
+   * solo el Simulador. Los botones siguen la misma regla; los de
+   * autoría los habilita la autoría.
    * @returns {void}
    */
   function _actualizarPestanas() {
     const soloSimulador = cartucho !== null && cartucho.tipo === 'GWC';
+    _$('pesCarga').disabled = enJuego;      // F5-I19: la carga, siempre disponible (menos en partida)
     _$('pesSetup').disabled = enJuego;
     _$('pesCartucho').disabled = enJuego || !setupGWS;
     _$('pesEditor').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesSprites').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesSimulador').disabled = !setupGWS;
     _$('pesPruebas').disabled = enJuego;    // Pruebas: con partida no se toca (GW_DEBUG la descubre pruebas/pruebas.js)
+    for (const id of BOTONES_CARGA) _$(id).disabled = enJuego;
     for (const id of BOTONES_SETUP) _$(id).disabled = enJuego;
     for (const id of BOTONES_CARTUCHO) _$(id).disabled = enJuego || !setupGWS;
     if (!editable) for (const id of BOTONES_AUTORIA) _$(id).disabled = true;
@@ -1667,14 +1797,14 @@ var BaseDirector = (function () {
       'estado', 'pantalla', 'maquina',
       'panelEstado', 'infoMaquina', 'infoDiseno',
       'listaSegmentos', 'zonaMapa', 'mapaSegmentos',
-      'panelSegmento', 'ficheroSetup', 'carpetaCartucho',
-      'ficheroGWIZip', 'ficheroGWC', 'ficheroGWBZip',
-      'pesSetup', 'pesSimulador', 'pesEditor',
+      'panelSegmento', 'ficheroCartucho', 'carpetaCartucho',
+      'panelCarga',
+      'pesCarga', 'pesSetup', 'pesSimulador', 'pesEditor',
       'pesSprites', 'pesCartucho', 'pesPruebas',
-      'vistaSetup', 'vistaSimulador', 'vistaEditor',
+      'vistaCarga', 'vistaSetup', 'vistaSimulador', 'vistaEditor',
       'vistaSprites', 'vistaCartucho', 'fichaSetup',
       'fichaCartucho', 'lienzoEditor']
-      .concat(BOTONES_SETUP, BOTONES_CARTUCHO, BOTONES_AUTORIA);
+      .concat(BOTONES_CARGA, BOTONES_SETUP, BOTONES_CARTUCHO, BOTONES_AUTORIA);
     const faltan = necesarios.filter(id => _$(id) === null);
     if (faltan.length > 0) {
       const msg = 'index.html desactualizado: faltan los elementos con id ' +
@@ -1712,23 +1842,31 @@ var BaseDirector = (function () {
    */
   function inicializar() {
     if (!_comprobarSalud()) return;            // sin index correcto no hay nada que cablear
-    _$('btnCargarSetup').addEventListener('click', () => _$('ficheroSetup').click());
+    // F5-I19: los DOS botones de la pestaña Carga y sus inputs.
+    _$('btnCargarFicheros').addEventListener('click', () => _$('ficheroCartucho').click());
+    _$('btnCargarCarpeta').addEventListener('click', () => _$('carpetaCartucho').click());
+    _$('ficheroCartucho').addEventListener('change', _alSeleccionarFicheros);
+    _$('carpetaCartucho').addEventListener('change', _alSeleccionarCarpeta);
+    // F5-I19: la zona de arrastre del panel y el pegado con ficheros
+    // (solo actúa con la pestaña Carga delante).
+    const panel = _$('panelCarga');
+    panel.addEventListener('dragover', ev => {
+      ev.preventDefault();
+      panel.classList.add('sobre');
+    });
+    panel.addEventListener('dragleave', () => panel.classList.remove('sobre'));
+    panel.addEventListener('drop', _alSoltarPanel);
+    document.addEventListener('paste', _alPegarPanel);
+
     _$('btnAplicarSetup').addEventListener('click', () => _aplicarDesdeFichaSetup(false));
     _$('btnGuardarSetup').addEventListener('click', () => _aplicarDesdeFichaSetup(true));
-    // F5-I12: cada carga tiene un ejemplar por pestaña; todos hacen lo mismo.
-    const entradas = {
-      gwbCarpeta: 'carpetaCartucho', gwbZip: 'ficheroGWBZip',
-      gwi: 'ficheroGWIZip', gwc: 'ficheroGWC'
-    };
-    for (const [accion, ids] of Object.entries(BOTONES_ACCION)) {
-      for (const id of ids) _$(id).addEventListener('click', () => _$(entradas[accion]).click());
-    }
     _$('btnAplicarCartucho').addEventListener('click', _aplicarDesdeFichaCartucho);
     _$('btnGuardarGWB').addEventListener('click', async () => {
       _$('btnGuardarGWB').disabled = true;           // evita guardados solapados
       try { await BaseFicha.guardar(); } finally { _actualizarPestanas(); }
     });
-    document.body.dataset.vista = 'vistaSetup';
+    document.body.dataset.vista = 'vistaCarga';   // F5-I19: se arranca EN la pestaña Carga
+    _$('pesCarga').addEventListener('click', () => mostrarPestanna('vistaCarga'));
     _$('pesSetup').addEventListener('click', () => mostrarPestanna('vistaSetup'));
     _$('pesSimulador').addEventListener('click', () => mostrarPestanna('vistaSimulador'));
     _$('pesEditor').addEventListener('click', () => mostrarPestanna('vistaEditor'));
@@ -1745,12 +1883,7 @@ var BaseDirector = (function () {
     _$('btnRehacer').addEventListener('click', () => BaseDescomponer.rehacer());
     BaseDescomponer.inicializar();                 // el clic del mapa, cableado por BaseDescomponer.js
     BaseSetup.pintar(_$('fichaSetup'));                  // F5-I12: la ficha del setup, desde el arranque
-    _actualizarPestanas();                               // al inicio solo Setup
-    _$('ficheroSetup').addEventListener('change', _alSeleccionarSetup);
-    _$('carpetaCartucho').addEventListener('change', _alSeleccionarCartucho);
-    _$('ficheroGWBZip').addEventListener('change', _alSeleccionarGWBZip);
-    _$('ficheroGWIZip').addEventListener('change', _alSeleccionarGWIZip);
-    _$('ficheroGWC').addEventListener('change', _alSeleccionarGWC);
+    _actualizarPestanas();                               // F5-I19: se arranca en la pestaña Carga
     document.addEventListener('keydown', _alPulsarTecla);
     document.addEventListener('keyup', _alSoltarTecla);
     document.addEventListener('keydown', _alAtajoTeclado);

@@ -91,11 +91,11 @@ function jsonDelGWI(zip) {
     };
   });
   await pg.goto('file://' + RAIZ + '/index.html');
-  await pg.setInputFiles('#ficheroSetup', SETUP);
+  await pg.setInputFiles('#ficheroCartucho', SETUP);
   await pg.waitForTimeout(400);
 
   // --- Genera el GWC desde las listas del GWI cargado ---
-  await pg.setInputFiles('#ficheroGWIZip', GWI);
+  await pg.setInputFiles('#ficheroCartucho', GWI);
   await pg.waitForTimeout(3500);
   const gwcBytes = await pg.evaluate((j) => {
     const pantalla = {
@@ -184,9 +184,9 @@ function jsonDelGWI(zip) {
   console.log('Datos: ' + (difs.length === 0 ? 'IGUALES' + (COMPLETO ? ' (cartucho completo)' : '') : difs.length + ' diferencia(s)'));
   for (const x of difs.slice(0, 40)) console.log('  - ' + x);
   for (const semilla of SEMILLAS) {
-    const histGWI = await jugar(async () => { await pg.setInputFiles('#ficheroGWIZip', GWI); await pg.waitForTimeout(3500); }, semilla);
+    const histGWI = await jugar(async () => { await pg.setInputFiles('#ficheroCartucho', GWI); await pg.waitForTimeout(3500); }, semilla);
     const histGWC = await jugar(async () => {
-      await pg.setInputFiles('#ficheroGWC', { name: 'equiv.gwc', mimeType: 'application/octet-stream', buffer: Buffer.from(gwcBytes) });
+      await pg.setInputFiles('#ficheroCartucho', { name: 'equiv.gwc', mimeType: 'application/octet-stream', buffer: Buffer.from(gwcBytes) });
       await pg.waitForTimeout(1500);
     }, semilla);
     let primera = -1;

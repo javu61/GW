@@ -11,7 +11,8 @@
 //   para exportar sus interiores (lista en pruebasEditor.js); el código real no cambia.
 //
 // FUNCIONES
-//   _servidor                  Servidor estático mínimo de una carpeta (con ficheros sustitutos).
+//   _servidor                  Servidor estático mínimo de una carpeta (con ficheros sustitutos);
+//                              público como «servidor»: lo usa también pruebas/servidor.js.
 //   _copiaParcheada            Copia del proyecto con los interiores de BaseDescomponer (editor).
 //   _comparar                  Compara las partidas grabadas con las de referencia (COMPARAR).
 //   _lanzar                    Lanza un grupo de pruebas y termina el proceso con su código.
@@ -35,8 +36,16 @@ const MIME = {
   '.zip': 'application/zip'
 };
 
-function _servidor(raiz, sustitutos) {
-  return new Promise((resolver) => {
+/**
+ * Servidor estático de una carpeta (solo 127.0.0.1). Lo usa el lanzador de pruebas y
+ * pruebas/servidor.js (el Servidor.bat que abre index.html por http en el navegador).
+ * @param {string} raiz - Carpeta a servir.
+ * @param {Object} [sustitutos] - URL → fichero ajeno a la carpeta (para las copias de pruebas).
+ * @param {number} [puerto=0] - Puerto pedido; 0 = el primero libre que asigne el sistema.
+ * @returns {Promise<http.Server>} El servidor; rechaza si el puerto pedido está ocupado.
+ */
+function _servidor(raiz, sustitutos, puerto) {
+  return new Promise((resolver, rechazar) => {
     const s = http.createServer((rq, rs) => {
       const p = decodeURIComponent(rq.url.split('?')[0]);
       const f = sustitutos[p] || path.join(raiz, p === '/' ? 'index.html' : p);
@@ -47,7 +56,8 @@ function _servidor(raiz, sustitutos) {
         rs.end(d);
       });
     });
-    s.listen(0, '127.0.0.1', () => resolver(s));
+    s.on('error', rechazar);
+    s.listen(puerto || 0, '127.0.0.1', () => resolver(s));
   });
 }
 
@@ -160,4 +170,4 @@ async function lanzar(grupo) {
   }
 }
 
-module.exports = { lanzar: lanzar };
+module.exports = { lanzar: lanzar, servidor: _servidor, raiz: RAIZ };

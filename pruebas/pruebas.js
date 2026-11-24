@@ -267,8 +267,13 @@ var Pruebas = (function () {
   /** Las suites de consola con su código Sx, en el orden de Lanzar.bat y
    * pruebasTodas.ps1 (el .ps1 de cada suite coincide). «todas» no lleva código. */
   const SUITES_CONSOLA = [
-    ['S1', 'motor'], ['S2', 'director'], ['S3', 'editor'],
-    ['S4', 'generales'], ['S5', 'gwi_gwc'], ['S6', 'teclas']
+    ['S1', 'motor'], 
+    ['S2', 'director'], 
+    ['S3', 'editor'],
+    ['S4', 'generales'], 
+    ['S5', 'gwi_gwc'], 
+    ['S6', 'teclas'], 
+    ['S7', 'todas']
   ];
 
   /**
@@ -285,8 +290,8 @@ var Pruebas = (function () {
     t.style.cssText = 'font-weight:bold;margin-bottom:.3em';
     t.textContent = 'Desde consola (copiar y pegar en CMD o PowerShell, en la carpeta del proyecto):';
     panel.appendChild(t);
-    for (const [sx, g] of SUITES_CONSOLA.concat([['', 'todas']])) {
-      const cmd = 'pruebas\\Lanzar.bat ' + g;
+    for (const [sx, g] of SUITES_CONSOLA) {
+      const cmd = 'Lanzar.bat ' + g;
       const fila = document.createElement('div');
       fila.style.cssText = 'margin:.15em 0';
       const s = document.createElement('span');

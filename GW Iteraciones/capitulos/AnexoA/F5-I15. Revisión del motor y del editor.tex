@@ -31,15 +31,15 @@ Esta es la lista de elementos que se han revisado y visto que hay diferencias en
 	\midrule
 	\endhead
 	Motor & M0 & Orden del tick: la limpieza de banderas \texttt{cambiar} pasa al paso (0) y la entrada al (1). La entrada escribe \texttt{cambiar=true} al mover al jugador; si la limpieza va después, esas marcas se pierden y el repintado selectivo del ESP32 no pintaría el paso & \textbf{Hecho} (ver~\ref{sec:F5I15OrdenTick}); PRUEBA 5 de la pestaña Pruebas \\
-	Motor & M1 & Excluir de \texttt{\_esCadena} y \texttt{\_esDeRuta} los segmentos secundarios de un «mostrar junto a» (están en \texttt{mapaComp}): los sincroniza su principal y no son rutas. Así el barrido no los apaga como fin de ruta ni \texttt{\_muereRuta} resta de \texttt{nRutasVivas} & \textbf{Corregido.} \texttt{pruebasMotorF5I15.js} (M1): principal con secundario; con el código anterior \texttt{nRutasVivas} bajaba de cero. Ahora nunca es negativo \\
-	Motor & M2 & Ejecutar \texttt{\_sincronizarIconos} antes de \texttt{\_sincronizarAcompanantes}, y también en \texttt{iniciar()}, para que el secundario de un icono se pinte en el mismo tick que su principal y en el tick final & \textbf{Corregido.} \texttt{pruebasMotorF5I15.js} (M2a, M2b): fallaba; el secundario cambia en el mismo tick que su principal y en el último \\
-	Motor & M3 & Barrido en dos fases: primero se calcula el destino de cada segmento sobre una foto del estado y después se aplican. El resultado deja de depender del orden de la lista y \texttt{nRutasVivas} se mantiene exacto. \textbf{Es el único que puede cambiar partidas reales: se hace el último} y se compara con las partidas grabadas & \textbf{Corregido.} \texttt{pruebasMotorF5I15.js} (M3a, M3b, M3c): cadena de dos rutas y confluencia, con la lista en ambos órdenes; mismo resultado y contador exacto. Partidas grabadas: ver~\ref{sec:F5I15Cambios} \\
-	Motor & M4 & Reproducir tres casos y corregir solo los que fallen: (a) punto de colisión que se enciende y apaga en el mismo tick; (b) ruta que entra en un segmento de la Secuencia y desaparece sin \texttt{\_muereRuta}; (c) congelación que no corta el barrido en curso & (a) \textbf{Descartado: es el diseño}, sin cambio. (b) y (c) \textbf{reproducidos y corregidos} (M4b, M4c en \texttt{pruebasMotorF5I15.js}) \\
-	Director & D1 & GWC tras GWI: reproducir el caso completo (autoría, botonera, Guardar y Generar); lo que falle se corrige con la regla de F5-I12: cargar un GWC limpia la autoría & \textbf{Corregido.} \texttt{pruebasDirectorF5I15.js} (D1): GWI y después GWC; el GWC limpia la autoría y la edición \\
+	Motor & M1 & Excluir de \texttt{\_esCadena} y \texttt{\_esDeRuta} los segmentos secundarios de un «mostrar junto a» (están en \texttt{mapaComp}): los sincroniza su principal y no son rutas. Así el barrido no los apaga como fin de ruta ni \texttt{\_muereRuta} resta de \texttt{nRutasVivas} & \textbf{Corregido.} \texttt{pruebasMotor.js} (M1): principal con secundario; con el código anterior \texttt{nRutasVivas} bajaba de cero. Ahora nunca es negativo \\
+	Motor & M2 & Ejecutar \texttt{\_sincronizarIconos} antes de \texttt{\_sincronizarAcompanantes}, y también en \texttt{iniciar()}, para que el secundario de un icono se pinte en el mismo tick que su principal y en el tick final & \textbf{Corregido.} \texttt{pruebasMotor.js} (M2a, M2b): fallaba; el secundario cambia en el mismo tick que su principal y en el último \\
+	Motor & M3 & Barrido en dos fases: primero se calcula el destino de cada segmento sobre una foto del estado y después se aplican. El resultado deja de depender del orden de la lista y \texttt{nRutasVivas} se mantiene exacto. \textbf{Es el único que puede cambiar partidas reales: se hace el último} y se compara con las partidas grabadas & \textbf{Corregido.} \texttt{pruebasMotor.js} (M3a, M3b, M3c): cadena de dos rutas y confluencia, con la lista en ambos órdenes; mismo resultado y contador exacto. Partidas grabadas: ver~\ref{sec:F5I15Cambios} \\
+	Motor & M4 & Reproducir tres casos y corregir solo los que fallen: (a) punto de colisión que se enciende y apaga en el mismo tick; (b) ruta que entra en un segmento de la Secuencia y desaparece sin \texttt{\_muereRuta}; (c) congelación que no corta el barrido en curso & (a) \textbf{Descartado: es el diseño}, sin cambio. (b) y (c) \textbf{reproducidos y corregidos} (M4b, M4c en \texttt{pruebasMotor.js}) \\
+	Director & D1 & GWC tras GWI: reproducir el caso completo (autoría, botonera, Guardar y Generar); lo que falle se corrige con la regla de F5-I12: cargar un GWC limpia la autoría & \textbf{Corregido.} \texttt{pruebasDirector.js} (D1): GWI y después GWC; el GWC limpia la autoría y la edición \\
 	Director & D2 & \texttt{\_descomponerImagen} ya comprueba el retorno de \texttt{arrancar} y sale sin habilitar los botones & \textbf{Resuelto}, confirmado con prueba (D2); sin cambio de código \\
 	Director & D3 & \texttt{\_procesarCartucho} hace primero todas las comprobaciones (estilo y botones) y solo después limpia el estado y asigna el cartucho, como ya hace el GWC & \textbf{Corregido.} Prueba D3: un cartucho incompatible tras uno bueno lo deja intacto \\
 	Director & D4 & \texttt{informarEstadistica} y \texttt{\#infoEstadistica} ya no existen & \textbf{Resuelto}, confirmado con prueba; sin cambio de código \\
-	Editor & E1 & Añadir \texttt{sec\_1}…\texttt{sec\_5} a \texttt{TODOS\_ENLACES}: al unir se re-apuntan a la raíz, al separar se anulan y \texttt{verificarReferencias} los revisa & \textbf{Corregido.} \texttt{pruebasEditorF5I15.js} (E1): al unir se re-apunta a la raíz, al separar se anula \\
+	Editor & E1 & Añadir \texttt{sec\_1}…\texttt{sec\_5} a \texttt{TODOS\_ENLACES}: al unir se re-apuntan a la raíz, al separar se anulan y \texttt{verificarReferencias} los revisa & \textbf{Corregido.} \texttt{pruebasEditor.js} (E1): al unir se re-apunta a la raíz, al separar se anula \\
 	Editor & E2 & El historial convierte los ids «F01» al deshacer tras cargar un GWI con piezas de unión & \textbf{Corregido.} E2: deshacer tras cargar un GWI con ids «F01» convierte a ids negativos \\
 	Editor & E3 & «Presentar el cero = false» llega al GWI: \texttt{reconstruir} deja de saltarse los \texttt{false} & \textbf{Corregido.} E3: el \texttt{false} de «presentar el cero» llega al GWI \\
 	Editor & E4 & Al cambiar de tipo se descartan solo los campos que el tipo nuevo no usa y se limpia \texttt{mostradoJunto} del secundario. Hace falta una tabla única «campos válidos por tipo» & \textbf{Corregido.} E4: se descartan solo los campos que el tipo nuevo no usa (tabla \texttt{\_camposDe}) y se limpia \texttt{mostradoJunto} \\
@@ -97,7 +97,7 @@ Sin cambio de comportamiento en el navegador: ningún módulo JavaScript lee tod
 \subsection{Cambios de código realizados y pruebas}
 \label{sec:F5I15Cambios}
 
-Cada punto se reprodujo con una prueba que fallaba con el código anterior y pasa con el corregido. Las pruebas están en \texttt{pruebas/pruebasMotorF5I15.js}, \texttt{pruebas/pruebasDirectorF5I15.js} y \texttt{pruebas/pruebasEditorF5I15.js}. Las del editor se ejecutan sobre una copia temporal en la que \texttt{BaseDescomponer.js} exporta su interior; el código de producción no cambia por ello.
+Cada punto se reprodujo con una prueba que fallaba con el código anterior y pasa con el corregido. Las pruebas están en \texttt{pruebas/pruebasMotor.js}, \texttt{pruebas/pruebasDirector.js} y \texttt{pruebas/pruebasEditor.js}. Las del editor se ejecutan sobre una copia temporal en la que \texttt{BaseDescomponer.js} exporta su interior; el código de producción no cambia por ello. Cómo se lanzan todas se describe en~\ref{sec:F5I15Pruebas}.
 
 \textbf{Motor} (\texttt{JuegoMotorEstados.js}).
 \begin{itemize}
@@ -135,4 +135,36 @@ Cada punto se reprodujo con una prueba que fallaba con el código anterior y pas
 	\item GWI frente a GWC (juego completo): \textbf{IGUAL tick a tick} en las cinco.
 	\item Variante completa frente a la grabación anterior: diferencias en tres semillas (1, 4660 y 6699), explicadas por M3 y M4c. En la grabación anterior se perdía una ruta por el orden de la lista (M3), y las rutas ahora esperan durante la congelación (M4c). No hay más diferencias.
 \end{itemize}
+
+\subsection{Sistema de pruebas unificado}
+\label{sec:F5I15Pruebas}
+
+Hasta F5-I14 había dos formas de probar: la pestaña \emph{Pruebas} (con partes portadas a mano) y scripts de Node con su propia copia de la lógica. Cambiar una prueba obligaba a cambiarla en dos sitios. Desde F5-I15 hay un solo sistema: \textbf{la lógica de cada prueba vive en un único fichero y se lanza por dos caminos}, el botón de la pestaña y un comando de consola. Ambos ejecutan exactamente el mismo código.
+
+\textbf{Funcionamiento.} \texttt{pruebas/pruebas.js} es el ejecutor: guarda el catálogo de pruebas, crea los botones y el panel «Desde consola» y ofrece \texttt{ejecutar(id)}. Cada fichero de pruebas se \emph{registra} en el catálogo y devuelve una lista de resultados \texttt{[nombre, ok, detalle]}. El comando de consola no contiene pruebas: \texttt{pruebas/lanzador.js} sirve el proyecto en un servidor local, abre \texttt{index.html} con Playwright y llama a la misma función \texttt{ejecutar} que el botón. Por eso \texttt{index.html} debe abrirse siempre por servidor local, no con doble clic.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X c l}
+		\toprule
+		\textbf{Fichero} & \textbf{Qué prueba} & \textbf{Botón} & \textbf{Comando} \\
+		\midrule
+		\texttt{pruebasMotor.js} & Motor de estados: orden del tick, M1--M4 y jugador & Sí & \texttt{Lanzar.bat motor} \\
+		\texttt{pruebasDirector.js} & Carga de cartuchos (D1--D3); sustituye el cartucho cargado & Sí & \texttt{Lanzar.bat director} \\
+		\texttt{pruebasEditor.js} & Editor (E1--E9) & No & \texttt{Lanzar.bat editor} \\
+		\texttt{pruebasGenerales.js} & GWC (CRC, lector) y ColorFondo & Sí & \texttt{Lanzar.bat generales} \\
+		\texttt{pruebasGWI\_GWC.js} & Equivalencia entre el GWI y el GWC que sale de él (datos y partidas) & Sí & \texttt{Lanzar.bat gwi\_gwc} \\
+		& Todas, una detrás de otra & & \texttt{Lanzar.bat todas} \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Ficheros de pruebas y cómo se lanzan (los comandos se escriben en la carpeta del proyecto como \texttt{pruebas\textbackslash Lanzar.bat}).}
+\end{table}
+
+\textbf{El Editor no tiene botón.} Sus comprobaciones necesitan ver el interior de \texttt{BaseDescomponer}, que está dentro de una función cerrada y que el código de producción no publica (solo es público lo que otros módulos necesitan). El lanzador sirve para esa prueba una \emph{copia temporal} del proyecto cuyo \texttt{BaseDescomponer.js} exporta además un objeto con los interiores que lista \texttt{pruebasEditor.js}; el resto del sistema es el mismo. En la pestaña real, la prueba responde que solo se lanza desde la consola.
+
+\textbf{Lanzamiento en Windows.} \texttt{Lanzar.bat} recibe el nombre de la prueba y llama a su script de PowerShell (\texttt{pruebasMotor.ps1}, etc.; \texttt{pruebasTodas.ps1} las encadena y escribe un resumen). Todos cargan primero \texttt{\_preparar.ps1}, que comprueba Node, instala Playwright de forma global si falta (\texttt{npm i -g playwright}), define \texttt{NODE\_PATH} y descarga el navegador. Cada prueba termina con una línea \texttt{RESULTADO: OK} o \texttt{RESULTADO: ERROR (detalle)} y con código de salida 0 o 1; cualquier excepción del lanzador acaba también en ese formato. El \texttt{.bat} y los \texttt{.ps1} se guardan con fin de línea CRLF (\texttt{.gitattributes}).
+
+\textbf{Cartuchos propios.} Las pruebas leen sus cartuchos de \texttt{pruebas/cartuchos/} (\texttt{setup2.json}, \texttt{setup4.json}, \texttt{cartucho\_GWI.zip} y \texttt{cartucho\_GWB.zip}), de modo que no dependen de los de la raíz del proyecto y se pueden regenerar sin romperlas. Las variantes (GWB con otro nombre o una imagen blanca, GWI con rutas y aceleración declaradas) se construyen en memoria con JSZip a partir de ellos.
+
+\textbf{Partidas grabadas.} La prueba de juego de GWI/GWC deja las partidas en \texttt{Pruebas.datos}. En consola, \texttt{GRABAR=fichero} las guarda y \texttt{COMPARAR=fichero} las compara con las guardadas: es la red de seguridad del motor (criterio 2).
 

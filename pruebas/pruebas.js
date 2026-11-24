@@ -40,7 +40,7 @@
 //     cargarEn                   Entrega ficheros a uno de los inputs del diseñador, como si el
 //                                usuario los hubiera elegido, y espera a que se procesen.
 //     salvarListas               Guarda las listas del motor y devuelve quien las restaura.
-//     cartuchoLaboratorio        Cartucho mínimo propio (2 sprites, 3 segmentos, 100×80).
+//     cartuchoLaboratorio        Cartucho mínimo propio (2 sprites, 3 segmentos, 320×240).
 //     crc16 / codigoCRC          CRC-16/CCITT-FALSE independiente y Código GWC «#HHHH#».
 //   datos                      Datos que una prueba deja para el lanzador de Node (partidas).
 //
@@ -90,10 +90,11 @@ var Pruebas = (function () {
    * @throws {Error} Si no se puede leer (la página abierta con doble clic no lo permite).
    */
   async function traerBytes(url) {
-    let r;
-    try { r = await fetch(url); } catch (e) { r = null; }
-    if (!r || !r.ok) throw new Error('No se pudo leer «' + url +
-      '»: abre index.html por un servidor local (http), no con doble clic');
+    let r, causa = '';
+    try { r = await fetch(url); } catch (e) { r = null; causa = e && e.message; }
+    if (!r || !r.ok) throw new Error('No se pudo leer «' + url + '» (' +
+      (r ? 'HTTP ' + r.status : causa || 'sin respuesta') + ') desde ' + location.href +
+      ': index.html debe abrirse por un servidor local (http) cuya raíz sea la carpeta del proyecto');
     return new Uint8Array(await r.arrayBuffer());
   }
 
@@ -145,7 +146,7 @@ var Pruebas = (function () {
   }
 
   /**
-   * Cartucho de laboratorio: 2 sprites y 3 segmentos, pantalla 100×80 sin escalar.
+   * Cartucho de laboratorio: 2 sprites y 3 segmentos, pantalla 320×240 (la menor que admite el GWC) sin escalar.
    * Lo usan las pruebas que no dependen del cartucho cargado.
    * @returns {{json:Object, sprites:Array, pantalla:Object}} Los tres argumentos
    *          de BaseCartucho.generarGWC.
@@ -164,7 +165,7 @@ var Pruebas = (function () {
     ];
     const json = {
       tipo: 'GWI', version: 1, nombre: 'p', estilo: '4',
-      resolucion: { ancho: 100, alto: 80 },
+      resolucion: { ancho: 320, alto: 240 },
       sprites: sprites.map(s => ({ id: s.id, ancho: 8, alto: 8, fichero: 'segmentos/' + s.id + '.png' })),
       segmentos: [
         { id: 'seg_000', tipo: 1, x: 0, y: 0, sprite: 'img_000', siguiente: 'seg_001' },
@@ -174,7 +175,7 @@ var Pruebas = (function () {
       secuencia: { ticks: 2, segmentos: ['seg_000', 'seg_001'] },
       fin: { mecanismo: 'vida' }
     };
-    const pantalla = { ancho: 100, alto: 80, fuente: { ancho: 100, alto: 80 } };
+    const pantalla = { ancho: 320, alto: 240, fuente: { ancho: 320, alto: 240 } };
     return { json: json, sprites: sprites, pantalla: pantalla };
   }
 

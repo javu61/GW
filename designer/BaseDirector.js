@@ -96,7 +96,10 @@
 //   _aplicarDesdeFichaSetup       Botón «Aplicar» de la pestaña Setup (F5-I12):
 //   _aplicarDesdeFichaCartucho    Botón «Aplicar» de la pestaña Cartucho (F5-I12):
 //   _textoBytes                   Bytes en texto legible, o «—» si no hay dato.
-//   _buscarBotonPorTecla          Encuentra el botón físico asociado a una tecla (si existe).
+//   _buscarBotonPorTecla          Encuentra el botón físico asociado a una tecla (si existe); F5-I17
+//                                también con las flechas del PC (ArrowLeft → cursor-izquierda…).
+//   _teclaDeEvento               F5-I17: tecla de evento normalizada (flecha PC → nombre de cursor).
+//   teclaValida / normalizarTecla F5-I17: la tecla del botón (letra A..Z o nombre de cursor).
 //   _alPulsarTecla                Permite jugar sin ratón:
 //   _alSoltarTecla                Soltar una tecla quita el resaltado de su botón.
 //   _pulsarSistema                Pulsación de un botón del trío en modo sistema (F5-I10).
@@ -163,18 +166,50 @@ var BaseDirector = (function () {
 
   // Teclas del teclado PC asociadas a cada número de botón, para jugar
   // sin ratón. El setup puede reasignar cada botón con "tecla" (una
-  // letra); si no la declara, se usa esta tabla por defecto.
+  // letra o un nombre de cursor); si no la declara, se usa la de esta
+  // tabla POR ESTILO (F5-I17, M6): los números 1/2/3 quedan para el
+  // trío de sistema A/B/R, presente en todos los estilos.
   const TECLAS_POR_DEFECTO = {
-    '0': 'Q',
-    '1': 'A',
-    '2': 'W',
-    '3': 'S',
-    '4': 'P',
-    '5': 'L',
-    '6': 'G',
-    '7': 'B',
-    '8': 'T'
+    '2': { '0': 'cursor-izquierda', '4': 'cursor-derecha', '6': '1', '7': '2', '8': '3' },
+    '4': { '0': 'W', '1': 'S', '4': 'O', '5': 'K', '6': '1', '7': '2', '8': '3' },
+    '5': { '0': 'cursor-izquierda', '1': 'cursor-derecha', '2': 'cursor-arriba',
+      '3': 'cursor-abajo', '4': 'Z', '6': '1', '7': '2', '8': '3' }
   };
+
+  // F5-I17 (M4): los cuatro nombres de cursor del GWS (lista cerrada,
+  // en minúsculas), la tecla de flecha del PC que los activa y el
+  // símbolo que pinta la pista del botón.
+  const CURSORES = {
+    'cursor-izquierda': { flecha: 'ArrowLeft', simbolo: '\u2190' },
+    'cursor-derecha':   { flecha: 'ArrowRight', simbolo: '\u2192' },
+    'cursor-arriba':    { flecha: 'ArrowUp', simbolo: '\u2191' },
+    'cursor-abajo':     { flecha: 'ArrowDown', simbolo: '\u2193' }
+  };
+
+  /**
+   * F5-I17 (M4): ¿es válida la tecla de un botón? Una letra A..Z (los
+   * dígitos se retiraron en F5-I17: quedan para el trío de sistema) o
+   * un nombre de cursor de la lista cerrada, sin distinguir mayúsculas.
+   * @param {?string} valor - Valor del campo tecla.
+   * @returns {boolean} true si es válida.
+   */
+  function teclaValida(valor) {
+    if (typeof valor !== 'string' || valor === '') return false;
+    if (/^[a-zA-Z]$/.test(valor)) return true;
+    return CURSORES[valor.toLowerCase()] !== undefined;
+  }
+
+  /**
+   * F5-I17 (M4): normaliza una tecla para comparar y guardar: las letras
+   * en mayúscula, los cursores con su nombre canónico en minúscula.
+   * @param {?string} valor - Tecla tal como llegó (setup, ficha o teclado).
+   * @returns {string} Tecla normalizada ('' si vacía).
+   */
+  function normalizarTecla(valor) {
+    if (!valor) return '';
+    const nombre = String(valor).toLowerCase();
+    return CURSORES[nombre] ? nombre : String(valor).toUpperCase();
+  }
 
   // ---------------- Catálogo de estilos de máquina ----------------
   // El setup declara el ESTILO de carcasa. Cada estilo es un DISEÑO
@@ -330,15 +365,28 @@ var BaseDirector = (function () {
       if (vistos.has(b.numero)) console.warn('Botón repetido en el setup: ' + b.numero);
       vistos.add(b.numero);
       if (b.tecla !== undefined) {
-        if (typeof b.tecla !== 'string' || !/^[a-zA-Z0-9]$/.test(b.tecla)) {
-          return 'la "tecla" del botón ' + b.numero + ' debe ser un carácter A..Z o 0..9.';
+        if (!teclaValida(b.tecla)) {
+          return 'la "tecla" del botón ' + b.numero +
+            ' debe ser una letra A..Z o un nombre de cursor (cursor-izquierda/derecha/arriba/abajo).';
         }
-        b.tecla = b.tecla.toUpperCase();
+        b.tecla = normalizarTecla(b.tecla);
         if (teclasVistas.has(b.tecla)) console.warn('Tecla repetida en el setup: ' + b.tecla);
         teclasVistas.add(b.tecla);
       }
       if (b.puerto !== undefined && (!Number.isInteger(b.puerto) || b.puerto < 0)) {
         return 'el "puerto" del botón ' + b.numero + ' debe ser un entero positivo.';
+      }
+    }
+    // F5-I17 (M6): si una tecla explícita coincide con la de por defecto
+    // de un botón sin tecla, ambos responderían a la misma tecla (gana
+    // el primero del DOM): aviso en consola, como los repetidos.
+    const defecto = TECLAS_POR_DEFECTO[jsonGWS.estilo] || {};
+    for (const numero of Object.keys(defecto)) {
+      const declarado = jsonGWS.botones.find(x => x.numero === numero);
+      if (!declarado || declarado.tecla !== undefined) continue;
+      if (teclasVistas.has(normalizarTecla(defecto[numero]))) {
+        console.warn('La tecla por defecto ' + defecto[numero] + ' del botón ' + numero +
+          ' coincide con una tecla explícita del setup.');
       }
     }
     return null;
@@ -425,8 +473,13 @@ var BaseDirector = (function () {
       el.style.gridRow = pos.celda[0];
       el.style.gridColumn = pos.celda[1];
     }
-    // Tecla de teclado asociada (la del setup o la tabla por defecto)
-    const tecla = (boton.tecla || TECLAS_POR_DEFECTO[boton.numero] || '').toUpperCase();
+    // Tecla de teclado asociada: la del setup o, si no declara, la de
+    // por defecto del estilo (F5-I17, M6). Los cursor llevan dataset con
+    // el nombre y pista con el símbolo; las letras, dataset y pista como
+    // antes (minúscula/mayúscula).
+    const defecto = (setupGWS && TECLAS_POR_DEFECTO[String(setupGWS.estilo)]) || {};
+    const tecla = normalizarTecla(boton.tecla || defecto[boton.numero] || '');
+    const cursor = CURSORES[tecla.toLowerCase()];
     if (tecla) el.dataset.tecla = tecla.toLowerCase();
     // Etiqueta visible + pista pequeña con la tecla asociada
     const etiqueta = document.createElement('span');
@@ -436,7 +489,7 @@ var BaseDirector = (function () {
     if (tecla) {
       el.appendChild(document.createElement('br'));
       const pista = document.createElement('small');
-      pista.textContent = tecla;
+      pista.textContent = cursor ? cursor.simbolo : tecla.toUpperCase();
       el.appendChild(pista);
     }
     // Resaltado al pulsar. Punto de enganche provisional.
@@ -973,6 +1026,10 @@ var BaseDirector = (function () {
       // img_s: la base de la geometría (leída por el módulo; en GWI
       // puede venir como fichero propio copiado al guardar).
       imgS = leido.imgS;
+      // F5-I17 (M3): ¿cuántas acciones tiene la autoría en curso? Si
+      // encima viene un GWB (no un GWI, que trae la SUYA), se descartan
+      // sin que el autor dice nada: hay que avisar (no bloqueante).
+      const accionesPrevias = BaseDescomponer.numeroDeCambios();
       BaseDescomponer.reset();                     // autoría anterior, fuera
       // El puente se escribe DESPUÉS del reset (ver volcarAlPuente).
       _volcarAlPuente(fondo, !!json.combinar, json);
@@ -1016,6 +1073,7 @@ var BaseDirector = (function () {
         nombre: json.nombre,
         estilo: json.estilo,
         resolucion: json.resolucion,
+        codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
         botones: (json.botones || []).map(b => ({
           numero: _normalizarNumeroBoton(b.numero), id: b.id
@@ -1033,8 +1091,12 @@ var BaseDirector = (function () {
       // Arriba indica la última operación realizada (con el tipo de
       // cartucho cargado, F5-I9), y los avisos de límites F5-I16
       // ajustados en memoria al cargar.
+      const descarteHistorial = (tipo !== 'GWI' && accionesPrevias > 0)
+        ? ' ATENCIÓN: se descarta el historial del GWI anterior (' + accionesPrevias +
+          ' acción(es)); si lo querías conservar, guarda el GWI antes de cargar otro cartucho.'
+        : '';
       avisar('Cartucho cargado (' + tipo + '): ' + (json.nombre || '(sin nombre)') +
-        (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
+        (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : '') + descarteHistorial);
       return tipo;
     } catch (e) {
       pintarInfo();
@@ -1334,12 +1396,29 @@ var BaseDirector = (function () {
 
   /**
    * Encuentra el botón físico asociado a una tecla (si existe).
-   * @param {string} tecla - Tecla pulsada.
+  /**
+   * F5-I17 (M4): la tecla de evento normalizada, con las flechas
+   * del PC mapeadas al nombre de cursor; el resto, en minúsculas.
+   * @param {string} k - ev.key del teclado PC.
+   * @returns {string} Tecla normalizada para comparar con dataset.tecla.
+   */
+  function _teclaDeEvento(k) {
+    for (const [nombre, c] of Object.entries(CURSORES)) {
+      if (c.flecha === k) return nombre;
+    }
+    return String(k).toLowerCase();
+  }
+
+  /**
+   * Encuentra el botón físico asociado a una tecla (si existe).
+   * Sin selector CSS: una tecla como «"» o «\» lo rompería (REVISION #14).
+   * F5-I17 (M4): las flechas del PC (ArrowLeft…) encuentran el botón
+   * cuyo dataset.tecla es el nombre de cursor.
+   * @param {string} tecla - Tecla pulsada (ev.key del teclado PC).
    * @returns {?HTMLElement} Botón físico, o null.
    */
   function _buscarBotonPorTecla(tecla) {
-    // Sin selector CSS: una tecla como «"» o «\» lo rompería (REVISION #14).
-    const t = tecla.toLowerCase();
+    const t = _teclaDeEvento(tecla);
     for (const b of document.querySelectorAll('.botonFisico')) {
       if (b.dataset.tecla === t) return b;
     }
@@ -1673,6 +1752,7 @@ var BaseDirector = (function () {
     avisarError: avisarError,
     validarSetup: validarSetup,           // F5-I12: la verifica también la ficha del Setup
     datosCartucho: () => cartucho,        // el JSON del cartucho en memoria (lo lee la pestaña Pruebas)
+    codigoGWCCargado: () => (cartucho && cartucho.tipo === 'GWI' && cartucho.codigoGWC) ? cartucho.codigoGWC : null,   // F5-I17 (M2)
     jugar: jugar,
     finDePartida: finDePartida,
     pestanna: mostrarPestanna,            // abrir el Editor desde la lista de segmentos

@@ -13,6 +13,7 @@ $scripts = [ordered]@{
     'editor'    = 'pruebasEditor.ps1'
     'generales' = 'pruebasGenerales.ps1'
     'gwi_gwc'   = 'pruebasGWI_GWC.ps1'
+    'teclas'    = 'pruebasTeclas.ps1'
 }
 $codigos = [ordered]@{}
 foreach ($g in $scripts.Keys) {

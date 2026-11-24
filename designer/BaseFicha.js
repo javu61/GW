@@ -33,6 +33,7 @@
 //    reiniciar          Deja la ficha en blanco.
 //    poblar             Rellena campos, botones e imágenes desde una carga.
 //    ponerImagen        Pone (o quita) una imagen sin avisar al director.
+//    actualizarCodigoGWC F5-I17 (M1): refresca el «Código GWC» de solo lectura.
 //  Lectura
 //    estado             Lee los datos de la ficha tal cual (sin completar).
 //    datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
@@ -372,6 +373,12 @@ const BaseFicha = (function () {
     campos.colorFondo = _entrada('color', { value: COLOR_BLANCO });
     _campo(rejilla, 'Color de fondo', campos.colorFondo,
       'Se usa si no hay img_f (blanco por defecto).');
+    // F5-I17 (M1): el Código GWC del par, visible (solo lectura):
+    // «---» si el GWI cargado no lo trae; se refresca al generar.
+    campos.codigoGWC = _entrada('text', { value: '---', readOnly: true });
+    campos.codigoGWC.style.width = '6em';
+    _campo(rejilla, 'Código GWC', campos.codigoGWC,
+      'Solo lectura: el código #HHHH# del par (lo estampa Generar GWI+GWC).');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
@@ -740,6 +747,7 @@ const BaseFicha = (function () {
     campos.ancho.value = '';
     campos.alto.value = '';
     campos.colorFondo.value = COLOR_BLANCO;
+    campos.codigoGWC.value = '---';
     cuerpoBotones.textContent = '';
     _pintarTablaBotones();
     if (mensajes) mensajes.textContent = '';
@@ -770,6 +778,7 @@ const BaseFicha = (function () {
     if (d.colorFondo !== undefined) {
       campos.colorFondo.value = _esColor(d.colorFondo) ? d.colorFondo.toLowerCase() : COLOR_BLANCO;
     }
+    if (d.codigoGWC !== undefined) campos.codigoGWC.value = d.codigoGWC || '---';
     if (d.botones !== undefined) {
       idsBoton = {};
       for (const b of d.botones || []) {
@@ -804,11 +813,25 @@ const BaseFicha = (function () {
     else _vaciarImagen(clave);
   }
 
+  /**
+   * Refresca el campo de solo lectura «Código GWC» (F5-I17, M1): lo
+   * llama el editor al generar el par (el código del GWC recién
+   * montado) y tras un guardado que suelta el código. No avisa de
+   * cambio: la ficha refleja el estado del cartucho en memoria.
+   * @param {?string} codigo - Código #HHHH#, o null para «---».
+   * @returns {void}
+   */
+  function actualizarCodigoGWC(codigo) {
+    _asegurar();
+    campos.codigoGWC.value = codigo || '---';
+  }
+
   return {
     pintar: pintar,
     reiniciar: reiniciar,
     poblar: poblar,
     ponerImagen: ponerImagen,
+    actualizarCodigoGWC: actualizarCodigoGWC,   // F5-I17 (M1)
     estado: estado,
     datosCartucho: datosCartucho,
     imagenesEnMemoria: imagenesEnMemoria,

@@ -29,6 +29,8 @@
 //                              con el resumen (N OK, M fallo(s) y tiempo).
 //   _panelConsola              Panel «Desde consola»: una línea por grupo (y «todas») con el
 //                              comando que lo lanza y un botón para copiarlo.
+//   _avisarServidorLocal       Aviso visible si la página se abrió por file:// (las pruebas que
+//                              leen ficheros del proyecto fallarán).
 //   inicializar                Con GW_DEBUG activo: descubre la pestaña, crea una línea por
 //                              grupo (título + un botón por prueba, salvo las soloConsola) y el
 //                              panel de comandos. Público: lo llama index.html tras cargar los
@@ -267,6 +269,27 @@ var Pruebas = (function () {
    * de la salida de la pestaña.
    * @returns {void}
    */
+  /**
+   * Aviso cuando index.html se abrió por fichero (file://): las pruebas
+   * que leen ficheros del proyecto por URL (G3 y todas las que cargan
+   * cartuchos de pruebas/cartuchos) fallan con «Failed to fetch».
+   * El aviso va antes de la salida (no se limpia al lanzar una prueba).
+   * @returns {void}
+   */
+  function _avisarServidorLocal() {
+    if (location.protocol !== 'file:') return;
+    const aviso = document.createElement('div');
+    aviso.id = 'avisoServidorLocal';
+    aviso.className = 'pruebaAviso';
+    aviso.style.cssText = 'padding:.4em .6em;margin:0 0 8px 0';
+    aviso.textContent = 'Página abierta por fichero (file://): las pruebas que leen ficheros del ' +
+      'proyecto (G3 y todas las que cargan cartuchos de pruebas/cartuchos) fallan con «Failed to ' +
+      'fetch». Abre index.html por un servidor local (http) con la raíz en la carpeta del proyecto; ' +
+      'por ejemplo, ejecuta en ella: npx http-server . -p 8080, y entra en http://localhost:8080/index.html';
+    _$(ID_SALIDA).insertAdjacentElement('beforebegin', aviso);
+    console.warn('[Pruebas] ' + aviso.textContent);
+  }
+
   function _panelConsola() {
     const grupos = [];
     for (const p of CATALOGO) if (!grupos.includes(p.grupo)) grupos.push(p.grupo);
@@ -336,6 +359,7 @@ var Pruebas = (function () {
       lineaGrupo.appendChild(btn);
     }
     _panelConsola();
+    _avisarServidorLocal();
   }
 
   return {

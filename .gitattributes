@@ -1,2 +1,6 @@
 *.bat text eol=crlf
+<<<<<<< HEAD
 *.ps1 text eol=crlf
+=======
+*.ps1 text eol=crlf
+>>>>>>> 1b67bcf5e3fb07e1d570a2a4d941f7cb606199c1

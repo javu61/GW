@@ -28,7 +28,7 @@
 //   ejecutar                   Ejecuta una prueba por id y devuelve su resultado, para Node.
 //   _lanzar                    Lanza una prueba desde su botón: pinta línea a línea y cierra
 //                              con el resumen (N OK, M fallo(s) y tiempo).
-//   _panelConsola              Panel «Desde consola»: una línea por suite S1..S6 (y «todas»),
+//   _panelConsola              Panel «Desde consola»: una línea por suite S1..S7,
 //                              con el comando que la lanza y un botón para copiarlo.
 //   inicializar                Por http y con GW_DEBUG activo: descubre la pestaña, crea una
 //                              línea por grupo (título + un botón por prueba, salvo las
@@ -265,7 +265,7 @@ var Pruebas = (function () {
   }
 
   /** Las suites de consola con su código Sx, en el orden de Lanzar.bat y
-   * pruebasTodas.ps1 (el .ps1 de cada suite coincide). «todas» no lleva código. */
+   * pruebasTodas.ps1 (el .ps1 de cada suite coincide). «todas» es la S7. */
   const SUITES_CONSOLA = [
     ['S1', 'motor'], 
     ['S2', 'director'], 
@@ -277,9 +277,9 @@ var Pruebas = (function () {
   ];
 
   /**
-   * Panel «Desde consola»: una línea por suite S1..S6 (y «todas») con el comando
-   * que la lanza y un botón «copiar». Se pegan en CMD o PowerShell, en la carpeta
-   * del proyecto. Se coloca debajo de la salida de la pestaña.
+   * Panel «Desde consola»: una línea por suite S1..S7 con el comando
+   * que la lanza y un botón «copiar». Se pegan en CMD o PowerShell, parado en
+   * la carpeta pruebas del proyecto. Se coloca debajo de la salida de la pestaña.
    * @returns {void}
    */
   function _panelConsola() {
@@ -288,7 +288,7 @@ var Pruebas = (function () {
     panel.style.cssText = 'margin-top:1em';
     const t = document.createElement('div');
     t.style.cssText = 'font-weight:bold;margin-bottom:.3em';
-    t.textContent = 'Desde consola (copiar y pegar en CMD o PowerShell, en la carpeta del proyecto):';
+    t.textContent = 'Desde consola (copiar y pegar en CMD o PowerShell, parado en la carpeta pruebas del proyecto):';
     panel.appendChild(t);
     for (const [sx, g] of SUITES_CONSOLA) {
       const cmd = 'Lanzar.bat ' + g;

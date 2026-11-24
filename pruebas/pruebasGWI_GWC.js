@@ -19,8 +19,16 @@
 //                               de donde los reconstruye la carga del GWI).
 //   Las dos de juego dejan sus partidas en Pruebas.datos: en Node, GRABAR=fichero las guarda y
 //   COMPARAR=fichero las compara con las guardadas (red de seguridad del motor).
+//   P1/P2/P3 (F5-I17)         El par GWI/GWC: el codigoGWC en la ficha de Cartucho (P1), el aviso
+//                              al guardar el GWI a secas (P2) y al generar el par (P3). Las dos
+//                              últimas solo en consola: el paso descarga los ficheros.
 //
 // FUNCIONES
+//   _codigoEnFicha              (F5-I17) El campo solo lectura «Código GWC» de la ficha de Cartucho.
+//   _codigoDeGWI               (F5-I17) El codigoGWC declarado en el JSON del GWI.
+//   _pruebaParFicha            (F5-I17) Prueba «Par: ficha codigoGWC».
+//   _pruebaParGuardar          (F5-I17) Prueba «Par: guardar despareja» (solo consola).
+//   _pruebaParGenerar          (F5-I17) Prueba «Par: generar desfasado» (solo consola).
 //   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
 //   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
 //   _pruebaEquivalencia         Pruebas de datos (normal y variante).
@@ -150,6 +158,99 @@
     await U.cargarEn('ficheroGWIZip', [U.fichero('cartucho.zip', bytes)], 3500);
   }
 
+  /* ---------------- F5-I17 (M1/M2): el par GWI/GWC y su codigoGWC ---------------- */
+
+  /** El campo solo lectura «Código GWC» de la ficha de Cartucho (o null). */
+  function _codigoEnFicha() {
+    const inp = [...document.querySelectorAll('#fichaCartucho input')].find(i => i.readOnly);
+    return inp ? inp.value : null;
+  }
+
+  /** El codigoGWC declarado en el JSON del GWI (o null si no lo trae). */
+  async function _codigoDeGWI(bytes) {
+    const zip = await JSZip.loadAsync(bytes);
+    const json = JSON.parse(await zip.file(Object.keys(zip.files)
+      .find(n => /^[^/]+\.json$/.test(n))).async('string'));
+    return json.codigoGWC || null;
+  }
+
+  async function _pruebaParFicha(opc) {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const j0 = BaseDirector.datosCartucho();
+    if (!j0 || j0.tipo !== 'GWI') return null;
+    const esperado = (await _codigoDeGWI(await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip')))
+      || '---';
+    const enFicha = _codigoEnFicha();
+    ok('P1: el GWI cargado muestra su codigoGWC en la ficha de Cartucho',
+      enFicha === esperado, enFicha + ' (esperado ' + esperado + ')');
+    return out;
+  }
+
+  // Las siguientes dos pruebas descargan ficheros al paso real del guardado, así que
+  // solo se lanzan desde la consola (en Playwright la descarga no se acepta):
+  // el contenido de la barra de estado se verifica igual.
+  async function _pruebaParGuardar() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const j0 = BaseDirector.datosCartucho();
+    if (!j0 || j0.tipo !== 'GWI') return null;
+    const antes = _codigoEnFicha();
+    if (!antes || antes === '---') {
+      out.push(['P2: (omitida: el GWI cargado no trae codigoGWC)', true, '']);
+      return out;
+    }
+    document.getElementById('btnGuardar').click();
+    await U.esperar(2500);
+    const estado = document.getElementById('estado').textContent;
+    ok('P2: guardar el GWI a secas avisa de que el GWC del destino queda desparejado',
+      /queda desparejado/.test(estado) && estado.includes(antes), estado);
+    ok('P2: la ficha de Cartucho vuelve a «---» al soltar el código',
+      _codigoEnFicha() === '---', _codigoEnFicha());
+    return out;
+  }
+
+  async function _pruebaParGenerar(opc) {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const bytes = await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip');
+    const codigoCargado = await _codigoDeGWI(bytes);
+    if (!codigoCargado) {
+      out.push(['P3: (omitida: el GWI no trae codigoGWC)', true, '']);
+      return out;
+    }
+    // Empezar del cartucho tal cual (para que la ficha traiga su código) y
+    // cargar de nuevo una copia con un cambio declarado en la autoría
+    // (pausaSim): al cargar se reconstruye desde ahí y el Bloque 1 sale
+    // distinto, de modo que generar produce un CRC diferente al declarado.
+    const setup = await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json');
+    await _cargarGWI(setup, bytes);
+    const enFichaInicio = _codigoEnFicha();
+    ok('P3 (previo): el GWI cargado mantiene su codigoGWC declarado en la ficha',
+      enFichaInicio === codigoCargado, enFichaInicio);
+    const zip = await JSZip.loadAsync(bytes);
+    const nombreJson = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
+    const json = JSON.parse(await zip.file(nombreJson).async('string'));
+    const segCartucho = json.autoria.cambios.find(c => c.tipo === 'cartucho').segmento;
+    const pausaSim = (json.pausas && json.pausas.simulador) || 0;
+    const nuevoValor = pausaSim === 499 ? 501 : 499;
+    json.autoria.ultimoOp += 1;
+    json.autoria.cambios.push({ n: json.autoria.ultimoOp, relacionados: 0,
+      segmento: segCartucho, pausaSim: nuevoValor, antes: { pausaSim: pausaSim } });
+    zip.file(nombreJson, JSON.stringify(json, null, 2));
+    await U.cargarEn('ficheroGWIZip',
+      [U.fichero('cartucho.zip', await zip.generateAsync({ type: 'uint8array' }))], 3500);
+    document.getElementById('btnGenerar').click();
+    await U.esperar(6000);
+    const estado = document.getElementById('estado').textContent;
+    ok('P3: generar avisa de que el GWC anterior queda desfasado (los dos códigos)',
+      /queda desfasado/.test(estado) && estado.includes(codigoCargado), estado);
+    const codigoNuevo = _codigoEnFicha();
+    ok('P3: la ficha muestra el codigoGWC NUEVO del par',
+      !!codigoNuevo && codigoNuevo !== '---' && codigoNuevo !== codigoCargado, codigoNuevo);
+    return out;
+  }
+
   /** Juega ticks con la cola del reloj; devuelve, por tick, qué segmentos están encendidos. */
   async function _jugarPartida(cargar, semilla, ticks, sinPulsar) {
     await cargar();
@@ -228,7 +329,10 @@
     { id: 'equivalencia', grupo: 'gwi_gwc', nombre: 'Equivalencia (datos)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(false) },
     { id: 'equivalenciaVariante', grupo: 'gwi_gwc', nombre: 'Equivalencia (variante)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(true) },
     { id: 'equivalenciaJuego', grupo: 'gwi_gwc', nombre: 'Equivalencia (juego)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaJuego', false, o) },
-    { id: 'equivalenciaCompleta', grupo: 'gwi_gwc', nombre: 'Equivalencia (completa)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaCompleta', true, o) }
+    { id: 'equivalenciaCompleta', grupo: 'gwi_gwc', nombre: 'Equivalencia (completa)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaCompleta', true, o) },
+    { id: 'parFicha', grupo: 'gwi_gwc', nombre: 'Par: ficha codigoGWC', necesita: 'gwi', ejecutar: (o) => _pruebaParFicha(o) },
+    { id: 'parGuardar', grupo: 'gwi_gwc', nombre: 'Par: guardar despareja', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaParGuardar() },
+    { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'Par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) }
   ]);
 })();
 

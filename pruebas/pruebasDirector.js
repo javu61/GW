@@ -10,11 +10,13 @@
 //   D1  Cargar un GWC tras un GWI no deja la autoría del GWI viva (editable, Guardar, Generar).
 //   D2  Un cartucho que no arranca la autoría no deja habilitados Guardar, Generar ni el Editor.
 //   D3  Un cartucho incompatible con la máquina NO destruye el cartucho que ya estaba cargado.
+//   D4  (F5-I17) Cargar un GWB sobre un GWI con autoría avisa del historial que se descarta;
+//       recargar el mismo GWI, no.
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 / _pruebaD2 / _pruebaD3
+//   _pruebaD1 / _pruebaD2 / _pruebaD3 / _pruebaD4
 //                        Una función por prueba.
 //
 // USO
@@ -106,10 +108,33 @@
     return out;
   }
 
+  // F5-I17 (M3): cargar un cartucho no-GWI sobre un GWI con autoría descarta el historial: aviso.
+  async function _pruebaD4() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const estado = () => document.getElementById('estado').textContent;
+    await U.cargarEn('ficheroSetup', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    const bytes = await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip');
+    await U.cargarEn('ficheroGWIZip', [U.fichero('g.zip', bytes)], 3500);
+    const antes = _estado();
+    ok('D4 (previo): el GWI cargado tiene autoría y Guardar activo',
+      antes.tipo === 'GWI' && antes.guardar, JSON.stringify(antes));
+    await U.cargarEn('ficheroGWIZip', [U.fichero('g.zip', bytes)], 3500);
+    ok('D4: recargar el MISMO GWI no avisa de historial',
+      !/descarta el historial/.test(estado()), estado());
+    await U.cargarEn('ficheroGWBZip', [await _gwbModificado(() => { })], 2500);
+    const tras = _estado();
+    ok('D4: cargar un GWB sobre un GWI con autoría avisa del historial descartado',
+      /descarta el historial/.test(estado()) && /acción/.test(estado()), estado());
+    ok('D4 (previo): el GWB ahora es el cartucho en memoria', tras.tipo === 'GWB', JSON.stringify(tras));
+    return out;
+  }
+
   Pruebas.registrar([
     { id: 'd1', grupo: 'director', nombre: 'D1 GWC tras GWI', destructiva: true, ejecutar: (o) => _pruebaD1(o) },
     { id: 'd3', grupo: 'director', nombre: 'D3 cartucho incompatible', destructiva: true, ejecutar: () => _pruebaD3() },
-    { id: 'd2', grupo: 'director', nombre: 'D2 GWB que no descompone', destructiva: true, ejecutar: () => _pruebaD2() }
+    { id: 'd2', grupo: 'director', nombre: 'D2 GWB que no descompone', destructiva: true, ejecutar: () => _pruebaD2() },
+    { id: 'd4', grupo: 'director', nombre: 'D4 GWB sobre autoría', destructiva: true, ejecutar: () => _pruebaD4() }
   ]);
 })();
 

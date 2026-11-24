@@ -18,7 +18,8 @@
 //     (opcionales) con miniatura, nombre, tamaño y los botones
 //     «Cargar…» y «Borrar».
 //   - Botones: la tabla de los botones posibles según el estilo
-//     elegido (incluido el trío de sistema A/B/R, 6-7-8), con «Usado» e «id».
+//     elegido (incluido el trío de sistema A/B/R, 6-7-8), con «Usado»,
+//     «id» y «Tecla» (F5-I17, M7: el mismo desplegable que el setup).
 //
 // SEPARACIÓN
 //   No conoce al descomponedor: solo pinta y guarda el estado de la
@@ -52,6 +53,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _pintarTablaBotones     _campo
+//    _teclaDeFicha
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
@@ -89,7 +91,12 @@ const BaseFicha = (function () {
   let raiz = null;                // contenedor ya construido
   let campos = {};                // nombre, estilo, ancho, alto
   let imagenes = {};              // clave → {img, nombre, url, ui:{...}}
-  let idsBoton = {};              // número → {usado, id} (sobrevive al cambio de estilo)
+  let idsBoton = {};              // número → {usado, id, tecla} (sobrevive al cambio de estilo)
+
+  // F5-I17 (M7): los cuatro nombres de cursor admitidos como tecla (los
+  // mismos valores que el GWS; la validación común vive en BaseDirector).
+  const CURSORES = ['cursor-izquierda', 'cursor-derecha',
+    'cursor-arriba', 'cursor-abajo'];
   let cuerpoBotones = null;
   let mensajes = null;            // zona de errores/avisos
   let extras = {};                // combinar/etiquetas del GWB cargado (se conservan al guardar)
@@ -302,6 +309,21 @@ const BaseFicha = (function () {
   // ---------------- Botones ----------------
 
   /**
+   * F5-I17 (M7): la tecla efectiva de una fila de la tabla: el nombre de
+   * cursor elegido en la lista, o la letra de la casilla cuando la lista
+   * está en «Propia». Sin tecla, ''.
+   * @param {HTMLElement} tr - Fila de la tabla de botones.
+   * @returns {string} La tecla tal como va al JSON del GWB/GWI.
+   */
+  function _teclaDeFicha(tr) {
+    const lista = tr.querySelector('.colTeclaLista');
+    if (!lista) return '';
+    if (lista.value !== 'tecla') return lista.value;
+    const letra = tr.querySelector('.colTeclaLetra');
+    return letra ? letra.value : '';
+  }
+
+  /**
    * Repinta la tabla de botones según el estilo elegido, conservando lo
    * ya escrito para cada número.
    * @returns {void}
@@ -311,7 +333,8 @@ const BaseFicha = (function () {
     for (const fila of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
       idsBoton[fila.dataset.numero] = {
         usado: fila.querySelector('input[type=checkbox]').checked,
-        id: fila.querySelector('input[type=text]').value
+        id: fila.querySelector('.colId').value,
+        tecla: _teclaDeFicha(fila)
       };
     }
     cuerpoBotones.textContent = '';
@@ -319,13 +342,13 @@ const BaseFicha = (function () {
     if (numeros.length === 0) {
       const tr = _crearElemento('tr');
       const td = _crearElemento('td', 'fichaNota', 'Elige un estilo (o carga un setup) para ver los botones posibles.');
-      td.colSpan = 3;
+      td.colSpan = 4;
       tr.appendChild(td);
       cuerpoBotones.appendChild(tr);
       return;
     }
     for (const n of numeros) {
-      const previo = idsBoton[String(n)] || { usado: false, id: '' };
+      const previo = idsBoton[String(n)] || { usado: false, id: '', tecla: '' };
       const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
       const tdUsado = _crearElemento('td');
@@ -335,11 +358,42 @@ const BaseFicha = (function () {
       const tdNumero = _crearElemento('td', null, String(n) +
         (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
       const tdId = _crearElemento('td');
-      const id = _entrada('text', { value: previo.id, placeholder: 'id lógico (IZQ, DER, Start…)' });
+      const id = _entrada('text', { className: 'colId', value: previo.id,
+        placeholder: 'id lógico (IZQ, DER, Start…)' });
       id.disabled = !usado.checked;
-      usado.addEventListener('change', () => { id.disabled = !usado.checked; });
       tdId.appendChild(id);
-      tr.append(tdUsado, tdNumero, tdId);
+      // F5-I17 (M7): la tecla se elige en la misma lista cerrada que el
+      // setup (los cuatro cursores y «Propia»), con casilla de letra aparte;
+      // solo editable si el botón está Usado.
+      const lista = _crearElemento('select', 'colTeclaLista');
+      for (const [valor, texto] of [['', '(sin tecla)'],
+        ...CURSORES.map(c => [c, c]), ['tecla', 'Propia (letra)']]) {
+        const o = document.createElement('option');
+        o.value = valor; o.textContent = texto;
+        lista.appendChild(o);
+      }
+      const nombreTecla = String(previo.tecla || '').trim().toLowerCase();
+      if (CURSORES.includes(nombreTecla)) lista.value = nombreTecla;
+      else if (/^[a-zA-Z]$/.test(nombreTecla)) lista.value = 'tecla';
+      else lista.value = '';
+      const letra = _entrada('text', { className: 'colTeclaLetra', maxLength: 1,
+        value: lista.value === 'tecla' ? String(previo.tecla || '').toUpperCase() : '' });
+      letra.classList.toggle('oculto', lista.value !== 'tecla');
+      letra.placeholder = 'A..Z';
+      lista.addEventListener('change', () => {
+        letra.classList.toggle('oculto', lista.value !== 'tecla');
+        if (lista.value !== 'tecla') letra.value = '';
+      });
+      const tdTecla = _crearElemento('td');
+      tdTecla.append(lista, letra);
+      usado.addEventListener('change', () => {
+        id.disabled = !usado.checked;
+        lista.disabled = !usado.checked;
+        letra.disabled = !usado.checked;
+      });
+      lista.disabled = !usado.checked;
+      letra.disabled = !usado.checked;
+      tr.append(tdUsado, tdNumero, tdId, tdTecla);
       cuerpoBotones.appendChild(tr);
     }
   }
@@ -397,12 +451,13 @@ const BaseFicha = (function () {
     const tabla = _crearElemento('table', 'fichaTabla');
     const cabecera = _crearElemento('thead');
     const trCab = _crearElemento('tr');
-    for (const t of ['Usado', 'Botón', 'Id']) trCab.appendChild(_crearElemento('th', null, t));
+    for (const t of ['Usado', 'Botón', 'Id', 'Tecla']) trCab.appendChild(_crearElemento('th', null, t));
     cabecera.appendChild(trCab);
     cuerpoBotones = _crearElemento('tbody');
     tabla.append(cabecera, cuerpoBotones);
     seccionBot.appendChild(tabla);
     seccionBot.appendChild(_crearElemento('p', 'fichaNota',
+      'Tecla: letra o cursor del teclado del PC para el simulador (misma lista que el setup; la del cartucho manda sobre la del setup). ' +
       'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
     contenedor.appendChild(seccionBot);
 
@@ -540,6 +595,23 @@ const BaseFicha = (function () {
       const clave = b.id.toLowerCase();
       if (vistos.has(clave)) errores.push('El id «' + b.id + '» está repetido.');
       vistos.add(clave);
+    }
+    // F5-I17 (M8): las teclas del cartucho, la misma regla que el GWS:
+    // letra A..Z o nombre de cursor, sin repetir entre las declaradas.
+    const teclasVistas = new Set();
+    for (const b of e.botones) {
+      if (b.tecla === undefined) continue;
+      const valida = (typeof BaseDirector !== 'undefined' && BaseDirector.teclaValida)
+        ? BaseDirector.teclaValida(b.tecla) : true;
+      if (!valida) {
+        errores.push('La tecla «' + b.tecla + '» del botón ' + b.numero +
+          ' no es válida: letra A..Z o nombre de cursor (los dígitos no existen desde F5-I17).');
+        continue;
+      }
+      if (teclasVistas.has(b.tecla.toLowerCase())) {
+        errores.push('La tecla «' + b.tecla + '» está repetida (botón ' + b.numero + ').');
+      }
+      teclasVistas.add(b.tecla.toLowerCase());
     }
     if (e.botones.length === 0) avisos.push('El cartucho no declara botones: se usarán los del setup.');
     // Validación del contrato del GWB (la misma que al cargarlo). El
@@ -679,7 +751,18 @@ const BaseFicha = (function () {
     }
     const botones = botonesDelEstilo(_estiloEfectivo())
       .filter(n => idsBoton[String(n)] && idsBoton[String(n)].usado)
-      .map(n => ({ numero: n, id: idsBoton[String(n)].id.trim() }));
+      .map(n => {
+        const d = idsBoton[String(n)];
+        const b = { numero: n, id: d.id.trim() };
+        const t = String(d.tecla || '').trim();
+        // F5-I17 (M7): la tecla viaja normalizada (cursor en minúsculas,
+        // letra en mayúsculas); un botón sin tecla no escribe el campo.
+        if (t) {
+          b.tecla = (typeof BaseDirector !== 'undefined' && BaseDirector.normalizarTecla)
+            ? BaseDirector.normalizarTecla(t) : t;
+        }
+        return b;
+      });
     return {
       nombre: campos.nombre.value.trim(),
       estilo: campos.estilo.value || null,
@@ -782,7 +865,8 @@ const BaseFicha = (function () {
     if (d.botones !== undefined) {
       idsBoton = {};
       for (const b of d.botones || []) {
-        idsBoton[String(b.numero)] = { usado: true, id: b.id ? String(b.id) : '' };
+        idsBoton[String(b.numero)] = { usado: true, id: b.id ? String(b.id) : '',
+          tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : '' };
       }
       cuerpoBotones.textContent = '';   // que no pise lo recién cargado
     }

@@ -99,7 +99,8 @@
 //   _buscarBotonPorTecla          Encuentra el botón físico asociado a una tecla (si existe); F5-I17
 //                                también con las flechas del PC (ArrowLeft → cursor-izquierda…).
 //   _teclaDeEvento               F5-I17: tecla de evento normalizada (flecha PC → nombre de cursor).
-//   teclaValida / normalizarTecla F5-I17: la tecla del botón (letra A..Z o nombre de cursor).
+//   teclaValida / normalizarTecla F5-I17: la tecla del botón (letra A..Z o nombre de cursor);
+//                                públicas desde M8 (las usan la ficha del cartucho y la carga).
 //   _alPulsarTecla                Permite jugar sin ratón:
 //   _alSoltarTecla                Soltar una tecla quita el resaltado de su botón.
 //   _pulsarSistema                Pulsación de un botón del trío en modo sistema (F5-I10).
@@ -473,12 +474,18 @@ var BaseDirector = (function () {
       el.style.gridRow = pos.celda[0];
       el.style.gridColumn = pos.celda[1];
     }
-    // Tecla de teclado asociada: la del setup o, si no declara, la de
-    // por defecto del estilo (F5-I17, M6). Los cursor llevan dataset con
-    // el nombre y pista con el símbolo; las letras, dataset y pista como
-    // antes (minúscula/mayúscula).
+    // Tecla de teclado asociada (F5-I17, M8): la del cartucho en memoria
+    // (GWI o GWB, botones[].tecla), si la declara para ese botón; si no,
+    // la del setup; si tampoco, la de por defecto del estilo (F5-I17, M6).
+    // Los cursor llevan dataset con el nombre y pista con el símbolo; las
+    // letras, dataset y pista como antes (minúscula/mayúscula).
+    const delCartucho = (cartucho && Array.isArray(cartucho.botones))
+      ? cartucho.botones.find(b => b && String(b.numero) === String(boton.numero) &&
+        b.tecla !== undefined && b.tecla !== null && b.tecla !== '') || null
+      : null;
     const defecto = (setupGWS && TECLAS_POR_DEFECTO[String(setupGWS.estilo)]) || {};
-    const tecla = normalizarTecla(boton.tecla || defecto[boton.numero] || '');
+    const tecla = normalizarTecla(delCartucho ? delCartucho.tecla :
+      (boton.tecla || defecto[boton.numero] || ''));
     const cursor = CURSORES[tecla.toLowerCase()];
     if (tecla) el.dataset.tecla = tecla.toLowerCase();
     // Etiqueta visible + pista pequeña con la tecla asociada
@@ -1078,7 +1085,8 @@ var BaseDirector = (function () {
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
         botones: (json.botones || []).map(b => ({
-          numero: _normalizarNumeroBoton(b.numero), id: b.id
+          numero: _normalizarNumeroBoton(b.numero), id: b.id,
+          tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : undefined
         })),
         imagenes: { img_s: imgS, img_f: imgF },
         extras: Object.fromEntries(['combinar', 'etiquetas']
@@ -1753,6 +1761,8 @@ var BaseDirector = (function () {
     avisar: avisar,
     avisarError: avisarError,
     validarSetup: validarSetup,           // F5-I12: la verifica también la ficha del Setup
+    teclaValida: teclaValida,             // F5-I17 (M8): la usan la ficha del cartucho y la validación de carga
+    normalizarTecla: normalizarTecla,     // F5-I17 (M8): idem, para comparar y guardar
     datosCartucho: () => cartucho,        // el JSON del cartucho en memoria (lo lee la pestaña Pruebas)
     codigoGWCCargado: () => (cartucho && cartucho.tipo === 'GWI' && cartucho.codigoGWC) ? cartucho.codigoGWC : null,   // F5-I17 (M2)
     jugar: jugar,

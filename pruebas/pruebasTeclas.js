@@ -13,13 +13,18 @@
 //       setup NO carga.
 //   T2  Setups sin teclas: los botones toman la tecla por defecto del estilo (estilo 2: cursores
 //       en 0/4 y el trío 1/2/3; estilo 5: cruceta con los cuatro cursores y el 4 con la letra Z).
+//   T3  Teclas propias del cartucho (F5-I17, M8, precedencia GWI > GWB > GWS): un GWB que declara
+//       teclas en botones[].tecla carga y manda sobre el setup (letra y cursor), los botones sin
+//       tecla caen al nivel inferior (el setup) y una tecla dígito o repetida NO carga.
 //
 // FUNCIONES
 //   _setupConTecla       Setup de cartuchos con la tecla del botón 0 cambiada (en memoria).
 //   _setupSinTeclas      Setup de cartuchos sin ninguna tecla declarada (en memoria).
+//   _gwbConTeclas        El GWB de cartuchos con teclas propias en botones[].tecla (en memoria).
 //   _botonPorNumero      El botón físico del estilo activo por su número.
 //   _pruebaT1            Prueba «T1 tecla cursor y rechazos» (destructiva).
 //   _pruebaT2            Prueba «T2 teclas por defecto por estilo» (destructiva).
+//   _pruebaT3            Prueba «T3 teclas del cartucho» (destructiva).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -50,6 +55,17 @@
     const json = JSON.parse(new TextDecoder().decode(await U.traerBytes('pruebas/cartuchos/' + fich)));
     for (const b of json.botones) delete b.tecla;
     return U.fichero(fich, new TextEncoder().encode(JSON.stringify(json)), 'application/json');
+  }
+
+  /** El GWB de cartuchos con teclas propias en botones[].tecla (en memoria). */
+  async function _gwbConTeclas(teclas) {
+    const zip = await JSZip.loadAsync(await U.traerBytes('pruebas/cartuchos/cartucho_GWB.zip'));
+    const nombreJson = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
+    const json = JSON.parse(await zip.file(nombreJson).async('string'));
+    const porNumero = new Map(json.botones.map(b => [String(b.numero), b]));
+    for (const [n, t] of Object.entries(teclas)) porNumero.get(n).tecla = t;
+    zip.file(nombreJson, JSON.stringify(json));
+    return U.fichero('gwb.zip', await zip.generateAsync({ type: 'uint8array' }));
   }
 
   /** El botón físico del estilo activo por su número (o null). */
@@ -122,9 +138,39 @@
     return out;
   }
 
+  async function _pruebaT3() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const teclaDe = (n) => { const b = _botonPorNumero(String(n)); return b ? b.dataset.tecla : null; };
+    const pistaDe = (n) => {
+      const b = _botonPorNumero(String(n)); const s = b ? b.querySelector('small') : null;
+      return s ? s.textContent : null;
+    };
+    // GWB con teclas propias (0 letra M, 4 cursor-arriba): mandan sobre el
+    // setup (O y P); el botón sin tecla en el cartucho cae al nivel
+    // inferior (el setup: 6 → Z).
+    await _cargarSetup('setup2.json', 600);
+    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: 'M', 4: 'cursor-arriba' })], 1500);
+    ok('T3: el GWB con teclas propias carga', /Cartucho cargado/.test(estado()), estado());
+    const r1 = { b0: teclaDe(0), p0: pistaDe(0), b4: teclaDe(4), p4: pistaDe(4), b6: teclaDe(6) };
+    ok('T3: mandan las teclas del cartucho (0 → M, 4 → cursor-arriba) y el 6 sin tecla cae al setup (Z)',
+      r1.b0 === 'm' && r1.p0 === 'M' && r1.b4 === 'cursor-arriba' && r1.p4 === '↑' &&
+      r1.b6 === 'z', JSON.stringify(r1));
+    // Rechazos: tecla dígito y tecla repetida en el cartucho (M8).
+    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: '5' })], 1500);
+    ok('T3: tecla dígito «5» en el cartucho NO carga',
+      /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());
+    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: 'M', 4: 'm' })], 1500);
+    ok('T3: tecla repetida en el cartucho NO carga',
+      /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());
+    await _cargarSetup('setup2.json', 600);      // dejamos la máquina como estaba
+    return out;
+  }
+
   Pruebas.registrar([
     { id: 'teclaCursor', grupo: 'teclas', nombre: 'T1 tecla cursor y rechazos', destructiva: true, ejecutar: () => _pruebaT1() },
-    { id: 'teclaDefaults', grupo: 'teclas', nombre: 'T2 teclas por defecto por estilo', destructiva: true, ejecutar: () => _pruebaT2() }
+    { id: 'teclaDefaults', grupo: 'teclas', nombre: 'T2 teclas por defecto por estilo', destructiva: true, ejecutar: () => _pruebaT2() },
+    { id: 'teclaCartucho', grupo: 'teclas', nombre: 'T3 teclas del cartucho', destructiva: true, ejecutar: () => _pruebaT3() }
   ]);
 })();
 

@@ -999,6 +999,11 @@ var BaseDirector = (function () {
       const incompatible = _botonesInexistentes(json);
       if (incompatible) throw new Error(incompatible + ' (se conserva el cartucho anterior).');
 
+      // F5-I17 (M3): la cuenta de acciones de la autoría en curso va ANTES
+      // de _limpiarCartucho: su reset vacía el historial y después el
+      // contador daría siempre 0 (el aviso de descarte nunca saldría).
+      const accionesPrevias = BaseDescomponer.numeroDeCambios();
+
       _limpiarCartucho();                       // fuera el cartucho anterior
       cartucho = json;
       const tipo = json.tipo;                  // obligatorio: sin tipo no se carga
@@ -1026,10 +1031,6 @@ var BaseDirector = (function () {
       // img_s: la base de la geometría (leída por el módulo; en GWI
       // puede venir como fichero propio copiado al guardar).
       imgS = leido.imgS;
-      // F5-I17 (M3): ¿cuántas acciones tiene la autoría en curso? Si
-      // encima viene un GWB (no un GWI, que trae la SUYA), se descartan
-      // sin que el autor dice nada: hay que avisar (no bloqueante).
-      const accionesPrevias = BaseDescomponer.numeroDeCambios();
       BaseDescomponer.reset();                     // autoría anterior, fuera
       // El puente se escribe DESPUÉS del reset (ver volcarAlPuente).
       _volcarAlPuente(fondo, !!json.combinar, json);

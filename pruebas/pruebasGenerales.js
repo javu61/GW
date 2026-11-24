@@ -6,19 +6,19 @@
 //   tercera carga cartuchos para ver la ficha y el pintado, y por eso sustituye el cartucho cargado.
 //
 // PRUEBAS (grupo «generales»)
-//   CRC y lector del GWC      Se genera y se lee; el CRC frente al cálculo independiente (vector
+//   G1 CRC y lector del GWC   Se genera y se lee; el CRC frente al cálculo independiente (vector
 //                             «123456789» = 0x29B1) y detección de bytes intercambiados; errores
 //                             claros del lector ante datos fuera de rango (con el CRC reparado, para
 //                             que lo único que falle sea la validación).
-//   ColorFondo en el GWC      Fondo por defecto, viaje del ColorFondo, huella en el Código GWC, bit
+//   G2 ColorFondo en el GWC   Fondo por defecto, viaje del ColorFondo, huella en el Código GWC, bit
 //                             «combinar» en el Bloque 0 y tamaños de los Bloques 0 y 1.
-//   ColorFondo (ficha y GWB)  Destructiva: la ficha entrega el ColorFondo (el blanco no viaja) y un
+//   G3 ColorFondo (ficha GWB) Destructiva: la ficha entrega el ColorFondo (el blanco no viaja) y un
 //                             GWB sin img_f lo guarda y pinta el fondo con él.
 //
 // FUNCIONES
-//   _pruebaCrcYLector         Prueba «CRC y lector del GWC».
-//   _pruebaColorFondo         Prueba «ColorFondo en el GWC».
-//   _pruebaColorFondoFicha    Prueba «ColorFondo (ficha y GWB)».
+//   _pruebaCrcYLector         Prueba «G1 CRC y lector del GWC».
+//   _pruebaColorFondo         Prueba «G2 ColorFondo en el GWC».
+//   _pruebaColorFondoFicha    Prueba «G3 ColorFondo (ficha y GWB)».
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -35,7 +35,7 @@
     const { json: j, sprites, pantalla: pant } = Pruebas.util.cartuchoLaboratorio();
 
     const g0 = BaseCartucho.generarGWC(j, sprites, pant);
-    ok('GWC genera y se lee', BaseCartucho.leerGWC(g0.bytes).segmentos.length === 3);
+    ok('G1: GWC genera y se lee', BaseCartucho.leerGWC(g0.bytes).segmentos.length === 3);
 
     const b = g0.bytes.slice();
     let i1 = -1, i2 = -1;
@@ -43,11 +43,11 @@
       for (let k = i + 1; k < b.length; k++) if (b[i] !== b[k]) { i1 = i; i2 = k; break; }
     const t = b[i1]; b[i1] = b[i2]; b[i2] = t;
     let msg = ''; try { BaseCartucho.leerGWC(b); } catch (e) { msg = e.message; }
-    ok('CRC detecta bytes intercambiados (la suma aditiva no)', /CRC/.test(msg), msg);
+    ok('G1: CRC detecta bytes intercambiados (la suma aditiva no)', /CRC/.test(msg), msg);
 
-    ok('fondo por defecto blanco', BaseCartucho.leerGWC(g0.bytes).fondo === '#FFFFFF');
-    ok('CRC del test = CRC del módulo', g0.codigo === Pruebas.util.codigoCRC(g0.bytes), g0.codigo);
-    ok('vector 123456789 = 0x29B1',
+    ok('G1: fondo por defecto blanco', BaseCartucho.leerGWC(g0.bytes).fondo === '#FFFFFF');
+    ok('G1: CRC del test = CRC del módulo', g0.codigo === Pruebas.util.codigoCRC(g0.bytes), g0.codigo);
+    ok('G1: vector 123456789 = 0x29B1',
       Pruebas.util.crc16(new TextEncoder().encode('123456789')) === 0x29B1);
 
     const reparar = (bytes) => {
@@ -63,15 +63,15 @@
     const dv = new DataView(g0.bytes.buffer);
     const dir = (n) => dv.getUint32(14 + 5 + 12 + n * 4, true);
     const regSeg0 = dir(3) + 5;
-    falla('sprite fuera de rango', c => { c[regSeg0 + 5] = 9; }, /sprite 9/);
-    falla('enlace fuera de rango', c => { c[regSeg0 + 6] = 50; }, /segmento 50/);
+    falla('G1: sprite fuera de rango', c => { c[regSeg0 + 5] = 9; }, /sprite 9/);
+    falla('G1: enlace fuera de rango', c => { c[regSeg0 + 6] = 50; }, /segmento 50/);
     const secIni = dir(4) + 5;
-    falla('Secuencia con segmento fuera de rango', c => { c[secIni + 1] = 77; },
+    falla('G1: Secuencia con segmento fuera de rango', c => { c[secIni + 1] = 77; },
       /Secuencia usa el segmento 77/);
     const cfgIni = dir(1) + 5;
-    falla('mecanismo de fin desconocido', c => { c[cfgIni + 12] = 9; c[cfgIni + 13] = 0; },
+    falla('G1: mecanismo de fin desconocido', c => { c[cfgIni + 12] = 9; c[cfgIni + 13] = 0; },
       /fin desconocido/);
-    falla('tabla de sprites que no cabe', c => { c[14 + 5 + 5] = 250; }, /sprite|segmento/);
+    falla('G1: tabla de sprites que no cabe', c => { c[14 + 5 + 5] = 250; }, /sprite|segmento/);
     return out;
   }
 
@@ -85,15 +85,15 @@
     const g1 = BaseCartucho.generarGWC(Object.assign({}, j, { ColorFondo: '#336699' }),
       sprites, pant);
     const l1 = BaseCartucho.leerGWC(g1.bytes);
-    ok('ColorFondo viaja al GWC', l1.fondo === '#336699', l1.fondo);
-    ok('ColorFondo cambia el código del GWC', g0.codigo !== g1.codigo,
+    ok('G2: ColorFondo viaja al GWC', l1.fondo === '#336699', l1.fondo);
+    ok('G2: ColorFondo cambia el código del GWC', g0.codigo !== g1.codigo,
       g0.codigo + ' / ' + g1.codigo);
     // F5-I14 (P06): el bit «combinar» viaja en el Bloque 0 (36 bytes); el Bloque 1 mide 16.
     const gc = BaseCartucho.generarGWC(Object.assign({}, j, { combinar: true }), sprites, pant);
-    ok('combinar viaja en el Bloque 0',
+    ok('G2: combinar viaja en el Bloque 0',
       BaseCartucho.leerGWC(gc.bytes).combinar === true && BaseCartucho.leerGWC(g0.bytes).combinar === false);
     const dv = new DataView(g0.bytes.buffer);
-    ok('Bloque 0 de 36 bytes y Bloque 1 de 16 bytes',
+    ok('G2: Bloque 0 de 36 bytes y Bloque 1 de 16 bytes',
       dv.getUint32(14 + 1, true) === 36 && dv.getUint32(14 + 5 + 36 + 1, true) === 16);
     return out;
   }
@@ -106,9 +106,9 @@
     // La ficha entrega el ColorFondo; el blanco no viaja.
     BaseFicha.poblar({ colorFondo: '#336699' });
     const ficha = { e: BaseFicha.estado().colorFondo, d: BaseFicha.datosCartucho().colorFondo };
-    ok('la ficha entrega ColorFondo', ficha.e === '#336699' && ficha.d === '#336699', JSON.stringify(ficha));
+    ok('G3: la ficha entrega ColorFondo', ficha.e === '#336699' && ficha.d === '#336699', JSON.stringify(ficha));
     BaseFicha.poblar({ colorFondo: '#ffffff' });
-    ok('blanco no viaja', BaseFicha.estado().colorFondo === null);
+    ok('G3: blanco no viaja', BaseFicha.estado().colorFondo === null);
 
     // Un GWB sin img_f y con ColorFondo: el canvas se pinta de ese color.
     await U.cargarEn('ficheroSetup', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
@@ -123,14 +123,14 @@
     const bytes = await zip.generateAsync({ type: 'uint8array' });
     await U.cargarEn('ficheroGWBZip', [U.fichero('cf.zip', bytes)], 1500);
     const pintado = { cf: BaseDirector.colorFondo(), ficha: BaseFicha.estado().colorFondo };
-    ok('GWB sin img_f guarda el ColorFondo', pintado.cf === '#336699' && pintado.ficha === '#336699', JSON.stringify(pintado));
+    ok('G3: GWB sin img_f guarda el ColorFondo', pintado.cf === '#336699' && pintado.ficha === '#336699', JSON.stringify(pintado));
     return out;
   }
 
   Pruebas.registrar([
-    { id: 'crcLector', grupo: 'generales', nombre: 'CRC y lector del GWC', ejecutar: () => _pruebaCrcYLector() },
-    { id: 'colorFondo', grupo: 'generales', nombre: 'ColorFondo en el GWC', ejecutar: () => _pruebaColorFondo() },
-    { id: 'colorFondoFicha', grupo: 'generales', nombre: 'ColorFondo (ficha y GWB)', destructiva: true,
+    { id: 'crcLector', grupo: 'generales', nombre: 'G1 CRC y lector del GWC', ejecutar: () => _pruebaCrcYLector() },
+    { id: 'colorFondo', grupo: 'generales', nombre: 'G2 ColorFondo en el GWC', ejecutar: () => _pruebaColorFondo() },
+    { id: 'colorFondoFicha', grupo: 'generales', nombre: 'G3 ColorFondo (ficha y GWB)', destructiva: true,
       ejecutar: (o) => _pruebaColorFondoFicha(o) }
   ]);
 })();

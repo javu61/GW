@@ -224,11 +224,13 @@ const BaseSetup = (function () {
       });
       const alias = _entrada('text', { className: 'colAlias', value: d.alias });
       alias.style.minWidth = '8em';
-      for (const c of [puerto, tecla, alias]) {
-        const td = _crearElemento('td');
-        td.appendChild(c);
-        tr.appendChild(td);
-      }
+      const tdPuerto = _crearElemento('td');
+      tdPuerto.appendChild(puerto);
+      const tdTecla = _crearElemento('td');
+      tdTecla.append(lista, tecla);
+      const tdAlias = _crearElemento('td');
+      tdAlias.appendChild(alias);
+      tr.append(tdPuerto, tdTecla, tdAlias);
       tr.insertBefore(tdN, tr.firstChild);
       cuerpoBotones.appendChild(tr);
     }

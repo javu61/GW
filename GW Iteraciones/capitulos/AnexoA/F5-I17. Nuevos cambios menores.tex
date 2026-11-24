@@ -122,9 +122,9 @@ En el sistema externo no influye en nada: ni el GWB/GWI cambian su sentido: \tex
 	\midrule
 	BaseDirector & M6 & \texttt{TECLAS\_POR\_DEFECTO} pasa a depender del estilo: 2 botones 0/4 $\to$ cursor-izquierda/derecha; 4 botones 0/1 $\to$ W/S y 4/5 $\to$ O/K; 5 botones cruceta 0--3 $\to$ los cuatro cursores y 4 $\to$ Z; trío sistema 6/7/8 $\to$ 1/2/3 & Cargar cada estilo sin setup de teclas: en el de 5 la cruceta responde a las flechas del PC; en todos, el trío A/B/R responde a 1/2/3 \\
 	
-	BaseFicha & M7 & La tabla de botones de la ficha de Cartucho incorpora la columna Tecla, mismo desplegable que el setup (lista + casilla de letra); solo editable con el botón Usado; se serializa en \texttt{botones[].tecla} del GWI o GWB & GWI o GWB con \texttt{tecla: "cursor-izquierda"} en un botón: la pista lleva $\leftarrow$ y la flecha lo pulsa; recargar: la ficha muestra la tecla guardada \\
+	BaseFicha & M7 & La tabla de botones de la ficha de Cartucho incorpora la columna Tecla, mismo desplegable que el setup (lista + casilla de letra); solo editable con el botón Usado; se serializa en \texttt{botones[].tecla} del GWI o GWB & GWI o GWB con \texttt{tecla: "cursor-izquierda"} en un botón: la pista lleva $\leftarrow$ y la flecha lo pulsa; recargar: la ficha muestra la tecla guardada; caja T3 (S6) \\
 	
-	BaseDirector & M8 & Resolución de tecla botón a botón: GWI $>$ GWB $>$ GWS $>$ defecto del estilo; al verificar el cartucho se valida su tecla (letra o cursor, sin repetir entre las declaradas; dígito rechaza) & Cartucho con teclas propias: mandan sobre el setup; al borrarlas vuelve la del setup; \texttt{tecla: "5"} NO verifica \\
+	BaseDirector & M8 & Resolución de tecla botón a botón: GWI $>$ GWB $>$ GWS $>$ defecto del estilo; al verificar el cartucho se valida su tecla (letra o cursor, sin repetir entre las declaradas; dígito rechaza) & Cartucho con teclas propias: mandan sobre el setup; al borrarlas vuelve la del setup; \texttt{tecla: "5"} NO verifica; dígito y repetidas NO cargan: caja T3 (S6) \\
 	
 	\bottomrule
 \end{xltabular}

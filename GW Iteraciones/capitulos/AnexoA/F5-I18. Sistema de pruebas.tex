@@ -1,18 +1,28 @@
 \section{Decimoctava iteración de la Fase 5: sistema de pruebas}
 \label{sec:F5I18}
 
-Esta iteración documenta cómo se prueba el diseñador y por qué. Las pruebas se fueron añadiendo a lo largo de las iteraciones anteriores (F5-I13 a F5-I17) y llegaron a existir dos sistemas con la lógica repetida: la pestaña \emph{Pruebas} y varios scripts de Node. Aquí se describe el sistema único que los sustituye, cómo se lanza, qué cubre y cómo se añade una prueba nueva. Su puesta en marcha se hizo durante F5-I15 (ver~\ref{sec:F5I15Pruebas}); esta sección es la descripción completa y la que se mantiene al día.
+Ha sido un error no hacer de esta la primera iteración de la primera fase, ya que la práctica actual de la programación recomienda construir el sistema de pruebas antes siquiera de empezar con el código. Se han probado manualmente cada iteración siempre, y se han ido incluyendo pruebas automáticas a lo largo del desarrollo lanzadas de forma manual.
+
+Esta  iteración incluye las pruebas dentro del sistema, para que se puedan lazar de manera mas sencilla desde el propio \emph{Index.html}. Aquí se documenta como incluir el manejo de las pruebas en el diseñador y por qué. Los procesos para las pruebas en sí se fueron añadiendo principalmente  a lo largo de las iteraciones anteriores (F5-I13 a F5-I17), usando algunos botones sueltos y varios scripts de Node. Aquí se unifica todo en una nueva pestaña "Pruebas" que los incluye, se describe cómo se lanza, qué cubre y cómo se añade una prueba nueva.
 
 \subsection{Principios}
 \label{sec:F5I18Principios}
 
 \begin{enumerate}
 	\item \textbf{Una prueba, un sitio.} La lógica de cada prueba vive en un único fichero. Cambiar una prueba no obliga a tocar nada más.
+
 	\item \textbf{Dos formas de lanzarla, un solo código.} Un botón en la pestaña \emph{Pruebas} y un comando de consola ejecutan exactamente la misma función. El comando no contiene pruebas: abre la página con un navegador automático y llama a la misma función que el botón.
+
 	\item \textbf{Solo es público lo que otros módulos necesitan.} Ninguna función se hace pública por comodidad de las pruebas. Lo que no se puede probar desde fuera se prueba en una copia temporal (ver~\ref{sec:F5I18Editor}).
-	\item \textbf{Sin depender de cartuchos ajenos.} Las pruebas usan sus propios cartuchos (\texttt{pruebas/cartuchos}) o cartuchos de laboratorio construidos en memoria, de modo que regenerar los cartuchos de ejemplo del proyecto no las rompe.
+
+	\item \textbf{Sin depender de cartuchos ajenos.} Para que las pruebas tengan sentido  usan sus propios cartuchos, que han sido copiados a (\texttt{pruebas/cartuchos}), o bien cartuchos de laboratorio construidos en memoria, de modo que regenerar los cartuchos de ejemplo del proyecto no las rompe.
+
 	\item \textbf{Un resultado inequívoco.} Cada lanzamiento termina en una línea \texttt{RESULTADO: OK} o \texttt{RESULTADO: ERROR (detalle)} y con código de salida 0 o 1.
+
 	\item \textbf{Reproducir antes de corregir.} Una prueba nueva debe fallar con el código anterior (criterio de F5-I15).
+	
+	\item \textbf{Reproducible}: Las pruebas se pueden lanzar sin problema varias veces, por lo que tras cada iteración se realizará una prueba completa para asegurarnos de que todo sigue funcionando.
+	
 \end{enumerate}
 
 \subsection{Arquitectura}

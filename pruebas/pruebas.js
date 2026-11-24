@@ -285,7 +285,7 @@ var Pruebas = (function () {
     aviso.textContent = 'Página abierta por fichero (file://): las pruebas que leen ficheros del ' +
       'proyecto (G3 y todas las que cargan cartuchos de pruebas/cartuchos) fallan con «Failed to ' +
       'fetch». Abre index.html por un servidor local (http) con la raíz en la carpeta del proyecto; ' +
-      'por ejemplo, ejecuta en ella: npx http-server . -p 8080, y entra en http://localhost:8080/index.html';
+      'ejecuta pruebas\\Servidor.bat en la carpeta del proyecto (o npx http-server . -p 8080).';
     _$(ID_SALIDA).insertAdjacentElement('beforebegin', aviso);
     console.warn('[Pruebas] ' + aviso.textContent);
   }

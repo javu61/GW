@@ -3,7 +3,7 @@
 
 Ha sido un error no hacer de esta la primera iteración de la primera fase, ya que la práctica actual de la programación recomienda construir el sistema de pruebas antes siquiera de empezar con el código. Se han probado manualmente cada iteración siempre, y se han ido incluyendo pruebas automáticas a lo largo del desarrollo lanzadas de forma manual.
 
-Esta  iteración incluye las pruebas dentro del sistema, para que se puedan lazar de manera mas sencilla desde el propio \emph{Index.html}. Aquí se documenta como incluir el manejo de las pruebas en el diseñador y por qué. Los procesos para las pruebas en sí se fueron añadiendo principalmente  a lo largo de las iteraciones anteriores (F5-I13 a F5-I17), usando algunos botones sueltos y varios scripts de Node. Aquí se unifica todo en una nueva pestaña "Pruebas" que los incluye, se describe cómo se lanza, qué cubre y cómo se añade una prueba nueva.
+Esta iteración incluye las pruebas dentro del sistema, para que se puedan lanzar de manera más sencilla desde el propio \emph{Index.html}. Aquí se documenta cómo incluir el manejo de las pruebas en el diseñador y por qué. Los procesos para las pruebas en sí se fueron añadiendo principalmente a lo largo de las iteraciones anteriores (F5-I13 a F5-I17), usando algunos botones sueltos y varios scripts de Node. Aquí se unifica todo en una nueva pestaña \emph{Pruebas} que los incluye, se describe cómo se lanza, qué cubre y cómo se añade una prueba nueva.
 
 \subsection{Principios}
 \label{sec:F5I18Principios}
@@ -15,7 +15,7 @@ Esta  iteración incluye las pruebas dentro del sistema, para que se puedan laza
 
 	\item \textbf{Solo es público lo que otros módulos necesitan.} Ninguna función se hace pública por comodidad de las pruebas. Lo que no se puede probar desde fuera se prueba en una copia temporal (ver~\ref{sec:F5I18Editor}).
 
-	\item \textbf{Sin depender de cartuchos ajenos.} Para que las pruebas tengan sentido  usan sus propios cartuchos, que han sido copiados a (\texttt{pruebas/cartuchos}), o bien cartuchos de laboratorio construidos en memoria, de modo que regenerar los cartuchos de ejemplo del proyecto no las rompe.
+	\item \textbf{Sin depender de cartuchos ajenos.} Para que las pruebas tengan sentido usan sus propios cartuchos, que han sido copiados a \texttt{pruebas/cartuchos}, o bien cartuchos de laboratorio construidos en memoria, de modo que regenerar los cartuchos de ejemplo del proyecto no las rompe.
 
 	\item \textbf{Un resultado inequívoco.} Cada lanzamiento termina en una línea \texttt{RESULTADO: OK} o \texttt{RESULTADO: ERROR (detalle)} y con código de salida 0 o 1.
 
@@ -60,13 +60,20 @@ Cada prueba lleva un código (M, D, E, G, C, T) que aparece en el botón y en el
 \subsection{Cómo se lanzan}
 \label{sec:F5I18Lanzar}
 
-\textbf{Desde la pestaña.} \texttt{index.html} se abre por servidor local (ver~\ref{sec:F5I18Servidor}) con \texttt{GW\_DEBUG} activo. La pestaña \emph{Pruebas} muestra un botón por prueba, agrupadas, y debajo el panel \emph{Desde consola}: una línea por grupo, con su código S1--S6, el comando que lo lanza y un botón \emph{Copiar}.
+\textbf{Desde la pestaña.} \texttt{index.html} se abre por servidor local (ver~\ref{sec:F5I18Servidor}) con \texttt{GW\_DEBUG} activo. La pestaña \emph{Pruebas} muestra un botón por prueba, agrupadas, y debajo el panel \emph{Desde consola}: una línea por grupo, con su código S1--S7, el comando que lo lanza y un botón \emph{Copiar}.
 
-\textbf{Desde la consola (Windows).} Se copia una línea del panel y se pega en CMD o PowerShell, en la carpeta del proyecto:
+\textbf{Desde la consola (Windows).} Se copia una línea del panel y se pega en CMD o PowerShell, parado en la carpeta \texttt{pruebas} del proyecto (donde está \texttt{Lanzar.bat}; también funciona desde cualquier otra carpeta poniendo la suya delante, \texttt{pruebas\textbackslash Lanzar.bat motor}, porque el \texttt{.bat} localiza sus propias rutas):
 
 \begin{itemize}
-	\item \texttt{pruebas\textbackslash Lanzar.bat motor}, \texttt{director}, \texttt{editor}, \texttt{generales}, \texttt{gwi\_gwc}, \texttt{teclas}.
-	\item \texttt{pruebas\textbackslash Lanzar.bat todas}: las lanza todas, una detrás de otra, y escribe un resumen por grupo. Tarda unos minutos, sobre todo por las partidas de GWI/GWC.
+	\item \texttt{S1}: \texttt{Lanzar.bat motor}; \texttt{S2}: \texttt{director}; \texttt{S3}: \texttt{editor}; \texttt{S4}: \texttt{generales}; \texttt{S5}: \texttt{gwi\_gwc}; \texttt{S6}: \texttt{teclas}.
+	\item \texttt{S7}: \texttt{Lanzar.bat todas}: las lanza todas, una detrás de otra, y escribe un resumen por grupo. Tarda unos minutos, sobre todo por las partidas de GWI/GWC.
+\end{itemize}
+
+\textbf{Botones y scripts.} Los scripts cubren todas las pruebas, también las que no tienen botón:
+
+\begin{itemize}
+	\item \textbf{Con botón en la pestaña} (y también por script): motor (M0--M5, S1), director (D1--D4, S2; destructivas), generales (G1--G3, S4; G3 destructiva), gwi\_gwc C1--C5 (S5; C3 y C4 destructivas, C1, C2 y C5 necesitan un GWI cargado) y teclas (T1--T2, S6; destructivas).
+	\item \textbf{Solo por script} (\texttt{soloConsola}, sin botón; necesitan un GWI cargado): editor (E1--E9, S3) y gwi\_gwc C6 y C7 (S5).
 \end{itemize}
 
 \texttt{Lanzar.bat} recibe el nombre del grupo (sin parámetro, o con uno desconocido, muestra la ayuda) y llama al script de PowerShell correspondiente (\texttt{pruebasMotor.ps1} y los demás; \texttt{pruebasTodas.ps1} los encadena). Todos cargan primero \texttt{\_preparar.ps1}, que comprueba que Node.js esté instalado, instala Playwright de forma global si falta (\texttt{npm i -g playwright}), define \texttt{NODE\_PATH} con la carpeta global de npm y descarga el navegador. La primera vez tarda. \texttt{Lanzar.bat} arranca PowerShell con \texttt{-ExecutionPolicy Bypass}, de modo que no hace falta cambiar la política de scripts. Los \texttt{.bat} y los \texttt{.ps1} se guardan con fin de línea CRLF (\texttt{.gitattributes}).

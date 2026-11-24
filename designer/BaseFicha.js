@@ -374,12 +374,13 @@ const BaseFicha = (function () {
       }
       const nombreTecla = String(previo.tecla || '').trim().toLowerCase();
       if (CURSORES.includes(nombreTecla)) lista.value = nombreTecla;
-      else if (/^[a-zA-Z]$/.test(nombreTecla)) lista.value = 'tecla';
+      else if (/^[a-zA-Z]$/.test(nombreTecla) ||
+        (/^[1-3]$/.test(nombreTecla) && NOMBRE_SISTEMA[n])) lista.value = 'tecla';
       else lista.value = '';
       const letra = _entrada('text', { className: 'colTeclaLetra', maxLength: 1,
         value: lista.value === 'tecla' ? String(previo.tecla || '').toUpperCase() : '' });
       letra.classList.toggle('oculto', lista.value !== 'tecla');
-      letra.placeholder = 'A..Z';
+      letra.placeholder = NOMBRE_SISTEMA[n] ? 'A..Z o 1-3' : 'A..Z';
       lista.addEventListener('change', () => {
         letra.classList.toggle('oculto', lista.value !== 'tecla');
         if (lista.value !== 'tecla') letra.value = '';
@@ -597,15 +598,17 @@ const BaseFicha = (function () {
       vistos.add(clave);
     }
     // F5-I17 (M8): las teclas del cartucho, la misma regla que el GWS:
-    // letra A..Z o nombre de cursor, sin repetir entre las declaradas.
+    // letra A..Z o nombre de cursor (el dígito 1/2/3 solo en el trío
+    // A/B/R), sin repetir entre las declaradas.
     const teclasVistas = new Set();
     for (const b of e.botones) {
       if (b.tecla === undefined) continue;
       const valida = (typeof BaseDirector !== 'undefined' && BaseDirector.teclaValida)
-        ? BaseDirector.teclaValida(b.tecla) : true;
+        ? BaseDirector.teclaValida(b.tecla, b.numero) : true;
       if (!valida) {
         errores.push('La tecla «' + b.tecla + '» del botón ' + b.numero +
-          ' no es válida: letra A..Z o nombre de cursor (los dígitos no existen desde F5-I17).');
+          ' no es válida: letra A..Z, un nombre de cursor o el dígito 1/2/3' +
+          ' solo en el trío de sistema A/B/R.');
         continue;
       }
       if (teclasVistas.has(b.tecla.toLowerCase())) {

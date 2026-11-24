@@ -7,15 +7,9 @@
 	
 	\item Bloque A: motor y editor 
 	\begin{itemize}
-		\item PA4. Unificar la carga de cartuchos: un panel para pegar los ficheros o un campo para cargar un directorio, en lugar de los 3 botones actuales (absorbe «unificar los 3 botones de carga»).
+		\item PA4. Unificar la carga de cartuchos: un panel para pegar los ficheros o un campo para cargar un directorio, en lugar de los 3 botones actuales (absorbe «unificar los 3 botones de carga»). Nota: mantener las suites Playwright en verde (S1--S6, red de seguridad; F5-I18).
 			
 		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetro Campo que retorne nombre en el json, valor min y valor max, y que la lectura del json la haga con json[nombre] en lugar de como json.nombre, recorriendo la lista de valores. Cuidado que esto es bueno para lectura y grabación, pero no para los ajustes al vuelo de los valores máximos de los campos en el interface. Hay que pensarlo bien.
-	\end{itemize}
-	
-	\item Bloque B: pruebas
-	\begin{itemize}
-		\item PB1. Mejorar la pestaña de pruebas con todas las que se han desarrollado, con botones o lista de comandos que se pueda copiar y pegar en un PowerShell. 
-		Mientras tanto: mantener las 4 suites Playwright (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}) en ejecución y en verde; «son la red de seguridad de PA4».
 	\end{itemize}
 	
 	\item Bloque C: documentación (cuando el código y el formato ya no cambien)
@@ -40,6 +34,10 @@
 \clearpage
 
 \section*{Refactorizar}
+
+Nota: durante la refactorización (R01--R09) y PA4, mantener las suites
+      Playwright en verde (S1--S6, red de seguridad; F5-I18).
+
 \begin{xltabular}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
 	\toprule
 	\textbf{Nro} & \textbf{Descripción} \\
@@ -112,7 +110,7 @@
 	\midrule
 	T10 & \textbf{F1-I01:}\newline dice «A y B arrancan\ldots{} Solo se usa actualmente el botón A» (l.~17); hoy el arranque por defecto es el 8, R. (La validación de \texttt{puerto} con aviso quedó resuelta en F5-I16.) \\
 	\midrule
-	T10 & \textbf{C4-diseño (l.~195, 204 y 232):}\newline dice que \texttt{tiempoEspera} lo cambia la máquina de estados según puntuación; lo cambia el director según los ticks. \\
+	T11 & \textbf{C4-diseño (l.~195, 204 y 232):}\newline dice que \texttt{tiempoEspera} lo cambia la máquina de estados según puntuación; lo cambia el director según los ticks. \\
 	\bottomrule
 \end{xltabular}
 

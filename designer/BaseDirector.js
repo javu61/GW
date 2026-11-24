@@ -99,8 +99,9 @@
 //   _buscarBotonPorTecla          Encuentra el botón físico asociado a una tecla (si existe); F5-I17
 //                                también con las flechas del PC (ArrowLeft → cursor-izquierda…).
 //   _teclaDeEvento               F5-I17: tecla de evento normalizada (flecha PC → nombre de cursor).
-//   teclaValida / normalizarTecla F5-I17: la tecla del botón (letra A..Z o nombre de cursor);
-//                                públicas desde M8 (las usan la ficha del cartucho y la carga).
+//   teclaValida / normalizarTecla F5-I17: la tecla del botón (letra A..Z o nombre de cursor;
+//                                el dígito 1/2/3 solo en el trío de sistema A/B/R); públicas desde
+//                                M8 (las usan la ficha del cartucho y la carga).
 //   _alPulsarTecla                Permite jugar sin ratón:
 //   _alSoltarTecla                Soltar una tecla quita el resaltado de su botón.
 //   _pulsarSistema                Pulsación de un botón del trío en modo sistema (F5-I10).
@@ -188,14 +189,18 @@ var BaseDirector = (function () {
   };
 
   /**
-   * F5-I17 (M4): ¿es válida la tecla de un botón? Una letra A..Z (los
-   * dígitos se retiraron en F5-I17: quedan para el trío de sistema) o
+   * F5-I17 (M4/M6): ¿es válida la tecla de un botón? Una letra A..Z o
    * un nombre de cursor de la lista cerrada, sin distinguir mayúsculas.
+   * Los dígitos se retiraron en F5-I17: el 1/2/3 queda reservado al trío
+   * de sistema A/B/R (botones 6/7/8) y se rechaza en cualquier otro.
    * @param {?string} valor - Valor del campo tecla.
+   * @param {?string} [numero] - Número del botón (para admitir 1/2/3
+   *   solo en el trío de sistema).
    * @returns {boolean} true si es válida.
    */
-  function teclaValida(valor) {
+  function teclaValida(valor, numero) {
     if (typeof valor !== 'string' || valor === '') return false;
+    if (/^[1-3]$/.test(valor)) return TIPO_SISTEMA[String(numero)] !== undefined;
     if (/^[a-zA-Z]$/.test(valor)) return true;
     return CURSORES[valor.toLowerCase()] !== undefined;
   }
@@ -366,9 +371,10 @@ var BaseDirector = (function () {
       if (vistos.has(b.numero)) console.warn('Botón repetido en el setup: ' + b.numero);
       vistos.add(b.numero);
       if (b.tecla !== undefined) {
-        if (!teclaValida(b.tecla)) {
+        if (!teclaValida(b.tecla, b.numero)) {
           return 'la "tecla" del botón ' + b.numero +
-            ' debe ser una letra A..Z o un nombre de cursor (cursor-izquierda/derecha/arriba/abajo).';
+            ' debe ser una letra A..Z o un nombre de cursor (cursor-izquierda/derecha/arriba/abajo);' +
+            ' el dígito 1/2/3 solo vale en el trío de sistema A/B/R.';
         }
         b.tecla = normalizarTecla(b.tecla);
         if (teclasVistas.has(b.tecla)) console.warn('Tecla repetida en el setup: ' + b.tecla);

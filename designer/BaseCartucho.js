@@ -21,7 +21,8 @@
 //   _elegirJSONCartucho     Elige el .json a cargar (GWC > GWI > GWB).
 //   validarComunes          Contrato de ENTRADA común a GWB y GWI (img_s
 //                           obligatoria; img_f e img_m opcionales; teclas
-//                           de botones válidas, F5-I17 M8).
+//                           de botones válidas, 1/2/3 solo en el trío
+//                           A/B/R; F5-I17 M8).
 //   validarGWB              Validación ESPECÍFICA, llama a validarComunes
 //   validarGWI              Validación ESPECÍFICA, llama a validarComunes
 //   cargarDelMapa           Carga una imagen referenciada por el JSON.
@@ -418,17 +419,19 @@ var BaseCartucho = (function () {
       return 'el campo "botones" del cartucho debe ser un array.';
     }
     // F5-I17 (M8): la tecla del cartucho (botones[].tecla) sigue la misma
-    // regla que la del GWS: letra A..Z o nombre de cursor (los dígitos no
-    // existen desde F5-I17) y sin repetir entre los botones declarados.
+    // regla que la del GWS: letra A..Z o nombre de cursor (el dígito
+    // 1/2/3 solo en el trío de sistema A/B/R) y sin repetir entre los
+    // botones declarados.
     if (Array.isArray(json.botones)) {
       const teclasVistas = new Set();
       for (const b of json.botones) {
         if (!b || typeof b !== 'object' || b.tecla === undefined ||
           b.tecla === null || b.tecla === '') continue;
         if (typeof BaseDirector === 'undefined' || !BaseDirector.teclaValida) continue;
-        if (!BaseDirector.teclaValida(String(b.tecla))) {
+        if (!BaseDirector.teclaValida(String(b.tecla), b.numero)) {
           return 'la "tecla" del botón ' + b.numero + ' del cartucho debe ser '
-            + 'una letra A..Z o un nombre de cursor (cursor-izquierda/derecha/arriba/abajo).';
+            + 'una letra A..Z o un nombre de cursor (cursor-izquierda/derecha/arriba/abajo);'
+            + ' el dígito 1/2/3 solo vale en el trío de sistema A/B/R.';
         }
         const t = BaseDirector.normalizarTecla(String(b.tecla));
         if (teclasVistas.has(t)) {

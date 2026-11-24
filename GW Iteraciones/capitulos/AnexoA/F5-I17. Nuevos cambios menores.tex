@@ -19,7 +19,7 @@ Iteración de cierre de dos pendientes menores, antes de abordar otros temas de 
 \begin{enumerate}
 	\item Las teclas solo afectan al \textbf{editor y el simulador de PC}: Ya que en el sistema externo no se emplean. La tecla es solo la forma de jugar con el teclado del PC; lo que manda en la máquina real sigue siendo el \texttt{puerto}. La tecla la puede declarar la máquina (GWS), el juego compatible (GWB) o el juego con autoría (GWI); manda el nivel más alto: GWI $>$ GWB $>$ GWS. Tampoco afectan al ESP32 u otro firmware futuro.
 	
-	\item \textbf{Sin cambios de formato}: El GWB y el GWI también cambian en sentido amplio: el campo \texttt{tecla} de \texttt{botones[]} pasa a admitir los mismos valores que el GWS (letra o nombre de cursor, opcional; un cartucho sin teclas sigue cargando igual) y un cartucho con tecla dígito NO carga. El GWC sigue sin llevar teclas.
+	\item \textbf{Sin cambios de formato}: El GWB y el GWI también cambian en sentido amplio: el campo \texttt{tecla} de \texttt{botones[]} pasa a admitir los mismos valores que el GWS (letra o nombre de cursor, opcional; un cartucho sin teclas sigue cargando igual); un cartucho con tecla dígito NO carga, salvo el 1/2/3 declarado en un botón del trío de sistema A/B/R. El GWC sigue sin llevar teclas.
 	
 	\item \textbf{Avisos con los mismos puntos de salida que F5-I16}: Los avisos nuevos salen en la barra superior \texttt{\#estado} y, si tocan a una ficha, en su zona de mensajes; quedan fuera del alcance del recorte y del silencio de F5-I16: aquí solo se añaden avisos.
 	
@@ -70,7 +70,7 @@ Se amplía para que el setup y la ficha del cartucho puedan asignar a un botón 
 \begin{itemize}
 	\item \textbf{Nombres de cursor en el GWS} (lista cerrada, sin distinguir mayúsculas/minúsculas): \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} (se escriben completos, sin abreviar). Esto es lo más natural en el vocabulario del proyecto (izquierda, derecha, arriba, abajo como los enlaces del editor).
 	
-	\item \textbf{\texttt{validarSetup}} acepta la tecla si es una letra \texttt{A..Z} (la letra va desde F5-I6; esta iteración retira los dígitos) O uno de los cuatro nombres de cursor. Sin repetir, como las letras.
+	\item \textbf{\texttt{validarSetup}} acepta la tecla si es una letra \texttt{A..Z} (la letra va desde F5-I6; esta iteración retira los dígitos: el 1/2/3 queda reservado al trío de sistema A/B/R, botones 6/7/8, donde sí se admite como tecla, y fuera de ese trío un dígito NO carga) O uno de los cuatro nombres de cursor. Sin repetir, como las letras.
 	
 	\item \textbf{El simulador} mapea las teclas de flecha del PC (\texttt{ev.key} \texttt{ArrowLeft}, \texttt{ArrowRight}, \texttt{ArrowUp}, \texttt{ArrowDown}) al nombre de cursor, y \texttt{\_buscarBotonPorTecla} las encuentra en los dos sentidos (pulsar con la flecha, resaltar y soltar igual que una letra). La pista del botón muestra un símbolo ($\leftarrow$/$\rightarrow$/$\uparrow$/$\downarrow$) en lugar de texto largo.
 	\item \textbf{La ficha del setup} (pestaña Setup): el campo \texttt{tecla} de cada botón se elige en una lista desplegable con cinco valores: los cuatro cursores y «tecla»; al elegir «tecla» aparece una casilla aparte para escribir la letra ($A \dots Z$). Ya no se admite teclear el nombre a mano.
@@ -116,7 +116,7 @@ En el sistema externo no influye en nada: ni el GWB/GWI cambian su sentido: \tex
 	\midrule
 	BaseDirector & M3 & Aviso al cargar un GWB sobre un GWI con autoría (N acciones), antes del \texttt{reset}; N desde función pública nueva del editor & GWI de Parachute cargado, cargar un GWB: aviso visible con el número de acciones; cargar el MISMO GWI de nuevo: sin aviso \\
 	\midrule
-	BaseDirector & M4 & \texttt{validarSetup}: la tecla admite letra o nombre de cursor (lista cerrada, sin repetir; los dígitos se retiran); \texttt{\_buscarBotonPorTecla} normaliza \texttt{Arrow*} y la pista del botón muestra el símbolo del cursor & GWS a mano con \texttt{tecla: "cursor-izquierda"}: carga; la flecha izquierda del PC pulsa ese botón; \texttt{tecla: "cursorziq"}: NO carga; \texttt{tecla: "1"}: NO carga \\
+	BaseDirector & M4 & \texttt{validarSetup}: la tecla admite letra o nombre de cursor (lista cerrada, sin repetir; los dígitos se retiran y el 1/2/3 queda reservado al trío de sistema A/B/R); \texttt{\_buscarBotonPorTecla} normaliza \texttt{Arrow*} y la pista del botón muestra el símbolo del cursor & GWS a mano con \texttt{tecla: "cursor-izquierda"}: carga; la flecha izquierda del PC pulsa ese botón; \texttt{tecla: "cursorziq"}: NO carga; \texttt{tecla: "1"}: NO carga (fuera del trío) \\
 	\midrule
 	BaseSetup & M5 & La ficha del setup elige la tecla en la lista desplegable (los cuatro cursores y «tecla», con casilla de letra aparte cuando toca) & Elegir \texttt{cursor-derecha} para el botón derecho y aplicar: el botón del simulador lleva $\rightarrow$ y la flecha derecha del PC lo pulsa; elegir «tecla», escribir M y aplicar: el botón lleva M \\
 	\midrule
@@ -124,7 +124,7 @@ En el sistema externo no influye en nada: ni el GWB/GWI cambian su sentido: \tex
 	
 	BaseFicha & M7 & La tabla de botones de la ficha de Cartucho incorpora la columna Tecla, mismo desplegable que el setup (lista + casilla de letra); solo editable con el botón Usado; se serializa en \texttt{botones[].tecla} del GWI o GWB & GWI o GWB con \texttt{tecla: "cursor-izquierda"} en un botón: la pista lleva $\leftarrow$ y la flecha lo pulsa; recargar: la ficha muestra la tecla guardada; caja T3 (S6) \\
 	
-	BaseDirector & M8 & Resolución de tecla botón a botón: GWI $>$ GWB $>$ GWS $>$ defecto del estilo; al verificar el cartucho se valida su tecla (letra o cursor, sin repetir entre las declaradas; dígito rechaza) & Cartucho con teclas propias: mandan sobre el setup; al borrarlas vuelve la del setup; \texttt{tecla: "5"} NO verifica; dígito y repetidas NO cargan: caja T3 (S6) \\
+	BaseDirector & M8 & Resolución de tecla botón a botón: GWI $>$ GWB $>$ GWS $>$ defecto del estilo; al verificar el cartucho se valida su tecla (letra o cursor, sin repetir entre las declaradas; dígito fuera del trío rechaza; 1/2/3 admitido solo en el trío A/B/R) & Cartucho con teclas propias: mandan sobre el setup; al borrarlas vuelve la del setup; \texttt{tecla: "5"} NO verifica; \texttt{tecla: "2"} en el 6 carga y fuera del trío no; dígito y repetidas NO cargan: caja T3 (S6) \\
 	
 	\bottomrule
 \end{xltabular}

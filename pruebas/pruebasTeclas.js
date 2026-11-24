@@ -15,7 +15,8 @@
 //       en 0/4 y el trío 1/2/3; estilo 5: cruceta con los cuatro cursores y el 4 con la letra Z).
 //   T3  Teclas propias del cartucho (F5-I17, M8, precedencia GWI > GWB > GWS): un GWB que declara
 //       teclas en botones[].tecla carga y manda sobre el setup (letra y cursor), los botones sin
-//       tecla caen al nivel inferior (el setup) y una tecla dígito o repetida NO carga.
+//       tecla caen al nivel inferior (el setup); el dígito 1/2/3 solo vale en el trío A/B/R y una
+//       tecla dígito fuera del trío (o el «5») o repetida NO carga.
 //
 // FUNCIONES
 //   _setupConTecla       Setup de cartuchos con la tecla del botón 0 cambiada (en memoria).
@@ -156,7 +157,19 @@
     ok('T3: mandan las teclas del cartucho (0 → M, 4 → cursor-arriba) y el 6 sin tecla cae al setup (Z)',
       r1.b0 === 'm' && r1.p0 === 'M' && r1.b4 === 'cursor-arriba' && r1.p4 === '↑' &&
       r1.b6 === 'z', JSON.stringify(r1));
-    // Rechazos: tecla dígito y tecla repetida en el cartucho (M8).
+    // El dígito 1/2/3 SOLO vale en el trío de sistema A/B/R (F5-I17, M6):
+    // el 6 lo admite; fuera del trío, no carga.
+    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 6: '2' })], 1500);
+    ok('T3: el dígito «2» como tecla del botón 6 (trío A/B/R) carga',
+      /Cartucho cargado/.test(estado()), estado());
+    const r2 = { b6: teclaDe(6), p6: pistaDe(6) };
+    ok('T3: el botón 6 queda con la tecla «2» del cartucho',
+      r2.b6 === '2' && r2.p6 === '2', JSON.stringify(r2));
+    // Rechazos: tecla dígito fuera del trío, dígito «5» (no vale en
+    // ningún caso) y tecla repetida en el cartucho (M8).
+    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: '1' })], 1500);
+    ok('T3: el dígito «1» en un botón fuera del trío NO carga',
+      /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());
     await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: '5' })], 1500);
     ok('T3: tecla dígito «5» en el cartucho NO carga',
       /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());

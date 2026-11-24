@@ -202,7 +202,8 @@ const BaseSetup = (function () {
       });
       // F5-I17 (M5): la tecla se elige en una lista cerrada (los cuatro
       // cursores y «Propia»); al elegir «Propia» aparece la casilla de
-      // letra (A..Z). Ya no se teclea el nombre a mano.
+      // letra (A..Z, o 1/2/3 solo en el trío A/B/R). Ya no se teclea el
+      // nombre a mano.
       const lista = _crearElemento('select', 'colTeclaLista');
       for (const [valor, texto] of [['', '(sin tecla)'], ...CURSORES_GWS.map(c => [c, c]),
         ['tecla', 'Propia (letra)']]) {
@@ -212,12 +213,13 @@ const BaseSetup = (function () {
       }
       const nombre = String(d.tecla || '').trim().toLowerCase();
       if (CURSORES_GWS.includes(nombre)) lista.value = nombre;
-      else if (/^[a-zA-Z]$/.test(nombre)) lista.value = 'tecla';
+      else if (/^[a-zA-Z]$/.test(nombre) ||
+        (/^[1-3]$/.test(nombre) && NOMBRE_SISTEMA[n])) lista.value = 'tecla';
       else lista.value = '';
       const tecla = _entrada('text', { className: 'colTeclaLetra', maxLength: 1,
         value: lista.value === 'tecla' ? String(d.tecla || '').toUpperCase() : '' });
       tecla.classList.toggle('oculto', lista.value !== 'tecla');
-      tecla.placeholder = 'A..Z';
+      tecla.placeholder = NOMBRE_SISTEMA[n] ? 'A..Z o 1-3' : 'A..Z';
       lista.addEventListener('change', () => {
         tecla.classList.toggle('oculto', lista.value !== 'tecla');
         if (lista.value !== 'tecla') tecla.value = '';

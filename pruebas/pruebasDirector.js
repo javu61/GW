@@ -60,7 +60,7 @@
   async function _pruebaD1(opc) {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    await U.cargarEn('ficheroSetup', [U.fichero('setup4.json', await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json'))], 500);
+    await U.cargarEn('ficheroSetup', [U.fichero('setup2.json', await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json'))], 500);
     await U.cargarEn('ficheroGWIZip', [U.fichero('g.zip', await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip'))], 3500);
     const antes = _estado();
     ok('D1 (previo): con el GWI cargado hay autoría y Guardar/Generar activos',

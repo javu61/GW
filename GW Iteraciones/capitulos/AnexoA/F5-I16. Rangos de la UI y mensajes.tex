@@ -133,16 +133,25 @@ Hay algunos detalles que considerar al limitar el manejo de estos valores máxim
 	\midrule
 	\endhead
 	BaseCartucho & M1 & Nueva tabla de límites (\texttt{campo} $\rightarrow$ \texttt{min}/\texttt{maxGWI}/\texttt{maxGWC}) y funciones \texttt{revisarValores(tipo, valores)} y \texttt{limitarValor(valor, maximo, minimo)}; \texttt{limitarValor} informa de cada valor recortado & Caja con \texttt{pausaSim} 5000: la memoria queda en 999 y aparece el aviso \\
-	BaseCartucho y BaseDirector & M2 & Llamar a \texttt{revisarValores} tras cargar cada fichero del cartucho (GWB/GWI/GWC) y al validar el setup (GWS) & Cargar un GWS a mano con \texttt{puerto} 65000: queda 99 con aviso; cargar un GWI a mano con \texttt{pausaSim} 5000: queda 999 con aviso \\
-	BaseCartucho y BaseSetup & M3 & Llamar a \texttt{revisarValores} antes de guardar GWI y GWC (BaseCartucho) y GWS (BaseSetup); el filtro del GWC aplica máximo GWI y máximo de tamaño de campo & Guardar el GWC de un GWI a mano con \texttt{pausaSim} 5000: el GWC lleva 999 y la equivalencia en memoria sigue verde \\
-	BaseSetup/BaseDirector & M4 & GWS: \texttt{puerto} limitado a 0--99 (hoy sin validación), \texttt{tecla} ampliada a \texttt{A..Z} + \texttt{0..9} (hoy solo letra en \texttt{validarSetup}) & Puerto 65000 queda 99; la tecla «5» se acepta y «AA» se rechaza \\
-	BaseCartucho, BaseSetup y BaseDirector & M5 & La \texttt{resolucion} fuera de 320$\times$240 a 1024$\times$600 pasa a ERROR bloqueante en la validación de cada fichero (\texttt{validarGWI}/\texttt{validarGWB}/\texttt{validarSetup}, \texttt{BaseSetup.verificar}) y también en el GWC cargado: no se carga nada y se conserva el estado anterior (adiós al «aviso sin recorte» de la versión previa) & GWS a mano con 100$\times$100: «Setup NO cargado»; GWI a mano con 4000$\times$2000: «Cartucho NO cargado»; teclear 10$\times$15 en la ficha de setup: error visible en la zona de mensajes, y Aplicar no pasa \\
+	\midrule
+	\makecell[tl]{BaseCartucho\\BaseDirector} & M2 & Llamar a \texttt{revisarValores} tras cargar cada fichero del cartucho (GWB/GWI/GWC) y al validar el setup (GWS) & Cargar un GWS a mano con \texttt{puerto} 65000: queda 99 con aviso; cargar un GWI a mano con \texttt{pausaSim} 5000: queda 999 con aviso \\
+	\midrule
+	\makecell[tl]{BaseCartucho\\BaseSetup} & M3 & Llamar a \texttt{revisarValores} antes de guardar GWI y GWC (BaseCartucho) y GWS (BaseSetup); el filtro del GWC aplica máximo GWI y máximo de tamaño de campo & Guardar el GWC de un GWI a mano con \texttt{pausaSim} 5000: el GWC lleva 999 y la equivalencia en memoria sigue verde \\
+	\midrule
+	\makecell[tl]{BaseSetup\\BaseDirector} & M4 & GWS: \texttt{puerto} limitado a 0--99 (hoy sin validación), \texttt{tecla} ampliada a \texttt{A..Z} + \texttt{0..9} (hoy solo letra en \texttt{validarSetup}) & Puerto 65000 queda 99; la tecla «5» se acepta y «AA» se rechaza \\
+	\midrule
+	\makecell[tl]{BaseCartucho\\BaseSetup\\BaseDirector} & M5 & La \texttt{resolucion} fuera de 320$\times$240 a 1024$\times$600 pasa a ERROR bloqueante en la validación de cada fichero (\texttt{validarGWI}/\texttt{validarGWB}/\texttt{validarSetup}, \texttt{BaseSetup.verificar}) y también en el GWC cargado: no se carga nada y se conserva el estado anterior (adiós al «aviso sin recorte» de la versión previa) & GWS a mano con 100$\times$100: «Setup NO cargado»; GWI a mano con 4000$\times$2000: «Cartucho NO cargado»; teclear 10$\times$15 en la ficha de setup: error visible en la zona de mensajes, y Aplicar no pasa \\
+	\midrule
 	Editor & R1 & Campo «Valor inicial» de los contadores: \texttt{max} pasa de 9999 a 255 y el manejador \texttt{change} recorta por arriba & Escribir 256 en el campo deja el valor en 255 \\
+	\midrule
 	Editor & R2 & Campo «Ticks entre lanzamientos» de la Secuencia: \texttt{max} pasa de 999 a 99 (cuenta ticks), con recorte en el manejador & Escribir 100 deja 99 \\
+	\midrule
 	Editor & R3 & Campos de 2 bytes del panel del reloj (construidos por \texttt{campoNumero}): \texttt{pausaSim}, \texttt{pausaEsp}, \texttt{accResta} y \texttt{accMinimo} (milisegundos) pasan de 9999 a 999; \texttt{accCada} y \texttt{aumentarCada} (ticks/lanzamientos) pasan de 9999 a 99. Recorte en el manejador en todos & Escribir 1000 deja 999 en las pausas; escribir 100 deja 99 en las cuentas de ticks \\
+	\midrule
 	Editor & R4 & La zona de mensajes no conserva errores viejos: al aplicar la ficha del cartucho con éxito (y al generar) lo mostrado corresponde al estado actual, en la ficha y en \texttt{\#estado}. \textbf{Punto condicional}: solo se corrige si la prueba reproduce la retención & Prueba: forzar un error, aplicar bien, y comprobar que no queda error anterior visible \\
 	\bottomrule
 \end{xltabular}
+
 
 \subsection{La zona de mensajes}
 \label{sec:F5I16Mensajes}

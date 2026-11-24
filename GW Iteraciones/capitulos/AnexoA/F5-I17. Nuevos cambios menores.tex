@@ -68,7 +68,7 @@ Hoy cada botón físico del simulador lleva una tecla de letra: la del setup (\t
 Se amplía para que el setup pueda asignar a un botón una \textbf{tecla de cursor} del PC, al lado de la letra (o en su lugar):
 
 \begin{itemize}
-	\item \textbf{Nombres de cursor en el GWS} (lista cerrada, sin distinguir mayúsculas/minúsculas): \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} (se escriben completos, sin abreviar). Es lo natural en el vocabulario del proyecto (izquierda/derecha/arriba/abajo como los enlaces del editor).
+	\item \textbf{Nombres de cursor en el GWS} (lista cerrada, sin distinguir mayúsculas/minúsculas): \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} (se escriben completos, sin abreviar). Esto es lo más natural en el vocabulario del proyecto (izquierda, derecha, arriba, abajo como los enlaces del editor).
 	\item \textbf{\texttt{validarSetup}} acepta la tecla si es una letra \texttt{A..Z} (la letra va desde F5-I6; esta iteración retira los dígitos) O uno de los cuatro nombres de cursor. Sin repetir, como las letras.
 	\item \textbf{El simulador} mapea las teclas de flecha del PC (\texttt{ev.key} \texttt{ArrowLeft}, \texttt{ArrowRight}, \texttt{ArrowUp}, \texttt{ArrowDown}) al nombre de cursor, y \texttt{\_buscarBotonPorTecla} las encuentra en los dos sentidos (pulsar con la flecha, resaltar y soltar igual que una letra). La pista del botón muestra un símbolo ($\leftarrow$/$\rightarrow$/$\uparrow$/$\downarrow$) en lugar de texto largo.
 	\item \textbf{La ficha del setup} (pestaña Setup): el campo \texttt{tecla} de cada botón se elige en una lista desplegable con cinco valores: los cuatro cursores y «tecla»; al elegir «tecla» aparece una casilla aparte para escribir la letra ($A \dots Z$). Ya no se admite teclear el nombre a mano.
@@ -87,7 +87,7 @@ Se amplía para que el setup pueda asignar a un botón una \textbf{tecla de curs
 			
 		\item Para las de 4 botones es difícil usar los cursores, dejaremos \texttt{W-S} en un lado y \texttt{O-K} en el otro.
 		
-		\item Para las de 5 botones \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} y \texttt{Z}.
+		\item Para las máquinas de 5 botones \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} y \texttt{Z}.
 	\end{enumerate}
 	
 	\item El trío sistema A/B/R usa \texttt{1}/\texttt{2}/\texttt{3} (antes \texttt{G}/\texttt{B}/\texttt{T}): separa el sistema de los botones y deja las 26 letras libres para los botones, sin reservas ni colisiones.
@@ -104,18 +104,24 @@ En el sistema externo no influye en nada: ni el GWS cambia su sentido (\texttt{p
 	\midrule
 	\endhead
 	BaseFicha & M1 & Campo \texttt{codigoGWC} de solo lectura en la ficha de Cartucho; se rellena al poblar con el del GWI cargado («---» si no trae) y se refresca tras generar & Cargar el GWI de Parachute: la ficha muestra su \texttt{codigoGWC}; cargar un GWB: «---» \\
+	\midrule
 	BaseDescomponer & M2 & En \texttt{\_generarPar}: aviso si el GWI cargado traía \#X\# y el nuevo código es \#Y\# $\neq$ \#X\#; en \texttt{verificarYGuardar}: aviso si el guardado suelta un \texttt{codigoGWC} que existía & GWI con \#X\# editado: \texttt{Verificar y Guardar} avisa «queda desparejado (\#X\#)»; \texttt{Generar} con código distinto avisa con ambos códigos \\
+	\midrule
 	BaseDirector & M3 & Aviso al cargar un GWB sobre un GWI con autoría (N acciones), antes del \texttt{reset}; N desde función pública nueva del editor & GWI de Parachute cargado, cargar un GWB: aviso visible con el número de acciones; cargar el MISMO GWI de nuevo: sin aviso \\
+	\midrule
 	BaseDirector & M4 & \texttt{validarSetup}: la tecla admite letra o nombre de cursor (lista cerrada, sin repetir; los dígitos se retiran); \texttt{\_buscarBotonPorTecla} normaliza \texttt{Arrow*} y la pista del botón muestra el símbolo del cursor & GWS a mano con \texttt{tecla: "cursor-izquierda"}: carga; la flecha izquierda del PC pulsa ese botón; \texttt{tecla: "cursorziq"}: NO carga; \texttt{tecla: "1"}: NO carga \\
+	\midrule
 	BaseSetup & M5 & La ficha del setup elige la tecla en la lista desplegable (los cuatro cursores y «tecla», con casilla de letra aparte cuando toca) & Elegir \texttt{cursor-derecha} para el botón derecho y aplicar: el botón del simulador lleva $\rightarrow$ y la flecha derecha del PC lo pulsa; elegir «tecla», escribir M y aplicar: el botón lleva M \\
+	\midrule
 	BaseDirector & M6 & \texttt{TECLAS\_POR\_DEFECTO} pasa a depender del estilo: 2 botones 0/4 $\to$ cursor-izquierda/derecha; 4 botones 0/1 $\to$ W/S y 4/5 $\to$ O/K; 5 botones cruceta 0--3 $\to$ los cuatro cursores y 4 $\to$ Z; trío sistema 6/7/8 $\to$ 1/2/3 & Cargar cada estilo sin setup de teclas: en el de 5 la cruceta responde a las flechas del PC; en todos, el trío A/B/R responde a 1/2/3 \\
 	\bottomrule
 \end{xltabular}
 
+
 \subsection{Pruebas}
 \label{sec:F5I17Pruebas}
 
-Las cajas se integran en el catálogo de pruebas del proyecto (ficheros registrados en \texttt{pruebas/pruebas.js}; se lanzan desde la pestaña «Pruebas» con botones o desde consola con \texttt{pruebas\textbackslash Lanzar.bat}): una por punto.
+Las cajas de prueba se integran en el catálogo de pruebas del proyecto (ficheros registrados en \texttt{pruebas/pruebas.js}; se lanzan desde la pestaña «Pruebas» con botones o desde consola con \texttt{pruebas\textbackslash Lanzar.bat}): una por punto.
 
 M1/M2 (grupo «\texttt{gwi\_gwc}», fichero \texttt{pruebasGWI\_GWC.js}): el \texttt{codigoGWC} del GWI cargado se ve en la ficha de Cartucho (P1); guardar el GWI a secas avisa de que el GWC queda desparejado y la ficha vuelve a «---» (P2); generar el par con un GWI cuyo código queda desfasado avisa con los dos códigos y la ficha enseña el nuevo (P3). P2 y P3 solo desde consola: el paso descarga los ficheros.
 

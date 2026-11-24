@@ -12,7 +12,7 @@
 		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetro Campo que retorne nombre en el json, valor min y valor max, y que la lectura del json la haga con json[nombre] en lugar de como json.nombre, recorriendo la lista de valores. Cuidado que esto es bueno para lectura y grabación, pero no para los ajustes al vuelo de los valores máximos de los campos en el interface. Hay que pensarlo bien.
 	\end{itemize}
 	
-	\item Bloque B: pruebas☺
+	\item Bloque B: pruebas
 	\begin{itemize}
 		\item PB1. Mejorar la pestaña de pruebas con todas las que se han desarrollado, con botones o lista de comandos que se pueda copiar y pegar en un PowerShell. 
 		Mientras tanto: mantener las 4 suites Playwright (\texttt{pruebasMotor}, \texttt{pruebasDirector}, \texttt{pruebasEditor}, \texttt{pruebasGWI\_GWC}) en ejecución y en verde; «son la red de seguridad de PA4».
@@ -28,7 +28,7 @@
 		
 		\item PC5. Anexo de formatos como anexo general en los dos documentos, con el Bloque 1 de 8 valores y el Bloque 0 de 36 bytes (ColorFondo y reglas).
 		
-		\item PC6. Integrar los cambios de textos de F5-I15a en sus lugares
+		\item PC6. Integración de textos
 	\end{itemize}
 	
 	\item Bloque D: Fase 6
@@ -37,6 +37,7 @@
 	\end{itemize}
 	
 \end{itemize}
+\clearpage
 
 \section*{Refactorizar}
 \begin{xltabular}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
@@ -82,45 +83,41 @@
 	R09 & \textbf{Pestañas / accesibilidad:}\newline faltan \texttt{role="tablist"/"tab"} y \texttt{aria-selected}; no hay \texttt{:focus-visible}; los botones de la máquina solo responden a \texttt{pointerdown} (sin Enter/Espacio); \texttt{mostrarPestanna} sobrescribe \texttt{className} (mejor \texttt{classList.toggle} o \texttt{data-vista}); el nombre se escribe de tres formas: \texttt{pestanna}, \texttt{pestanaVista}, \texttt{\#pestanas}. \\
 	\bottomrule
 \end{xltabular}
+\clearpage
 
 \section*{Textos a revisar}
+
 \begin{xltabular}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
 	\toprule
 	\textbf{Nro} & \textbf{Descripción} \\
 	\midrule
 	\endhead
-	
-	T01 & \textbf{Orden del tick (F3-I01, Memoria F3):}\newline el código ya hace (0) limpieza, (1) entrada, (2) rutas (el comentario del motor ya está corregido); el texto de la Memoria F3 (l.~65--66) sigue con el orden antiguo. Texto nuevo propuesto en F5-I15a (l.~34--41), sin aplicar. \\
+	T01 & \textbf{Integrar los cambios de textos:}\newline los detallados en F5-I15a. \\
 	\midrule
-	
-	T02 & \textbf{«combinar»:}\newline la explicación de la Memoria F3 ya está actualizada con el texto de F5-I15a; quedan el «Hoy esta regla vive únicamente en el \textit{setup}» de F4-I02 (l.~82) y los pasos diagonales de F3-I01 (l.~78) y F3-I02 (l.~87) --- el código hace dos movimientos encadenados y \texttt{MOVER} solo tiene izquierda y derecha. \\
+	T02 & \textbf{Orden del tick (F3-I01, Memoria F3):}\newline el código ya hace (0) limpieza, (1) entrada, (2) rutas (el comentario del motor ya está corregido); el texto de la Memoria F3 (l.~65--66) sigue con el orden antiguo. Texto nuevo propuesto en F5-I15a (l.~34--41), sin aplicar. \\
 	\midrule
-	
-	T03 & \textbf{Cadenas por vida/muerte (F3-I08):}\newline la cabecera del motor ya está corregida; quedan dos «atraviesa» en la Memoria F3 (l.~580 y 597, filas descriptivas de la tabla de pruebas) por revisar. \\
+	T03 & \textbf{«combinar»:}\newline la explicación de la Memoria F3 ya está actualizada con el texto de F5-I15a; quedan el «Hoy esta regla vive únicamente en el \textit{setup}» de F4-I02 (l.~82) y los pasos diagonales de F3-I01 (l.~78) y F3-I02 (l.~87) --- el código hace dos movimientos encadenados y \texttt{MOVER} solo tiene izquierda y derecha. \\
 	\midrule
-	
-	T04 & \textbf{F5-I03:}\newline planificaba \texttt{guardarGWC} y \texttt{estadistica} con el ahorro de deduplicación; se hizo distinto; anotarlo (aún no está en F5-I15a). \\
+	T04 & \textbf{Cadenas por vida/muerte (F3-I08):}\newline la cabecera del motor ya está corregida; quedan dos «atraviesa» en la Memoria F3 (l.~580 y 597, filas descriptivas de la tabla de pruebas) por revisar. \\
 	\midrule
-	
-	T05 & \textbf{F3-I06 y F3-I10:}\newline usan \texttt{salvadoIndicador}/\texttt{ColisionPositiva}; el código, \texttt{salvadoContador}/\texttt{muerteContador} con valores \texttt{'1'}--\texttt{'4'}. F3-I10 dice \texttt{seg\_F01}, el código \texttt{F01}. Dígito y contador usan otro mecanismo de absorción, que no hereda ni re-apunta. \\
+	T05 & \textbf{F5-I03:}\newline planificaba \texttt{guardarGWC} y \texttt{estadistica} con el ahorro de deduplicación; se hizo distinto; anotarlo (aún no está en F5-I15a). \\
 	\midrule
-	
-	T06 & \textbf{Memoria F1.tex (260--281):}\newline presenta el XOR y la unión con fantasmas tipo 99; hoy el color se escribe directo y la unión crea una pieza F con \texttt{fusionadoPor}. \\
+	T06 & \textbf{F3-I06 y F3-I10:}\newline usan \texttt{salvadoIndicador}/\texttt{ColisionPositiva}; el código, \texttt{salvadoContador}/\texttt{muerteContador} con valores \texttt{'1'}--\texttt{'4'}. F3-I10 dice \texttt{seg\_F01}, el código \texttt{F01}. Dígito y contador usan otro mecanismo de absorción, que no hereda ni re-apunta. \\
 	\midrule
-	
-	T07 & \textbf{F1-I08:}\newline dice que el JSDoc lleva \texttt{@iteracion} (l.~113); no aparece. \\
+	T07 & \textbf{Memoria F1.tex (260--281):}\newline presenta el XOR y la unión con fantasmas tipo 99; hoy el color se escribe directo y la unión crea una pieza F con \texttt{fusionadoPor}. \\
 	\midrule
-	
-	T08 & \textbf{F1-I11:}\newline se contradice sobre \texttt{DibujarSegmento} o funciones propias (l.~21 y 36; usa propias). \\
+	T08 & \textbf{F1-I08:}\newline dice que el JSDoc lleva \texttt{@iteracion} (l.~113); no aparece. \\
 	\midrule
-	
-	T09 & \textbf{F1-I01:}\newline dice «A y B arrancan… Solo se usa actualmente el botón A» (l.~17); hoy el arranque por defecto es el 8, R. (La validación de \texttt{puerto} con aviso quedó resuelta en F5-I16.) \\
+	T09 & \textbf{F1-I11:}\newline se contradice sobre \texttt{DibujarSegmento} o funciones propias (l.~21 y 36; usa propias). \\
 	\midrule
-	
+	T10 & \textbf{F1-I01:}\newline dice «A y B arrancan\ldots{} Solo se usa actualmente el botón A» (l.~17); hoy el arranque por defecto es el 8, R. (La validación de \texttt{puerto} con aviso quedó resuelta en F5-I16.) \\
+	\midrule
 	T10 & \textbf{C4-diseño (l.~195, 204 y 232):}\newline dice que \texttt{tiempoEspera} lo cambia la máquina de estados según puntuación; lo cambia el director según los ticks. \\
 	\bottomrule
 \end{xltabular}
 
+
+\clearpage
 
 
 **********************************************************************************\\

@@ -44,7 +44,7 @@ Aunque no todos son errores, se presenta en este punto todas las diferencias ent
 		\midrule
 		\multicolumn{2}{l}{\textbf{Dato:} Contador de iconos de vida y de muerte} \\
 		& \textbf{GWI:} Orden del icono en su familia ($1\text{--}N$) \\
-		& \textbf{GWC:} No viajaba (punto 29 de \texttt{REVISION\_CODIGO.md}) \\
+		& \textbf{GWC:} No viajaba \\
 		& \textbf{Efecto:} El motor ordena los iconos por él; con el GWC solo contaba la posición en la lista \\
 		\midrule
 		\multicolumn{2}{l}{\textbf{Dato:} Regla \texttt{combinar}} \\
@@ -129,7 +129,6 @@ Además se repitieron las pruebas anteriores de la aplicación (cargar, aplicar,
 \begin{itemize}
 	\item \textbf{F5-I02 Formato del GWC} Describir el Bloque 1 con 9 valores (campo de reglas), el byte «valor inicial u orden» del registro de segmento y que \textbf{un valor sin declarar es siempre 0xFFFF}, nunca un valor por defecto.
 	\item \textbf{F5-I06 (par GWI/GWC).} El código del par cambia al regenerar; hay que regenerar los dos ficheros.
-	\item \textbf{REVISION\_CODIGO.md.} Resueltos el \#31 (este error) y el \#29 (el contador de vida y muerte no viajaba).
 \end{itemize}
 
 \subsection{Reflexión metodológica}

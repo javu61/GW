@@ -4,7 +4,8 @@
 //   Es el ÚNICO sitio que sabe lanzar pruebas. Las pruebas viven cada una en su fichero
 //   (pruebasMotor.js, pruebasDirector.js, pruebasGenerales.js, pruebasGWI_GWC.js), se REGISTRAN
 //   aquí y se lanzan de dos formas con el MISMO código:
-//     - desde la pestaña «Pruebas» (visible solo con GW_DEBUG, index.html): un botón por prueba;
+//     - desde la pestaña «Pruebas» (solo por http y con GW_DEBUG, index.html): un botón por
+//       prueba; si la página se abre con doble clic (file://) la pestaña queda oculta;
 //     - desde la consola: «pruebas\Lanzar.bat motor» abre la página con Playwright y llama a
 //       ejecutar() de este módulo (el lanzador común es pruebas/lanzador.js).
 //   Las pruebas del Editor (soloConsola) necesitan ver el interior de un módulo que el código de
@@ -29,12 +30,14 @@
 //                              con el resumen (N OK, M fallo(s) y tiempo).
 //   _panelConsola              Panel «Desde consola»: una línea por grupo (y «todas») con el
 //                              comando que lo lanza y un botón para copiarlo.
-//   _avisarServidorLocal       Aviso visible si la página se abrió por file:// (las pruebas que
-//                              leen ficheros del proyecto fallarán).
-//   inicializar                Con GW_DEBUG activo: descubre la pestaña, crea una línea por
-//                              grupo (título + un botón por prueba, salvo las soloConsola) y el
-//                              panel de comandos. Público: lo llama index.html tras cargar los
-//                              ficheros de pruebas.
+//   _avisarFile                Si la página se abrió por file://: deja la pestaña oculta, un
+//                              aviso arriba de la página y el motivo en consola (las pruebas
+//                              que leen ficheros del proyecto fallarían).
+//   inicializar                Por http y con GW_DEBUG activo: descubre la pestaña, crea una
+//                              línea por grupo (título + un botón por prueba, salvo las
+//                              soloConsola) y el panel de comandos. Con file:// no construye
+//                              nada. Público: lo llama index.html tras cargar los ficheros de
+//                              pruebas.
 //   util                       Utilidades que comparten los ficheros de pruebas:
 //     igual / nz / nn            Comparación JSON y normalización de lo indefinido a null.
 //     esperar                    Espera en milisegundos.
@@ -264,32 +267,30 @@ var Pruebas = (function () {
   }
 
   /**
+   * Si index.html se abrió por fichero (file://) deja la pestaña oculta: las pruebas que
+   * leen ficheros del proyecto por URL (G3 y todas las que cargan cartuchos de
+   * pruebas/cartuchos) fallan con «Failed to fetch», así que no se pueden lanzar desde ahí.
+   * Aviso arriba de la página con la solución y el mismo motivo en consola.
+   * @returns {boolean} true si la página está por file:// (no se construye la pestaña).
+   */
+  function _avisarFile() {
+    if (location.protocol !== 'file:') return false;
+    const aviso = document.createElement('div');
+    aviso.className = 'avisoFileLocal';
+    aviso.textContent = 'Página abierta por fichero (file://): la pestaña Pruebas queda ' +
+      'desactivada y las cargas de cartuchos por URL fallan. Ejecuta pruebas\\Servidor.bat ' +
+      'en la carpeta del proyecto para abrirla por http.';
+    document.body.insertBefore(aviso, document.body.firstChild);
+    console.warn('[Pruebas] ' + aviso.textContent);
+    return true;
+  }
+
+  /**
    * Panel «Desde consola»: la línea de comando de cada grupo (y la de todos) con un botón
    * «copiar». Se pegan en CMD o PowerShell, en la carpeta del proyecto. Se coloca debajo
    * de la salida de la pestaña.
    * @returns {void}
    */
-  /**
-   * Aviso cuando index.html se abrió por fichero (file://): las pruebas
-   * que leen ficheros del proyecto por URL (G3 y todas las que cargan
-   * cartuchos de pruebas/cartuchos) fallan con «Failed to fetch».
-   * El aviso va antes de la salida (no se limpia al lanzar una prueba).
-   * @returns {void}
-   */
-  function _avisarServidorLocal() {
-    if (location.protocol !== 'file:') return;
-    const aviso = document.createElement('div');
-    aviso.id = 'avisoServidorLocal';
-    aviso.className = 'pruebaAviso';
-    aviso.style.cssText = 'padding:.4em .6em;margin:0 0 8px 0';
-    aviso.textContent = 'Página abierta por fichero (file://): las pruebas que leen ficheros del ' +
-      'proyecto (G3 y todas las que cargan cartuchos de pruebas/cartuchos) fallan con «Failed to ' +
-      'fetch». Abre index.html por un servidor local (http) con la raíz en la carpeta del proyecto; ' +
-      'ejecuta pruebas\\Servidor.bat en la carpeta del proyecto (o npx http-server . -p 8080).';
-    _$(ID_SALIDA).insertAdjacentElement('beforebegin', aviso);
-    console.warn('[Pruebas] ' + aviso.textContent);
-  }
-
   function _panelConsola() {
     const grupos = [];
     for (const p of CATALOGO) if (!grupos.includes(p.grupo)) grupos.push(p.grupo);
@@ -322,12 +323,14 @@ var Pruebas = (function () {
 
   /**
    * Construye los botones de la pestaña (agrupados) y quita el oculto a la pestaña
-   * si GW_DEBUG está activo; con debug apagado no hace nada. Lo llama index.html
-   * después de cargar todos los ficheros de pruebas.
+   * si GW_DEBUG está activo y la página está por http. Con debug apagado, sin los
+   * elementos de index.html o por file:// (aviso y pestaña oculta) no hace nada.
+   * Lo llama index.html después de cargar todos los ficheros de pruebas.
    * @returns {void}
    */
   function inicializar() {
     if (!(typeof GW_DEBUG !== 'undefined' && GW_DEBUG)) return;
+    if (_avisarFile()) return;
     if (!(_$(ID_PESTANA) && _$(ID_BARRA) && _$(ID_SALIDA))) {
       console.error('[Pruebas] index.html desactualizado: faltan ' + ID_PESTANA +
         ', ' + ID_BARRA + ' o ' + ID_SALIDA + '.');
@@ -344,8 +347,8 @@ var Pruebas = (function () {
         lineaGrupo = document.createElement('div');
         lineaGrupo.className = 'pruebaGrupo';
         const t = document.createElement('span');
+        t.className = 'pruebaGrupoTitulo';
         t.textContent = grupo;
-        t.style.cssText = 'font-weight:bold;margin:0 .4em 0 0';
         lineaGrupo.appendChild(t);
         _$(ID_BARRA).appendChild(lineaGrupo);
       }
@@ -359,7 +362,6 @@ var Pruebas = (function () {
       lineaGrupo.appendChild(btn);
     }
     _panelConsola();
-    _avisarServidorLocal();
   }
 
   return {

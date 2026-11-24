@@ -1,66 +1,52 @@
-// pruebas/pruebas.js — Pestaña «Pruebas» del diseñador
+// pruebas/pruebas.js — Ejecutor de pruebas del diseñador (pestaña «Pruebas» y Node)
 // ================================================================================================
 // PROPÓSITO
-//   Reúne en una pestaña del navegador (VISIBLE SOLO CON GW_DEBUG, index.html) comprobaciones
-//   que hasta ahora solo se lanzaban por consola con Node+Playwright: la parte de CRC/lector
-//   GWC de pruebas/pruebasGenerales.js y la parte de DATOS de pruebas/equivalenciaGWC.js. Cada
-//   prueba es un botón que corre AQUÍ, sobre los módulos ya cargados, y pinta el resultado
-//   en la propia pestaña; nada toca el cartucho en edición, todo es de solo lectura.
+//   Es el ÚNICO sitio que sabe lanzar pruebas. Las pruebas viven cada una en su fichero
+//   (pruebasMotor.js, pruebasDirector.js, pruebasGenerales.js, pruebasGWI_GWC.js), se REGISTRAN
+//   aquí y se lanzan de dos formas con el MISMO código:
+//     - desde la pestaña «Pruebas» (visible solo con GW_DEBUG, index.html): un botón por prueba;
+//     - desde la consola: «pruebas\Lanzar.bat motor» abre la página con Playwright y llama a
+//       ejecutar() de este módulo (el lanzador común es pruebas/lanzador.js).
+//   Las pruebas del Editor (soloConsola) necesitan ver el interior de un módulo que el código de
+//   producción no publica: no tienen botón, solo comando (se ejecutan en una copia parcheada).
 //
-//   La comparación JUEGO tick a tick sigue en pruebas/equivalenciaGWC.js: necesita sustituir
-//   el reloj del motor ANTES de que la página cargue, y eso no puede hacerlo una pestaña que
-//   nace con la página ya arriba.
-//
-// PRUEBAS
-//   CRC y lector del GWC            Autónoma: monta un cartucho mínimo propio y comprueba el
-//                                   CRC-16/CCITT-FALSE (vector, detección de intercambios) y
-//                                   los errores claros del lector ante datos fuera de rango.
-//   ColorFondo en el GWC            Autónoma: fondo por defecto, viaje del ColorFondo y huella
-//                                   en el Código GWC; bit «combinar» en el Bloque 0 y tamaños
-//                                   de los Bloques 0 y 1 (F5-I14).
-//   Equivalencia GWC↔GWI (datos)    Pide un GWI cargado: genera el GWC del cartucho en
-//                                   memoria y compara la configuración y cada campo de cada
-//                                   segmento con lo que leerGWC devuelve.
-//   Equivalencia (variante)         Lo mismo declarando además rutas, aceleración, pausas y
-//                                   regla «combinar» (la VARIANTE=1 de equivalenciaGWC.js).
-//   Orden del tick (F5-I15)         Autónoma: la limpieza de las banderas «cambiar» ocurre
-//                                   antes de la entrada, y las marcas del paso del jugador
-//                                   sobreviven al tick (para el repintado selectivo del ESP32).
+// FORMA DE UNA PRUEBA
+//   { id, grupo, nombre, necesita, destructiva, soloConsola, ejecutar(opciones) }
+//   ejecutar devuelve [[nombre, ok, detalle], ...], o null si faltan los datos que necesita
+//   (aviso, no fallo). «necesita: 'gwi'» pide un GWI cargado. «destructiva» avisa de que la
+//   prueba sustituye el cartucho cargado.
+//   «soloConsola» no crea botón: la prueba solo se lanza desde el panel de comandos.
 //
 // FUNCIONES
 //   _$                         Un elemento del DOM por id.
 //   _linea                     Una línea (clase + texto) en la salida de la pestaña; las
 //                              clases la pintan verde, roja o de aviso (estilos.css).
 //   _ok / _mal                 Las líneas OK y FALLO del resultado.
-//   _igual / _nz / _nn         Comparación JSON y normalización de lo indefinido a null.
-//   cartuchoLaboratorio        Monta un cartucho mínimo propio (2 sprites, 3 segmentos,
-//                              pantalla 100×80 sin escalar), independiente de lo cargado.
-//   crc16                      CRC-16/CCITT-FALSE calculado de forma independiente.
-//   codigoCRC                  El Código GWC «#HHHH#» que corresponde a un fichero.
-//   _pruebaCrcYLector          PRUEBA 1 «CRC y lector del GWC»: se genera y se lee, el
-//                              CRC frente al cálculo independiente (vector y módulo),
-//                              detección de intercambios y errores claros del lector
-//                              ante datos fuera de rango (F5-I14).
-//   _pruebaColorFondo          PRUEBA 2 «ColorFondo en el GWC»: fondo por defecto,
-//                              viaje del ColorFondo y huella en el Código (F5-I14).
-//   _prepararEquivalencia      El GWI en memoria + el GWC que sale de él, releído;
-//                              null si no hay GWI cargado (lo avisa el lanzador).
-//   _diferenciasEquivalencia   Configuración y campo a campo de cada segmento: GWI ↔ GWC
-//                              (solo los que viajan: sin tipo 99 ni fusionados).
-//   _pruebaEquivalencia        PRUEBAS 3 y 4 «Equivalencia (datos)» y «(variante
-//                              declarada)»: sin diferencias = IGUALES (F5-I13).
-//   _pruebaOrdenTick           PRUEBA 5 «Orden del tick (F5-I15)»: la limpieza de las
-//                              banderas «cambiar» va ANTES de la entrada; las marcas
-//                              del paso del jugador sobreviven al tick.
-//   PRUEBAS                    El catálogo: id, nombre y ejecutor de cada prueba.
-//   _lanzar                    Lanza una prueba, pinta línea a línea y cierra con el
-//                              resumen (N OK, M fallo(s) y tiempo).
-//   inicializar                Con GW_DEBUG activo: descubre la pestaña y crea un botón
-//                              por prueba. Público: único punto de arranque del módulo, lo
-//                              llama el propio script al cargar.
+//   registrar                  Añade pruebas al catálogo (lo llama cada fichero de pruebas).
+//   listar                     Las pruebas de un grupo (id, nombre, necesita), para Node.
+//   ejecutar                   Ejecuta una prueba por id y devuelve su resultado, para Node.
+//   _lanzar                    Lanza una prueba desde su botón: pinta línea a línea y cierra
+//                              con el resumen (N OK, M fallo(s) y tiempo).
+//   _panelConsola              Panel «Desde consola»: una línea por grupo (y «todas») con el
+//                              comando que lo lanza y un botón para copiarlo.
+//   inicializar                Con GW_DEBUG activo: descubre la pestaña, crea un botón por
+//                              prueba (salvo las soloConsola) y el panel de comandos. Público: lo llama index.html tras cargar los ficheros
+//                              de pruebas.
+//   util                       Utilidades que comparten los ficheros de pruebas:
+//     igual / nz / nn            Comparación JSON y normalización de lo indefinido a null.
+//     esperar                    Espera en milisegundos.
+//     traerBytes                 Lee un fichero del proyecto por URL (necesita servidor local).
+//     fichero                    Un File a partir de bytes.
+//     cargarEn                   Entrega ficheros a uno de los inputs del diseñador, como si el
+//                                usuario los hubiera elegido, y espera a que se procesen.
+//     salvarListas               Guarda las listas del motor y devuelve quien las restaura.
+//     cartuchoLaboratorio        Cartucho mínimo propio (2 sprites, 3 segmentos, 100×80).
+//     crc16 / codigoCRC          CRC-16/CCITT-FALSE independiente y Código GWC «#HHHH#».
+//   datos                      Datos que una prueba deja para el lanzador de Node (partidas).
 //
 // USO
-//   Abrir index.html con GW_DEBUG = true y entrar en la pestaña Pruebas.
+//   Pestaña: abrir index.html por servidor local con GW_DEBUG = true y entrar en Pruebas.
+//   Consola: ver el README.md (lista de comandos).
 // ================================================================================================
 'use strict';
 
@@ -69,6 +55,9 @@ var Pruebas = (function () {
   const ID_PESTANA = 'pesPruebas';
   const ID_BARRA = 'barraPruebas';
   const ID_SALIDA = 'salidaPruebas';
+
+  const CATALOGO = [];
+  const datos = {};
 
   /* ---------------- Utilidades del DOM y del resultado ---------------- */
 
@@ -83,20 +72,81 @@ var Pruebas = (function () {
   }
 
   const _ok = (nombre, detalle) => _linea('pruebaOk', 'OK    ' + nombre +
-    (detalle ? ' \u2014 ' + detalle : ''));
+    (detalle ? ' — ' + detalle : ''));
   const _mal = (nombre, detalle) => _linea('pruebaMal', 'FALLO ' + nombre +
-    (detalle ? ' \u2014 ' + detalle : ''));
+    (detalle ? ' — ' + detalle : ''));
 
-  const _igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const _nz = (o) => (o === undefined ? null : o);
-  const _nn = (v) => (v === undefined || v === null) ? null : Number(v);
+  /* ---------------- Utilidades compartidas con los ficheros de pruebas ---------------- */
 
-  /* ---------------- Montaje de un cartucho mínimo de laboratorio ---------------- */
+  const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const nz = (o) => (o === undefined ? null : o);
+  const nn = (v) => (v === undefined || v === null) ? null : Number(v);
+  const esperar = (ms) => new Promise(r => setTimeout(r, ms));
 
   /**
-   * Cartucho de laboratorio (montaje de pruebas/pruebasGenerales.js): 2 sprites y
-   * 3 segmentos, pantalla 100×80 sin escalar. Lo usan las pruebas que no
-   * dependen del cartucho cargado, sin tocar nada del diseñador.
+   * Lee un fichero del proyecto por URL relativa.
+   * @param {string} url - Ruta relativa a index.html (p. ej. 'setup4.json').
+   * @returns {Promise<Uint8Array>}
+   * @throws {Error} Si no se puede leer (la página abierta con doble clic no lo permite).
+   */
+  async function traerBytes(url) {
+    let r;
+    try { r = await fetch(url); } catch (e) { r = null; }
+    if (!r || !r.ok) throw new Error('No se pudo leer «' + url +
+      '»: abre index.html por un servidor local (http), no con doble clic');
+    return new Uint8Array(await r.arrayBuffer());
+  }
+
+  /** Un File a partir de bytes (lo que entregaría el selector de ficheros). */
+  function fichero(nombre, bytes, tipo) {
+    return new File([bytes], nombre, { type: tipo || '' });
+  }
+
+  /**
+   * Entrega ficheros a un input del diseñador como si el usuario los hubiera elegido
+   * y espera a que el diseñador los procese.
+   * @param {string} idInput - Id del input (p. ej. 'ficheroGWIZip').
+   * @param {File[]} ficheros
+   * @param {number} [ms=1500] - Espera tras el evento.
+   * @returns {Promise<void>}
+   */
+  async function cargarEn(idInput, ficheros, ms) {
+    const dt = new DataTransfer();
+    for (const f of ficheros) dt.items.add(f);
+    const el = _$(idInput);
+    el.files = dt.files;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    await esperar(ms || 1500);
+  }
+
+  /**
+   * Guarda las listas del motor (para las pruebas que montan su propio cartucho
+   * en memoria) y devuelve la función que las deja como estaban.
+   * @returns {function(): void} Restaurador.
+   */
+  function salvarListas() {
+    const s = {
+      sprites: ComunListas.sprites().slice(), segmentos: ComunListas.segmentos().slice(),
+      fondo: ComunListas.fondo(), reglas: ComunListas.reglas(),
+      fin: ComunListas.finDeCartucho(), secuencia: ComunListas.secuenciaDeCartucho(),
+      pausas: ComunListas.pausasDeCartucho(), aceleracion: ComunListas.aceleracionDeCartucho(),
+      rutas: ComunListas.rutasDeCartucho()
+    };
+    return function restaurar() {
+      ComunListas.cargar(s.sprites, s.segmentos);
+      ComunListas.fijarFondo(s.fondo);
+      ComunListas.fijarReglas(s.reglas);
+      ComunListas.fijarFin(s.fin);
+      ComunListas.fijarSecuencia(s.secuencia);
+      ComunListas.fijarPausas(s.pausas);
+      ComunListas.fijarAceleracion(s.aceleracion);
+      ComunListas.fijarRutas(s.rutas);
+    };
+  }
+
+  /**
+   * Cartucho de laboratorio: 2 sprites y 3 segmentos, pantalla 100×80 sin escalar.
+   * Lo usan las pruebas que no dependen del cartucho cargado.
    * @returns {{json:Object, sprites:Array, pantalla:Object}} Los tres argumentos
    *          de BaseCartucho.generarGWC.
    */
@@ -143,272 +193,54 @@ var Pruebas = (function () {
     return '#' + crc16(bytes.subarray(14)).toString(16).toUpperCase().padStart(4, '0') + '#';
   }
 
-  /* ---------------- PRUEBA 1: CRC y lector del GWC (F5-I14) ---------------- */
-  /* Portada de pruebas/pruebasGenerales.js: (1) se genera y se lee; (2) el CRC detecta
-     el intercambio de dos bytes del cuerpo con la misma suma aditiva; (3) el CRC del
-     módulo coincide con el cálculo independiente y con el vector «123456789»;
-     (4) corrompiendo campo a campo (con el CRC reparado, para que lo único que
-     falle sea la validación nueva) el lector da errores claros.                    */
-
-  function _pruebaCrcYLector() {
-    const out = [];
-    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    const { json: j, sprites, pantalla: pant } = cartuchoLaboratorio();
-
-    const g0 = BaseCartucho.generarGWC(j, sprites, pant);
-    ok('GWC genera y se lee', BaseCartucho.leerGWC(g0.bytes).segmentos.length === 3);
-
-    const b = g0.bytes.slice();
-    let i1 = -1, i2 = -1;
-    for (let i = 14; i < b.length && i2 < 0; i++)
-      for (let k = i + 1; k < b.length; k++) if (b[i] !== b[k]) { i1 = i; i2 = k; break; }
-    const t = b[i1]; b[i1] = b[i2]; b[i2] = t;
-    let msg = ''; try { BaseCartucho.leerGWC(b); } catch (e) { msg = e.message; }
-    ok('CRC detecta bytes intercambiados (la suma aditiva no)', /CRC/.test(msg), msg);
-
-    ok('fondo por defecto blanco', BaseCartucho.leerGWC(g0.bytes).fondo === '#FFFFFF');
-    ok('CRC del test = CRC del módulo', g0.codigo === codigoCRC(g0.bytes), g0.codigo);
-    ok('vector 123456789 = 0x29B1',
-      crc16(new TextEncoder().encode('123456789')) === 0x29B1);
-
-    const reparar = (bytes) => {
-      const txt = codigoCRC(bytes);
-      for (let k = 0; k < 6; k++) bytes[4 + k] = txt.charCodeAt(k);
-      return bytes;
-    };
-    const falla = (nombre, mut, re) => {
-      const c = g0.bytes.slice(); mut(c); reparar(c);
-      let m = ''; try { BaseCartucho.leerGWC(c); } catch (e) { m = e.message; }
-      ok(nombre, re.test(m), m || '(no falló)');
-    };
-    const dv = new DataView(g0.bytes.buffer);
-    const dir = (n) => dv.getUint32(14 + 5 + 12 + n * 4, true);
-    const regSeg0 = dir(3) + 5;
-    falla('sprite fuera de rango', c => { c[regSeg0 + 5] = 9; }, /sprite 9/);
-    falla('enlace fuera de rango', c => { c[regSeg0 + 6] = 50; }, /segmento 50/);
-    const secIni = dir(4) + 5;
-    falla('Secuencia con segmento fuera de rango', c => { c[secIni + 1] = 77; },
-      /Secuencia usa el segmento 77/);
-    const cfgIni = dir(1) + 5;
-    falla('mecanismo de fin desconocido', c => { c[cfgIni + 12] = 9; c[cfgIni + 13] = 0; },
-      /fin desconocido/);
-    falla('tabla de sprites que no cabe', c => { c[14 + 5 + 5] = 250; }, /sprite|segmento/);
-    return out;
-  }
-
-  /* ---------------- PRUEBA 2: ColorFondo en el GWC (F5-I14) ---------------- */
-  /* Portada de pruebas/pruebasGenerales.js: el fondo por defecto es blanco, el
-     ColorFondo viaja al GWC y cambia el Código GWC. Solo la parte del GWC:
-     lo que toca la ficha o el canvas pertenece al diseñador y aquí no se toca. */
-
-  function _pruebaColorFondo() {
-    const out = [];
-    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    const { json: j, sprites, pantalla: pant } = cartuchoLaboratorio();
-
-    const g0 = BaseCartucho.generarGWC(j, sprites, pant);
-    const g1 = BaseCartucho.generarGWC(Object.assign({}, j, { ColorFondo: '#336699' }),
-      sprites, pant);
-    const l1 = BaseCartucho.leerGWC(g1.bytes);
-    ok('ColorFondo viaja al GWC', l1.fondo === '#336699', l1.fondo);
-    ok('ColorFondo cambia el código del GWC', g0.codigo !== g1.codigo,
-      g0.codigo + ' / ' + g1.codigo);
-    // F5-I14 (P06): el bit «combinar» viaja en el Bloque 0 (36 bytes); el Bloque 1 mide 16.
-    const gc = BaseCartucho.generarGWC(Object.assign({}, j, { combinar: true }), sprites, pant);
-    ok('combinar viaja en el Bloque 0',
-      BaseCartucho.leerGWC(gc.bytes).combinar === true && BaseCartucho.leerGWC(g0.bytes).combinar === false);
-    const dv = new DataView(g0.bytes.buffer);
-    ok('Bloque 0 de 36 bytes y Bloque 1 de 16 bytes',
-      dv.getUint32(14 + 1, true) === 36 && dv.getUint32(14 + 5 + 36 + 1, true) === 16);
-    return out;
-  }
-
-  /* ---------------- PRUEBAS 3 y 4: equivalencia GWI↔GWC (datos, F5-I13) ---------------- */
-  /* Portada de la parte DATOS de pruebas/equivalenciaGWC.js: genera el GWC del
-     cartucho en memoria (sin escalar, pantalla = fuente), lo relee y compara la
-     configuración y cada campo de cada segmento. La VARIANTE añade lo que el
-     cartucho de ejemplo no usa (rutas, aceleración, pausas, combinar) para
-     comprobar que también viajan los valores declarados.                      */
-
-  function _prepararEquivalencia(variante) {
-    const j0 = BaseDirector.datosCartucho();
-    if (!j0 || j0.tipo !== 'GWI') return null;
-    const j = JSON.parse(JSON.stringify(j0));
-    if (variante) {
-      j.rutas = { aumentarCada: 3 };
-      j.aceleracion = { cada: 5, resta: 20, minimo: 100 };
-      j.pausas = { simulador: 300, externo: 250 };
-      j.combinar = true;
-    }
-    const pantalla = {
-      ancho: j.resolucion.ancho, alto: j.resolucion.alto,
-      fuente: { ancho: j.resolucion.ancho, alto: j.resolucion.alto }
-    };
-    const gwc = BaseCartucho.generarGWC(j, BaseDescomponer.sprites(), pantalla);
-    return { json: j, leido: BaseCartucho.leerGWC(gwc.bytes), gwc: gwc };
-  }
-
-  function _diferenciasEquivalencia(j, l) {
-    const d = [];
-    const cmpVal = (etiqueta, a, b) => {
-      if (!_igual(_nz(a), _nz(b)))
-        d.push(etiqueta + ': GWI=' + JSON.stringify(a) + ' GWC=' + JSON.stringify(b));
-    };
-    cmpVal('pausas.simulador', j.pausas && j.pausas.simulador, l.pausas && l.pausas.simulador);
-    cmpVal('pausas.externo', j.pausas && j.pausas.externo, l.pausas && l.pausas.externo);
-    cmpVal('aceleracion', j.aceleracion, l.aceleracion);
-    cmpVal('rutas.aumentarCada', j.rutas && j.rutas.aumentarCada, l.rutas && l.rutas.aumentarCada);
-    cmpVal('fin.mecanismo', j.fin && j.fin.mecanismo, l.fin && l.fin.mecanismo);
-    cmpVal('fin.contador', j.fin && j.fin.contador, l.fin && l.fin.contador);
-    if (!!j.combinar !== !!l.combinar)
-      d.push('combinar: GWI=' + !!j.combinar + ' GWC=' + !!l.combinar);
-
-    const viaja = j.segmentos.filter(s => s.tipo !== 99 && !s.fusionadoPor);
-    if (viaja.length !== l.segmentos.length)
-      d.push('nº de segmentos: GWI=' + viaja.length + ' GWC=' + l.segmentos.length);
-    const idx = new Map(viaja.map((s, i) => [s.id, i]));
-    const enlace = (id) => (id === undefined || id === null) ? null :
-      (idx.has(id) ? idx.get(id) : 'x:' + id);
-    const ENL = ['siguiente', 'salvado', 'muerte', 'mostrarJunto', 'izquierda', 'derecha',
-      'arriba', 'abajo', 'colision', 'barra_a', 'barra_b', 'barra_c', 'barra_d', 'barra_e',
-      'barra_f', 'barra_g', 'digito_1', 'digito_2', 'digito_3', 'digito_4'];
-    viaja.forEach((s, i) => {
-      const g = l.segmentos[i];
-      if (!g) return;
-      const cmp = (campo, a, b) => cmpVal(s.id + '.' + campo, a, b);
-      cmp('tipo', s.tipo, g.tipo); cmp('x', s.x, g.x); cmp('y', s.y, g.y);
-      for (const c of ENL)
-        cmp(c, enlace(s[c]), enlace(g[c]) === null ? null :
-          g[c] === undefined ? null : parseInt(String(g[c]).replace(/\D/g, ''), 10));
-      cmp('salvadoContador', _nn(s.salvadoContador), g.salvadoContador);
-      cmp('muerteContador', _nn(s.muerteContador), g.muerteContador);
-      cmp('contadorInterno', s.contadorInterno, g.contadorInterno);
-      cmp('ruta', s.ruta, g.ruta);
-      cmp('primero', !!s.primero, !!g.primero);
-      if (s.tipo === 3 || s.tipo === 4) cmp('contador (orden de la familia)', s.contador, g.contador);
-      if (s.tipo === 6) {
-        cmp('valorInicial', s.valorInicial || 0, g.valorInicial || 0);
-        cmp('direccion', s.direccion === 'descendente', g.direccion === 'descendente');
-        cmp('presentarCero', s.presentarCero !== false, g.presentarCero !== false);
-      }
-    });
-    return d;
-  }
-
-  function _pruebaEquivalencia(variante) {
-    const out = [];
-    const preparado = _prepararEquivalencia(variante);
-    if (!preparado) return null;           // lo avisa el lanzador, sin fallo
-    const difs = _diferenciasEquivalencia(preparado.json, preparado.leido);
-    out.push(['equivalencia de datos' + (variante ? ' (variante)' : ''),
-    difs.length === 0,
-    difs.slice(0, 40).join(' || ')]);
-    if (difs.length > 40) out.push(['(resto de diferencias omitidas)', true,
-      (difs.length - 40) + ' más']);
-    return out;
-  }
-
-  /* ---------------- PRUEBA 5: orden del tick (F5-I15) ---------------- */
-  /* El análisis (Memoria F2) fija el orden del tick: (0) limpieza de las
-     banderas «cambiar» del tick anterior, (1) ENTRADA, (2) cómputo. La
-     entrada marca «cambiar» al mover al jugador (el hueco que deja y el
-     que ocupa): si la limpieza viniera DESPUÉS de ella, esas marcas se
-     perderían y el repintado selectivo del ESP32 no pintaría el paso.
-     Contrato que se comprueba con un laboratorio de dos segmentos y el
-     motor movido a mano; al final se DEVUELVE el puente como estaba, con
-     el cartucho cargado intacto (si lo había).                    */
-
-  function _pruebaOrdenTick() {
-    const out = [];
-    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    const salvado = {
-      sprites: ComunListas.sprites(), segmentos: ComunListas.segmentos(),
-      fondo: ComunListas.fondo(), reglas: ComunListas.reglas(),
-      fin: ComunListas.finDeCartucho(), secuencia: ComunListas.secuenciaDeCartucho(),
-      pausas: ComunListas.pausasDeCartucho(), aceleracion: ComunListas.aceleracionDeCartucho(),
-      rutas: ComunListas.rutasDeCartucho()
-    };
-    try {
-      ComunListas.limpiar();
-      ComunListas.cargar([], [
-        { id: 'jug_a', tipo: 0, primero: true, visible: false, derecha: 'jug_b' },
-        { id: 'jug_b', tipo: 0, visible: false }
-      ]);
-      JuegoMotorEstados.iniciar();
-      let teclaDerecha = '4';
-      for (const [t, d] of Object.entries(JuegoMotorEstados.MOVER))
-        if (d === 'derecha') teclaDerecha = t;
-      JuegoMotorEstados.tick();
-      const segs = ComunListas.segmentos();
-      const a = segs[0];
-      a.visible = true; a.cambiar = true;
-      ComunListas.encolar(teclaDerecha);
-      JuegoMotorEstados.tick();
-      const b = segs[1];
-      ok('el paso del jugador ocurre', (!a.visible && b.visible &&
-        JuegoMotorEstados.jugadorActual && JuegoMotorEstados.jugadorActual() === 1),
-        'A.visible=' + a.visible + ' B.visible=' + b.visible);
-      ok('las banderas del paso SOBREVIVEN al tick (limpieza antes de la entrada)',
-        a.cambiar === true && b.cambiar === true,
-        'A.cambiar=' + a.cambiar + ' B.cambiar=' + b.cambiar);
-      JuegoMotorEstados.tick();
-      ok('el tick siguiente deja las banderas limpias',
-        !a.cambiar && !b.cambiar && !a.visible && b.visible,
-        'A.cambiar=' + a.cambiar + ' B.cambiar=' + b.cambiar);
-    } finally {
-      ComunListas.cargar(salvado.sprites, salvado.segmentos);
-      ComunListas.fijarFondo(salvado.fondo);
-      ComunListas.fijarReglas(salvado.reglas);
-      ComunListas.fijarFin(salvado.fin);
-      ComunListas.fijarSecuencia(salvado.secuencia);
-      ComunListas.fijarPausas(salvado.pausas);
-      ComunListas.fijarAceleracion(salvado.aceleracion);
-      ComunListas.fijarRutas(salvado.rutas);
-    }
-    return out;
-  }
-
-  /* ---------------- Catálogo y lanzador ---------------- */
-
-  const PRUEBAS = [
-    {
-      id: 'crcLector', nombre: 'CRC y lector del GWC', necesita: null,
-      ejecutar: () => _pruebaCrcYLector()
-    },
-    {
-      id: 'colorFondo', nombre: 'ColorFondo en el GWC', necesita: null,
-      ejecutar: () => _pruebaColorFondo()
-    },
-    {
-      id: 'equivalencia', nombre: 'Equivalencia GWC↔GWI (datos)', necesita: null,
-      ejecutar: () => _pruebaEquivalencia(false)
-    },
-    {
-      id: 'equivalenciaVariante', nombre: 'Equivalencia (variante declarada)', necesita: null,
-      ejecutar: () => _pruebaEquivalencia(true)
-    },
-    {
-      id: 'ordenTick', nombre: 'Orden del tick (F5-I15)', necesita: null,
-      ejecutar: () => _pruebaOrdenTick()
-    }
-  ];
+  /* ---------------- Catálogo ---------------- */
 
   /**
-   * Lanza una prueba del catálogo: deshabilita los botones mientras corre,
-   * limpia la salida, la ejecuta y determina el resultado final.
-   * Una prueba devuelve null cuando NO TIENE LOS DATOS que necesita
-   * (aviso, no fallo); sinónimo de array de [nombre, ok, detalle].
-   * @param {number} indice - Posición en el catálogo PRUEBAS.
+   * Añade pruebas al catálogo. Cada fichero de pruebas lo llama al cargarse.
+   * @param {Array<Object>} lista - Pruebas con la forma descrita en la cabecera.
+   * @returns {void}
+   */
+  function registrar(lista) { for (const p of lista) CATALOGO.push(p); }
+
+  /**
+   * Las pruebas de un grupo, sin su código (para que Node sepa qué lanzar).
+   * @param {string} grupo
+   * @returns {Array<{id:string, nombre:string, necesita:?string, destructiva:boolean}>}
+   */
+  function listar(grupo) {
+    return CATALOGO.filter(p => p.grupo === grupo).map(p => ({
+      id: p.id, nombre: p.nombre, necesita: p.necesita || null, destructiva: !!p.destructiva
+    }));
+  }
+
+  /**
+   * Ejecuta una prueba por id.
+   * @param {string} id
+   * @param {Object} [opciones] - Opciones de la prueba (cartuchos, semillas, ticks...).
+   * @returns {Promise<?Array>} [[nombre, ok, detalle], ...] o null si faltan datos.
+   */
+  async function ejecutar(id, opciones) {
+    const p = CATALOGO.find(x => x.id === id);
+    if (!p) throw new Error('Prueba desconocida: ' + id);
+    return await p.ejecutar(opciones || {});
+  }
+
+  /**
+   * Lanza una prueba desde su botón: deshabilita los botones mientras corre,
+   * limpia la salida, la ejecuta y pinta el resultado. Una prueba que devuelve
+   * null no tiene los datos que necesita (aviso, no fallo).
+   * @param {Object} prueba - Entrada del catálogo.
    * @returns {Promise<void>}
    */
-  async function _lanzar(indice) {
-    const prueba = PRUEBAS[indice];
+  async function _lanzar(prueba) {
     for (const b of _$(ID_BARRA).querySelectorAll('button')) b.disabled = true;
     _$(ID_SALIDA).innerHTML = '';
     _linea('pruebaTitulo', prueba.nombre);
+    if (prueba.destructiva)
+      _linea('pruebaAviso', 'Esta prueba sustituye el cartucho cargado (vuelve a cargarlo después).');
     const t0 = performance.now();
     try {
-      const res = await Promise.resolve().then(prueba.ejecutar);
+      const res = await Promise.resolve().then(() => prueba.ejecutar({}));
       if (res === null) {
         _linea('pruebaAviso',
           'Esta prueba necesita un GWI cargado (pestaña Cartucho o Editor).');
@@ -416,7 +248,7 @@ var Pruebas = (function () {
         let fallos = 0;
         for (const [n, c, x] of res) { (c ? _ok : _mal)(n, x); if (!c) fallos++; }
         _linea(fallos === 0 ? 'pruebaFinOk' : 'pruebaFinMal',
-          (res.length - fallos) + ' OK, ' + fallos + ' fallo(s) \u2014 ' +
+          (res.length - fallos) + ' OK, ' + fallos + ' fallo(s) — ' +
           Math.round(performance.now() - t0) + ' ms');
       }
     } catch (e) {
@@ -428,10 +260,45 @@ var Pruebas = (function () {
   }
 
   /**
-   * Construye los botones de la pestaña y quita el oculto a la pestaña si
-   * GW_DEBUG está activo (index.html); con debug apagado no hace nada: la
-   * pestaña queda oculta y no se carga ninguna comprobación. Lo llama la
-   * propia página al cargar el script (va al final del body).
+   * Panel «Desde consola»: la línea de comando de cada grupo (y la de todos) con un botón
+   * «copiar». Se pegan en CMD o PowerShell, en la carpeta del proyecto. Se coloca debajo
+   * de la salida de la pestaña.
+   * @returns {void}
+   */
+  function _panelConsola() {
+    const grupos = [];
+    for (const p of CATALOGO) if (!grupos.includes(p.grupo)) grupos.push(p.grupo);
+    const panel = document.createElement('div');
+    panel.id = 'panelConsolaPruebas';
+    panel.style.cssText = 'margin-top:1em';
+    const t = document.createElement('div');
+    t.style.cssText = 'font-weight:bold;margin-bottom:.3em';
+    t.textContent = 'Desde consola (copiar y pegar en CMD o PowerShell, en la carpeta del proyecto):';
+    panel.appendChild(t);
+    for (const g of grupos.concat(['todas'])) {
+      const cmd = 'pruebas\\Lanzar.bat ' + g;
+      const fila = document.createElement('div');
+      fila.style.cssText = 'margin:.15em 0';
+      const b = document.createElement('button');
+      b.textContent = 'Copiar';
+      b.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(cmd); b.textContent = 'Copiado'; }
+        catch (e) { b.textContent = 'No se pudo copiar'; }
+        setTimeout(() => { b.textContent = 'Copiar'; }, 1500);
+      });
+      const c = document.createElement('code');
+      c.style.cssText = 'margin-left:.6em';
+      c.textContent = cmd;
+      fila.appendChild(b); fila.appendChild(c);
+      panel.appendChild(fila);
+    }
+    _$(ID_SALIDA).insertAdjacentElement('afterend', panel);
+  }
+
+  /**
+   * Construye los botones de la pestaña (agrupados) y quita el oculto a la pestaña
+   * si GW_DEBUG está activo; con debug apagado no hace nada. Lo llama index.html
+   * después de cargar todos los ficheros de pruebas.
    * @returns {void}
    */
   function inicializar() {
@@ -442,17 +309,36 @@ var Pruebas = (function () {
       return;
     }
     _$(ID_PESTANA).classList.remove('oculto');
-    for (let i = 0; i < PRUEBAS.length; i++) {
+    let grupo = null;
+    for (const p of CATALOGO) {
+      if (p.soloConsola) continue;
+      if (p.grupo !== grupo) {
+        grupo = p.grupo;
+        const t = document.createElement('span');
+        t.textContent = grupo;
+        t.style.cssText = 'font-weight:bold;margin:0 .4em 0 1em';
+        _$(ID_BARRA).appendChild(t);
+      }
       const btn = document.createElement('button');
-      btn.textContent = PRUEBAS[i].nombre;
-      if (PRUEBAS[i].necesita) btn.title = 'Necesita ' + PRUEBAS[i].necesita;
-      btn.addEventListener('click', () => _lanzar(i));
+      btn.textContent = p.nombre;
+      const aviso = [];
+      if (p.necesita) aviso.push('Necesita ' + p.necesita);
+      if (p.destructiva) aviso.push('Sustituye el cartucho cargado');
+      if (aviso.length) btn.title = aviso.join('. ');
+      btn.addEventListener('click', () => _lanzar(p));
       _$(ID_BARRA).appendChild(btn);
     }
+    _panelConsola();
   }
 
-  return { inicializar: inicializar };
+  return {
+    registrar: registrar, listar: listar, ejecutar: ejecutar, inicializar: inicializar,
+    datos: datos,
+    util: {
+      igual: igual, nz: nz, nn: nn, esperar: esperar, traerBytes: traerBytes, fichero: fichero,
+      cargarEn: cargarEn, salvarListas: salvarListas, cartuchoLaboratorio: cartuchoLaboratorio,
+      crc16: crc16, codigoCRC: codigoCRC
+    }
+  };
 
 })();
-
-Pruebas.inicializar();

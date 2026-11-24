@@ -1,143 +1,97 @@
-// pruebas/pruebasGWI_GWC.js — F5-I13 (+ cartucho completo y semillas, F5-I14)
+// pruebas/pruebasGWI_GWC.js — Equivalencia entre un GWI y el GWC que sale de él
 // ================================================================================================
 // PROPÓSITO
-//   Comprueba que un GWC generado desde un GWI es EQUIVALENTE a él: mismos datos de configuración
-//   y mismo juego. Es la prueba del principio de F5-I13: «el juego debe funcionar igual cargando
-//   el GWI o el GWC del que sale».
+//   Comprueba el principio de F5-I13: «el juego debe funcionar igual cargando el GWI o el GWC del
+//   que sale». Genera con BaseCartucho.generarGWC el GWC del GWI cargado, sin escalar (pantalla =
+//   fuente), y compara:
+//     - DATOS: lo que devuelve leerGWC (configuración y cada campo de cada segmento) con el GWI.
+//     - JUEGO: una partida con el GWI y otra con el GWC (mismo arranque, mismo generador de
+//       aleatorios, reloj sustituido por una cola que se vacía a mano, un jugador determinista
+//       que mueve izquierda y derecha) y compara, tick a tick, qué segmentos están encendidos.
 //
-// QUÉ HACE
-//   1. Carga el setup y el GWI en el diseñador (Playwright, Chromium).
-//   2. Genera con BaseCartucho.generarGWC el GWC del GWI, sin escalar (pantalla = fuente).
-//   3. DATOS: relee el GWC con leerGWC y compara la configuración (pausas, aceleración, rutas,
-//      fin, secuencia) y cada campo de cada segmento que lee el motor con los del GWI.
-//   4. JUEGO: ejecuta N ticks con el GWI y N con el GWC (mismo arranque, mismo generador de
-//      aleatorios, reloj sustituido por una cola que se vacía a mano) y compara, tick a tick,
-//      qué segmentos están encendidos.
+// PRUEBAS (grupo «gwi_gwc»)
+//   Equivalencia (datos)        Pide un GWI cargado.
+//   Equivalencia (variante)     Lo mismo declarando además rutas, aceleración, pausas y «combinar».
+//   Equivalencia (juego)        Partidas del cartucho de ejemplo con cada semilla (cinco por
+//                               defecto). Vuelve a cargar el GWI de ejemplo al terminar.
+//   Equivalencia (completa)     Partidas con un GWI al que se declara además rutas, aceleración,
+//                               pausas y «combinar» (los declara en el historial de autoría, que es
+//                               de donde los reconstruye la carga del GWI).
+//   Las dos de juego dejan sus partidas en Pruebas.datos: en Node, GRABAR=fichero las guarda y
+//   COMPARAR=fichero las compara con las guardadas (red de seguridad del motor).
+//
+// FUNCIONES
+//   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
+//   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
+//   _pruebaEquivalencia         Pruebas de datos (normal y variante).
+//   _gwiCompleto                El GWI de ejemplo con las declaraciones añadidas (en memoria).
+//   _cargarGWI                  Carga el setup y un GWI por los inputs del diseñador.
+//   _jugarPartida               N ticks con el reloj sustituido, devolviendo qué hay encendido.
+//   _pruebaJuego                Pruebas de juego (ejemplo y completa).
 //
 // USO
-//   NODE_PATH=$(npm root -g) node pruebas/equivalenciaGWC.js [setup.json] [gwi.zip] [ticks]
-//   COMPLETO=1 (F5-I14) declara en el GWI rutas, aceleración, pausas y «combinar» y JUEGA con
-//   ese cartucho completo (datos y partida tick a tick), no solo los datos.
-//   SEMILLAS=1,6699,48879 (F5-I14) lista de semillas del generador de aleatorios con las que se
-//   juega; por defecto cinco. Cada semilla es una partida distinta y todas deben coincidir.
-//   DEPURAR=1 muestra, en la primera diferencia de cada partida, el estado de los segmentos.
-//   VARIANTE=1 declara además rutas, aceleración, pausas y regla «combinar» (que el cartucho de
-//   ejemplo no usa) y comprueba solo los DATOS: así se prueba que también viajan los valores
-//   declarados, no solo los ausentes.
-//   Sale con código 1 si hay alguna diferencia.
+//   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
+//     pruebas\Lanzar.bat gwi_gwc      (opciones: ver lanzador.js)
+//   Variables: SEMILLAS=1,6699  TICKS=400  SIN_PULSAR=1  GRABAR=fich  COMPARAR=fich
 // ================================================================================================
 'use strict';
-const { chromium } = require('playwright');
-const path = require('path');
-const fs = require('fs');
-const { execFileSync } = require('child_process');
 
-const RAIZ = path.resolve(__dirname, '..');
-const SETUP = process.argv[2] || path.join(RAIZ, 'setup4.json');
-let GWI = process.argv[3] || path.join(RAIZ, 'cartucho_gwi.zip');
-const TICKS = Number(process.argv[4]) || 400;
-const SEMILLAS = (process.env.SEMILLAS || '1,6699,48879,32767,4660').split(',').map(Number);
+(function () {
+  if (typeof Pruebas === 'undefined') return;     // en Node solo cuenta el lanzador del final
+  const U = Pruebas.util;
 
-function jsonDelGWI(zip) {
-  const dir = fs.mkdtempSync('/tmp/gwi_');
-  execFileSync('unzip', ['-q', '-o', zip, '-d', dir]);
-  const f = fs.readdirSync(dir).find(n => n.endsWith('.json'));
-  return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-}
-
-(async () => {
-  const json = jsonDelGWI(GWI);
-  const VARIANTE = !!process.env.VARIANTE;
-  const COMPLETO = !!process.env.COMPLETO;
-  if (VARIANTE || COMPLETO) {
-    json.rutas = { aumentarCada: 3 };
-    json.aceleracion = { cada: 5, resta: 20, minimo: 100 };
-    json.pausas = { simulador: 300, externo: 250 };
-    json.combinar = true;
-    json.ColorFondo = '#336699';
-  }
-  if (COMPLETO) {
-    // Un GWI con esas declaraciones, empaquetado de nuevo para jugarlo de verdad.
-    const dir = fs.mkdtempSync('/tmp/gwi_c_');
-    execFileSync('unzip', ['-q', '-o', GWI, '-d', dir]);
-    const f = fs.readdirSync(dir).find(n => n.endsWith('.json'));
-    // Al cargar un GWI, pausas, aceleración y rutas se RECONSTRUYEN desde las propiedades del
-    // segmento «cartucho» (autoria.cambios): hay que declararlas ahí, no solo arriba.
-    const cartucho = json.autoria.cambios.find(c => c.tipo === 'cartucho').segmento;
-    const nuevas = { pausaSim: 300, pausaEsp: 250, accCada: 5, accResta: 20, accMinimo: 100, aumentarCada: 3 };
-    for (const [campo, valor] of Object.entries(nuevas)) {
-      json.autoria.ultimoOp += 1;
-      json.autoria.cambios.push({ n: json.autoria.ultimoOp, relacionados: 0, segmento: cartucho,
-        [campo]: valor, antes: { [campo]: null } });
+  function _prepararEquivalencia(variante) {
+    const j0 = BaseDirector.datosCartucho();
+    if (!j0 || j0.tipo !== 'GWI') return null;
+    const j = JSON.parse(JSON.stringify(j0));
+    if (variante) {
+      j.rutas = { aumentarCada: 3 };
+      j.aceleracion = { cada: 5, resta: 20, minimo: 100 };
+      j.pausas = { simulador: 300, externo: 250 };
+      j.combinar = true;
     }
-    fs.writeFileSync(path.join(dir, f), JSON.stringify(json, null, 2));
-    GWI = '/tmp/gwi_completo.zip';
-    if (fs.existsSync(GWI)) fs.unlinkSync(GWI);
-    execFileSync('zip', ['-q', '-r', GWI, '.'], { cwd: dir });
-  }
-  const navegador = await chromium.launch();
-  const pg = await navegador.newPage();
-  const errores = [];
-  pg.on('pageerror', e => errores.push(e.message));
-  // El reloj del simulador pasa a una cola que vaciamos a mano (tick a tick, sin esperas).
-  await pg.addInitScript(() => {
-    window.__cola = [];
-    const real = window.setTimeout.bind(window);
-    window.setTimeout = (f, ms, ...a) => {
-      if (typeof ms === 'number' && ms >= 100 && f && f.name === '_tick') { window.__cola.push(f); return 1; }
-      return real(f, ms, ...a);
-    };
-  });
-  await pg.goto('file://' + RAIZ + '/index.html');
-  await pg.setInputFiles('#ficheroSetup', SETUP);
-  await pg.waitForTimeout(400);
-
-  // --- Genera el GWC desde las listas del GWI cargado ---
-  await pg.setInputFiles('#ficheroGWIZip', GWI);
-  await pg.waitForTimeout(3500);
-  const gwcBytes = await pg.evaluate((j) => {
     const pantalla = {
       ancho: j.resolucion.ancho, alto: j.resolucion.alto,
       fuente: { ancho: j.resolucion.ancho, alto: j.resolucion.alto }
     };
     const gwc = BaseCartucho.generarGWC(j, BaseDescomponer.sprites(), pantalla);
-    return Array.from(gwc.bytes);
-  }, json);
-  fs.writeFileSync('/tmp/t_equiv.gwc', Buffer.from(gwcBytes));
+    return { json: j, leido: BaseCartucho.leerGWC(gwc.bytes), gwc: gwc };
+  }
 
-  // --- DATOS: GWI frente a lo que lee leerGWC ---
-  const difs = await pg.evaluate(({ j, bytes }) => {
-    const l = BaseCartucho.leerGWC(new Uint8Array(bytes));
+  function _diferenciasEquivalencia(j, l) {
     const d = [];
-    const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-    const nz = (o) => (o === undefined ? null : o);
-    const nn = (v) => (v === undefined || v === null) ? null : Number(v);
-    // Configuración: «sin declarar» en el GWI debe seguir siendo «sin declarar» en el GWC.
-    if (!igual(nz(j.pausas && j.pausas.simulador), nz(l.pausas && l.pausas.simulador)))
-      d.push('pausas.simulador: GWI=' + JSON.stringify(j.pausas && j.pausas.simulador) + ' GWC=' + JSON.stringify(l.pausas && l.pausas.simulador));
-    if (!igual(nz(j.pausas && j.pausas.externo), nz(l.pausas && l.pausas.externo)))
-      d.push('pausas.externo: GWI=' + JSON.stringify(j.pausas && j.pausas.externo) + ' GWC=' + JSON.stringify(l.pausas && l.pausas.externo));
-    if (!igual(nz(j.aceleracion), nz(l.aceleracion))) d.push('aceleracion: GWI=' + JSON.stringify(j.aceleracion) + ' GWC=' + JSON.stringify(l.aceleracion));
-    if (!igual(nz(j.rutas && j.rutas.aumentarCada), nz(l.rutas && l.rutas.aumentarCada)))
-      d.push('rutas.aumentarCada: GWI=' + JSON.stringify(j.rutas && j.rutas.aumentarCada) + ' GWC=' + JSON.stringify(l.rutas && l.rutas.aumentarCada));
-    if (!igual(nz(j.fin && j.fin.mecanismo), nz(l.fin && l.fin.mecanismo))) d.push('fin.mecanismo');
-    if (!igual(nz(j.fin && j.fin.contador), nz(l.fin && l.fin.contador))) d.push('fin.contador');
-    if ((j.ColorFondo || '#FFFFFF').toUpperCase() !== l.fondo.toUpperCase()) d.push('ColorFondo: GWI=' + j.ColorFondo + ' GWC=' + l.fondo);
-    if (!!j.combinar !== !!l.combinar) d.push('combinar: GWI=' + !!j.combinar + ' GWC=' + !!l.combinar);
-    // Segmentos que viajan (sin fantasmas ni absorbidos), en orden.
+    const cmpVal = (etiqueta, a, b) => {
+      if (!U.igual(U.nz(a), U.nz(b)))
+        d.push(etiqueta + ': GWI=' + JSON.stringify(a) + ' GWC=' + JSON.stringify(b));
+    };
+    cmpVal('pausas.simulador', j.pausas && j.pausas.simulador, l.pausas && l.pausas.simulador);
+    cmpVal('pausas.externo', j.pausas && j.pausas.externo, l.pausas && l.pausas.externo);
+    cmpVal('aceleracion', j.aceleracion, l.aceleracion);
+    cmpVal('rutas.aumentarCada', j.rutas && j.rutas.aumentarCada, l.rutas && l.rutas.aumentarCada);
+    cmpVal('fin.mecanismo', j.fin && j.fin.mecanismo, l.fin && l.fin.mecanismo);
+    cmpVal('fin.contador', j.fin && j.fin.contador, l.fin && l.fin.contador);
+    if (!!j.combinar !== !!l.combinar)
+      d.push('combinar: GWI=' + !!j.combinar + ' GWC=' + !!l.combinar);
+
     const viaja = j.segmentos.filter(s => s.tipo !== 99 && !s.fusionadoPor);
-    if (viaja.length !== l.segmentos.length) d.push('nº de segmentos: GWI=' + viaja.length + ' GWC=' + l.segmentos.length);
+    if (viaja.length !== l.segmentos.length)
+      d.push('nº de segmentos: GWI=' + viaja.length + ' GWC=' + l.segmentos.length);
     const idx = new Map(viaja.map((s, i) => [s.id, i]));
-    const enlace = (id) => (id === undefined || id === null) ? null : (idx.has(id) ? idx.get(id) : 'x:' + id);
-    const ENL = ['siguiente', 'salvado', 'muerte', 'mostrarJunto', 'izquierda', 'derecha', 'arriba', 'abajo', 'colision',
-      'barra_a', 'barra_b', 'barra_c', 'barra_d', 'barra_e', 'barra_f', 'barra_g', 'digito_1', 'digito_2', 'digito_3', 'digito_4'];
+    const enlace = (id) => (id === undefined || id === null) ? null :
+      (idx.has(id) ? idx.get(id) : 'x:' + id);
+    const ENL = ['siguiente', 'salvado', 'muerte', 'mostrarJunto', 'izquierda', 'derecha',
+      'arriba', 'abajo', 'colision', 'barra_a', 'barra_b', 'barra_c', 'barra_d', 'barra_e',
+      'barra_f', 'barra_g', 'digito_1', 'digito_2', 'digito_3', 'digito_4'];
     viaja.forEach((s, i) => {
-      const g = l.segmentos[i]; if (!g) return;
-      const cmp = (campo, a, b) => { if (!igual(nz(a), nz(b))) d.push(s.id + '.' + campo + ': GWI=' + JSON.stringify(a) + ' GWC=' + JSON.stringify(b)); };
+      const g = l.segmentos[i];
+      if (!g) return;
+      const cmp = (campo, a, b) => cmpVal(s.id + '.' + campo, a, b);
       cmp('tipo', s.tipo, g.tipo); cmp('x', s.x, g.x); cmp('y', s.y, g.y);
-      for (const c of ENL) cmp(c, enlace(s[c]), enlace(g[c]) === null ? null : g[c] === undefined ? null : parseInt(String(g[c]).replace(/\D/g, ''), 10));
-      cmp('salvadoContador', nn(s.salvadoContador), g.salvadoContador);
-      cmp('muerteContador', nn(s.muerteContador), g.muerteContador);
+      for (const c of ENL)
+        cmp(c, enlace(s[c]), enlace(g[c]) === null ? null :
+          g[c] === undefined ? null : parseInt(String(g[c]).replace(/\D/g, ''), 10));
+      cmp('salvadoContador', U.nn(s.salvadoContador), g.salvadoContador);
+      cmp('muerteContador', U.nn(s.muerteContador), g.muerteContador);
       cmp('contadorInterno', s.contadorInterno, g.contadorInterno);
       cmp('ruta', s.ruta, g.ruta);
       cmp('primero', !!s.primero, !!g.primero);
@@ -149,51 +103,134 @@ function jsonDelGWI(zip) {
       }
     });
     return d;
-  }, { j: json, bytes: gwcBytes });
+  }
 
-  // --- JUEGO: N ticks con cada cartucho y comparación tick a tick ---
-  const jugar = async (cargar, semilla) => {
+  function _pruebaEquivalencia(variante) {
+    const out = [];
+    const preparado = _prepararEquivalencia(variante);
+    if (!preparado) return null;           // lo avisa el lanzador, sin fallo
+    const difs = _diferenciasEquivalencia(preparado.json, preparado.leido);
+    out.push(['equivalencia de datos' + (variante ? ' (variante)' : ''),
+    difs.length === 0,
+    difs.slice(0, 40).join(' || ')]);
+    if (difs.length > 40) out.push(['(resto de diferencias omitidas)', true,
+      (difs.length - 40) + ' más']);
+    return out;
+  }
+
+  /* ---------------- Juego tick a tick ---------------- */
+
+  const SEMILLAS = [1, 6699, 48879, 32767, 4660];
+
+  /** El GWI de ejemplo con rutas, aceleración, pausas y «combinar» declarados. */
+  async function _gwiCompleto(bytes) {
+    const zip = await JSZip.loadAsync(bytes);
+    const nombre = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
+    const json = JSON.parse(await zip.file(nombre).async('string'));
+    json.rutas = { aumentarCada: 3 };
+    json.aceleracion = { cada: 5, resta: 20, minimo: 100 };
+    json.pausas = { simulador: 300, externo: 250 };
+    json.combinar = true;
+    json.ColorFondo = '#336699';
+    // Al cargar un GWI, pausas, aceleración y rutas se RECONSTRUYEN desde las propiedades del
+    // segmento «cartucho» (autoria.cambios): hay que declararlas ahí, no solo arriba.
+    const cartucho = json.autoria.cambios.find(c => c.tipo === 'cartucho').segmento;
+    const nuevas = { pausaSim: 300, pausaEsp: 250, accCada: 5, accResta: 20, accMinimo: 100, aumentarCada: 3 };
+    for (const [campo, valor] of Object.entries(nuevas)) {
+      json.autoria.ultimoOp += 1;
+      json.autoria.cambios.push({ n: json.autoria.ultimoOp, relacionados: 0, segmento: cartucho,
+        [campo]: valor, antes: { [campo]: null } });
+    }
+    zip.file(nombre, JSON.stringify(json, null, 2));
+    return { json: json, bytes: await zip.generateAsync({ type: 'uint8array' }) };
+  }
+
+  async function _cargarGWI(setup, bytes) {
+    await U.cargarEn('ficheroSetup', [U.fichero('setup.json', setup)], 400);
+    await U.cargarEn('ficheroGWIZip', [U.fichero('cartucho.zip', bytes)], 3500);
+  }
+
+  /** Juega ticks con la cola del reloj; devuelve, por tick, qué segmentos están encendidos. */
+  async function _jugarPartida(cargar, semilla, ticks, sinPulsar) {
     await cargar();
-    await pg.click('#pesSimulador');
-    await pg.evaluate((sem) => { window.__cola.length = 0; JuegoDirector.fijarSemilla(sem); }, semilla);
-    await pg.keyboard.press('z');                       // A = Start
-    await pg.waitForTimeout(100);
-    return pg.evaluate((n) => {
-      const hist = [];
-      for (let t = 0; t < n; t++) {
-        const f = window.__cola.shift(); if (!f) break;
-        f();
-        hist.push(ComunListas.segmentos().filter(s => s.tipo !== 99 && !s.fusionadoPor)
-          .map(s => (s.visible ? '1' : '0')).join(''));
+    document.getElementById('pesSimulador').click();
+    window.__cola.length = 0;
+    JuegoDirector.fijarSemilla(semilla);
+    for (const tipo of ['keydown', 'keyup'])
+      document.dispatchEvent(new KeyboardEvent(tipo, { key: 'z', bubbles: true }));   // A = Start
+    await U.esperar(100);
+    const hist = [];
+    for (let t = 0; t < ticks; t++) {
+      const f = window.__cola.shift(); if (!f) break;
+      if (!sinPulsar) { const r = (t * 7 + semilla) % 5; if (r === 0) ComunListas.encolar(0); else if (r === 1) ComunListas.encolar(4); }
+      f();
+      hist.push(ComunListas.segmentos().filter(s => s.tipo !== 99 && !s.fusionadoPor)
+        .map(s => (s.visible ? '1' : '0')).join(''));
+    }
+    return hist;
+  }
+
+  /**
+   * Partidas con el GWI y con el GWC que sale de él, por semilla.
+   * @param {string} id - Clave en Pruebas.datos.
+   * @param {boolean} completa - GWI con las declaraciones añadidas.
+   */
+  async function _pruebaJuego(id, completa, opc) {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const setup = await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json');
+    let bytes = await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip');
+    let json;
+    if (completa) { const c = await _gwiCompleto(bytes); json = c.json; bytes = c.bytes; }
+    else {
+      const zip = await JSZip.loadAsync(bytes);
+      json = JSON.parse(await zip.file(Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n))).async('string'));
+    }
+    const ticks = opc.ticks || 400, semillas = opc.semillas || SEMILLAS;
+    const real = window.setTimeout;
+    window.__cola = [];
+    window.setTimeout = (f, ms, ...a) => {
+      if (typeof ms === 'number' && ms >= 100 && f && f.name === '_tick') { window.__cola.push(f); return 1; }
+      return real.call(window, f, ms, ...a);
+    };
+    const grabadas = {};
+    try {
+      await _cargarGWI(setup, bytes);
+      const pantalla = { ancho: json.resolucion.ancho, alto: json.resolucion.alto,
+        fuente: { ancho: json.resolucion.ancho, alto: json.resolucion.alto } };
+      const gwc = BaseCartucho.generarGWC(json, BaseDescomponer.sprites(), pantalla);
+      const difs = _diferenciasEquivalencia(json, BaseCartucho.leerGWC(gwc.bytes));
+      ok('datos iguales', difs.length === 0, difs.slice(0, 40).join(' || '));
+      for (const semilla of semillas) {
+        const hGWI = await _jugarPartida(() => _cargarGWI(setup, bytes), semilla, ticks, opc.sinPulsar);
+        const hGWC = await _jugarPartida(() => U.cargarEn('ficheroGWC', [U.fichero('equiv.gwc', gwc.bytes)], 1500),
+          semilla, ticks, opc.sinPulsar);
+        let primera = -1;
+        const n = Math.min(hGWI.length, hGWC.length);
+        for (let t = 0; t < n; t++) if (hGWI[t] !== hGWC[t]) { primera = t; break; }
+        grabadas[semilla] = hGWI;
+        const igualPartida = primera < 0 && hGWI.length === hGWC.length && hGWI.length > 0;
+        ok('juego (semilla ' + semilla + '): ' + hGWI.length + ' ticks con el GWI, ' + hGWC.length + ' con el GWC',
+          igualPartida, 'primera diferencia en el tick ' + (primera < 0 ? n + 1 : primera + 1));
       }
-      return hist;
-    }, TICKS);
-  };
-  if (VARIANTE && !COMPLETO) {
-    console.log('Datos: ' + (difs.length === 0 ? 'IGUALES (variante con rutas, aceleración, pausas y combinar)' : difs.length + ' diferencia(s)'));
-    for (const x of difs.slice(0, 40)) console.log('  - ' + x);
-    await navegador.close();
-    process.exit(difs.length === 0 && errores.length === 0 ? 0 : 1);
+      await _cargarGWI(setup, bytes);                  // deja cargado el GWI para las pruebas de datos
+    } finally {
+      window.setTimeout = real;
+      window.__cola.length = 0;
+      const t = document.getElementById('pesPruebas');
+      if (t && !t.disabled) t.click();
+    }
+    Pruebas.datos[id] = grabadas;
+    return out;
   }
-  let fallosJuego = 0;
-  console.log('Datos: ' + (difs.length === 0 ? 'IGUALES' + (COMPLETO ? ' (cartucho completo)' : '') : difs.length + ' diferencia(s)'));
-  for (const x of difs.slice(0, 40)) console.log('  - ' + x);
-  for (const semilla of SEMILLAS) {
-    const histGWI = await jugar(async () => { await pg.setInputFiles('#ficheroGWIZip', GWI); await pg.waitForTimeout(3500); }, semilla);
-    const histGWC = await jugar(async () => {
-      await pg.setInputFiles('#ficheroGWC', { name: 'equiv.gwc', mimeType: 'application/octet-stream', buffer: Buffer.from(gwcBytes) });
-      await pg.waitForTimeout(1500);
-    }, semilla);
-    let primera = -1;
-    const n = Math.min(histGWI.length, histGWC.length);
-    for (let t = 0; t < n; t++) if (histGWI[t] !== histGWC[t]) { primera = t; break; }
-    const igualPartida = primera < 0 && histGWI.length === histGWC.length && histGWI.length > 0;
-    if (!igualPartida) fallosJuego++;
-    if (process.env.DEPURAR && primera >= 0) { console.log(' GWI:', histGWI[primera]); console.log(' GWC:', histGWC[primera]); console.log(' GWI-1:', histGWI[primera-1]); console.log(' GWC-1:', histGWC[primera-1]); }
-    console.log('Juego (semilla ' + semilla + '): ' + histGWI.length + ' ticks con el GWI, ' + histGWC.length + ' con el GWC; ' +
-      (igualPartida ? 'IGUAL tick a tick' : 'primera diferencia en el tick ' + (primera < 0 ? n + 1 : primera + 1)));
-  }
-  if (errores.length) console.log('Errores de página:', errores);
-  await navegador.close();
-  process.exit(difs.length === 0 && fallosJuego === 0 && errores.length === 0 ? 0 : 1);
+
+  Pruebas.registrar([
+    { id: 'equivalencia', grupo: 'gwi_gwc', nombre: 'Equivalencia (datos)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(false) },
+    { id: 'equivalenciaVariante', grupo: 'gwi_gwc', nombre: 'Equivalencia (variante)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(true) },
+    { id: 'equivalenciaJuego', grupo: 'gwi_gwc', nombre: 'Equivalencia (juego)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaJuego', false, o) },
+    { id: 'equivalenciaCompleta', grupo: 'gwi_gwc', nombre: 'Equivalencia (completa)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaCompleta', true, o) }
+  ]);
 })();
+
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module)
+  require('./lanzador.js').lanzar('gwi_gwc');

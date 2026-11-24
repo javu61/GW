@@ -1,102 +1,117 @@
-// pruebas/pruebasDirector.js — F5-I15, bloque Director (D1-D3)
+// pruebas/pruebasDirector.js — Pruebas del DIRECTOR del editor (BaseDirector): carga de cartuchos
 // ================================================================================================
-// D1: cargar un GWC tras un GWI no deja la autoría del GWI viva (editable, Guardar/Generar).
-// D2: un cartucho que no arranca la autoría no deja los botones de autoría habilitados.
-// D3: un cartucho incompatible con la máquina NO destruye el cartucho que ya estaba cargado.
-// USO: NODE_PATH=$(npm root -g) node pruebas/pruebasDirectorF5I15.js
+// PROPÓSITO
+//   Cargan cartuchos por los inputs del diseñador, como si el usuario los eligiera, y comprueban
+//   en qué estado queda el diseñador. TODAS sustituyen el cartucho cargado (el botón avisa).
+//   Necesitan los cartuchos de ejemplo del proyecto (pruebas/cartuchos (setup2.json, cartucho_GWI.zip
+//   y cartucho_GWB.zip), que leen por URL: index.html debe abrirse por un servidor local.
+//
+// PRUEBAS (grupo «director»)
+//   D1  Cargar un GWC tras un GWI no deja la autoría del GWI viva (editable, Guardar, Generar).
+//   D2  Un cartucho que no arranca la autoría no deja habilitados Guardar, Generar ni el Editor.
+//   D3  Un cartucho incompatible con la máquina NO destruye el cartucho que ya estaba cargado.
+//
+// FUNCIONES
+//   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
+//   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
+//   _pruebaD1 / _pruebaD2 / _pruebaD3
+//                        Una función por prueba.
+//
+// USO
+//   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
+//     pruebas\Lanzar.bat director
 // ================================================================================================
 'use strict';
-const { chromium } = require('playwright');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-const RAIZ = path.resolve(__dirname, '..');
-const res = [];
-const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
 
-(async () => {
-  const nav = await chromium.launch();
-  const pg = await nav.newPage();
-  const errPag = [];
-  pg.on('pageerror', e => errPag.push(e.message));
-  await pg.goto('file://' + RAIZ + '/index.html');
-  const cargar = async (sel, ruta, esperar) => { await pg.setInputFiles(sel, ruta); await pg.waitForTimeout(esperar || 1500); };
-  const estado = () => pg.evaluate(() => ({
+(function () {
+  if (typeof Pruebas === 'undefined') return;     // en Node solo cuenta el lanzador del final
+  const U = Pruebas.util;
+
+  const _estado = () => ({
     tipo: BaseDirector.datosCartucho() ? BaseDirector.datosCartucho().tipo : null,
     nombre: BaseDirector.datosCartucho() ? BaseDirector.datosCartucho().nombre : null,
     imgS: !!BaseDirector.imagenSegmentos(),
     guardar: !document.getElementById('btnGuardar').disabled,
     generar: !document.getElementById('btnGenerar').disabled,
-    pesEditor: !document.getElementById('pesEditor').disabled,
-    msg: (document.getElementById('avisos') || document.body).textContent.slice(-200)
-  }));
-
-  // ---- D1: GWC tras GWI ----
-  await cargar('#ficheroSetup', path.join(RAIZ, 'setup4.json'), 500);
-  await cargar('#ficheroGWIZip', path.join(RAIZ, 'cartucho_gwi.zip'), 3500);
-  const antes = await estado();
-  ok('D1 (previo): con el GWI cargado hay autoría y Guardar/Generar activos', antes.tipo === 'GWI' && antes.guardar && antes.generar && antes.pesEditor, JSON.stringify(antes));
-  const bytes = await pg.evaluate(() => {
-    const j = BaseDirector.datosCartucho();
-    const sprites = j.sprites.map(s => ({ id: s.id, ancho: s.ancho, alto: s.alto, imagen: s.imagen || s }));
-    return null;
+    pesEditor: !document.getElementById('pesEditor').disabled
   });
-  // GWC de laboratorio: se genera con el cartucho mínimo y se baja a un fichero temporal
-  const b64 = await pg.evaluate(() => {
-    const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, w, h); return c; };
-    const sprites = [{ id: 'img_000', ancho: 8, alto: 8, imagen: mk(8, 8) }];
-    const j = { tipo: 'GWI', version: 1, nombre: 'p', estilo: '4', resolucion: { ancho: 100, alto: 80 },
-      sprites: [{ id: 'img_000', ancho: 8, alto: 8, fichero: 'segmentos/img_000.png' }],
-      segmentos: [{ id: 'seg_000', tipo: 1, x: 0, y: 0, sprite: 'img_000' }], fin: { mecanismo: 'vida' } };
-    const g = BaseCartucho.generarGWC(j, sprites, { ancho: 100, alto: 80, fuente: { ancho: 100, alto: 80 } });
-    let s = ''; g.bytes.forEach(b => { s += String.fromCharCode(b); }); return btoa(s);
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gwi15_'));
-  const fGWC = path.join(dir, 'lab.gwc');
-  fs.writeFileSync(fGWC, Buffer.from(b64, 'base64'));
-  await cargar('#ficheroGWC', fGWC, 1500);
-  const despuesGWC = await estado();
-  ok('D1: tras cargar el GWC el cartucho es el GWC', despuesGWC.tipo === 'GWC', JSON.stringify(despuesGWC));
-  ok('D1: tras cargar el GWC no quedan Guardar/Generar ni Editor de la autoría del GWI', !despuesGWC.guardar && !despuesGWC.generar && !despuesGWC.pesEditor, JSON.stringify(despuesGWC));
 
-  // ---- D3: cartucho incompatible tras uno bueno ----
-  await cargar('#ficheroSetup', path.join(RAIZ, 'setup2.json'), 500);
-  const dBueno = path.join(dir, 'bueno'); fs.mkdirSync(dBueno);
-  const dMalo = path.join(dir, 'malo'); fs.mkdirSync(dMalo);
-  for (const f of fs.readdirSync(path.join(RAIZ, 'cartucho'))) { fs.copyFileSync(path.join(RAIZ, 'cartucho', f), path.join(dBueno, f)); fs.copyFileSync(path.join(RAIZ, 'cartucho', f), path.join(dMalo, f)); }
-  const jm = JSON.parse(fs.readFileSync(path.join(dMalo, 'parachute-demo.json'), 'utf8'));
-  jm.nombre = 'Malo'; jm.botones.push({ numero: 99, id: 'X' });
-  fs.writeFileSync(path.join(dMalo, 'parachute-demo.json'), JSON.stringify(jm));
-  await cargar('#carpetaCartucho', dBueno, 2500);
-  const bueno = await estado();
-  ok('D3 (previo): el GWB bueno carga', bueno.tipo === 'GWB' && bueno.nombre === 'Parachute' && bueno.imgS, JSON.stringify(bueno));
-  const botonesAntes = await pg.evaluate(() => document.querySelectorAll('.botonFisico').length);
-  const etiquetasAntes = await pg.evaluate(() => [...document.querySelectorAll('.botonFisico .etiqueta')].map(e => e.textContent).join(','));
-  await cargar('#carpetaCartucho', dMalo, 2500);
-  const tras = await estado();
-  const botonesTras = await pg.evaluate(() => document.querySelectorAll('.botonFisico').length);
-  const etiquetasTras = await pg.evaluate(() => [...document.querySelectorAll('.botonFisico .etiqueta')].map(e => e.textContent).join(','));
-  ok('D3: el cartucho incompatible no carga y el anterior sigue siendo el cartucho', tras.nombre === 'Parachute' && tras.imgS, JSON.stringify(tras));
-  ok('D3: la botonera sigue como la del cartucho anterior', botonesTras === botonesAntes && etiquetasTras === etiquetasAntes, botonesAntes + ' ' + etiquetasAntes + ' | ' + botonesTras + ' ' + etiquetasTras);
-  ok('D3: el editor sigue disponible con el cartucho anterior', tras.pesEditor && tras.guardar !== undefined, JSON.stringify(tras));
+  /**
+   * El GWB de ejemplo (cartucho_GWB.zip) con cambios, empaquetado de nuevo en memoria.
+   * @param {function(Object): void} cambiarJson - Modifica el JSON del cartucho.
+   * @param {boolean} [imgSBlanca] - Sustituye img_s por una imagen toda blanca.
+   * @returns {Promise<File>}
+   */
+  async function _gwbModificado(cambiarJson, imgSBlanca) {
+    const zip = await JSZip.loadAsync(await U.traerBytes('pruebas/cartuchos/cartucho_GWB.zip'));
+    const nombre = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
+    const json = JSON.parse(await zip.file(nombre).async('string'));
+    cambiarJson(json);
+    zip.file(nombre, JSON.stringify(json));
+    if (imgSBlanca) {
+      const c = document.createElement('canvas'); c.width = 320; c.height = 240;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 320, 240);
+      const png = await new Promise(r => c.toBlob(r, 'image/png'));
+      zip.file(json.imagenes.img_s, await png.arrayBuffer());
+    }
+    return U.fichero('gwb.zip', await zip.generateAsync({ type: 'uint8array' }));
+  }
 
-  // ---- D2: un GWB sin img_s no deja la autoría habilitada ----
-  const dSin = path.join(dir, 'sin'); fs.mkdirSync(dSin);
-  for (const f of fs.readdirSync(path.join(RAIZ, 'cartucho'))) fs.copyFileSync(path.join(RAIZ, 'cartucho', f), path.join(dSin, f));
-  const js = JSON.parse(fs.readFileSync(path.join(dSin, 'parachute-demo.json'), 'utf8'));
-  js.nombre = 'SinS';
-  // img_s completamente blanca: no hay nada que descomponer y la autoría no arranca
-  require('child_process').execFileSync('python3', ['-c',
-    "from PIL import Image; Image.new('RGB',(320,240),'white').save(r'" + path.join(dSin, js.imagenes.img_s) + "')"]);
-  fs.writeFileSync(path.join(dSin, 'parachute-demo.json'), JSON.stringify(js));
-  await cargar('#carpetaCartucho', dSin, 2500);
-  const sin = await estado();
-  ok('D2: un GWB cuya img_s no descompone no deja Guardar/Generar ni Editor habilitados', sin.nombre === 'SinS' && !sin.guardar && !sin.generar && !sin.pesEditor, JSON.stringify(sin));
+  async function _pruebaD1(opc) {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    await U.cargarEn('ficheroSetup', [U.fichero('setup4.json', await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json'))], 500);
+    await U.cargarEn('ficheroGWIZip', [U.fichero('g.zip', await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip'))], 3500);
+    const antes = _estado();
+    ok('D1 (previo): con el GWI cargado hay autoría y Guardar/Generar activos',
+      antes.tipo === 'GWI' && antes.guardar && antes.generar && antes.pesEditor, JSON.stringify(antes));
+    const lab = U.cartuchoLaboratorio();
+    lab.json.estilo = BaseDirector.datosCartucho().estilo;     // el GWC ha de ser de la máquina cargada
+    const gwc = BaseCartucho.generarGWC(lab.json, lab.sprites, lab.pantalla);
+    await U.cargarEn('ficheroGWC', [U.fichero('lab.gwc', gwc.bytes)], 1500);
+    const despues = _estado();
+    ok('D1: tras cargar el GWC el cartucho es el GWC', despues.tipo === 'GWC', JSON.stringify(despues));
+    ok('D1: tras cargar el GWC no quedan Guardar/Generar ni Editor de la autoría del GWI',
+      !despues.guardar && !despues.generar && !despues.pesEditor, JSON.stringify(despues));
+    return out;
+  }
 
-  ok('sin errores de página', errPag.length === 0, errPag.join(' | '));
-  for (const [n, c, x] of res) console.log((c ? 'OK    ' : 'FALLO ') + n + (c ? '' : '  -> ' + x));
-  const malos = res.filter(r => !r[1]).length;
-  console.log(malos ? malos + ' fallo(s)' : 'TODO OK');
-  await nav.close();
-  process.exit(malos ? 1 : 0);
+  async function _pruebaD3() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const etiquetas = () => [...document.querySelectorAll('.botonFisico .etiqueta')].map(e => e.textContent).join(',');
+    await U.cargarEn('ficheroSetup', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    await U.cargarEn('ficheroGWBZip', [await _gwbModificado(() => { })], 2500);
+    const bueno = _estado();
+    ok('D3 (previo): el GWB bueno carga', bueno.tipo === 'GWB' && bueno.nombre === 'Parachute' && bueno.imgS, JSON.stringify(bueno));
+    const nAntes = document.querySelectorAll('.botonFisico').length, eAntes = etiquetas();
+    await U.cargarEn('ficheroGWBZip', [await _gwbModificado(j => { j.nombre = 'Malo'; j.botones.push({ numero: 99, id: 'X' }); })], 2500);
+    const tras = _estado();
+    const nTras = document.querySelectorAll('.botonFisico').length, eTras = etiquetas();
+    ok('D3: el cartucho incompatible no carga y el anterior sigue siendo el cartucho', tras.nombre === 'Parachute' && tras.imgS, JSON.stringify(tras));
+    ok('D3: la botonera sigue como la del cartucho anterior', nTras === nAntes && eTras === eAntes, nAntes + ' ' + eAntes + ' | ' + nTras + ' ' + eTras);
+    ok('D3: el editor sigue disponible con el cartucho anterior', tras.pesEditor && tras.guardar !== undefined, JSON.stringify(tras));
+    return out;
+  }
+
+  async function _pruebaD2() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    await U.cargarEn('ficheroSetup', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    // img_s completamente blanca: no hay nada que descomponer y la autoría no arranca
+    await U.cargarEn('ficheroGWBZip', [await _gwbModificado(j => { j.nombre = 'SinS'; }, true)], 2500);
+    const sin = _estado();
+    ok('D2: un GWB cuya img_s no descompone no deja Guardar/Generar ni Editor habilitados',
+      sin.nombre === 'SinS' && !sin.guardar && !sin.generar && !sin.pesEditor, JSON.stringify(sin));
+    return out;
+  }
+
+  Pruebas.registrar([
+    { id: 'd1', grupo: 'director', nombre: 'D1 GWC tras GWI', destructiva: true, ejecutar: (o) => _pruebaD1(o) },
+    { id: 'd3', grupo: 'director', nombre: 'D3 cartucho incompatible', destructiva: true, ejecutar: () => _pruebaD3() },
+    { id: 'd2', grupo: 'director', nombre: 'D2 GWB que no descompone', destructiva: true, ejecutar: () => _pruebaD2() }
+  ]);
 })();
+
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module)
+  require('./lanzador.js').lanzar('director');

@@ -1,88 +1,53 @@
-// pruebas/pruebasEditor.js — F5-I15, bloque Editor (E1-E9) + F5-I16: límites de la UI (L1, M2-M4, R4)
+// pruebas/pruebasEditor.js — Pruebas del EDITOR (BaseDescomponer, BaseCartucho, BaseExtractor)
 // ================================================================================================
-// Las funciones del editor viven dentro de un cierre (BaseDescomponer es una IIFE): para probarlas sin
-// ensuciar el código de producción, la prueba trabaja sobre una COPIA temporal del proyecto en la que
-// BaseDescomponer.js exporta además un objeto «_t» con los internos que hacen falta. El código real no
-// cambia.
-// USO: NODE_PATH=$(npm root -g) node pruebas/pruebasEditorF5I15.js
+// PROPÓSITO
+//   Comprueban el editor sobre el cartucho de ejemplo cargado: historial de autoría (ids «F01»,
+//   deshacer, rehacer), presentar el cero, cambio de tipo, alta de la ficha, numeración y uniones,
+//   dígitos y contadores, PNG con alfa y verificación (E1-E9 de F5-I15).
+//
+//   Estas pruebas necesitan ver el INTERIOR de BaseDescomponer (vive dentro de una función
+//   cerrada) y el código de producción no lo publica. Por eso solo se lanzan desde la consola:
+//   el lanzador sirve una COPIA temporal del proyecto en la que BaseDescomponer.js exporta además
+//   un objeto «_t» con los interiores de la lista «interiores» de este fichero. El código real no
+//   cambia, y en la pestaña «Pruebas» esta prueba no tiene botón (solo aparece en el panel de
+//   comandos).
+//
+// PRUEBAS (grupo «editor»)
+//   Editor (E1-E9)       Un solo bloque de comprobaciones, cada una con su rótulo E1…E9.
+//
+// FUNCIONES
+//   interiores           (solo Node) Qué variables y funciones de BaseDescomponer hay que exportar.
+//   _pruebaEditor        La prueba. Recarga el GWI de ejemplo entre bloques, porque E5 deshace
+//                        todo el historial y contaminaría a los siguientes.
+//
+// USO
+//   Solo consola:  pruebas\Lanzar.bat editor
 // ================================================================================================
 'use strict';
-const { chromium } = require('playwright');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-const cp = require('child_process');
-const RAIZ = path.resolve(__dirname, '..');
 
-const COPIA = fs.mkdtempSync(path.join(os.tmpdir(), 'gwE_'));
-cp.execFileSync('cp', ['-r', RAIZ, COPIA + '/p']);
-fs.rmSync(COPIA + '/p/.git', { recursive: true, force: true });
-const fDesc = COPIA + '/p/designer/BaseDescomponer.js';
-let src = fs.readFileSync(fDesc, 'utf8');
-const marca = '  return {\n    arrancar: arrancar,';
-if (!src.includes(marca)) { console.error('No encuentro el return de BaseDescomponer'); process.exit(2); }
-const nombres = ['cambios', 'props', 'uniones', 'grupos', 'ficticios', 'base', 'marcados', 'rehacibles'];
-const funciones = ['_reproducirCambios', '_reconstruir', '_unirGrupos', '_separarAgrupado', '_registrarCambio',
-  '_propsDe', '_montarGWI', '_crearFicticio', '_verificarReferencias', '_grupoDeComp', '_refrescar', '_hacerContador', '_hacerDigito', '_aplicarEleccion', '_cartuchoDe', '_numContador', '_unirMarcados', '_ctxVerificacion'];
-let t = '  return {\n    _t: {\n      _sel: (g) => { seleccion = g; },\n      _mostrarPanel: _mostrarPanel,\n';
-for (const n of nombres) t += '      ' + n + ': () => ' + n + ',\n';
-for (const f of funciones) t += "      " + f + ': (typeof ' + f + " === 'function') ? " + f + ' : undefined,\n';
-t += '    },\n    arrancar: arrancar,';
-src = src.replace(marca, t);
-fs.writeFileSync(fDesc, src);
+if (typeof module !== 'undefined') {
+  // Lo lee pruebas/lanzador.js para preparar la copia que sirve a la página.
+  const nombres = ['cambios', 'props', 'uniones', 'grupos', 'ficticios', 'base', 'marcados', 'rehacibles'];
+  const funciones = ['_reproducirCambios', '_reconstruir', '_unirGrupos', '_separarAgrupado', '_registrarCambio',
+    '_propsDe', '_montarGWI', '_crearFicticio', '_verificarReferencias', '_grupoDeComp', '_refrescar', '_hacerContador', '_hacerDigito', '_aplicarEleccion', '_cartuchoDe', '_numContador', '_unirMarcados', '_ctxVerificacion'];
+  module.exports = { interiores: { nombres: nombres, funciones: funciones } };
+}
 
-// Ficheros «a mano» para F5-I16 (M2/M3/M4, sobres COPIA/p): un GWI con pausaSim 5000
-// y secuencia.ticks 300; un GWS con puerto 65000 y tecla «5»; y un GWS con tecla «AA».
-const dirMano = fs.mkdtempSync(path.join(os.tmpdir(), 'gwM_'));
-cp.execFileSync('unzip', ['-o', '-q', RAIZ + '/cartucho_gwi.zip', '-d', dirMano]);
-const fGwiMano = dirMano + '/cartucho_GWI.json';
-const jsonMano = JSON.parse(fs.readFileSync(fGwiMano, 'utf8'));
-jsonMano.pausas.simulador = 5000;
-jsonMano.secuencia.ticks = 300;
-fs.writeFileSync(fGwiMano, JSON.stringify(jsonMano, null, 2));
-cp.execFileSync('zip', ['-q', '-r', COPIA + '/gwi_limites.zip', '.'], { cwd: dirMano });
-const setupPuerto = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
-setupPuerto.botones[0].puerto = 65000;
-setupPuerto.botones[0].tecla = '5';
-fs.writeFileSync(COPIA + '/setup_puerto5.json', JSON.stringify(setupPuerto, null, 2));
-const setupTecla = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
-setupTecla.botones[0].tecla = 'AA';
-fs.writeFileSync(COPIA + '/setup_teclaAA.json', JSON.stringify(setupTecla, null, 2));
-const setupRes = JSON.parse(fs.readFileSync(RAIZ + '/setup4.json', 'utf8'));
-setupRes.resolucion = { ancho: 100, alto: 100 };
-fs.writeFileSync(COPIA + '/setup_res100.json', JSON.stringify(setupRes, null, 2));
-const jsonRes = JSON.parse(fs.readFileSync(fGwiMano, 'utf8'));
-jsonRes.resolucion = { ancho: 4000, alto: 2000 };
-fs.writeFileSync(dirMano + '/cartucho_GWI.json', JSON.stringify(jsonRes, null, 2));
-cp.execFileSync('zip', ['-q', '-r', COPIA + '/gwi_res4k.zip', '.'], { cwd: dirMano });
+(function () {
+  if (typeof Pruebas === 'undefined') return;     // en Node solo cuenta el lanzador del final
 
-const res = [];
-const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
+  async function _pruebaEditor(opc) {
+    if (typeof BaseDescomponer === 'undefined' || !BaseDescomponer._t)
+      return [['esta prueba solo se lanza desde la consola (necesita la copia con los interiores)', false, '']];
+    const U = Pruebas.util;
+    const res = [];
+    const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
+    const gwiBytes = await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip');
+    // Las comprobaciones se escribieron para dirigirse desde fuera con pg.evaluate; aquí ya
+    // estamos dentro de la página, y pg.evaluate solo llama a la función.
+    const pg = { evaluate: async (f) => f() };
+    const recargar = async () => { await U.cargarEn('ficheroGWIZip', [U.fichero('cartucho.zip', gwiBytes)], 3000); };
 
-(async () => {
-  const nav = await chromium.launch();
-  const pg = await nav.newPage();
-  const errPag = [];
-  pg.on('pageerror', e => errPag.push(e.message));
-  await pg.goto('file://' + COPIA + '/p/index.html');
-  await pg.setInputFiles('#ficheroSetup', path.join(COPIA, 'p/setup4.json'));
-  await pg.waitForTimeout(500);
-  await pg.setInputFiles('#ficheroGWIZip', path.join(COPIA, 'p/cartucho_gwi.zip'));
-  await pg.waitForTimeout(3500);
-
-  const recargar = async () => {
-    await pg.setInputFiles('#ficheroGWIZip', path.join(COPIA, 'p/cartucho_gwi.zip'));
-    await pg.waitForTimeout(3000);
-  };
-  const sondeo = await pg.evaluate(() => {
-    const t = BaseDescomponer._t;
-    return { cambios: t.cambios().length, grupos: t.grupos().length, ficticios: t.ficticios().length, uniones: t.uniones().length,
-      tipos: [...new Set(t.grupos().map(g => g.prop.tipo))] };
-  });
-  console.log('sondeo', JSON.stringify(sondeo));
-  console.log('porTipo', JSON.stringify(await pg.evaluate(() => { const o = {}; BaseDescomponer._t.grupos().forEach(g => { const k = g.prop.tipo + (g.raiz < 0 ? '(F)' : '') + (g.absorbido ? '(abs)' : ''); o[k] = (o[k] || 0) + 1; }); return o; })));
-
-  // E_: las pruebas se añaden aquí abajo
   await recargar();
   // ---- E2: el historial cargado de un GWI usa los ids internos (los de las piezas, números negativos) ----
   {
@@ -313,165 +278,14 @@ const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
     ok('E9: y se lleva con ella los inversos derivados (B.izquierda), sin dejar acciones invisibles', r.izquierda === null && r.nDespues === r.nAntes - 1, JSON.stringify(r));
   }
 
-  await recargar();
-  // ---- L1 (F5-I16): la ficha del cartucho ajusta el max y recorta por arriba con aviso ----
-  {
-    const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
-      const cart = t._cartuchoDe();
-      const casos = [['Ticks entre lanzamientos', 'secTicks', 300],
-        ['Pausa simulador', 'pausaSim', 1000],
-        ['Ticks entre reducciones', 'accCada', 100],
-        ['Reducción (ms)', 'accResta', 2000],
-        ['Pausa mínima (ms)', 'accMinimo', 5000],
-        ['Nº para aumentar rutas', 'aumentarCada', 123]];
-      const detalle = {};
-      for (const [etiqueta, campo, escribir] of casos) {
-        t._sel(t._grupoDeComp(cart.raiz)); t._mostrarPanel();
-        const fila = [...document.querySelectorAll('#panelSegmento .filaProp')]
-          .find(f => f.querySelector('label') && f.querySelector('label').textContent === etiqueta);
-        if (!fila) { detalle[campo] = 'sin campo'; continue; }
-        const inp = fila.querySelector('input');
-        inp.value = String(escribir);
-        inp.dispatchEvent(new Event('change'));
-        detalle[campo] = { max: inp.max, valor: t._propsDe(cart.raiz)[campo],
-          estado: document.getElementById('estado').textContent };
-      }
-      return detalle;
-    });
-    ok('L1: los campos numéricos de la ficha del cartucho llevan el max de F5-I16',
-      r.secTicks.max === '99' && r.pausaSim.max === '999' && r.accCada.max === '99' &&
-      r.accResta.max === '999' && r.accMinimo.max === '999' && r.aumentarCada.max === '99', JSON.stringify(r));
-    ok('L1: escribir fuera de rango recorta en memoria al máximo práctico',
-      r.secTicks.valor === 99 && r.pausaSim.valor === 999 && r.accCada.valor === 99 &&
-      r.accResta.valor === 999 && r.accMinimo.valor === 999 && r.aumentarCada.valor === 99, JSON.stringify(r));
-    ok('L1: cada recorte avisa por la barra de estado',
-      ['secTicks', 'pausaSim', 'accCada', 'accResta', 'accMinimo', 'aumentarCada']
-        .every(c => /limitado/.test(r[c].estado || r[c] || '')), JSON.stringify(r));
+    return res;
   }
 
-  // ---- L1 (F5-I16 R1): el «Valor inicial» de un contador recorta a 255 con aviso ----
-  {
-    const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
-      const dj = t.grupos().filter(g => g.prop.tipo === 'juego' && g.raiz >= 0 && !g.absorbido && g.miembros.length === 1);
-      t._propsDe(dj[0].raiz).tipo = 'dígito'; t._propsDe(dj[1].raiz).tipo = 'dígito';
-      t._reconstruir();
-      t.marcados().clear();
-      t.marcados().add(t._grupoDeComp(dj[0].raiz));
-      t.marcados().add(t._grupoDeComp(dj[1].raiz));
-      t._hacerContador();
-      const cont = t.grupos().find(g => g.prop.tipo === 'contador');
-      if (!cont) return { error: 'no se creó el contador' };
-      t._sel(cont); t._mostrarPanel();
-      const fila = [...document.querySelectorAll('#panelSegmento .filaProp')]
-        .find(f => f.querySelector('label') && f.querySelector('label').textContent === 'Valor inicial');
-      if (!fila) return { error: 'sin campo Valor inicial' };
-      const inp = fila.querySelector('input');
-      const maxAttr = inp.max;
-      inp.value = '256';
-      inp.dispatchEvent(new Event('change'));
-      return { maxAttr, valor: t._propsDe(cont.raiz).valorInicial, estado: document.getElementById('estado').textContent };
-    });
-    ok('L1 (R1): el «Valor inicial» del contador lleva max 255', r.maxAttr === '255', JSON.stringify(r));
-    ok('L1 (R1): escribir 256 recorta el valor a 255 con aviso', r.valor === 255 && /limitado/.test(r.estado || ''), JSON.stringify(r));
-  }
-
-  // ---- M2/M3 (F5-I16): un GWI a mano con valores fuera de rango se limita al cargar; el GWC lleva lo limitado ----
-  {
-    await pg.setInputFiles('#ficheroGWIZip', COPIA + '/gwi_limites.zip');
-    await pg.waitForTimeout(3000);
-    const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
-      const p = t._propsDe(t._cartuchoDe().raiz);
-      return { pausaSim: p.pausaSim, secTicks: p.secTicks, estado: document.getElementById('estado').textContent };
-    });
-    ok('M2: un GWI a mano con pausaSim 5000 se limita a 999 en memoria, con aviso',
-      r.pausaSim === 999 && /limitado/.test(r.estado), JSON.stringify(r));
-    ok('M2: un GWI a mano con secuencia.ticks 300 se limita a 99',
-      r.secTicks === 99 && /limitado/.test(r.estado), JSON.stringify(r));
-    const l = await pg.evaluate(() => {
-      const pantalla = { ancho: 320, alto: 240, fuente: { ancho: 320, alto: 240 } };
-      const gwi = BaseDescomponer._t._montarGWI();
-      const gwc = BaseCartucho.generarGWC(gwi, BaseDescomponer.sprites(), pantalla);
-      return BaseCartucho.leerGWC(gwc.bytes);
-    });
-    ok('M3: el GWC generado desde el GWI a mano lleva pausaSim 999 (dentro del formato)',
-      l.pausas && l.pausas.simulador === 999, JSON.stringify(l.pausas));
-    ok('M3: el GWC generado lleva ticks de Secuencia 99',
-      l.secuencia && l.secuencia.ticks === 99, JSON.stringify(l.secuencia));
-  }
-
-  // ---- R4 (F5-I16, condicional): la ficha no conserva errores de una verificación anterior ----
-  {
-    const r = await pg.evaluate(() => {
-      const inpNombre = document.querySelector('#fichaCartucho input[placeholder="Nombre del cartucho"]');
-      const antes = BaseFicha.estado().nombre;
-      const zona = () => {
-        const z = document.querySelector('#fichaCartucho .fichaMensajes');
-        return { nErrores: z ? z.querySelectorAll('.fichaError').length : -1,
-          texto: z ? z.textContent.slice(0, 200) : null };
-      };
-      inpNombre.value = '';
-      BaseFicha.verificar({ mostrar: true });
-      const conError = zona();
-      inpNombre.value = antes;
-      BaseFicha.verificar({ mostrar: true });
-      return { conError, sinError: zona() };
-    });
-    ok('R4: un error de la ficha se pinta en .fichaMensajes',
-      r.conError.nErrores > 0 && /Falta el nombre/.test(r.conError.texto || ''), JSON.stringify(r.conError));
-    ok('R4: corregir y re-verificar deja la zona sin el error anterior',
-      r.sinError.nErrores === 0 && !/Falta el nombre/.test(r.sinError.texto || ''), JSON.stringify(r.sinError));
-  }
-
-  // ---- M4 (F5-I16): GWS a mano — puerto 65000 se limita a 99; tecla «AA» no carga ----
-  {
-    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup_puerto5.json');
-    await pg.waitForTimeout(600);
-    const rPuerto = await pg.evaluate(() => document.getElementById('estado').textContent);
-    ok('M4: un GWS a mano con puerto 65000 y tecla «5» carga, y el puerto queda 99 con aviso',
-      /Setup cargado/.test(rPuerto) && /limitado a 99/.test(rPuerto), rPuerto);
-    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup_teclaAA.json');
-    await pg.waitForTimeout(600);
-    const rTecla = await pg.evaluate(() => document.getElementById('estado').textContent);
-    ok('M4: un GWS a mano con tecla «AA» NO se carga', /Setup NO cargado/.test(rTecla), rTecla);
-  }
-
-  // ---- M5 (F5-I16): la resolución fuera de 320×240..1024×600 es ERROR bloqueante ----
-  {
-    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup_res100.json');
-    await pg.waitForTimeout(600);
-    const rGws = await pg.evaluate(() => document.getElementById('estado').textContent);
-    ok('M5: un GWS a mano con resolucion 100×100 NO se carga (bloqueante)',
-      /Setup NO cargado/.test(rGws) && /fuera del rango de pantallas/.test(rGws), rGws);
-    const rFicha = await pg.evaluate(() => {
-      const inpA = document.querySelector('#fichaSetup input[placeholder="ancho"]');
-      const inpL = document.querySelector('#fichaSetup input[placeholder="alto"]');
-      inpA.value = '10'; inpL.value = '15';
-      inpA.dispatchEvent(new Event('change'));
-      const zona = document.querySelector('#fichaSetup .fichaMensajes');
-      const texto = zona ? zona.textContent : '';
-      return { texto, visible: texto.length > 0 };
-    });
-    ok('M5: teclear 10×15 en la ficha de setup muestra el error al change',
-      rFicha.visible && /fuera del rango de pantallas/.test(rFicha.texto), JSON.stringify(rFicha).slice(0, 300));
-    await pg.setInputFiles('#ficheroSetup', COPIA + '/setup4.json');
-    await pg.waitForTimeout(600);
-    await pg.setInputFiles('#ficheroGWIZip', COPIA + '/gwi_res4k.zip');
-    await pg.waitForTimeout(2500);
-    const rGwi = await pg.evaluate(() => document.getElementById('estado').textContent);
-    ok('M5: un GWI a mano con resolucion 4000×2000 NO se carga (bloqueante)',
-      /Cartucho NO cargado/.test(rGwi) && /fuera del rango de pantallas/.test(rGwi), rGwi);
-    await pg.setInputFiles('#ficheroGWIZip', path.join(COPIA, 'p/cartucho_gwi.zip'));
-    await pg.waitForTimeout(3000);
-  }
-
-  ok('sin errores de página', errPag.length === 0, errPag.join(' | '));
-  for (const [n, c, x] of res) console.log((c ? 'OK    ' : 'FALLO ') + n + (c ? '' : '  -> ' + x));
-  const malos = res.filter(r => !r[1]).length;
-  console.log(malos ? malos + ' fallo(s)' : 'TODO OK');
-  await nav.close();
-  fs.rmSync(COPIA, { recursive: true, force: true });
-  process.exit(malos ? 1 : 0);
+  Pruebas.registrar([
+    { id: 'editor', grupo: 'editor', nombre: 'Editor (E1-E9)', necesita: 'gwi', soloConsola: true,
+      ejecutar: (o) => _pruebaEditor(o) }
+  ]);
 })();
+
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module)
+  require('./lanzador.js').lanzar('editor');

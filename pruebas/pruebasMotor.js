@@ -1,25 +1,84 @@
-// pruebas/pruebasMotor.js — F5-I15: pruebas de laboratorio del MOTOR de estados
+// pruebas/pruebasMotor.js — Pruebas del MOTOR de estados (JuegoMotorEstados)
 // ================================================================================================
-// Cada prueba monta un cartucho mínimo EN MEMORIA (ComunListas.cargar) y juega unos ticks con
-// JuegoMotorEstados, sin cartucho real. Son los casos A1–A4 de F5-I15: se escribieron primero
-// para que FALLARAN con el código anterior y pasan con el corregido.
-// USO: NODE_PATH=$(npm root -g) node pruebas/pruebasMotorF5I15.js
+// PROPÓSITO
+//   Cada prueba monta un cartucho mínimo EN MEMORIA (ComunListas.cargar) y juega unos ticks con
+//   JuegoMotorEstados, sin cartucho real. Al terminar deja las listas del motor como estaban, así
+//   que el cartucho cargado no se toca. Se escribieron primero para que FALLARAN con el código
+//   anterior (F5-I15) y pasan con el corregido.
+//
+// PRUEBAS (un botón cada una en la pestaña «Pruebas», grupo «motor»)
+//   Orden del tick        La limpieza de las banderas «cambiar» va antes de la entrada y las
+//                         marcas del paso del jugador sobreviven al tick (M0).
+//   M1                    El secundario de «mostrar junto a» no es una ruta ni resta rutas vivas.
+//   M2                    El secundario de un icono cambia en el mismo tick que su principal y ya
+//                         coincide al iniciar.
+//   M3                    El barrido no depende del orden de la lista y nRutasVivas es exacto.
+//   M4                    Punto de colisión (a), ruta que cruza la Secuencia (b) y congelación (c).
+//   Jugador               El cambio del jugador llega al pintado (bandera «cambiar»).
+//
+// FUNCIONES
+//   _conMotor             Ejecuta una prueba y deja las listas del motor como estaban.
+//   _pruebaOrdenTick      Prueba «Orden del tick».
+//   _pruebaM1 / _pruebaM2 / _pruebaM3 / _pruebaM4 / _pruebaJugador
+//                         Las pruebas de cada punto; cada una monta sus cartuchos de laboratorio.
+//
+// USO
+//   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
+//     pruebas\Lanzar.bat motor
 // ================================================================================================
 'use strict';
-const { chromium } = require('playwright');
-const path = require('path');
-const RAIZ = path.resolve(__dirname, '..');
 
-(async () => {
-  const nav = await chromium.launch();
-  const pg = await nav.newPage();
-  const errPag = [];
-  pg.on('pageerror', e => errPag.push(e.message));
-  await pg.goto('file://' + RAIZ + '/index.html');
+(function () {
+  if (typeof Pruebas === 'undefined') return;     // en Node solo cuenta el lanzador del final
 
-  const res = await pg.evaluate(() => {
-    const out = [];
-    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+  const _conMotor = (f) => {
+    const restaurar = Pruebas.util.salvarListas();
+    try { return f(); } finally { restaurar(); }
+  };
+
+  /* ---------------- Orden del tick (M0) ---------------- */
+  /* El análisis (Memoria F2) fija el orden del tick: (0) limpieza de las banderas «cambiar» del
+     tick anterior, (1) ENTRADA, (2) cómputo. La entrada marca «cambiar» al mover al jugador: si la
+     limpieza viniera DESPUÉS de ella, esas marcas se perderían y el repintado selectivo del ESP32
+     no pintaría el paso. */
+  function _pruebaOrdenTick() {
+    return _conMotor(() => {
+      const out = [];
+      const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+      ComunListas.limpiar();
+      ComunListas.cargar([], [
+        { id: 'jug_a', tipo: 0, primero: true, visible: false, derecha: 'jug_b' },
+        { id: 'jug_b', tipo: 0, visible: false }
+      ]);
+      JuegoMotorEstados.iniciar();
+      let teclaDerecha = '4';
+      for (const [t, d] of Object.entries(JuegoMotorEstados.MOVER))
+        if (d === 'derecha') teclaDerecha = t;
+      JuegoMotorEstados.tick();
+      const segs = ComunListas.segmentos();
+      const a = segs[0];
+      a.visible = true; a.cambiar = true;
+      ComunListas.encolar(teclaDerecha);
+      JuegoMotorEstados.tick();
+      const b = segs[1];
+      ok('el paso del jugador ocurre', (!a.visible && b.visible &&
+        JuegoMotorEstados.jugadorActual && JuegoMotorEstados.jugadorActual() === 1),
+        'A.visible=' + a.visible + ' B.visible=' + b.visible);
+      ok('las banderas del paso SOBREVIVEN al tick (limpieza antes de la entrada)',
+        a.cambiar === true && b.cambiar === true,
+        'A.cambiar=' + a.cambiar + ' B.cambiar=' + b.cambiar);
+      JuegoMotorEstados.tick();
+      ok('el tick siguiente deja las banderas limpias',
+        !a.cambiar && !b.cambiar && !a.visible && b.visible,
+        'A.cambiar=' + a.cambiar + ' B.cambiar=' + b.cambiar);
+      return out;
+    });
+  }
+
+  function _pruebaM1() {
+    return _conMotor(() => {
+      const out = [];
+      const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
     const S = (id, tipo, extra) => Object.assign({ id: id, tipo: tipo, x: 0, y: 0, sprite: 'img', visible: false, cambiar: false, estado: 0, cambiado: 0 }, extra || {});
     const T = ComunListas.tipos;
     // Monta y arranca; devuelve la lista viva del motor.
@@ -61,6 +120,29 @@ const RAIZ = path.resolve(__dirname, '..');
       ok('M1: nRutasVivas coincide con las rutas visibles y no es negativo', !errMsg && desajustes === 0 && minVivas >= 0, 'desajustes=' + desajustes + ' min=' + minVivas);
     }
 
+      return out;
+    });
+  }
+
+  function _pruebaM2() {
+    return _conMotor(() => {
+      const out = [];
+      const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const S = (id, tipo, extra) => Object.assign({ id: id, tipo: tipo, x: 0, y: 0, sprite: 'img', visible: false, cambiar: false, estado: 0, cambiado: 0 }, extra || {});
+    const T = ComunListas.tipos;
+    // Monta y arranca; devuelve la lista viva del motor.
+    const montar = (segs, rutas, semilla, fin) => {
+      ComunListas.limpiar();
+      ComunListas.cargar([], segs);
+      ComunListas.fijarReglas({ combinar: false });
+      ComunListas.fijarRutas(rutas || null);
+      ComunListas.fijarFin(fin || null);
+      JuegoDirector.fijarSemilla(semilla || 1);
+      JuegoMotorEstados.iniciar();
+      return ComunListas.segmentos();
+    };
+    const visibles = (segs) => segs.map(s => s.visible ? s.id : '').filter(Boolean).join(',');
+
     // ---- M2a: al iniciar, el secundario de un icono ya coincide con su principal ----
     {
       const segs = [
@@ -96,6 +178,97 @@ const RAIZ = path.resolve(__dirname, '..');
       }
       ok('M2b: el secundario del icono se enciende en el mismo tick que su principal', tickM1 >= 0 && tickM1 === tickC1, 'm1 en el tick ' + tickM1 + ', c1 en el tick ' + tickC1);
     }
+
+      return out;
+    });
+  }
+
+  function _pruebaM3() {
+    return _conMotor(() => {
+      const out = [];
+      const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const S = (id, tipo, extra) => Object.assign({ id: id, tipo: tipo, x: 0, y: 0, sprite: 'img', visible: false, cambiar: false, estado: 0, cambiado: 0 }, extra || {});
+    const T = ComunListas.tipos;
+    // Monta y arranca; devuelve la lista viva del motor.
+    const montar = (segs, rutas, semilla, fin) => {
+      ComunListas.limpiar();
+      ComunListas.cargar([], segs);
+      ComunListas.fijarReglas({ combinar: false });
+      ComunListas.fijarRutas(rutas || null);
+      ComunListas.fijarFin(fin || null);
+      JuegoDirector.fijarSemilla(semilla || 1);
+      JuegoMotorEstados.iniciar();
+      return ComunListas.segmentos();
+    };
+    const visibles = (segs) => segs.map(s => s.visible ? s.id : '').filter(Boolean).join(',');
+
+    // ---- M3: el barrido no depende del orden de la lista ----
+    // Dos rutas seguidas en la misma cadena (a→b→c con a y b encendidas): deben pasar a b y c.
+    // Con el barrido secuencial, si «a» se procesaba antes que «b», la ruta de «a» se fundía con la de «b».
+    {
+      const ordenes = [['ra', 'rb', 'rc'], ['rb', 'ra', 'rc'], ['rc', 'rb', 'ra']];
+      const resultados = ordenes.map(orden => {
+        const def = { ra: { siguiente: 'rb' }, rb: { siguiente: 'rc' }, rc: {} };
+        const segs = [S('jug', T.jugador, { primero: true })].concat(orden.map(id => S(id, T.juego, def[id])));
+        montar(segs);
+        segs.forEach(s => { if (s.id === 'ra' || s.id === 'rb') s.visible = true; });
+        JuegoMotorEstados.tick();
+        return visibles(segs.filter(s => s.id !== 'jug')).split(',').sort().join(',');
+      });
+      ok('M3a: dos rutas seguidas en la cadena avanzan las dos, con la lista en cualquier orden',
+        resultados.every(r => r === 'rb,rc'), resultados.join(' | '));
+    }
+    // Una ruta aterriza donde otra muere al final de la cadena: la que llega sobrevive, en ambos órdenes.
+    {
+      const ordenes = [['rc', 'rd'], ['rd', 'rc']];
+      const resultados = ordenes.map(orden => {
+        const def = { rc: { siguiente: 'rd' }, rd: {} };
+        const segs = [S('jug', T.jugador, { primero: true })].concat(orden.map(id => S(id, T.juego, def[id])));
+        montar(segs);
+        segs.forEach(s => { if (s.id === 'rc' || s.id === 'rd') s.visible = true; });
+        JuegoMotorEstados.tick();
+        return visibles(segs.filter(s => s.id !== 'jug'));
+      });
+      ok('M3b: la ruta que llega a un final donde otra muere sobrevive, con la lista en cualquier orden',
+        resultados.every(r => r === 'rd'), resultados.join(' | '));
+    }
+    // Dos rutas que confluyen: el resultado es el mismo en ambos órdenes y el contador es exacto.
+    {
+      const ordenes = [['x', 'y', 'z'], ['y', 'x', 'z']];
+      const resultados = ordenes.map(orden => {
+        const def = { x: { siguiente: 'z' }, y: { siguiente: 'z' }, z: {} };
+        const segs = [S('jug', T.jugador, { primero: true })].concat(orden.map(id => S(id, T.juego, def[id])));
+        montar(segs);
+        segs.forEach(s => { if (s.id === 'x' || s.id === 'y') s.visible = true; });
+        JuegoMotorEstados.tick();
+        return visibles(segs.filter(s => s.id !== 'jug')) + '/vivas=' + JuegoMotorEstados.estadoRutas().vivas;
+      });
+      ok('M3c: dos rutas que confluyen dan el mismo resultado con la lista en cualquier orden y el contador exacto',
+        resultados[0] === resultados[1] && resultados[0] === 'z/vivas=1', resultados.join(' | '));
+    }
+
+      return out;
+    });
+  }
+
+  function _pruebaM4() {
+    return _conMotor(() => {
+      const out = [];
+      const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const S = (id, tipo, extra) => Object.assign({ id: id, tipo: tipo, x: 0, y: 0, sprite: 'img', visible: false, cambiar: false, estado: 0, cambiado: 0 }, extra || {});
+    const T = ComunListas.tipos;
+    // Monta y arranca; devuelve la lista viva del motor.
+    const montar = (segs, rutas, semilla, fin) => {
+      ComunListas.limpiar();
+      ComunListas.cargar([], segs);
+      ComunListas.fijarReglas({ combinar: false });
+      ComunListas.fijarRutas(rutas || null);
+      ComunListas.fijarFin(fin || null);
+      JuegoDirector.fijarSemilla(semilla || 1);
+      JuegoMotorEstados.iniciar();
+      return ComunListas.segmentos();
+    };
+    const visibles = (segs) => segs.map(s => s.visible ? s.id : '').filter(Boolean).join(',');
 
     // ---- M4a: un punto de colisión decide el MISMO tick en que la ruta llega (F3-I8) ----
     // Caso «el punto se enciende y apaga en el mismo tick». Es el diseño: la decisión no espera un
@@ -167,50 +340,28 @@ const RAIZ = path.resolve(__dirname, '..');
         'congelada=' + JuegoMotorEstados.congelada() + ' b0=' + b0.visible + ' b1=' + b1.visible);
     }
 
-    // ---- M3: el barrido no depende del orden de la lista ----
-    // Dos rutas seguidas en la misma cadena (a→b→c con a y b encendidas): deben pasar a b y c.
-    // Con el barrido secuencial, si «a» se procesaba antes que «b», la ruta de «a» se fundía con la de «b».
-    {
-      const ordenes = [['ra', 'rb', 'rc'], ['rb', 'ra', 'rc'], ['rc', 'rb', 'ra']];
-      const resultados = ordenes.map(orden => {
-        const def = { ra: { siguiente: 'rb' }, rb: { siguiente: 'rc' }, rc: {} };
-        const segs = [S('jug', T.jugador, { primero: true })].concat(orden.map(id => S(id, T.juego, def[id])));
-        montar(segs);
-        segs.forEach(s => { if (s.id === 'ra' || s.id === 'rb') s.visible = true; });
-        JuegoMotorEstados.tick();
-        return visibles(segs.filter(s => s.id !== 'jug')).split(',').sort().join(',');
-      });
-      ok('M3a: dos rutas seguidas en la cadena avanzan las dos, con la lista en cualquier orden',
-        resultados.every(r => r === 'rb,rc'), resultados.join(' | '));
-    }
-    // Una ruta aterriza donde otra muere al final de la cadena: la que llega sobrevive, en ambos órdenes.
-    {
-      const ordenes = [['rc', 'rd'], ['rd', 'rc']];
-      const resultados = ordenes.map(orden => {
-        const def = { rc: { siguiente: 'rd' }, rd: {} };
-        const segs = [S('jug', T.jugador, { primero: true })].concat(orden.map(id => S(id, T.juego, def[id])));
-        montar(segs);
-        segs.forEach(s => { if (s.id === 'rc' || s.id === 'rd') s.visible = true; });
-        JuegoMotorEstados.tick();
-        return visibles(segs.filter(s => s.id !== 'jug'));
-      });
-      ok('M3b: la ruta que llega a un final donde otra muere sobrevive, con la lista en cualquier orden',
-        resultados.every(r => r === 'rd'), resultados.join(' | '));
-    }
-    // Dos rutas que confluyen: el resultado es el mismo en ambos órdenes y el contador es exacto.
-    {
-      const ordenes = [['x', 'y', 'z'], ['y', 'x', 'z']];
-      const resultados = ordenes.map(orden => {
-        const def = { x: { siguiente: 'z' }, y: { siguiente: 'z' }, z: {} };
-        const segs = [S('jug', T.jugador, { primero: true })].concat(orden.map(id => S(id, T.juego, def[id])));
-        montar(segs);
-        segs.forEach(s => { if (s.id === 'x' || s.id === 'y') s.visible = true; });
-        JuegoMotorEstados.tick();
-        return visibles(segs.filter(s => s.id !== 'jug')) + '/vivas=' + JuegoMotorEstados.estadoRutas().vivas;
-      });
-      ok('M3c: dos rutas que confluyen dan el mismo resultado con la lista en cualquier orden y el contador exacto',
-        resultados[0] === resultados[1] && resultados[0] === 'z/vivas=1', resultados.join(' | '));
-    }
+      return out;
+    });
+  }
+
+  function _pruebaJugador() {
+    return _conMotor(() => {
+      const out = [];
+      const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const S = (id, tipo, extra) => Object.assign({ id: id, tipo: tipo, x: 0, y: 0, sprite: 'img', visible: false, cambiar: false, estado: 0, cambiado: 0 }, extra || {});
+    const T = ComunListas.tipos;
+    // Monta y arranca; devuelve la lista viva del motor.
+    const montar = (segs, rutas, semilla, fin) => {
+      ComunListas.limpiar();
+      ComunListas.cargar([], segs);
+      ComunListas.fijarReglas({ combinar: false });
+      ComunListas.fijarRutas(rutas || null);
+      ComunListas.fijarFin(fin || null);
+      JuegoDirector.fijarSemilla(semilla || 1);
+      JuegoMotorEstados.iniciar();
+      return ComunListas.segmentos();
+    };
+    const visibles = (segs) => segs.map(s => s.visible ? s.id : '').filter(Boolean).join(',');
 
     // ---- Orden del tick: el cambio del jugador llega al pintado ----
     {
@@ -227,13 +378,19 @@ const RAIZ = path.resolve(__dirname, '..');
       const j2 = segs.find(s => s.id === 'j2');
       ok('Orden del tick: tras mover, el jugador nuevo queda con la bandera «cambiar»', j2.visible && j2.cambiar === true, 'j2=' + j2.visible + '/' + j2.cambiar);
     }
-    return out;
-  });
+      return out;
+    });
+  }
 
-  let fallos = 0;
-  for (const [n, c, x] of res) { console.log((c ? 'OK   ' : 'FALLO') + ' ' + n + (c ? '' : '  -> ' + x)); if (!c) fallos++; }
-  if (errPag.length) { console.log('Errores de página:', errPag); fallos++; }
-  console.log(fallos === 0 ? 'TODO OK' : fallos + ' fallo(s)');
-  await nav.close();
-  process.exit(fallos ? 1 : 0);
+  Pruebas.registrar([
+    { id: 'ordenTick', grupo: 'motor', nombre: 'Orden del tick', ejecutar: () => _pruebaOrdenTick() },
+    { id: 'm1', grupo: 'motor', nombre: 'M1 secundarios', ejecutar: () => _pruebaM1() },
+    { id: 'm2', grupo: 'motor', nombre: 'M2 iconos', ejecutar: () => _pruebaM2() },
+    { id: 'm3', grupo: 'motor', nombre: 'M3 barrido', ejecutar: () => _pruebaM3() },
+    { id: 'm4', grupo: 'motor', nombre: 'M4 colisión, secuencia y congelación', ejecutar: () => _pruebaM4() },
+    { id: 'jugador', grupo: 'motor', nombre: 'Jugador', ejecutar: () => _pruebaJugador() }
+  ]);
 })();
+
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module)
+  require('./lanzador.js').lanzar('motor');

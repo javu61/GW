@@ -1,23 +1,3 @@
-# R1. Revision del código para los test
-
-Los js de las pruebas están en la carpeta pruebas. Son:
-
-- pruebas.js  
-- pruebasDirector.js 
-- pruebasEditor.js
-- pruebasGenerales.js
-- pruebasGWI_GWC.js
-- pruebasMotor.js
-
-La pestaña de test debe incluir el máximo posible de botones que las lancen.
-
-Para las pruebas que no son posible desde un botón, hay que generar un script para lanzarlos, y añadir en la pantalla la lista de los scripts desarrollados, una lista con el comando que se debe usar para lanzarlo. Hay que usar un script que haga dos temas, primero el npm i -g playwright y luego el test, preferentemente el scripot será de PowerShell. La lista debe permitir copiar una linea, pegarla en un CMD y que lance el test, o bien definir ademas de la prueba en PowerShell un fichero .bat que lo lance. Lo importante es que sea copiar una línea, pegarla en CMD o en PowerShell y que se lance el test, con resultado OK o Error y descripción del mismo. Si es necesario disponer de varios cartuchos se pueden poner en el directorio de pruebas para tenerlos siempre disponibles, y no depender de otros, esto se pueden generar con datos de prueba sin importar que realmente lancen un juego completo.
-
-Index.html se lanza desde el servidor local no con file. 
-
-Sobre los botones Hay que tener Una sola copia: la lógica de la prueba está en un fichero que carga la pestaña y da el botón. El script de Node es solo un lanzador que abre la página con Playwright, pulsa el botón y lee el resultado. Si cambias una prueba, cambia en un solo sitio.
-
-
 # R2. Revisión del código: solo lo pendiente — 22-11-2026
 
 Depurado tras F5-I15. Se han eliminado los puntos resueltos (#1-5, 7, 12, 14-17, 19, 28-32 y el código muerto ya retirado).

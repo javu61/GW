@@ -109,11 +109,15 @@
       b1: _botonPorNumero('1') ? _botonPorNumero('1').dataset.tecla : null,
       b2: _botonPorNumero('2') ? _botonPorNumero('2').dataset.tecla : null,
       b3: _botonPorNumero('3') ? _botonPorNumero('3').dataset.tecla : null,
-      b4: _botonPorNumero('4') ? _botonPorNumero('4').dataset.tecla : null
+      b4: _botonPorNumero('4') ? _botonPorNumero('4').dataset.tecla : null,
+      p4: pista('4')
     };
+    // dataset.tecla va normalizado en minúsculas (es la clave de comparación con
+    // el teclado, BaseDirector); la letra se pinta en mayúscula en la pista.
     ok('T2: estilo 5 sin teclas — cruceta 0-3 con los cuatro cursores y el 4 con la letra Z',
       r5.b0 === 'cursor-izquierda' && r5.b1 === 'cursor-derecha' &&
-      r5.b2 === 'cursor-arriba' && r5.b3 === 'cursor-abajo' && r5.b4 === 'Z', JSON.stringify(r5));
+      r5.b2 === 'cursor-arriba' && r5.b3 === 'cursor-abajo' &&
+      r5.b4 === 'z' && r5.p4 === 'Z', JSON.stringify(r5));
     await _cargarSetup('setup2.json', 600);      // dejamos la máquina como estaba
     return out;
   }

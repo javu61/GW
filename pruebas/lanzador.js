@@ -76,7 +76,9 @@ function _copiaParcheada() {
     filter: (origen) => !EXCLUIR.includes(path.relative(RAIZ, origen).split(path.sep)[0])
   });
   const f = path.join(copia, 'designer', 'BaseDescomponer.js');
-  let src = fs.readFileSync(f, 'utf8');
+  // Normales CRLF a LF: en un árbol de trabajo de Windows (autocrlf) los
+  // finales del fichero pueden ser \r\n y la marca con \n no casaría.
+  let src = fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
   const marca = '  return {\n    arrancar: arrancar,';
   if (!src.includes(marca)) throw new Error('No encuentro el return de BaseDescomponer.js');
   let t = '  return {\n    _t: {\n      _sel: (g) => { seleccion = g; },\n      _mostrarPanel: _mostrarPanel,\n';

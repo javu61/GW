@@ -45,14 +45,15 @@ PRUEBAS:
     *.ps1                Scripts de PowerShell que llama Lanzar.bat; _preparar.ps1
                          instala Playwright (npm i -g playwright) y el navegador si faltan
 
-  Comandos (copiar una línea y pegarla en CMD o PowerShell, en la carpeta del proyecto;
-  la primera vez instala Playwright, necesita Node.js):
-    pruebas\Lanzar.bat motor
-    pruebas\Lanzar.bat director
-    pruebas\Lanzar.bat editor
-    pruebas\Lanzar.bat generales
-    pruebas\Lanzar.bat gwi_gwc
-    pruebas\Lanzar.bat todas
+  Comandos (copiar una línea y pegarla en CMD o PowerShell, parado en la carpeta
+  pruebas del proyecto, donde está este Lanzar.bat; la primera vez instala
+  Playwright, necesita Node.js):
+    Lanzar.bat motor
+    Lanzar.bat director
+    Lanzar.bat editor
+    Lanzar.bat generales
+    Lanzar.bat gwi_gwc
+    Lanzar.bat todas
   Cada una termina con «RESULTADO: OK» o «RESULTADO: ERROR (detalle)» y código de salida
   0 o 1. Las pruebas de juego (gwi_gwc) tardan; «todas» tarda unos minutos.
 

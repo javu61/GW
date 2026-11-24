@@ -9,8 +9,8 @@
 	\begin{itemize}
 		\item PA4. Unificar la carga de cartuchos: un panel para pegar los ficheros o un campo para cargar un directorio, en lugar de los 3 botones actuales (absorbe «unificar los 3 botones de carga»).
 		
-		\item PA5. Funciones gigantes y patrones repetidos (§3 de REVISION\_CODIGO). Último del bloque: no cambia comportamiento, y las suites Playwright detectan regresiones.
-		
+		\item PA5. Funciones gigantes y patrones repetidos (Detallado en la tabla siguiente). 
+			
 		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetro Campo que retorne nombre en el json, valor min y valor max, y que la lectura del json la haga con json[nombre] en lugar de como json.nombre, recorriendo la lista de valores. Cuidado que esto es bueno para lectura y grabación, pero no para los ajustes al vuelo de los valores máximos de los campos en el interface. Hay que pensarlo bien.
 	\end{itemize}
 	
@@ -35,6 +35,48 @@
 	\end{itemize}
 	
 \end{itemize}
+
+
+\begin{xltabular}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
+	\toprule
+	\textbf{Nro} & \textbf{Descripción} \\
+	\midrule
+	\endhead
+	PA4-1 & \textbf{Funciones gigantes:}\newline \texttt{BaseDescomponer.mostrarPanel} ($\sim$1300 líneas $\to$ \texttt{panelMarcados}, \texttt{panelCartucho}, \texttt{panelOrden}, \texttt{panelTipo}, \texttt{panelEnlaces}, \texttt{panelColision}, \texttt{panelDigito}, \texttt{panelContador}, \texttt{panelUnion}); \texttt{aplicarEleccion} (279); manejador del selector de tipo ($\sim$175); \texttt{JuegoMotorEstados.tick} (que sea una lista de llamadas), \texttt{iniciar} (110), \texttt{decidirColision} (100), \texttt{prepararContadores} (80); \texttt{BaseDirector.procesarCartucho} (110), \texttt{generarGWIyGWC} (75), \texttt{montarGWI} (80). \\
+	\midrule
+	PA4-2 & \textbf{Patrones repetidos:}\newline \texttt{filaEnlace(...)} (6$\times$); \texttt{confirmar(g, entradas)} (19$\times$); \texttt{encender(seg, v)} en el motor ($\sim$6$\times$); \texttt{escribirInverso}/\texttt{retirarInverso} (4 sitios); \texttt{publicarEnPuente(cfg)} (7 llamadas \texttt{ComunListas.fijar*} en \texttt{procesarCartucho} y \texttt{procesarGWC}); \texttt{accionarBoton(numero)} (Start/pulsar duplicado); \texttt{tomarFichero(id)} (4 \texttt{alSeleccionar*}); \texttt{envolvente(cajas)} (6$\times$); \texttt{aplicarAlta}/\texttt{aplicarBaja} (3 sitios); \texttt{\_descargarGWC} copia una descarga genérica y \texttt{\_validarCabeceraGWC} repite la suma de verificación. \\
+	\midrule
+	PA4-3 & \textbf{GWC: una sola tabla de layout por registro}\newline \texttt{[\{campo, bytes, escala, nulo\}]} con escritor y lector con cursor (\texttt{DataView}) y aserción $\Sigma\texttt{bytes} === 32$; sirve de especificación para el \texttt{.tex} y el C del ESP32. \\
+	\midrule
+	PA4-4 & \textbf{Guardas defensivas innecesarias:}\newline \texttt{typeof ComunListas/JuegoDirector/BaseDirector !== 'undefined'} por todas partes (el orden de carga lo fija \texttt{index.html}) y enums de respaldo que copian \texttt{ComunListas.tipos}. \\
+	\midrule
+	PA4-5 & \textbf{Portabilidad al ESP32 (motor):}\newline ids de texto $\to$ índices al cargar (\texttt{\_indiceDe} busca linealmente); bits por segmento en lugar de mapas por id; quitar \texttt{sort}/\texttt{filter} del tick (calcular en \texttt{iniciar}); \texttt{'ascendente'/'descendente'} $\to$ booleano; en el motor gráfico \texttt{\_pixelesDe} crea un canvas por segmento en cada tick: guardar siluetas al cargar. \\
+	\midrule
+	PA4-6 & \textbf{Pintado duplicado:}\newline el aparato tiene su copia de \texttt{DibujarFondo}/\texttt{DibujarSegmento}; unificar en \texttt{BaseGraficos.pintarSprite(...)} o recortar \texttt{BaseGraficos}. \\
+	\midrule
+	PA4-7 & \textbf{Código muerto o sobrante (comprobado 22-11):}\newline Limpieza de elementos sin uso verificados en los módulos principales: \\
+
+		& 1. \textbf{BaseDirector:}\newline parte de dibujo de \texttt{mostrarSprites} (siempre con \texttt{[]}), variables privadas \texttt{sprites}/\texttt{segmentos}, \texttt{ESTILOS.*.descripcion}, exports \texttt{pestanna} e \texttt{imagenBlob}. \\
+	
+		& 2. \textbf{BaseCartucho:}\newline exports \texttt{leerGWB}, \texttt{leerGWI}, \texttt{leerJSON}, \texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}; \texttt{cargarDelMapa} (lógica copiada en \texttt{BaseDirector}); \texttt{'GWC'} en \texttt{TIPOS\_CARTUCHO} (acepta un \texttt{.json} de tipo GWC); \texttt{json.img\_s} en la raíz. \\
+	
+		& 3. \textbf{BaseDescomponer:}\newline parámetro \texttt{codigo} de \texttt{montarGWI}; \texttt{dx}/\texttt{dy} (restos de «Posicionar»); compatibilidad con GWI antiguos (\texttt{uniones}, \texttt{\{unir\}}, tipo 99, «Deshacer unión»): aislar o retirar. \\
+	
+		& 4. \textbf{JuegoMotorEstados:}\newline \texttt{splice} de \texttt{iniciar} sin efecto; \texttt{pruebaAleatorios}, \texttt{jugadorActual}, \texttt{rutasVivas}, \texttt{congelada}, \texttt{estadoRutas} y \texttt{MOVER} exportados sin uso (\texttt{estadoRutas} y \texttt{BasePACK.verificarPACK} se dejan: API del Anexo A). \\
+	
+		& 5. \textbf{JuegoDirector:}\newline 14 líneas de prueba comentadas en \texttt{arrancar}, \texttt{pausaVigente} y comprobación redundante \texttt{ticks > 0}. \\
+	
+	\midrule
+
+	PA4-8 & \textbf{Comentarios y BaseGraficos.js:}\newline mezclan historial («23-10», «F4-I9», «v12.5», \texttt{@since}) con la explicación; dejar el \textbf{qué} y el \textbf{por qué}, la historia al LaTeX (P17: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los \texttt{Juego*.js}). Desactualizados: motor («nace un tick tras morir», «interrumpida con cada colisión», \texttt{rutasVivas} «0 o 1», errata «ATRIZA»); \texttt{BaseCartucho} («GWC > GWI > GWB», «little-endian» aplicado a RGB); \texttt{BaseDirector} (comentario de \texttt{imagenBlob}, «único miembro público», «combinar viene del setup», «pantalla en blanco» pinta gris); \texttt{BaseDescomponer} (JSDoc duplicados en $\sim$542--580 y $\sim$2583--2593, frases cortadas en $\sim$743, 1114, 1135--1141, 4706). \textbf{BaseGraficos.js:} mojibake («INVERSIÓN», «públic») y 29 guiones blandos \texttt{U+00AD} (recontados). \\
+	\midrule
+
+	PA4-9 & \textbf{Pestañas / accesibilidad:}\newline faltan \texttt{role="tablist"/"tab"} y \texttt{aria-selected}; no hay \texttt{:focus-visible}; los botones de la máquina solo responden a \texttt{pointerdown} (sin Enter/Espacio); \texttt{mostrarPestanna} sobrescribe \texttt{className} (mejor \texttt{classList.toggle} o \texttt{data-vista}); el nombre se escribe de tres formas: \texttt{pestanna}, \texttt{pestanaVista}, \texttt{\#pestanas}. \\
+	\bottomrule
+\end{xltabular}
+
+
+
 
 **********************************************************************************\\
 **********************************************************************************\\

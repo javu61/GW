@@ -22,9 +22,10 @@
 //       oculta, pestaña Carga delante y las pestañas de datos deshabilitadas; repetido
 //       sin nada cargado es idempotente y no rompe.
 //   D9  (F5-I20) Aplicar/cargar un setup PROPAGA a la ficha de Cartucho todos los datos
-//       comunes (nombre, memoria, ColorFondo + estilo/resolución); con cartucho en
-//       memoria pide SIEMPRE confirmación (cancelar conserva, confirmar aplica) y con
-//       GW_DEBUG no se pide (criterio D8).
+//       comunes (nombre, memoria, ColorFondo + estilo/resolución); a la inversa, la
+//       memoria del setup derivado sale del cartucho, subcampo a subcampo. Con cartucho
+//       en memoria pide SIEMPRE confirmación (cancelar conserva, confirmar aplica) y
+//       con GW_DEBUG no se pide (criterio D8).
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
@@ -256,8 +257,13 @@
       e1.colorFondo === '#AABBCC', String(e1.colorFondo));
     ok('D9: estilo y resolución siguen llegando (como antes)',
       e1.estilo === '2' && e1.resolucion && e1.resolucion.ancho === 320, JSON.stringify(e1));
-    // 2) Con un cartucho en memoria, aplicar el setup PIDE confirmación: cancelar conserva.
-    await U.cargarEn('ficheroCartucho', [await _gwbModificado(() => { })], 2500);
+    // 2) A la inversa: la memoria del GWB pasa al setup derivado (subcampo a
+    // subcampo: su RAM 128 manda; la FLASH no la declara y sigue 128, del GWS).
+    await U.cargarEn('ficheroCartucho', [await _gwbModificado(j => { j.memoria = { RAM: 128 }; })], 2500);
+    const memDerivada = BaseDirector.datosSetup().memoria;
+    ok('D9: la memoria del GWB pasa al setup derivado (subcampo a subcampo)',
+      JSON.stringify(memDerivada) === JSON.stringify({ RAM: 128, FLASH: 128 }),
+      JSON.stringify(memDerivada));
     ok('D9 (previo): hay cartucho (Parachute) antes de aplicar',
       (_estado().tipo === 'GWB' && _estado().nombre === 'Parachute'), JSON.stringify(_estado()));
     const confirmadas = [];

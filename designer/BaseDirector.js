@@ -778,10 +778,12 @@ var BaseDirector = (function () {
    * la máquina) a partir de un GWB/GWI cargado: estilo y resolución del
    * cartucho, y de un botón a otro del estilo, con la tecla del cartucho
    * si la declara; si no, la del setup previo y, en su defecto, la de
-   * por defecto del estilo (precedencia M8). Los puertos y alias del
-   * ESP32 no viajan en el cartucho: se heredan del setup previo, botón
-   * a botón (vacíos si no hay setup). FUNCION PURA: no toca el estado
-   * ni el DOM (el llamador decide cuándo se aplica).
+   * por defecto del estilo (precedencia M8). La memoria (F5-I20) va
+   * SUBCAMPO a subcampo: la del cartucho manda, y lo que él no declara
+   * viene de la máquina previa. Los puertos y alias del ESP32 no viajan
+   * en el cartucho: se heredan del setup previo, botón a botón (vacíos
+   * si no hay setup). FUNCION PURA: no toca el estado ni el DOM (el
+   * llamador decide cuándo se aplica).
    * @param {Object} json - JSON del cartucho cargado (GWB o GWI).
    * @param {?Object} previo - El setup anterior (o null).
    * @returns {Object} El GWS derivado.
@@ -817,16 +819,21 @@ var BaseDirector = (function () {
       throw new Error('el cartucho no declara "resolucion" y no hay un setup ' +
         'previo del que heredarla (F5-I19).');
     }
+    // F5-I20 (ajuste tras la primera prueba): la memoria del setup derivado
+    // sale del CARTUCHO, subcampo a subcampo (lo que él no declara, de la
+    // máquina previa, que es del hardware): así, al aplicar la ficha de
+    // Cartucho o cargar el cartucho, el setup visible muestra la memoria
+    // que MANDA (F5-I19: el cartucho cargado manda, también aquí).
+    const mem = BaseCartucho.memoriaEfectiva(json.memoria,
+      previo ? previo.memoria : null);
+    const memoriaDerivada = (mem.RAM > 0 || mem.FLASH > 0) ? mem : null;
     return {
       tipo: GWS_TIPO, version: GWS_VERSION,
       nombre: json.nombre || 'Derivado del cartucho',
       estilo: estilo,
       resolucion: { ancho: resolucion.ancho, alto: resolucion.alto },
       botones: botones,
-      // F5-I20: la memoria del setup anterior se hereda (es del hardware);
-      // la que declare el cartucho vive en la ficha y manda al informar.
-      ...(previo && BaseCartucho.memoriaNoCero(previo.memoria)
-        ? { memoria: BaseCartucho.memoriaNoCero(previo.memoria) } : {})
+      ...(memoriaDerivada ? { memoria: memoriaDerivada } : {})
     };
   }
 

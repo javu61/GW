@@ -49,7 +49,10 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	\item \textbf{Los datos comunes pasan al aplicar (ajuste tras la
 	primera prueba):} al aplicar o cargar un GWS, la ficha de Cartucho
 	recibe TODOS los datos comunes del setup, no solo el estilo y la
-	resolución que ya iban: nombre, \texttt{memoria} y ColorFondo. Un GWB
+	resolución que ya iban: nombre, \texttt{memoria} y ColorFondo. Y a la
+	inversa: al aplicar la ficha de Cartucho o cargar el cartucho, la
+	memoria del setup derivado sale del CARTUCHO, subcampo a subcampo (lo
+	que él no declara, de la máquina previa, que es del hardware). Un GWB
 	montado desde la ficha sale así completo y sus ficheros llevan el
 	nombre del setup (F5-I17, M10); los ids, las teclas propias y las
 	imágenes siguen siendo del cartucho.
@@ -88,7 +91,9 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	\item \texttt{BaseDirector.js} (ajuste tras la primera prueba):
 	\texttt{\_aplicarJSONSetup} repuebla la ficha de Cartucho con TODOS los
 	datos comunes del setup (nombre, memoria y ColorFondo, además del
-	estilo y la resolución); función \texttt{\_confirmarDescarteCartucho}
+	estilo y la resolución); \texttt{\_setupDerivadoDe} toma la memoria
+	del cartucho, subcampo a subcampo (lo que él no declara, de la
+	máquina previa); función \texttt{\_confirmarDescarteCartucho}
 	(igual que el Limpiar: se omite con \texttt{GW\_DEBUG}) llamada desde
 	los DOS botones Aplicar, desde «Guardar GWS» y desde la carga de un
 	GWS: ninguna vía descarta datos sin preguntar antes.
@@ -109,7 +114,9 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	\item Caja nueva D9 (grupo \texttt{director}, destructiva, al final de
 	la suite S2), registrada y REFERENCIADA EN F5-I18 (la norma vigente):
 	cargar un GWS con nombre, \texttt{memoria} y ColorFondo $\to$ la ficha
-	de Cartucho recibe los cuatro datos comunes; con un cartucho en
+	de Cartucho recibe los cuatro datos comunes; y un GWB que declara su
+	propia memoria pasa al setup derivado subcampo a subcampo (su RAM
+	manda; la FLASH sin declarar sigue siendo la del GWS); con un cartucho en
 	memoria, aplicar el setup PIDE confirmación (capturada en la prueba):
 	cancelar conserva el cartucho y avisa de «NO aplicado»; confirmar
 	aplica y vuelve a propagar; con \texttt{GW\_DEBUG} no se pide
@@ -133,7 +140,9 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	a cero no se serializan en el JSON.
 	\item Al aplicar (o cargar) un GWS, la ficha de Cartucho recibe todos
 	los datos comunes (nombre, memoria, ColorFondo, estilo y resolución);
-	el GWB montado desde la ficha sale completo.
+	y al aplicar la ficha o cargar el cartucho, la memoria del setup
+	derivado sale del cartucho, subcampo a subcampo. El GWB montado
+	desde la ficha sale completo.
 	\item Ninguna vía descarta datos sin confirmación: aplicar el setup,
 	guardar el GWS, cargar un GWS o aplicar la ficha de Cartucho con
 	cartucho en memoria piden confirmación (cancelar conserva todo);

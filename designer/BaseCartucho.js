@@ -339,7 +339,8 @@ var BaseCartucho = (function () {
    * Contrato común de GWB y GWI en las imágenes de pantalla: img_s
    * OBLIGATORIA (y su fichero presente); img_f e img_m OPCIONALES,
    * pero si se declaran sus ficheros deben estar (el GWC se valida
-   * en leerGWC).
+   * en leerGWC). La regla «combinar» (F3-I1) es opcional en ambos
+   * y debe ser booleana.
    * @param {Object} json - JSON del cartucho.
    * @param {Map<string,File>} mapa - Mapa nombre → File de la carpeta.
    * @param {?string} estiloMaquina - Estilo del setup cargado, o null
@@ -378,6 +379,13 @@ var BaseCartucho = (function () {
     if (json.ColorFondo !== undefined && json.ColorFondo !== null &&
       !_esColorRGB(json.ColorFondo)) {
       return 'el "ColorFondo" del cartucho debe ser un color "#RRGGBB".';
+    }
+    // combinar (F3-I1): OPCIONAL, booleano. Es la fuente del bit de
+    // Reglas del Bloque 0 del GWC; en el GWB llega como extra conservado
+    // y en el GWI viaja al nivel superior (solo si está activa).
+    if (json.combinar !== undefined && json.combinar !== null &&
+      typeof json.combinar !== 'boolean') {
+      return 'la regla "combinar" del cartucho debe ser un booleano.';
     }
     // resolucion {ancho, alto}: OPCIONAL en el GWB; OBLIGATORIA en el GWI,
     // que debe poder cargarse sin un setup previo. Es INFORMATIVA (F5-I14):
@@ -682,6 +690,9 @@ var BaseCartucho = (function () {
       ...(_esColorRGB(json.ColorFondo) ? [_lineaDeCampo('ColorFondo', json.ColorFondo)] : []),
       ...(memoriaNoCero(json.memoria) ? [_lineaDeCampo('memoria', memoriaNoCero(json.memoria))] : []),
       _lineaDeCampo('imagenes', imagenesGWI),
+      // Regla «combinar» (F3-I1): solo si está activa (falsy fuera: es
+      // el valor por defecto). El GWC toma su bit de Reglas de aquí.
+      ...(json.combinar ? [_lineaDeCampo('combinar', json.combinar)] : []),
       ..._lineasOpcionales(json),
       _lineaDeLista('botones', json.botones),
       _lineaDeLista('sprites', json.sprites),

@@ -140,11 +140,11 @@ estructura de C y sepa dónde está todo sin recorrer nada (se indica expresamen
 		Alto & Num & 2 & Igual para el alto de la pantalla & -  \\ \hline
 		Sprites & Num & 1 & Número de sprites en el cartucho & -  \\ \hline
 		Segmentos & Num & 1 & Número de segmentos en el cartucho & -  \\ \hline
-		Secuencias & Num & 1 & Número de secuencias en el cartucho & - \\ \hline
+		Secuencias & Num & 1 & Número de secuencias en el cartucho: 0 o 1 (hoy el cartucho admite una sola secuencia; sin ella el Bloque 4 no viaja) & - \\ \hline
 		Fondo & Num & 3 & Color de fondo en RGB (campo \texttt{ColorFondo} del cartucho, blanco por defecto)\footnotemark. & - \\ \hline
 		Reglas & Num & 1 & Campo de bits con las reglas del juego:
 		\begin{itemize}
-			\item  el bit 0 es la regla \textbf{combinar}; 
+			\item  el bit 0 es la regla \textbf{combinar}: su valor es el del campo \texttt{combinar} del GWI (o del GWB si el GWI no lo lleva; 0 = no combinar, 1 = combinar);
 			\item los demás bits están reservados y valen 0\footnotemark
 		\end{itemize} & - \\ \hline
 		Inicio Bloque 0 & Num & 4 & Inicio del bloque 0 & Ob. \\ \hline
@@ -203,8 +203,8 @@ Es necesario disponer de varios datos generales sobre el juego, velocidades, ace
 
 Cada campo contiene
 el valor que se definió en el diseñador y, si no se hizo, el valor \sout{por
-defecto ya definido en el GWI} nulo\footnote{ver \ref{sec:F5I13}} en los campos 0, 1 y 5 de la lista de posibles valores. De esta manera el campo viaja siempre, sea cual
-sea su origen:
+defecto ya definido en el GWI} \textbf{nulo}\footnote{ver \ref{sec:F5I13}}: así viajan las pausas (00, 01), la aceleración (02--04) si el GWI no lleva el bloque, el aumento de rutas (05) y el fin (06--07) si no se declara. De esta manera el campo viaja siempre, sea cual
+sea su origen; el valor por defecto (500 ms, «sin aumento de rutas»…; la tabla completa de defectos del lector está en \ref{sec:F5I13}) lo aplica quien lee el cartucho, igual en el navegador que en el ESP32:
 
 \begin{table}[H]
 	\centering
@@ -225,16 +225,16 @@ sea su origen:
 		
 		05 & Aumentar cada & Número de lanzamientos entre aumentos de la política de rutas; \textbf{nulo} si no aplica  \\ \hline
 		
-		06 & Mecanismo de fin & Por contador o por familia de iconos \\ \hline
+		06 & Mecanismo de fin & Código del mecanismo de fin de la partida: \textbf{1} = vida, \textbf{2} = muerte, \textbf{3} = contador; \textbf{nulo} si no se declara \\ \hline
 		
-		07 & Contador de fin & El contador elegido cuando el mecanismo es por contador; \textbf{nulo} si no aplica \\ \hline
-		
-		08 & \textbf{Libre} & Antes contenía las reglas del juego; se movieron al Bloque 0 (campo \textbf{Reglas}), ver \ref{sec:F5I14Reglas}. Queda disponible para una ampliación futura. \\ \hline
+		07 & Contador de fin & El contador elegido (1--4) cuando el mecanismo es por contador; \textbf{nulo} si no aplica o el mecanismo es otro \\ \hline
 			
 	\end{tabular}
-	\caption{Datos en la tabla de configuración general del juego.}
+	\caption{Datos en la tabla de configuración general del juego (índices 00--07: los 8 valores del bloque).}
 	\label{tab:A02ConfGeneral}
 \end{table}
+
+Las reglas del juego ya no viajan en este bloque: su bit \textbf{combinar} pasa por el campo \textbf{Reglas} del Bloque 0 (ver \ref{sec:F5I14Reglas}), que es su única ubicación; el generador lo toma del \texttt{combinar} del GWI (o del GWB si el GWI no lo lleva). No existe un noveno valor.
 
 
 \subsection{Bloque de Sprites}

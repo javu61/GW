@@ -5061,6 +5061,10 @@ const BaseDescomponer = (() => {
       ...(ficha.colorFondo ? { ColorFondo: ficha.colorFondo } : {}),
       // Memoria propia del cartucho (F5-I20): solo los subcampos ≠ 0.
       ...(ficha.memoria ? { memoria: ficha.memoria } : {}),
+      // Regla «combinar» (F3-I1): del GWB/GWI cargado (extras de la
+      // ficha). El GWI la lleva SIEMPRE que esté activa: el GWC toma
+      // su bit de Reglas del Bloque 0 de AQUÍ, no del GWB.
+      ...(ficha.extras.combinar ? { combinar: true } : {}),
       // Código GWC del par (F5-I6): el código «#HHHH#» del GWC,
       // AUSENTE cuando no lo hay (el GWI no lleva sobras). Solo lo
       // estampa «Generar GWI+GWC», con el código del GWC recién

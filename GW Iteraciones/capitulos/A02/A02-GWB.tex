@@ -32,11 +32,14 @@ Los campos del JSON asociado a un GWB:
 		\texttt{tipo} & cadena & \texttt{"GWB"} \\
 		\texttt{version} & número & Versión del formato (actualmente 1) \\
 		\texttt{nombre} & cadena & Nombre del cartucho \\
-		\texttt{estilo} & cadena & Estilo de la máquina (debe coincidir con el setup) \\
-		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen \\
-		\texttt{resolucion} & objeto & OPCIONAL: \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Si este dato no se indica usará la definida en el GWS cargado. \\
-		\texttt{botones} & array & OPCIONAL: Los nombres que damos a los botones. \texttt{[\{numero, id\}]} por cada botón \\
-		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\texttt{estilo} & cadena & OPCIONAL, pero OBLIGATORIO si no hay máquina previa (F5-I19); si viene, coincide con el setup o la máquina se re-ajusta \\
+		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen (si una imagen se declara, su fichero DEBE estar presente) \\
+		\texttt{resolucion} & objeto & OPCIONAL: \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD, dentro del rango de pantallas (F5-I16). Si falta, se usa la de la máquina previa; sin máquina previa, error. Al generarlo desde el editor viaja SIEMPRE \\
+		\texttt{ColorFondo} & cadena & OPCIONAL (\texttt{"#RRGGBB"}, F5-I14): el color del fondo de la pantalla cuando el cartucho no lleva img\_f (blanco si falta) \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupación al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\texttt{botones} & array & OPCIONAL: Los nombres que damos a los botones. \texttt{[\{numero, id, tecla?\}]} por cada botón (la \texttt{tecla}, F5-I17, sigue la misma regla que en el setup) \\
+		\texttt{combinar} & booleano & OPCIONAL (F3-I1): la regla «combinar» (dos acciones de teclas en un mismo tick). Viaja también a nivel superior en el GWI (solo si está activa), que es el cartucho del que el GWC toma el bit de reglas del Bloque 0; no se edita en la ficha y se conserva al volver a guardar (F5-I10) \\
+		\texttt{etiquetas} & objeto & OPCIONAL, heredado del diseño original: si viaja, no se edita y se conserva al volver a guardar (F5-I10); el motor actual no lo lee \\
 		\bottomrule
 	\end{tabular}
 	\caption{Campos del json del GWB}
@@ -63,15 +66,17 @@ El campo \texttt{numero} de un botón es el número físico del hardware (los
 		"version": 1,
 		"nombre": "Parachute",
 		"estilo": "2",
+		"resolucion": { "ancho": 156, "alto": 156 },
+		"memoria": { "RAM": 216, "FLASH": 128 },
 		"imagenes": {
 			"img_m": "parachute_m.png",
 			"img_f": "parachute_f.png",
 			"img_s": "parachute_s.png"
 		},
 		"botones": [
-		{"numero": 0, "id": "IZQ"},
-		{"numero": 4, "id": "DER"},
-		{"numero": "A", "id": "Start"}
+		{"numero": 0, "id": "IZQ", "tecla": "Q"},
+		{"numero": 4, "id": "DER", "tecla": "P"},
+		{"numero": 6, "alias": "A", "id": "Start", "tecla": "1"}
 		]
 	}
 \end{lstlisting}

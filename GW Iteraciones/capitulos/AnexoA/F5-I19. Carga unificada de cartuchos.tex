@@ -97,7 +97,11 @@ que reinicia TODO el diseño: sin setup ni cartucho en memoria, object
 URLs revocadas, máquina oculta, fichas en blanco, pestaña de Carga
 delante y pestañas de datos deshabilitadas, como al abrir la página.
 Lo cubre la caja D8 (destructiva) del grupo \texttt{director}
-(ver F5-I18).
+(ver F5-I18). El botón pide confirmación antes de borrar cuando
+hay datos en memoria (\texttt{window.confirm}); la omite con
+\texttt{GW\_DEBUG}, para que las suites corran solas (la caja D8 lo
+aprovecha para comprobar también que un Limpiar repetido, sin nada
+cargado, no rompe).
 
 \subsection{Pruebas}
 \label{sec:F5I19Pruebas}

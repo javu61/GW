@@ -19,7 +19,8 @@
 //   D7  (F5-I19) Cambio de máquina EN CALIENTE: tras un setup2, cargar un GWB de estilo 4
 //       re-ajusta esqueleto, botonera, lienzo, sprites y título (y avisa de setup derivado).
 //   D8  (F5-I19) El botón «Limpiar» de la Carga REINICIA: sin setup ni cartucho, máquina
-//       oculta, pestaña Carga delante y las pestañas de datos deshabilitadas.
+//       oculta, pestaña Carga delante y las pestañas de datos deshabilitadas; repetido
+//       sin nada cargado es idempotente y no rompe.
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
@@ -249,6 +250,12 @@
     ok('D8: Cartucho y Simulador se deshabilitan',
       document.getElementById('pesCartucho').disabled &&
       document.getElementById('pesSimulador').disabled, '');
+    // Segunda pulsación: sin confirmación previa (GW_DEBUG la omite) y
+    // sin NADA que perder, Limpiar es idempotente y no rompe (F5-I19).
+    document.getElementById('btnLimpiarCarga').click();
+    await new Promise(r => setTimeout(r, 300));
+    ok('D8: repetir Limpiar sin nada cargado no rompe (idempotente)',
+      document.body.dataset.vista === 'vistaCarga' && _estado().tipo === null, estado());
     return out;
   }
 

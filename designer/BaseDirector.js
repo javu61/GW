@@ -1339,6 +1339,7 @@ var BaseDirector = (function () {
       // máquina derivada si el cartucho no los declara (heredados).
       BaseFicha.poblar({
         nombre: json.nombre,
+        descripcion: json.descripcion || null,   // F5-I17 (M13)
         estilo: json.estilo !== undefined ? json.estilo : setupGWS.estilo,
         resolucion: json.resolucion || setupGWS.resolucion,
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae

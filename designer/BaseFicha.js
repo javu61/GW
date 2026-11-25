@@ -413,6 +413,11 @@ const BaseFicha = (function () {
     datos.appendChild(_crearElemento('h3', null, 'Datos del GWB'));
     const rejilla = _crearElemento('div', 'fichaRejilla');
     campos.nombre = _campo(rejilla, 'Nombre', _entrada('text', { placeholder: 'Nombre del cartucho' }));
+    // F5-I17 (M13): descripción del cartucho (opcional), mismo significado
+    // que en el GWS; viaja a nivel superior en GWB y GWI (el GWC no lleva
+    // textos). Su uso en pantalla llegará con el selector de máquinas.
+    campos.descripcion = _campo(rejilla, 'Descripción',
+      _entrada('text', { placeholder: 'Para qué es esta máquina' }));
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(sin definir)'], ['2', '2 botones'],
     ['4', '4 botones'], ['5', '5 botones']]) {
@@ -686,6 +691,7 @@ const BaseFicha = (function () {
   function _montarGWB() {
     const e = estado();
     const json = { tipo: 'GWB', version: 1, nombre: e.nombre };
+    if (e.descripcion) json.descripcion = e.descripcion;    // F5-I17 (M13)
     if (e.estilo) json.estilo = e.estilo;
     if (e.resolucion) json.resolucion = e.resolucion;
     if (e.colorFondo) json.ColorFondo = e.colorFondo;
@@ -793,6 +799,7 @@ const BaseFicha = (function () {
       });
     return {
       nombre: campos.nombre.value.trim(),
+      descripcion: campos.descripcion.value.trim(),   // F5-I17 (M13)
       estilo: campos.estilo.value || null,
       resolucion: (ancho > 0 && alto > 0) ? { ancho: ancho, alto: alto } : null,
       // Solo viaja si no es el blanco por defecto (los defaults no viajan).
@@ -810,8 +817,9 @@ const BaseFicha = (function () {
    * completado con el setup cuando falta (estilo y resolución son
    * obligatorios en el GWI). Los nombres de imagen son los del fichero
    * que se escribe (img_s.png, img_f.png, img_m.png).
-   * @returns {{nombre:string, estilo:string, resolucion:?Object,
-   *   imagenes:Object, imgs:Object, botones:Array, extras:Object}}
+   * @returns {{nombre:string, descripcion:?string, estilo:string,
+   *   resolucion:?Object, imagenes:Object, imgs:Object, botones:Array,
+   *   extras:Object}}
    */
   function datosCartucho() {
     const e = estado();
@@ -823,6 +831,7 @@ const BaseFicha = (function () {
     for (const d of IMAGENES) if (e.imagenes[d.clave]) nombres[d.clave] = d.clave + '.png';
     return {
       nombre: e.nombre,
+      descripcion: e.descripcion || null,             // F5-I17 (M13)
       estilo: e.estilo || delSetup,
       resolucion: e.resolucion || pantalla,
       colorFondo: e.colorFondo,
@@ -857,6 +866,7 @@ const BaseFicha = (function () {
     idsBoton = {};
     extras = {};
     campos.nombre.value = '';
+    campos.descripcion.value = '';                     // F5-I17 (M13)
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
@@ -873,14 +883,16 @@ const BaseFicha = (function () {
   /**
    * Rellena la ficha desde una carga (GWS, GWB o GWI). Solo toca lo que
    * viene definido; el director llama antes a reiniciar().
-   * @param {{nombre:?string, estilo:?(string|number), resolucion:?Object,
-   *   colorFondo:?string, botones:?Array<{numero:(string|number), id:?string}>,
+   * @param {{nombre:?string, descripcion:?string, estilo:?(string|number),
+   *   resolucion:?Object, colorFondo:?string,
+   *   botones:?Array<{numero:(string|number), id:?string}>,
    *   imagenes:?Object, extras:?Object}} d - Datos a mostrar.
    * @returns {void}
    */
   function poblar(d) {
     _asegurar();
     if (d.nombre !== undefined) campos.nombre.value = d.nombre || '';
+    if (d.descripcion !== undefined) campos.descripcion.value = d.descripcion || '';   // F5-I17 (M13)
     if (d.estilo !== undefined) {
       const v = d.estilo === null ? '' : String(d.estilo);
       campos.estilo.value = v;

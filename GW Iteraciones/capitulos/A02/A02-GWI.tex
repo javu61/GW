@@ -39,6 +39,8 @@ Los campos incluidos en el json son:
 		\texttt{tipo} & cadena & \texttt{"GWI"} \\
 		\texttt{version} & número & Versión del formato (1) \\
 		\texttt{nombre} & cadena & Nombre del cartucho \\
+
+		\texttt{descripcion} & cadena & OPCIONAL, texto libre: el «para qué es esta máquina» (el mismo significado que en el GWS; incluido desde F5-I17, M13, ver \ref{sec:F5I17Codigo}). El GWC, binario, no la lleva \\
 		\texttt{estilo} & cadena & Estilo de la máquina: OBLIGATORIO en el GWI (es autosuficiente y debe poder cargar sin setup previo, F5-I19) \\
 		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupación al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
 		\texttt{resolucion}\footnotemark\setcounter{fnA02GWIuno}{\value{footnote}} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD, dentro del rango de pantallas (F5-I16). Este dato es necesario para escalar, por lo que es obligatorio incluirlo siempre.\\
@@ -67,7 +69,7 @@ Los campos incluidos en el json son:
 
 Al serializar, los campos se escriben SIEMPRE en este orden (los
 opcionales solo si viajan): \texttt{tipo}, \texttt{version},
-\texttt{codigoGWC}?, \texttt{nombre}, \texttt{estilo},
+\texttt{codigoGWC}?, \texttt{nombre}, \texttt{descripcion}?, \texttt{estilo},
 \texttt{resolucion}, \texttt{ColorFondo}?, \texttt{memoria}?,
 \texttt{imagenes}, \texttt{combinar}?, \texttt{fin}?, \texttt{secuencia}?,
 \texttt{pausas}?, \texttt{aceleracion}?, \texttt{rutas}?,
@@ -84,7 +86,7 @@ opcionales solo si viajan): \texttt{tipo}, \texttt{version},
 	]
 	{
 	"tipo": "GWI", "version": 1, "codigoGWC": "#3F7E#",
-	"nombre": "Parachute", "estilo": "2",
+	"nombre": "Parachute", "descripcion": "Parachute (modelo PR-21)", "estilo": "2",
 	"resolucion": { "ancho": 156, "alto": 156 },
 	"memoria": { "RAM": 216, "FLASH": 128 },
 	"imagenes": { "img_m": "parachute_m.png", "img_f": "parachute_f.png", "img_s": "parachute_s.png" },

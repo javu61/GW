@@ -299,8 +299,11 @@ var BaseCartucho = (function () {
    * @returns {Promise<{nombre:string, json:Object}>} JSON elegido.
    */
   async function _elegirJSONCartucho(mapa) {
-    const nombres = Array.from(mapa.keys()).filter(n => n.toLowerCase().endsWith('.json'));
-    if (nombres.length === 0) throw new Error('la carpeta no contiene ningún .json.');
+    // F5-I17 (M11): el GWS viaja como .gws; el .json sigue admitido
+    // (compatibilidad con los cartuchos de antes del cambio).
+    const nombres = Array.from(mapa.keys())
+      .filter(n => /\.(json|gws)$/i.test(n));
+    if (nombres.length === 0) throw new Error('la carpeta no contiene ningún .json/.gws.');
 
     const leidos = await _leerJSONsLegibles(mapa, nombres);
     if (leidos.length === 0) throw new Error('ningún .json de la carpeta se ha podido leer.');

@@ -1091,8 +1091,10 @@ var BaseDirector = (function () {
     try {
       if (ficheros.length === 1) {
         const nombre = ficheros[0].name || '';
-        // UN .json: setup (GWS) o cartucho de un solo fichero.
-        if (/\.json$/i.test(nombre)) {
+        // UN .json/.gws: setup (GWS; F5-I17 M11: el GWS usa su extensión
+        // .gws, el .json sigue admitido por compatibilidad) o cartucho de
+        // un solo fichero.
+        if (/\.(json|gws)$/i.test(nombre)) {
           const json = await _leerJSON(ficheros[0]);
           if (json.tipo === GWS_TIPO) {
             rotulo = 'Setup';                // el error, con su propio rótulo

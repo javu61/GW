@@ -464,12 +464,14 @@ const BaseSetup = (function () {
 
   /**
    * Nombre de fichero válido a partir del nombre del setup.
+   * F5-I17 (M11): el GWS usa SU extensión, .gws (el .json sigue
+   * aceptado en la carga por compatibilidad).
    * @param {string} nombre - Nombre del setup.
-   * @returns {string} P. ej. «setup_ESP32 GW 4 botones.json».
+   * @returns {string} P. ej. «setup_ESP32 GW 4 botones.gws».
    */
   function _nombreFichero(nombre) {
     const limpio = nombre.replace(/[\\/:*?"<>|]/g, '_').trim() || 'setup';
-    return limpio + '.json';
+    return limpio + '.gws';
   }
 
   /**

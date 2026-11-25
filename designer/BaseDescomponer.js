@@ -127,6 +127,8 @@
 //                          topes (aviso) + guardar GWI.
 //   generarGWIyGWC         Botón «Generar GWS+GWB+GWI+GWC» (F5-I17 M9): verificar
 //                          + topes BLOQUEANTES + GWC + su GWS + GWI con el Código GWC.
+//   _cambiosSinAplicar     F5-I17 (M12): «Generar pide Aplicar» — si el
+//                          setup tiene cambios sin aplicar, no se genera.
 //   _ctxVerificacion        El contexto que pide BaseCartucho para
 //                          verificar (helpers y tablas de aquí).
 //   _avisoTopes            Presenta los avisos de tope de 255.
@@ -4707,6 +4709,7 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('No hay nada que verificar: descompón la imagen primero.');
       return;
     }
+    if (_cambiosSinAplicar()) return;        // F5-I17 (M12)
     // Por parámetro va lo que la verificación leía antes por
     // clausura: los grupos del editor, sus helpers y las constantes
     // de los enlaces. Los inversos que calcula se registran en el
@@ -4856,6 +4859,7 @@ const BaseDescomponer = (() => {
       BaseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
       return;
     }
+    if (_cambiosSinAplicar()) return;        // F5-I17 (M12)
     // F5-I10: los datos propios del cartucho (nombre, estilo,
     // resolución, imágenes y botones) salen de la FICHA de la pestaña
     // Cartucho: se verifican antes de generar NADA (los tres ficheros
@@ -5053,6 +5057,9 @@ const BaseDescomponer = (() => {
       tipo: 'GWI',
       version: 1,
       nombre: ficha.nombre || null,
+      // F5-I17 (M13): descripción del cartucho (opcional): la de la
+      // ficha; solo viaja si el usuario la escribió.
+      ...(ficha.descripcion ? { descripcion: ficha.descripcion } : {}),
       estilo: ficha.estilo || null,
       // Resolución (obligatoria en el GWI, autosuficiente): la de la
       // ficha o, si está vacía, la del GWS en uso.
@@ -5102,6 +5109,22 @@ const BaseDescomponer = (() => {
         'el GWI no podrá re-editarse sin esa referencia.');
     }
     return json;
+  }
+
+  /**
+   * F5-I17 (M12): «Generar pide Aplicar». Las dos fichas (Setup y
+   * Cartucho) son BORRADORES hasta Aplicar (F5-I12); los botones del
+   * Editor (Verificar y Guardar y Generar) trabajan SIEMPRE con los
+   * datos aplicados. La ficha de Cartucho la cubre
+   * BaseFicha.verificar({generar:true}); aquí se ataja la del setup.
+   * @returns {boolean} true si el setup tiene cambios sin aplicar (y el
+   *   error ya se ha mostrado): no se genera ni guarda nada.
+   */
+  function _cambiosSinAplicar() {
+    if (typeof BaseSetup === 'undefined' || !BaseSetup.hayCambios) return false;
+    if (!BaseSetup.hayCambios()) return false;
+    BaseDirector.avisarError('El setup tiene cambios sin aplicar: pulsa «Aplicar» (o «Guardar GWS») en la pestaña Setup antes de generar o guardar.');
+    return true;
   }
 
   /**

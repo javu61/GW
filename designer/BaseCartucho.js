@@ -387,6 +387,13 @@ var BaseCartucho = (function () {
       typeof json.combinar !== 'boolean') {
       return 'la regla "combinar" del cartucho debe ser un booleano.';
     }
+    // descripcion (F5-I17, M13): OPCIONAL, cadena (no vacía a efectos de
+    // escritura; aquí basta con el tipo). Igual significado en GWS, GWB
+    // y GWI; el GWC no la lleva (binario, sin textos).
+    if (json.descripcion !== undefined && json.descripcion !== null &&
+      typeof json.descripcion !== 'string') {
+      return 'el campo "descripcion" del cartucho debe ser una cadena.';
+    }
     // resolucion {ancho, alto}: OPCIONAL en el GWB; OBLIGATORIA en el GWI,
     // que debe poder cargarse sin un setup previo. Es INFORMATIVA (F5-I14):
     // la que manda es la del Setup (el hardware); si difiere se escala y
@@ -685,6 +692,7 @@ var BaseCartucho = (function () {
       _lineaDeCampo('version', json.version),
       ...lineaCodigoGWC,
       _lineaDeCampo('nombre', json.nombre),
+      ...(json.descripcion ? [_lineaDeCampo('descripcion', json.descripcion)] : []),   // F5-I17 (M13)
       _lineaDeCampo('estilo', json.estilo),
       _lineaDeCampo('resolucion', json.resolucion),
       ...(_esColorRGB(json.ColorFondo) ? [_lineaDeCampo('ColorFondo', json.ColorFondo)] : []),
@@ -709,11 +717,14 @@ var BaseCartucho = (function () {
    * @returns {string} Texto JSON del GWB.
    */
   function _formatearGWB(json) {
+    // F5-I17 (M13): la descripción viaja a nivel superior si no está vacía
+    // (mismo significado que en el GWS; el GWC no lleva textos).
     const lineas = [
       _lineaDeCampo('tipo', 'GWB'),
       _lineaDeCampo('version', json.version),
       _lineaDeCampo('nombre', json.nombre)
     ];
+    if (json.descripcion) lineas.push(_lineaDeCampo('descripcion', json.descripcion));   // F5-I17 (M13)
     if (json.estilo) lineas.push(_lineaDeCampo('estilo', json.estilo));
     if (json.resolucion) lineas.push(_lineaDeCampo('resolucion', json.resolucion));
     if (_esColorRGB(json.ColorFondo)) lineas.push(_lineaDeCampo('ColorFondo', json.ColorFondo));

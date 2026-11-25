@@ -32,6 +32,8 @@ Los campos del JSON asociado a un GWB:
 		\texttt{tipo} & cadena & \texttt{"GWB"} \\
 		\texttt{version} & número & Versión del formato (actualmente 1) \\
 		\texttt{nombre} & cadena & Nombre del cartucho \\
+
+		\texttt{descripcion} & cadena & OPCIONAL, texto libre: el «para qué es esta máquina» (el mismo significado que en el GWS; incluido desde F5-I17, M13, ver \ref{sec:F5I17Codigo}). El GWC, binario, no la lleva \\
 		\texttt{estilo} & cadena & OPCIONAL, pero OBLIGATORIO si no hay máquina previa (F5-I19); si viene, coincide con el setup o la máquina se re-ajusta \\
 		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen (si una imagen se declara, su fichero DEBE estar presente) \\
 		\texttt{resolucion} & objeto & OPCIONAL: \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD, dentro del rango de pantallas (F5-I16). Si falta, se usa la de la máquina previa; sin máquina previa, error. Al generarlo desde el editor viaja SIEMPRE \\
@@ -65,6 +67,7 @@ A continuación un ejemplo del fichero:
 		"tipo": "GWB",
 		"version": 1,
 		"nombre": "Parachute",
+		"descripcion": "Parachute (modelo PR-21)",
 		"estilo": "2",
 		"resolucion": { "ancho": 156, "alto": 156 },
 		"memoria": { "RAM": 216, "FLASH": 128 },

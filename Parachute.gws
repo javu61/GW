@@ -1,0 +1,40 @@
+{
+  "tipo": "GWS",
+  "version": "1",
+  "nombre": "Parachute",
+  "estilo": "2",
+  "resolucion": {
+    "ancho": 320,
+    "alto": 240
+  },
+  "botones": [
+    {
+      "numero": "0",
+      "tecla": "O",
+      "puerto": 13
+    },
+    {
+      "numero": "4",
+      "tecla": "P",
+      "puerto": 14
+    },
+    {
+      "numero": "6",
+      "tecla": "Z",
+      "puerto": 33,
+      "alias": "A"
+    },
+    {
+      "numero": "7",
+      "tecla": "X",
+      "puerto": 16,
+      "alias": "B"
+    },
+    {
+      "numero": "8",
+      "tecla": "C",
+      "puerto": 17,
+      "alias": "R"
+    }
+  ]
+}

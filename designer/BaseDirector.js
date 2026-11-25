@@ -442,7 +442,7 @@ var BaseDirector = (function () {
     // "cancelar" y la caja D8 no pasaría).
     if (typeof GW_DEBUG === 'undefined' || !GW_DEBUG) {
       if (setupGWS || cartucho) {
-        if (!window.confirm('¿Limpiar todo? Se perderán los datos cargados.')) return;
+        if (!window.confirm('Se perderán los datos cargados. ¿Limpiar todo?')) return;
       }
     }
     _limpiarCartucho();

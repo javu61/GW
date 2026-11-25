@@ -1,0 +1,77 @@
+\section{El formato GWB: la base de trabajo}
+\label{sec:A02GWB}
+
+
+El cartucho de tipo GWB (Game \& Watch Base) es el cartucho de PARTIDA de la autoría: contiene sobre todo la imagen de partida con los objetos dibujados, todavía sin
+segmentos identificados. Se \emph{entrega como una CARPETA} (no un ZIP) con estos ficheros en su interior:
+
+\begin{itemize}
+	\item Un \texttt{.json} con los datos del cartucho GWB (cualquier nombre; si hay
+	varios, la prioridad del apartado anterior).
+	
+	\item \texttt{imagenes.img\_f}: OPCIONAL. La imagen de fondo sin los segmentos. Hay 
+	cartuchos sin arte de fondo. Si \texttt{img\_f} está declarada, el 	fichero referenciado
+	DEBE estar presente en la carpeta; sin fondo, el simulador pinta la pantalla en blanco.
+	
+	\item \texttt{imagenes.img\_s}: OBLIGATORIO. La imagen con todos los segmentos encendidos pero sin 
+	el fondo, OBLIGATORIA siempre (de ella se extrae la geometría): el fichero DEBE estar presente en la carpeta. Si existe \texttt{img\_f}
+	debe medir exactamente lo mismo; si no es así hay que dar un aviso por consola NO bloqueante.
+	
+	\item \texttt{imagenes.img\_m}: OPCIONAL. La portada de la máquina, que se usará en la
+	pantalla de selección de juegos como referencia gráfica del cartucho a cargar. Si se declara, el fichero referenciado DEBE estar presente.
+\end{itemize}
+
+Los campos del JSON asociado a un GWB:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{10cm}}
+		\toprule
+		Campo & Tipo & Contenido \\
+		\midrule
+		\texttt{tipo} & cadena & \texttt{"GWB"} \\
+		\texttt{version} & número & Versión del formato (actualmente 1) \\
+		\texttt{nombre} & cadena & Nombre del cartucho \\
+		\texttt{estilo} & cadena & Estilo de la máquina (debe coincidir con el setup) \\
+		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen \\
+		\texttt{resolucion} & objeto & OPCIONAL: \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Si este dato no se indica usará la definida en el GWS cargado. \\
+		\texttt{botones} & array & OPCIONAL: Los nombres que damos a los botones. \texttt{[\{numero, id\}]} por cada botón \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Campos del json del GWB}
+	\label{tab:A02GWB}
+\end{table}
+
+Un GWB NO lleva sprites, segmentos ni autoría: al cargarlo, el editor
+descompone \texttt{img\_s} automáticamente (extracción de componentes
+negras) y el diseñador trabaja a partir de ahí. 
+
+El campo \texttt{numero} de un botón es el número físico del hardware (los
+\texttt{id} son etiquetas legibles como \texttt{IZQ} o \texttt{Start}).
+
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Ejemplo de json para un cartucho GWB},
+	label={lst:A02GWB}
+	]
+	{
+		"tipo": "GWB",
+		"version": 1,
+		"nombre": "Parachute",
+		"estilo": "2",
+		"imagenes": {
+			"img_m": "parachute_m.png",
+			"img_f": "parachute_f.png",
+			"img_s": "parachute_s.png"
+		},
+		"botones": [
+		{"numero": 0, "id": "IZQ"},
+		{"numero": 4, "id": "DER"},
+		{"numero": "A", "id": "Start"}
+		]
+	}
+\end{lstlisting}

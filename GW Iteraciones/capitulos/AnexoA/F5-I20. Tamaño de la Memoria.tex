@@ -1,82 +1,24 @@
 \section{Vigésima iteración de la Fase 5: Tamaño de la Memoria}
 \label{sec:F5I20}
 
-<<<<<<< HEAD
-En esta iteración añadimos información sobre el sistema externo, cuanta memoria dispone, para que al generar el cartucho se indique que porcentaje de la misma ocupa, y el usuario vea si cabe o no en su sistema.
-=======
-Reformulación de la antigua MA02 (\emph{Tamaño máximo del cartucho}): no se
-establece un límite ni se avisa de que «no cabe», sino que el sistema
-INFORMA de la ocupación de memoria, como hacen los entornos de desarrollo de
-estas máquinas (del estilo «el sketch usa el X\,\% del espacio de
-programa»): al generar el GWC, se indica el porcentaje de RAM y de FLASH
-que consume el cartucho. El usuario decide después; la información nunca
-bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
->>>>>>> 5aabb3dbb009a91ba37a9a41e98bdb98ee629305
+En esta iteración incluimos información sobre el sistema externo, en cuanto a la cantidad de memoria de que disponer, de forma que al generar los cartuchos GWC se indique el porcentaje que van a ocupar, como dato informativo para el usuario. Como cada sistema externo pude disponer de una cantidad de memoria diferente, y el programa final puede ocupar mas o menos de esa memoria, solo damos el tamaño y el porcentaje, y será el usuario quien decide después; la información nunca bloquea.
 
 \subsection{Análisis del estado actual}
 \label{sec:F5I20Analisis}
 
 \begin{itemize}
-<<<<<<< HEAD
-	\item El GWC ya tiene TOPES PROPORCIONALES bloqueantes (F5-I6: Sprites,
-	Segmentos y SegmentosPantalla, tope 255), que protegen el FORMATO; pero
-	nada compara el tamaño RESULTANTE del cartucho con la memoria del
-	hardware que lo va a ejecutar.
-	\item El tamaño del GWC es un dato que el sistema YA conoce en los dos
-	momentos que importan: al generar (byte a byte en
-	\texttt{BaseCartucho.generarGWC}, presentado en el editor por
-	\texttt{informarTamanos}) y al cargar el GWC
-	(\texttt{tamGWC = fichero.size} en \texttt{\_procesarGWC}).
-	\item El GWS declara la máquina (estilo, resolución, botones, teclas,
-	\ldots) pero no dice NADA del hardware externo que la ejecutará: la
-	memoria disponible es una propiedad de CADA máquina externa, así que su
-	sitio natural es el setup: dos GWS de la misma máquina pueden
-	corresponder a hardware con memoria distinta.
-\end{itemize}
-
-\subsection{Diseño: el campo \texttt{memoria} del GWS}
-\label{sec:F5I20Diseno}
-
-\begin{itemize}
-	\item \textbf{Campo opcional del GWS: \texttt{memoria}, en KB (entero
-	positivo).} Cada máquina externa declara en su setup cuánta memoria
-	tiene el ESP32 que la ejecuta. Se escribe en el JSON del GWS como
-	\texttt{"memoria": 110}.
-	\item \textbf{Defecto 110 KB, SIN error.} Si el GWS no declara el campo
-	(o lo declara vacío), se usa 110 KB ($110 \times 1024$ bytes) sin
-	mensaje de error: es el valor razonable de un ESP32 con el reparto de
-	memoria que necesita el motor (el valor se documentará en el anexo de
-	formatos junto al resto de campos del GWS, PC5).
-	\item \textbf{Validación con cuidado:} si el valor DECLARADO no es un
-	entero positivo, aviso (F5-I16) y el sistema asume el defecto; no
-	bloquea, consistente con el carácter de defecto (sin error) del campo.
-	\item \textbf{La ficha del Setup} incorpora el campo «Memoria (KB)»
-	(placeholder 110): vacío vale 110; a la hora de serializar, solo se
-	escribe en el GWS si el autor puso un valor distinto del defecto.
-	\item \textbf{¿Dónde se compara? En los DOS momentos en que el GWC
-	existe como tal:} (1) al GENERAR, «Generar GWS+GWB+GWI+GWC» conoce los
-	bytes del GWC recién creado y compara; (2) al CARGAR un
-	\texttt{.GWC}, el tamaño ya se toma del fichero (F5-I6). El aviso es
-	NO bloqueante: el cartucho se genera o carga igualmente, con la pista
-	de cuánto excede (p.~ej. «el cartucho (X de 110 KB) supera la memoria
-	de la máquina (F5-I20)»).
-	\item \textbf{Alcance:} la memoria solo afecta al GWC: el GWB y el GWI
-	viven en el navegador del autor y no van al ESP32.
-=======
-	\item De los dos datos que hacen falta para el porcentaje, el sistema YA
+	\item De los dos datos que hacen falta para el porcentaje, el sistema ya
 	conoce uno: los bytes del GWC recién creado
 	(\texttt{BaseCartucho.generarGWC}, presentados en el panel del Editor por
 	\texttt{informarTamanos}). El otro, la memoria de que dispone la máquina
-	externa, NO se declara en ningún sitio.
+	externa, no se declara actualmente en ningún sitio.
 	\item El GWS describe la máquina externa (estilo, resolución, botones,
 	teclas, \ldots) pero no dice cuánta memoria tiene el hardware que la
 	ejecuta; y desde F5-I19 los cartuchos (GWB/GWI) llevan la información de
 	la autoría, con lo cual el sitio natural para declararla son PANTALLAS Y
 	CARTUCHOS.
 	\item La RAM la ocupa lo que viaja dentro del GWC (sus bytes); la FLASH la
-	ocupará el fondo (img\_f), que todavía no existe: hoy la ocupación de
-	FLASH es 0 KB y 0\,\%, pero conviene que el sistema quede ya preparado
-	para cuando el fondo se fabrique.
+	ocupará el fondo (img\_f), que todavía no se guarda en el cartucho, pero el sistema considerará que si, mirará la ocupación del bloque del fondo, hoy será cero, y dará la ocupación. Cuando guardemos el fondo no hay que tocar nada para que siga funcionando.
 \end{itemize}
 
 \subsection{Diseño: el campo \texttt{memoria} (RAM y FLASH)}
@@ -84,7 +26,7 @@ bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
 
 \begin{itemize}
 	\item \textbf{Campo opcional \texttt{memoria}, con dos subcampos
-	\texttt{RAM} y \texttt{FLASH},} en KB, enteros $\ge 0$, que PUEDEN QUEDAR
+		\texttt{RAM} y \texttt{FLASH},} en KB, enteros $\ge 0$, que PUEDEN QUEDAR
 	A CERO (o simplemente no venir, lo que vale lo mismo). Se incluye en
 	PANTALLAS (GWS) y CARTUCHOS (GWB/GWI), en la raíz del JSON:
 	\texttt{"memoria": \{"RAM": 216, "FLASH": 0\}}.
@@ -92,50 +34,24 @@ bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
 	MANDA: la memoria del cartucho (GWB/GWI) si la declara; si no, la del
 	setup (GWS); si ninguna existe o ambas están a cero, NO se muestra
 	ningún porcentaje ni ningún aviso (nada que informar).
-	\item \textbf{¿Dónde se informa? Solo al GENERAR el GWC} (botón
-	«Generar GWS+GWB+GWI+GWC»), junto a los
+	\item \textbf{¿Dónde se informa?} Solo cuando tenemos el tamaño definido, que es al generar el GWC (botón «Generar GWC»), junto a los
 	tamaños del par: en la línea de \texttt{informarTamanos} del panel del
 	Editor y en el aviso final de \texttt{\#estado} (p.~ej.
 	«RAM: 4 de 216 KB (2\,\%) · FLASH: 0 de 216 KB
 	(0\,\%)»). El porcentaje es un entero (redondeo clásico);
 	si el cálculo da menos de 1\,\%, se muestra «$< 1$\,\%
 	» para no leer un 0 engañoso.
-	\item \textbf{FLASH: hoy 0 KB y 0\,\%.} El fondo no viaja en el GWC y sus
-	bytes de FLASH son 0; el cálculo, el campo y el mensaje quedan ya
-	montados para que, cuando el fondo se fabrique y vaya a Flash, cuente
-	allí sin tocar el diseño.
-	\item \textbf{Validación con cuidado (F5-I16):} si un valor declarado no
+	\item \textbf{FLASH:} Tamaño del bloque del fondo, si no existe será 0 KB y 0\,\%, si existe el tamaño del bloque. 
+	\item \textbf{Validación:} si un valor declarado no
 	es un entero $\ge 0$, aviso y se trata como 0 (es decir, sin
 	porcentaje); no bloquea nada, coherente con el carácter informativo de
 	toda la iteración.
->>>>>>> 5aabb3dbb009a91ba37a9a41e98bdb98ee629305
 \end{itemize}
 
 \subsection{Plan de cambios}
 \label{sec:F5I20Plan}
 
 \begin{itemize}
-<<<<<<< HEAD
-	\item \texttt{BaseSetup.js}: campo nuevo de la ficha de setup
-	(«Memoria (KB)», placeholder 110); lo toma \texttt{estado()}; solo se
-	serializa en el GWS si se declaró distinto del defecto; la repoblación
-	muestra el campo del GWS cargado (o vacío, que vale 110).
-	\item \texttt{BaseCartucho.js}: \texttt{validarSetup} acepta el campo
-	si es entero positivo (o ausente); \texttt{revisarValores(F5-I16)}
-	emite aviso si el valor declarado no es válido y lo devuelve para que
-	el defecto 110 se aplique sin error. Constante de módulo
-	\texttt{MEMORIA\_POR\_DEFECTO = 110}.
-	\item \texttt{BaseDirector.js}: función pequeña reutilizable
-	(\texttt{avisarTopeMemoria(bytes)}) que compara los bytes del GWC
-	contra la memoria del setup (con el defecto cuando ausente); se llama
-	desde \texttt{\_procesarGWC} (tras tomar \texttt{tamGWC}) y se
-	exporta para quien genera.
-	\item \texttt{BaseDescomponer.js}: en \texttt{generarGWIyGWC}, tras
-	crear el GWC, el mismo aviso si excede (junto a los avisos del par de
-	F5-I17 M2).
-	\item Cabeceras de módulos al día; A5-anexo, una línea de \texttt{
-	\textbackslash input} nueva.
-=======
 	\item \texttt{BaseSetup.js}: en la ficha de Setup, campos
 	«RAM (KB)»{} y «FLASH
 	(KB)»{} (enteros $\ge 0$, vacío vale 0); los recoge
@@ -154,27 +70,12 @@ bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
 	\texttt{informarTamanos}, el cálculo del porcentaje (precedencia
 	cartucho $>$ setup) y la línea/aviso de ocupación. Cabeceras de módulos
 	al día; A5-anexo, una línea de \texttt{\textbackslash input} nueva.
->>>>>>> 5aabb3dbb009a91ba37a9a41e98bdb98ee629305
 \end{itemize}
 
 \subsection{Pruebas}
 \label{sec:F5I20Pruebas}
 
 \begin{itemize}
-<<<<<<< HEAD
-	\item Caja nueva del grupo \texttt{director} (caja D10, destructiva, al
-	final de la suite S2) que se registra y se REFERENCIA EN F5-I18 (la
-	norma vigente): carga un GWS cuyo campo declarado es \texttt{memoria: 1}
-	y tras él el \texttt{cartucho.GWC} de \texttt{pruebas/cartuchos} (su
-	tamaño real supera 1 KB): la carga sale ADELANTE (no bloquea) y
-	\texttt{\#estado} canta el aviso «supera la memoria»; después, un GWS
-	SIN el campo y el mismo GWC cargan SIN aviso (el defecto 110 basta).
-	\item Caja del grupo \texttt{gwi\_gwc} (solo consola, C8, al estilo de
-	C7): generar con un setup \texttt{memoria: 1} avisa del exceso; con el
-	defecto, no.
-	\item S2 y S5 completas en verde; los avisos nuevos no tocan el formato
-	GWC ni el orden del tick.
-=======
 	\item Caja nueva C8 (grupo \texttt{gwi\_gwc}, solo consola, al estilo de
 	C7), registrada y REFERENCIADA EN F5-I18 (la norma vigente): generar el
 	par con un setup cuya \texttt{memoria.RAM} es pequeña y distinta de 0
@@ -183,20 +84,12 @@ bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
 	siempre 0 KB y 0\,\%.
 	\item S2 y S5 completas en verde; el cambio no toca el formato GWC ni el
 	orden del tick.
->>>>>>> 5aabb3dbb009a91ba37a9a41e98bdb98ee629305
 \end{itemize}
 
 \subsection{Criterios de aceptación}
 \label{sec:F5I20Criterios}
 
 \begin{enumerate}
-<<<<<<< HEAD
-	\item Un GWS sin \texttt{memoria} usa 110 KB sin error ni aviso.
-	\item Generar (o cargar) un GWC que quepa: sin aviso; uno que exceda:
-	aviso claro con los dos tamaños, NO bloqueante.
-	\item La ficha de Setup muestra y guarda el campo \texttt{memoria}
-	cuando se declara, con el placeholder 110.
-=======
 	\item Un GWS o cartucho sin \texttt{memoria} (o con RAM/FLASH a cero)
 	genera SIN porcentajes y SIN avisos de memoria.
 	\item Con \texttt{memoria.RAM} declarada, al generar el GWC se muestra el
@@ -206,6 +99,5 @@ bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
 	0\,\%: cuando exista el fondo, contará allí sin cambiar el diseño.
 	\item RAM y FLASH visibles y editables en las pestañas Setup y Cartucho;
 	a cero no se serializan en el JSON.
->>>>>>> 5aabb3dbb009a91ba37a9a41e98bdb98ee629305
 	\item S2 y S5 en verde al cerrar la iteración.
 \end{enumerate}

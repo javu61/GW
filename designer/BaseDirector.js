@@ -430,10 +430,21 @@ var BaseDirector = (function () {
    * primera prueba): REINICIO TOTAL del diseño — sin setup, sin
    * cartucho, máquina oculta y fichas en blanco, como al abrir la
    * página — para cargar otro cartucho limpio. No entra con una
-   * partida en marcha: el botón se deshabilita en el juego.
+   * partida en marcha: el botón se deshabilita en el juego. Pide
+   * confirmación antes de borrar si hay datos en memoria (la omite
+   * con GW_DEBUG, que corren las suites solas; F5-I19).
    * @returns {void}
    */
   function _limpiarTodo() {
+    // Confirmación (F5-I19): SOLO si hay algo que perder (setup o
+    // cartucho en memoria) y SIN GW_DEBUG — las suites corren solas y
+    // el navegador de Playwright descarta los diálogos (daría
+    // "cancelar" y la caja D8 no pasaría).
+    if (typeof GW_DEBUG === 'undefined' || !GW_DEBUG) {
+      if (setupGWS || cartucho) {
+        if (!window.confirm('¿Limpiar todo? Se perderán los datos cargados.')) return;
+      }
+    }
     _limpiarCartucho();
     BaseCartucho.revocarURLs();
     setupGWS = null;

@@ -125,12 +125,14 @@
 //  Verificación y generación
 //   verificarYGuardar      Botón «Verificar y Guardar»: verificar +
 //                          topes (aviso) + guardar GWI.
-//   generarGWIyGWC         Botón «Generar GWI+GWC»: verificar + topes
-//                          BLOQUEANTES + GWC + GWI con el Código GWC.
+//   generarGWIyGWC         Botón «Generar GWS+GWB+GWI+GWC» (F5-I17 M9): verificar
+//                          + topes BLOQUEANTES + GWC + su GWS + GWI con el Código GWC.
 //   _ctxVerificacion        El contexto que pide BaseCartucho para
 //                          verificar (helpers y tablas de aquí).
 //   _avisoTopes            Presenta los avisos de tope de 255.
-//   _descargarGWC          Descarga el fichero .gwc generado.
+//   _nombreFichero         Nombre de fichero saneado: el nombre del cartucho (F5-I17 M10).
+//   _descargarGWC          Descarga el fichero .gwc generado (con su nombre; F5-I17 M10).
+//   _descargarGWS          Descarga el GWS del setup vigente junto al GWC (F5-I17 M9).
 //   _montarGWI             Monta el JSON del GWI (con la autoría).
 //   _guardarGWI             Validaciones de contexto y delega en
 //                          BaseCartucho.guardarGWI.
@@ -4776,12 +4778,32 @@ const BaseDescomponer = (() => {
    * @param {Uint8Array} bytes - El fichero GWC completo.
    * @returns {void}
    */
-  function _descargarGWC(bytes) {
+  /**
+   * Nombre de fichero a partir del nombre del cartucho (F5-I17, M10):
+   * saneado para el disco (inválidos de Windows a "_"), con el genérico
+   * "cartucho" de salvavidas.
+   * @param {string} nombre - El nombre del cartucho.
+   * @param {string} extension - Con punto (p. ej. ".GWC").
+   * @returns {string} Nombre de fichero completo.
+   */
+  function _nombreFichero(nombre, extension) {
+    const limpio = String(nombre || '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'cartucho';
+    return limpio + extension;
+  }
+
+  /**
+   * Descarga el fichero .gwc generado (F5-I17 M10: con el nombre del
+   * cartucho, no el genérico).
+   * @param {Uint8Array} bytes - El GWC ya montado.
+   * @param {string} nombre - El nombre del cartucho.
+   * @returns {void}
+   */
+  function _descargarGWC(bytes, nombre) {
     const blob = new Blob([bytes], { type: 'application/octet-stream' });
     const a = document.createElement('a');
     const url = URL.createObjectURL(blob);
     a.href = url;
-    a.download = 'cartucho.GWC';
+    a.download = _nombreFichero(nombre, '.GWC');
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -4789,7 +4811,23 @@ const BaseDescomponer = (() => {
   }
 
   /**
-   * El botón «Generar GWI+GWC» (F5-I6): verifica el cartucho con la
+   * Descarga el GWS del setup vigente (F5-I17, M9): con el GWC sale
+   * también su setup (real o derivado del cartucho), para que la
+   * carpeta de destino tenga todo lo necesario. La extensión es
+   * .json — la del sistema para el GWS —: un .GWS no lo reconocería
+   * el cargador (F5-I19 reconoce el setup por .json).
+   * @param {Object} setup - El setupGWS en memoria.
+   * @returns {void}
+   */
+  function _descargarGWS(setup) {
+    if (!setup) return;
+    const blob = new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' });
+    BasePACK.descargarBlob(blob, _nombreFichero(setup.nombre, '.json'));
+  }
+
+  /**
+   * El botón «Generar GWS+GWB+GWI+GWC» (F5-I6; F5-I17 M9 le añade el
+   * GWS y el nombre): verifica el cartucho con la
    * MISMA función independiente que «Verificar y Guardar»
    * (bloqueante), comprueba los topes del GWC (bloqueantes aquí:
    * no se genera NINGUNO de los dos ficheros), genera el GWC
@@ -4919,9 +4957,15 @@ const BaseDescomponer = (() => {
     // El GWB después (F5-I10): los tres ficheros de la misma ficha, ya
     // verificada arriba, para que vayan de la mano.
     if (tamGWI) {
-      _descargarGWC(gwc.bytes);   // el GWC se descarga SOLO cuando el GWI se ha guardado (sin GWC huérfano)
+      _descargarGWC(gwc.bytes, json.nombre);   // el GWC se descarga SOLO cuando el GWI se ha guardado (sin GWC huérfano)
+      // F5-I17 (M9): el GWC YA NO SE VA SOLO: con él sale el GWS del
+      // setup vigente (real o derivado del cartucho), así la carpeta de
+      // destino queda con TODO lo necesario (F5-I19: el GWC binario
+      // necesita su setup al lado para poder volver a cargarse).
+      const setup = (typeof BaseDirector !== 'undefined') ? BaseDirector.datosSetup() : null;
+      if (setup) _descargarGWS(setup);
       const gwbOk = await BaseFicha.guardar();
-      if (gwbOk) BaseDirector.avisar('Generados GWC, GWI y GWB (' + json.nombre + '].' + avisoPar);
+      if (gwbOk) BaseDirector.avisar('Generados GWS, GWB, GWI y GWC (' + json.nombre + ').' + avisoPar);
     }
     // F5-I7: los dos tamaños del par, a la vista en el Editor
     // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del

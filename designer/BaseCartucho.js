@@ -127,6 +127,13 @@
 //   limitarValor            Un valor numérico acotado a [mínimo, máximo]; no toca nulos ni no numéricos.
 //   _aplicarLimite          Aplica un límite de la tabla a un campo de un objeto y compone el aviso.
 //   _avisosDeResolucion     Validación BLOQUEANTE de la resolución (M5, F5-I16): fuera de 320×240..1024×600 el fichero no carga ni se genera.
+//
+//  Memoria del hardware (F5-I20, MA02): campo opcional «memoria» {RAM, FLASH} en KB
+//   memoriaNoCero           Solo los subcampos válidos y distintos de 0 de una «memoria» (o null): lo que se serializa.
+//   memoriaEfectiva         La memoria que vale para un cartucho: la suya por subcampo, o la del setup.
+//   ocupacionMemoria        Texto «RAM: 4 de 216 KB (2 %) · FLASH: …» de lo usado frente a la memoria efectiva (null si no hay memoria).
+//   _revisarMemoria         Avisa de los subcampos inválidos de «memoria», los trata como 0 y quita los ceros.
+//   _memoriaValida          true si un subcampo es un entero ≥ 0.
 // ====================================================================================================
 
 var BaseCartucho = (function () {
@@ -673,6 +680,7 @@ var BaseCartucho = (function () {
       _lineaDeCampo('estilo', json.estilo),
       _lineaDeCampo('resolucion', json.resolucion),
       ...(_esColorRGB(json.ColorFondo) ? [_lineaDeCampo('ColorFondo', json.ColorFondo)] : []),
+      ...(memoriaNoCero(json.memoria) ? [_lineaDeCampo('memoria', memoriaNoCero(json.memoria))] : []),
       _lineaDeCampo('imagenes', imagenesGWI),
       ..._lineasOpcionales(json),
       _lineaDeLista('botones', json.botones),
@@ -698,6 +706,7 @@ var BaseCartucho = (function () {
     if (json.estilo) lineas.push(_lineaDeCampo('estilo', json.estilo));
     if (json.resolucion) lineas.push(_lineaDeCampo('resolucion', json.resolucion));
     if (_esColorRGB(json.ColorFondo)) lineas.push(_lineaDeCampo('ColorFondo', json.ColorFondo));
+    if (memoriaNoCero(json.memoria)) lineas.push(_lineaDeCampo('memoria', memoriaNoCero(json.memoria)));
     lineas.push(_lineaDeCampo('imagenes', json.imagenes));
     for (const campo of ['combinar', 'etiquetas']) {
       if (json[campo]) lineas.push(_lineaDeCampo(campo, json[campo]));
@@ -1792,6 +1801,7 @@ var BaseCartucho = (function () {
   function revisarValores(tipo, json) {
     const avisos = [];
     if (!json || typeof json !== 'object') return avisos;
+    _revisarMemoria(json, avisos);       // F5-I20: «memoria» en GWS, GWB y GWI
     if (tipo === 'GWS') {
       for (const b of (Array.isArray(json.botones) ? json.botones : [])) {
         if (!b || typeof b !== 'object' || b.puerto === undefined) continue;
@@ -1817,6 +1827,105 @@ var BaseCartucho = (function () {
       }
     }
     return avisos;
+  }
+
+  // ---------------- Memoria del hardware (F5-I20, MA02) ----------------
+  // «memoria» {RAM, FLASH} en KB (enteros ≥ 0, ambos opcionales) va en la
+  // raíz del GWS y de los cartuchos. Es INFORMATIVA: solo sirve para mostrar
+  // el porcentaje de ocupación al generar el GWC; nunca bloquea.
+  const CLAVES_MEMORIA = ['RAM', 'FLASH'];
+
+  /** true si el valor es un entero ≥ 0 (los KB de un subcampo de memoria). */
+  function _memoriaValida(v) {
+    return typeof v === 'number' && Number.isInteger(v) && v >= 0;
+  }
+
+  /**
+   * Revisa «memoria» de un fichero: lo que no es un entero ≥ 0 se AVISA y
+   * se trata como 0 (F5-I16); los ceros y el objeto vacío se quitan, de modo
+   * que 0 equivale a no declarar y no se serializa. Muta el JSON en memoria.
+   * @param {Object} json - GWS, GWB o GWI.
+   * @param {string[]} avisos - Se le añaden los avisos.
+   * @returns {void}
+   */
+  function _revisarMemoria(json, avisos) {
+    if (json.memoria === undefined || json.memoria === null) {
+      if (json.memoria === null) delete json.memoria;
+      return;
+    }
+    const m = json.memoria;
+    if (typeof m !== 'object' || Array.isArray(m)) {
+      avisos.push('"memoria" debe ser {RAM, FLASH} en KB: se ignora.');
+      delete json.memoria;
+      return;
+    }
+    for (const k of CLAVES_MEMORIA) {
+      if (m[k] === undefined) continue;
+      if (!_memoriaValida(m[k])) {
+        avisos.push('memoria.' + k + ' (' + String(m[k]) + ') debe ser un entero ≥ 0 de KB: se trata como 0.');
+        m[k] = 0;
+      }
+      if (m[k] === 0) delete m[k];
+    }
+    if (CLAVES_MEMORIA.every(k => m[k] === undefined)) delete json.memoria;
+  }
+
+  /**
+   * Solo los subcampos válidos y distintos de 0 de una «memoria».
+   * @param {*} memoria - Objeto {RAM, FLASH} (puede ser cualquier cosa).
+   * @returns {?{RAM:number, FLASH:number}} Objeto con lo que se escribe, o null si no hay nada.
+   */
+  function memoriaNoCero(memoria) {
+    if (!memoria || typeof memoria !== 'object' || Array.isArray(memoria)) return null;
+    const o = {};
+    for (const k of CLAVES_MEMORIA) if (_memoriaValida(memoria[k]) && memoria[k] > 0) o[k] = memoria[k];
+    return Object.keys(o).length > 0 ? o : null;
+  }
+
+  /**
+   * La memoria que vale para un cartucho: la que declara él, o la del
+   * setup, SUBCAMPO a subcampo (el 0 o la ausencia significan «no declara»).
+   * @param {*} delCartucho - «memoria» del cartucho (o null).
+   * @param {*} delSetup - «memoria» del setup (o null).
+   * @returns {{RAM:number, FLASH:number}} KB efectivos (0 = sin dato).
+   */
+  function memoriaEfectiva(delCartucho, delSetup) {
+    const c = memoriaNoCero(delCartucho) || {};
+    const s = memoriaNoCero(delSetup) || {};
+    return { RAM: c.RAM || s.RAM || 0, FLASH: c.FLASH || s.FLASH || 0 };
+  }
+
+  /** «4,2» → «4.2»; entero sin decimales (un decimal como mucho). */
+  function _kb(bytes) {
+    return String(Math.round(bytes / 1024 * 10) / 10);
+  }
+
+  /** Porcentaje entero redondeado; «< 1 %» si hay uso pero menos del 1 %. */
+  function _porcentaje(usado, total) {
+    if (usado <= 0) return '0 %';
+    const p = usado / total * 100;
+    return p < 1 ? '< 1 %' : Math.round(p) + ' %';
+  }
+
+  /**
+   * Texto de ocupación: «RAM: 4 de 216 KB (2 %) · FLASH: 0 de 216 KB (0 %)».
+   * Solo entran los tipos con memoria > 0; sin ninguna, null (ni porcentaje
+   * ni aviso). RAM usada = bytes del GWC; FLASH usada = bloque de fondo.
+   * @param {{RAM:number, FLASH:number}} efectiva - De memoriaEfectiva.
+   * @param {number} bytesRAM - Bytes del GWC.
+   * @param {number} bytesFLASH - Bytes del bloque de fondo (hoy 0).
+   * @returns {?string} El texto, o null si no hay memoria declarada.
+   */
+  function ocupacionMemoria(efectiva, bytesRAM, bytesFLASH) {
+    const partes = [];
+    const usos = { RAM: bytesRAM || 0, FLASH: bytesFLASH || 0 };
+    for (const k of CLAVES_MEMORIA) {
+      const total = efectiva && efectiva[k];
+      if (!total) continue;
+      partes.push(k + ': ' + _kb(usos[k]) + ' de ' + total + ' KB (' +
+        _porcentaje(usos[k] / 1024, total) + ')');
+    }
+    return partes.length > 0 ? partes.join(' · ') : null;
   }
 
   /** Escala por eje de la imagen fuente a la pantalla declarada. */
@@ -2565,6 +2674,10 @@ var BaseCartucho = (function () {
     // Límites de campos por fichero (F5-I16)
     revisarValores: revisarValores,
     limitarValor: limitarValor,
+    // Memoria del hardware (F5-I20)
+    memoriaNoCero: memoriaNoCero,
+    memoriaEfectiva: memoriaEfectiva,
+    ocupacionMemoria: ocupacionMemoria,
     MAX_PUERTO_GWS: MAX_PUERTO_GWS,
     PANTALLA_MIN: PANTALLA_MIN,
     PANTALLA_MAX: PANTALLA_MAX,

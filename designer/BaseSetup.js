@@ -21,6 +21,11 @@
 //   cargar siempre. Es el director quien llama a poblar y quien
 //   aplica el JSON que devuelve leer.
 //
+// MEMORIA (F5-I20, MA02)
+//   «RAM (KB)» y «FLASH (KB)» son opcionales (vacío = 0 = no declarada) y
+//   viajan como «memoria» {RAM, FLASH} en la raíz del GWS, subcampo a
+//   subcampo y solo si no son 0. Son informativos: se usan al generar el GWC.
+//
 // FUNCIONES
 //   Pantalla
 //     pintar             Construye la ficha (la primera vez) en el contenedor.
@@ -58,7 +63,7 @@ const BaseSetup = (function () {
   };
 
   let raiz = null;                // contenedor ya construido
-  let campos = {};                // nombre, descripcion, estilo, ancho, alto
+  let campos = {};                // nombre, descripcion, estilo, ancho, alto, ram, flash
   let datosBoton = {};            // número → {puerto, tecla, alias} (sobrevive al cambio de estilo)
   let cuerpoBotones = null;
   let mensajes = null;
@@ -265,6 +270,11 @@ const BaseSetup = (function () {
     campos.alto = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.alto, step: 1, placeholder: 'alto' });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par, 'Píxeles de la pantalla.');
+    // F5-I20 (MA02): memoria del hardware, opcional (vacío = 0).
+    campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
+    campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
+    _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: la RAM del ESP; sirve para mostrar la ocupación al generar el GWC.');
+    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: la FLASH del ESP (hoy el fondo, que aún no se cuenta).');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
@@ -330,6 +340,8 @@ const BaseSetup = (function () {
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
+    campos.ram.value = '';
+    campos.flash.value = '';
     _pintarTablaBotones();
     mensajes.textContent = '';
     _marcarCambios(false);
@@ -350,6 +362,9 @@ const BaseSetup = (function () {
       campos.ancho.value = json.resolucion.ancho;
       campos.alto.value = json.resolucion.alto;
     }
+    const mem = (json.memoria && typeof json.memoria === 'object') ? json.memoria : {};
+    campos.ram.value = mem.RAM ? mem.RAM : '';       // F5-I20: el GWS cargado
+    campos.flash.value = mem.FLASH ? mem.FLASH : '';
     for (const b of json.botones || []) {
       datosBoton[String(b.numero)] = {
         puerto: b.puerto === undefined ? '' : String(b.puerto),
@@ -377,6 +392,15 @@ const BaseSetup = (function () {
       ancho: parseInt(campos.ancho.value, 10),
       alto: parseInt(campos.alto.value, 10)
     };
+    // F5-I20: memoria subcampo a subcampo y solo si no es 0. Un valor no
+    // válido (negativo, decimal) viaja tal cual: revisarValores lo avisa
+    // y lo trata como 0 (verificar), sin bloquear.
+    const memoria = {};
+    for (const [k, campo] of [['RAM', campos.ram], ['FLASH', campos.flash]]) {
+      const t = campo.value.trim();
+      if (t !== '' && Number(t) !== 0) memoria[k] = Number(t);
+    }
+    if (Object.keys(memoria).length > 0) json.memoria = memoria;
     json.botones = [];
     for (const n of botonesDelEstilo(campos.estilo.value)) {
       const d = datosBoton[String(n)];

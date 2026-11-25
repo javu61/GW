@@ -55,7 +55,7 @@
 //
 //  Panel de información (F5-I7)
 //   pintarInfo               Máquina y cartucho; en el Editor, el diseño.
-//   informarTamanos          Tamaños del GWI y del GWC generados y línea de deduplicación.
+//   informarTamanos          Tamaños del GWI y del GWC generados, línea de deduplicación y línea de memoria (F5-I20).
 //   _sumarGWI                 Tamaño aproximado de un GWI cargado.
 //
 //  Carga del cartucho (delegada en BaseCartucho)
@@ -142,6 +142,7 @@ var BaseDirector = (function () {
   let tamGWI = null;                      // bytes del GWI generado o cargado (JSON + PNG, aproximado)
   let tamGWC = null;                      // bytes del GWC generado o cargado (exacto)
   let deduplicacion = null;               // línea de deduplicación del último «Generar GWI+GWC»
+  let textoMemoria = null;                // F5-I20: «RAM: 4 de 216 KB (2 %) · …» del último «Generar GWI+GWC»
   let setupDerivado = false;              // F5-I19: el setup mostrado se derivó del cartucho, no es un GWS cargado
 
   // F5-I19: desaparecen los botones de carga repartidos por las pestañas:
@@ -412,6 +413,7 @@ var BaseDirector = (function () {
     botonesSistema = false;   // F5-I10: fuera el modo sistema del trío
     tamGWI = null;
     tamGWC = null;
+    textoMemoria = null;
     imgM = null;
     imgF = null;
     colorFondo = '#FFFFFF';
@@ -799,7 +801,11 @@ var BaseDirector = (function () {
       nombre: json.nombre || 'Derivado del cartucho',
       estilo: estilo,
       resolucion: { ancho: resolucion.ancho, alto: resolucion.alto },
-      botones: botones
+      botones: botones,
+      // F5-I20: la memoria del setup anterior se hereda (es del hardware);
+      // la que declare el cartucho vive en la ficha y manda al informar.
+      ...(previo && BaseCartucho.memoriaNoCero(previo.memoria)
+        ? { memoria: BaseCartucho.memoriaNoCero(previo.memoria) } : {})
     };
   }
 
@@ -817,6 +823,7 @@ var BaseDirector = (function () {
     // F5-I16: límites asentados al validar el setup (puertos fuera de
     // rango se limitan aquí; la resolución solo avisa).
     const avisosLimites = BaseCartucho.revisarValores('GWS', json);
+    textoMemoria = null;                      // F5-I20: la línea de memoria era del cartucho anterior
     _limpiarCartucho();                       // aplicar un setup limpia el cartucho actual
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
@@ -914,20 +921,24 @@ var BaseDirector = (function () {
     // F5-I7+: debajo, la línea de la deduplicación (solo si la hay).
     _$('infoDiseno').textContent +=
       deduplicacion ? '\n' + deduplicacion : '';
+    // F5-I20 (MA02): y la línea de memoria, solo si hay memoria declarada.
+    _$('infoDiseno').textContent +=
+      textoMemoria ? '\n' + textoMemoria : '';
   }
 
   /**
    * Anota los tamaños del GWI y/o del GWC recién generados (los
    * campos ausentes no cambian) y repinta el panel.
-   * @param {{gwi:?number, gwc:?number, deduplicacion:?string}} tamanos -
-   *        Bytes de cada uno y la línea de deduplicación (o null para
-   *        quitarla).
+   * @param {{gwi:?number, gwc:?number, deduplicacion:?string, memoria:?string}} tamanos -
+   *        Bytes de cada uno, la línea de deduplicación y la de memoria
+   *        (F5-I20); null quita la línea.
    * @returns {void}
    */
   function informarTamanos(tamanos) {
     if (tamanos.gwi !== undefined) tamGWI = tamanos.gwi;
     if (tamanos.gwc !== undefined) tamGWC = tamanos.gwc;
     if (tamanos.deduplicacion !== undefined) deduplicacion = tamanos.deduplicacion;
+    if (tamanos.memoria !== undefined) textoMemoria = tamanos.memoria;
     pintarInfo();
   }
 
@@ -1279,6 +1290,7 @@ var BaseDirector = (function () {
         resolucion: json.resolucion || setupGWS.resolucion,
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
+        memoria: json.memoria || null,        // F5-I20
         botones: (json.botones || []).map(b => ({
           numero: _normalizarNumeroBoton(b.numero), id: b.id,
           tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : undefined

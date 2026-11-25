@@ -22,6 +22,10 @@
 //   C5/C6/C7 el par (F5-I17)    El codigoGWC del GWI en la ficha de Cartucho (C5), el aviso al
 //                               guardar el GWI a secas (C6) y al generar el par (C7). Las dos
 //                               últimas solo en consola: el paso descarga los ficheros.
+//   C8 memoria (F5-I20, MA02)   Al generar el par con memoria declarada (RAM/FLASH, en el setup o,
+//                               por subcampo, en el cartucho) sale el porcentaje en la línea del
+//                               panel y en el aviso final; sin memoria, o a 0, no sale nada; FLASH
+//                               siempre 0 KB y 0 %. Solo en consola: el paso descarga los ficheros.
 //
 // FUNCIONES
 //   _codigoEnFicha              (F5-I17) El campo solo lectura «Código GWC» de la ficha de Cartucho.
@@ -29,6 +33,8 @@
 //   _pruebaParFicha            (F5-I17) Prueba «C5 par: ficha codigoGWC».
 //   _pruebaParGuardar          (F5-I17) Prueba «C6 par: guardar despareja» (solo consola).
 //   _pruebaParGenerar          (F5-I17) Prueba «C7 par: generar desfasado» (solo consola).
+//   _generarConMemoria         (F5-I20) Carga setup (+ memoria) y GWI (+ memoria), genera y devuelve aviso final y panel.
+//   _pruebaMemoria             (F5-I20) Prueba «C8 memoria: porcentaje al generar» (solo consola).
 //   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
 //   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
 //   _pruebaEquivalencia         Pruebas de datos (normal y variante).
@@ -251,6 +257,64 @@
     return out;
   }
 
+  /**
+   * Carga el setup (con la memoria dada, o sin ella) y el GWI (con la suya, o sin ella), pulsa
+   * «Generar» y devuelve el aviso final (#estado) y la información del panel (#infoDiseno).
+   * @param {?Object} memSetup - «memoria» a poner en el setup (null = tal cual, sin campo).
+   * @param {?Object} memCartucho - «memoria» a declarar en el GWI (null = sin campo).
+   */
+  async function _generarConMemoria(opc, memSetup, memCartucho) {
+    const dec = new TextDecoder();
+    const setup = JSON.parse(dec.decode(await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json')));
+    delete setup.memoria;
+    if (memSetup) setup.memoria = memSetup;
+    const bytes = await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip');
+    const zip = await JSZip.loadAsync(bytes);
+    const nombreJson = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
+    const json = JSON.parse(await zip.file(nombreJson).async('string'));
+    delete json.memoria;
+    if (memCartucho) json.memoria = memCartucho;
+    zip.file(nombreJson, JSON.stringify(json, null, 2));
+    await _cargarGWI(JSON.stringify(setup),
+      await zip.generateAsync({ type: 'uint8array' }));
+    document.getElementById('btnGenerar').click();
+    await U.esperar(6000);
+    return {
+      estado: document.getElementById('estado').textContent,
+      panel: document.getElementById('infoDiseno').textContent
+    };
+  }
+
+  async function _pruebaMemoria(opc) {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const PORC = '\\((?:< 1|\\d+) %\\)';
+    const reRAM = (kb) => new RegExp('RAM: [\\d.]+ de ' + kb + ' KB ' + PORC);
+    const FLASH0 = (kb) => 'FLASH: 0 de ' + kb + ' KB (0 %)';
+
+    // 1) Memoria en el setup: porcentaje en el panel y en el aviso final; FLASH a 0.
+    let r = await _generarConMemoria(opc, { RAM: 64, FLASH: 32 }, null);
+    ok('C8: con memoria en el setup, el aviso final trae la RAM con su porcentaje',
+      reRAM(64).test(r.estado), r.estado);
+    ok('C8: FLASH sale con 0 KB y 0 % (aún no se cuenta el fondo)', r.estado.includes(FLASH0(32)), r.estado);
+    ok('C8: la línea del panel (informarTamanos) trae también la ocupación',
+      reRAM(64).test(r.panel) && r.panel.includes(FLASH0(32)), r.panel);
+
+    // 2) El cartucho manda por subcampo: su RAM gana, la FLASH sigue siendo la del setup.
+    r = await _generarConMemoria(opc, { RAM: 64, FLASH: 32 }, { RAM: 128 });
+    ok('C8: la RAM del cartucho manda sobre la del setup', reRAM(128).test(r.estado) && !reRAM(64).test(r.estado), r.estado);
+    ok('C8: la FLASH que el cartucho no declara se toma del setup', r.estado.includes(FLASH0(32)), r.estado);
+
+    // 3) Sin memoria, o a 0: ni porcentaje ni aviso ni línea de panel.
+    for (const [etiqueta, ms] of [['ausente', null], ['a 0', { RAM: 0, FLASH: 0 }]]) {
+      r = await _generarConMemoria(opc, ms, null);
+      ok('C8: memoria ' + etiqueta + ' → sin porcentaje en el aviso final',
+        !/RAM:|FLASH:/.test(r.estado) && /Generados/.test(r.estado), r.estado);
+      ok('C8: memoria ' + etiqueta + ' → sin línea de memoria en el panel', !/RAM:|FLASH:/.test(r.panel), r.panel);
+    }
+    return out;
+  }
+
   /** Juega ticks con la cola del reloj; devuelve, por tick, qué segmentos están encendidos. */
   async function _jugarPartida(cargar, semilla, ticks, sinPulsar) {
     await cargar();
@@ -332,7 +396,8 @@
     { id: 'equivalenciaCompleta', grupo: 'gwi_gwc', nombre: 'C4 equivalencia (completa)', destructiva: true, ejecutar: (o) => _pruebaJuego('equivalenciaCompleta', true, o) },
     { id: 'parFicha', grupo: 'gwi_gwc', nombre: 'C5 par: ficha codigoGWC', necesita: 'gwi', ejecutar: (o) => _pruebaParFicha(o) },
     { id: 'parGuardar', grupo: 'gwi_gwc', nombre: 'C6 par: guardar despareja', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaParGuardar() },
-    { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'C7 par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) }
+    { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'C7 par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) },
+    { id: 'memoria', grupo: 'gwi_gwc', nombre: 'C8 memoria: porcentaje al generar', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaMemoria(o) }
   ]);
 })();
 

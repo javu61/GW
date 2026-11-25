@@ -4933,6 +4933,15 @@ const BaseDescomponer = (() => {
     const pctGWC = gwc.bytes.length + gwc.ahorroSprites > 0
       ? Math.round((gwc.ahorroSprites / (gwc.bytes.length + gwc.ahorroSprites)) * 100) : 0;
     BaseDirector.avisar(BaseCartucho.estadistica(gwc));
+    // F5-I20 (MA02): ocupación de la memoria, solo informativa. Efectiva =
+    // la del cartucho (ficha) o, por subcampo, la del setup; sin memoria
+    // (o a 0) no hay texto. RAM usada = bytes del GWC; FLASH usada = el
+    // bloque de fondo, que hoy no se cuenta (0).
+    const setupMem = BaseDirector.datosSetup();
+    const textoMemoria = BaseCartucho.ocupacionMemoria(
+      BaseCartucho.memoriaEfectiva(json.memoria, setupMem ? setupMem.memoria : null),
+      gwc.bytes.length, 0);
+    const avisoMemoria = textoMemoria ? ' ' + textoMemoria : '';
     // 4. El GWI después, con el Código GWC del par: el código del
     // GWC recién generado (TEXTO «#HHHH#», visible igual que en la
     // cabecera del GWC) estampado en el JSON (montarGWI no lo pone:
@@ -4965,7 +4974,7 @@ const BaseDescomponer = (() => {
       const setup = (typeof BaseDirector !== 'undefined') ? BaseDirector.datosSetup() : null;
       if (setup) _descargarGWS(setup);
       const gwbOk = await BaseFicha.guardar();
-      if (gwbOk) BaseDirector.avisar('Generados GWS, GWB, GWI y GWC (' + json.nombre + ').' + avisoPar);
+      if (gwbOk) BaseDirector.avisar('Generados GWS, GWB, GWI y GWC (' + json.nombre + ').' + avisoPar + avisoMemoria);
     }
     // F5-I7: los dos tamaños del par, a la vista en el Editor
     // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del
@@ -4975,7 +4984,8 @@ const BaseDescomponer = (() => {
       gwi: tamGWI || null, gwc: gwc.bytes.length,
       deduplicacion: 'Deduplicadas ' + nDedup + ' imágenes, ahorro GWI ' +
         ahorroGWI + ' bytes (' + pctGWI((tamGWI || 0) + ahorroGWI) + '%), GWC ' +
-        gwc.ahorroSprites + ' bytes (' + pctGWC + '%)'
+        gwc.ahorroSprites + ' bytes (' + pctGWC + '%)',
+      memoria: textoMemoria        // F5-I20: null = sin línea
     });
     // El canvas del aparato presenta el estado vigente, igual que
     // tras «Verificar y Guardar».
@@ -5049,6 +5059,8 @@ const BaseDescomponer = (() => {
       resolucion: ficha.resolucion || null,
       // ColorFondo (F5-I14): solo viaja si no es el blanco por defecto.
       ...(ficha.colorFondo ? { ColorFondo: ficha.colorFondo } : {}),
+      // Memoria propia del cartucho (F5-I20): solo los subcampos ≠ 0.
+      ...(ficha.memoria ? { memoria: ficha.memoria } : {}),
       // Código GWC del par (F5-I6): el código «#HHHH#» del GWC,
       // AUSENTE cuando no lo hay (el GWI no lleva sobras). Solo lo
       // estampa «Generar GWI+GWC», con el código del GWC recién
@@ -5125,7 +5137,7 @@ const BaseDescomponer = (() => {
     if (tamGWI) {
       // F5-I7: el tamaño del GWI nuevo; el GWC anterior ya no es su
       // pareja, así que su tamaño deja de mostrarse.
-      BaseDirector.informarTamanos({ gwi: tamGWI, gwc: null, deduplicacion: null });
+      BaseDirector.informarTamanos({ gwi: tamGWI, gwc: null, deduplicacion: null, memoria: null });
       // El canvas del aparato presenta el estado vigente tras
       // guardar: fondo + TODOS los segmentos en negro (look LCD).
       componerPantalla = true;

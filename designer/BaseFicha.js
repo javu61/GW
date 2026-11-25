@@ -20,6 +20,9 @@
 //   - Botones: la tabla de los botones posibles según el estilo
 //     elegido (incluido el trío de sistema A/B/R, 6-7-8), con «Usado»,
 //     «id» y «Tecla» (F5-I17, M7: el mismo desplegable que el setup).
+//   - Memoria (F5-I20, MA02): «RAM (KB)» y «FLASH (KB)», opcionales (vacío = 0):
+//     si el cartucho las declara mandan sobre las del setup al informar de
+//     la ocupación; se escriben en el GWB/GWI solo si no son 0.
 //
 // SEPARACIÓN
 //   No conoce al descomponedor: solo pinta y guarda el estado de la
@@ -53,7 +56,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _pintarTablaBotones     _campo
-//    _teclaDeFicha
+//    _teclaDeFicha       _memoriaCruda
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
@@ -425,6 +428,11 @@ const BaseFicha = (function () {
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par,
       'Opcional: si falta, se usa la pantalla del setup cargado.');
+    // F5-I20 (MA02): memoria propia del cartucho, opcional (vacío = 0).
+    campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
+    campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
+    _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: si falta o es 0, se usa la del setup cargado.');
+    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: si falta o es 0, se usa la del setup cargado.');
     campos.colorFondo = _entrada('color', { value: COLOR_BLANCO });
     _campo(rejilla, 'Color de fondo', campos.colorFondo,
       'Se usa si no hay img_f (blanco por defecto).');
@@ -616,6 +624,8 @@ const BaseFicha = (function () {
       }
       teclasVistas.add(b.tecla.toLowerCase());
     }
+    // F5-I20 (MA02): memoria no válida = aviso (nunca bloquea) y vale 0.
+    avisos.push(...BaseCartucho.revisarValores('GWB', { memoria: _memoriaCruda() }));
     if (e.botones.length === 0) avisos.push('El cartucho no declara botones: se usarán los del setup.');
     // Validación del contrato del GWB (la misma que al cargarlo). El
     // mapa de ficheros se monta aquí con las imágenes en memoria.
@@ -679,6 +689,7 @@ const BaseFicha = (function () {
     if (e.estilo) json.estilo = e.estilo;
     if (e.resolucion) json.resolucion = e.resolucion;
     if (e.colorFondo) json.ColorFondo = e.colorFondo;
+    if (e.memoria) json.memoria = e.memoria;            // F5-I20
     json.imagenes = { img_s: 'img_s.png' };
     if (e.imagenes.img_f) json.imagenes.img_f = 'img_f.png';
     if (e.imagenes.img_m) json.imagenes.img_m = 'img_m.png';
@@ -738,6 +749,20 @@ const BaseFicha = (function () {
   }
 
   /**
+   * Los campos de memoria tal cual (vacío = no declarado; un valor no
+   * válido viaja para que revisarValores lo avise).
+   * @returns {{RAM:number, FLASH:number}} Subcampos escritos (F5-I20).
+   */
+  function _memoriaCruda() {
+    const m = {};
+    for (const [k, c] of [['RAM', campos.ram], ['FLASH', campos.flash]]) {
+      const t = c.value.trim();
+      if (t !== '') m[k] = Number(t);
+    }
+    return m;
+  }
+
+  /**
    * Lee la ficha tal cual está (sin completar con el setup).
    * @returns {{nombre:string, estilo:?string, resolucion:?Object,
    *   colorFondo:?string, imagenes:Object, botones:Array}} Datos de la ficha.
@@ -773,6 +798,8 @@ const BaseFicha = (function () {
       // Solo viaja si no es el blanco por defecto (los defaults no viajan).
       colorFondo: campos.colorFondo.value.toLowerCase() === COLOR_BLANCO
         ? null : campos.colorFondo.value.toUpperCase(),
+      // F5-I20: solo los subcampos válidos y ≠ 0 (null si no hay ninguno).
+      memoria: BaseCartucho.memoriaNoCero(_memoriaCruda()),
       imagenes: imgs,
       botones: botones
     };
@@ -799,6 +826,7 @@ const BaseFicha = (function () {
       estilo: e.estilo || delSetup,
       resolucion: e.resolucion || pantalla,
       colorFondo: e.colorFondo,
+      memoria: e.memoria,
       imagenes: nombres,
       imgs: imagenesEnMemoria(),
       botones: e.botones,
@@ -832,6 +860,8 @@ const BaseFicha = (function () {
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
+    campos.ram.value = '';
+    campos.flash.value = '';
     campos.colorFondo.value = COLOR_BLANCO;
     campos.codigoGWC.value = '---';
     cuerpoBotones.textContent = '';
@@ -860,6 +890,11 @@ const BaseFicha = (function () {
       const r = d.resolucion;
       campos.ancho.value = r && r.ancho ? r.ancho : '';
       campos.alto.value = r && r.alto ? r.alto : '';
+    }
+    if (d.memoria !== undefined) {                 // F5-I20
+      const m = d.memoria || {};
+      campos.ram.value = m.RAM ? m.RAM : '';
+      campos.flash.value = m.FLASH ? m.FLASH : '';
     }
     if (d.colorFondo !== undefined) {
       campos.colorFondo.value = _esColor(d.colorFondo) ? d.colorFondo.toLowerCase() : COLOR_BLANCO;

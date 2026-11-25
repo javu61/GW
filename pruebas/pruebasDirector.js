@@ -18,12 +18,14 @@
 //       recargar el mismo GWI, no.
 //   D7  (F5-I19) Cambio de máquina EN CALIENTE: tras un setup2, cargar un GWB de estilo 4
 //       re-ajusta esqueleto, botonera, lienzo, sprites y título (y avisa de setup derivado).
+//   D8  (F5-I19) El botón «Limpiar» de la Carga REINICIA: sin setup ni cartucho, máquina
+//       oculta, pestaña Carga delante y las pestañas de datos deshabilitadas.
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 ... _pruebaD7
-//                        Una función por prueba (D5/D6/D7: F5-I19).
+//   _pruebaD1 ... _pruebaD8
+//                        Una función por prueba (D5/D6/D7/D8: F5-I19).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -225,6 +227,31 @@
     return out;
   }
 
+  async function _pruebaD8() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const estado = () => document.getElementById('estado').textContent;
+    await U.cargarEn('ficheroCartucho',
+      [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    ok('D8 (previo): hay máquina y la pestaña Simulador está habilitada',
+      !document.getElementById('maquina').classList.contains('oculto') &&
+      !document.getElementById('pesSimulador').disabled, estado());
+    document.getElementById('btnLimpiarCarga').click();
+    await new Promise(r => setTimeout(r, 300));
+    ok('D8: #estado queda en «Sin setup cargado.»',
+      /Sin setup cargado/.test(estado()), estado());
+    ok('D8: no queda cartucho en memoria', _estado().tipo === null, estado());
+    ok('D8: la máquina queda oculta',
+      document.getElementById('maquina').classList.contains('oculto'), '');
+    ok('D8: la vista delante es la Carga',
+      document.body.dataset.vista === 'vistaCarga' &&
+      !document.getElementById('vistaCarga').classList.contains('oculto'), '');
+    ok('D8: Cartucho y Simulador se deshabilitan',
+      document.getElementById('pesCartucho').disabled &&
+      document.getElementById('pesSimulador').disabled, '');
+    return out;
+  }
+
   Pruebas.registrar([
     // F5-I19: d5 y d6 necesitan la página RECIÉN cargada: d5 PRIMERO.
     { id: 'd5', grupo: 'director', nombre: 'D5 GWC sin máquina (requiere página recién cargada)', destructiva: false, ejecutar: () => _pruebaD5() },
@@ -233,7 +260,8 @@
     { id: 'd3', grupo: 'director', nombre: 'D3 cartucho incompatible', destructiva: true, ejecutar: () => _pruebaD3() },
     { id: 'd2', grupo: 'director', nombre: 'D2 GWB que no descompone', destructiva: true, ejecutar: () => _pruebaD2() },
     { id: 'd4', grupo: 'director', nombre: 'D4 GWB sobre autoría', destructiva: true, ejecutar: () => _pruebaD4() },
-    { id: 'd7', grupo: 'director', nombre: 'D7 cambio de máquina en caliente (F5-I19)', destructiva: true, ejecutar: () => _pruebaD7() }
+    { id: 'd7', grupo: 'director', nombre: 'D7 cambio de máquina en caliente (F5-I19)', destructiva: true, ejecutar: () => _pruebaD7() },
+    { id: 'd8', grupo: 'director', nombre: 'D8 botón Limpiar de la Carga (F5-I19)', destructiva: true, ejecutar: () => _pruebaD8() }
   ]);
 })();
 

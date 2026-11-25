@@ -46,6 +46,8 @@ Los campos incluidos en el json son:
 		\texttt{botones} & array & \texttt{[\{numero, id, tecla?\}]} por botón (la \texttt{tecla}, F5-I17, sigue la misma regla que en el setup) \\
 		\texttt{codigoGWC}\footnotemark\setcounter{fnA02GWIdos}{\value{footnote}} & cadena & OPCIONAL: El Código GWC del par, un texto con formato \texttt{"\#HHHH\#"}. Se guarda al generar el GWC y GWI a la vez; si solo se guarda el GWI, se genera sin este campo \\
 		\texttt{imagenes} & objeto & \texttt{\{img\_m, img\_f, img\_s\}} (igual que el GWB) \\
+
+		\texttt{combinar} & booleano & OPCIONAL (F3-I1): la regla «combinar» del juego (dos acciones de teclas en un mismo tick). Solo viaja si está activa; de aquí toma el GWC el bit de Reglas del Bloque 0 \\
 		\texttt{fin} & objeto & OPCIONAL: \texttt{\{mecanismo, contador\}} con \texttt{mecanismo} en \texttt{vida}, \texttt{muerte} o \texttt{contador} (contador solo con el tercero, 1--4). Propiedad del cartucho, no un segmento \\
 		\texttt{secuencia} & objeto & OPCIONAL: \texttt{\{ticks, segmentos\}}: animación periódica, hasta 5 segmentos lanzados en orden, uno por tick \\
 		\texttt{pausas} & objeto & OPCIONAL: \texttt{\{simulador, externo\}} en ms; ausente o sin pausa: 500 ms \\
@@ -67,7 +69,7 @@ Al serializar, los campos se escriben SIEMPRE en este orden (los
 opcionales solo si viajan): \texttt{tipo}, \texttt{version},
 \texttt{codigoGWC}?, \texttt{nombre}, \texttt{estilo},
 \texttt{resolucion}, \texttt{ColorFondo}?, \texttt{memoria}?,
-\texttt{imagenes}, \texttt{fin}?, \texttt{secuencia}?,
+\texttt{imagenes}, \texttt{combinar}?, \texttt{fin}?, \texttt{secuencia}?,
 \texttt{pausas}?, \texttt{aceleracion}?, \texttt{rutas}?,
 \texttt{botones}, \texttt{sprites}, \texttt{segmentos},
 \texttt{autoria}.
@@ -86,6 +88,7 @@ opcionales solo si viajan): \texttt{tipo}, \texttt{version},
 	"resolucion": { "ancho": 156, "alto": 156 },
 	"memoria": { "RAM": 216, "FLASH": 128 },
 	"imagenes": { "img_m": "parachute_m.png", "img_f": "parachute_f.png", "img_s": "parachute_s.png" },
+	"combinar": true,
 	"fin": { "mecanismo": "vida", "contador": null },
 	"pausas": { "simulador": 500, "externo": 500 },
 	"aceleracion": { "cada": 10, "resta": 10, "minimo": 100 },

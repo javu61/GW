@@ -144,7 +144,7 @@ estructura de C y sepa dónde está todo sin recorrer nada (se indica expresamen
 		Fondo & Num & 3 & Color de fondo en RGB (campo \texttt{ColorFondo} del cartucho, blanco por defecto)\footnotemark. & - \\ \hline
 		Reglas & Num & 1 & Campo de bits con las reglas del juego:
 		\begin{itemize}
-			\item  el bit 0 es la regla \textbf{combinar}: su valor es el del campo \texttt{combinar} del cartucho (0 = no combinar, 1 = combinar);
+			\item  el bit 0 es la regla \textbf{combinar}: su valor es el del campo \texttt{combinar} del GWI (o del GWB si el GWI no lo lleva; 0 = no combinar, 1 = combinar);
 			\item los demás bits están reservados y valen 0\footnotemark
 		\end{itemize} & - \\ \hline
 		Inicio Bloque 0 & Num & 4 & Inicio del bloque 0 & Ob. \\ \hline
@@ -234,7 +234,7 @@ sea su origen; el valor por defecto (500 ms, «sin aumento de rutas»…; la tab
 	\label{tab:A02ConfGeneral}
 \end{table}
 
-Las reglas del juego ya no viajan en este bloque: su bit \textbf{combinar} pasa por el campo \textbf{Reglas} del Bloque 0 (ver \ref{sec:F5I14Reglas}), que es su única ubicación; no existe un noveno valor.
+Las reglas del juego ya no viajan en este bloque: su bit \textbf{combinar} pasa por el campo \textbf{Reglas} del Bloque 0 (ver \ref{sec:F5I14Reglas}), que es su única ubicación; el generador lo toma del \texttt{combinar} del GWI (o del GWB si el GWI no lo lleva). No existe un noveno valor.
 
 
 \subsection{Bloque de Sprites}

@@ -22,10 +22,10 @@ La validación de entrada (el contrato de lo que puede ENTRAR) exige incluir en 
 formatos de cartucho estos datos básicos:
 
 \begin{itemize}
-	\item \texttt{Tipo} presente y válido (GWB, GWI o GWC): sin tipo no se
+	\item \texttt{tipo} presente y válido (GWS, GWB o GWI): sin tipo no se
 	asume nada.
 
-	\item \texttt{Version} para poder cargar datos correctamente según la versión del fichero (actualmente todos tienen versión 1).
+	\item \texttt{version} para poder cargar datos correctamente según la versión del fichero (actualmente todos están en la versión 1; en el GWS es la cadena \texttt{"1"}, en el resto un número).
 
 	\item \texttt{imagenes} con las tres posibles imágenes relacionadas con el juego: \texttt{img\_s} OBLIGATORIA (de ella se extrae la geometría) e \texttt{img\_f} e \texttt{img\_m} OPCIONALES. Si una imagen se declara, su fichero DEBE estar presente; sin fondo, el simulador pinta la pantalla en blanco. (El GWC es binario y se valida por su propio camino, en la lectura del fichero.)
 	

@@ -1,0 +1,201 @@
+\section{Séptima iteración de la Fase 5: Mejoras en la pantalla}
+\label{sec:F5I7}
+
+Antes del proceso de lectura del GWC, que implica añadir más botones en
+la pantalla, he decidido mejorar primero la presentación de esta, haciéndola
+más operativa. Mi idea es que el manejo sea lo más natural posible, y
+ahora mismo están juntas las pantallas del simulador y del editor
+gráfico, lo que no es demasiado intuitivo, y presento demasiada información
+que no es necesario tener allí.
+
+\subsection{Redefinir la pantalla}
+\label{sec:F5I7Pantalla}
+
+La idea es disponer de tres pestañas en la pantalla. La primera es la
+del simulador: si se quiere jugar no hace falta nada más. La segunda es
+la del editor gráfico: al eliminar de ella la pantalla del simulador
+gano espacio, por lo que ahora el editor ocupa la parte izquierda de la
+pantalla, y al pulsar en un segmento sus propiedades aparecen a la
+derecha, en un sistema similar al de los editores gráficos. La tercera
+es la lista de segmentos, cada uno con la imagen que tiene asociada.
+
+\begin{itemize}
+	\item \textbf{Simulador}: 
+	Solo la pantalla del juego dentro de la carcasa de la máquina, con
+	sus botones, y debajo la información de la máquina y del cartucho.
+	
+	\item \textbf{Editor}:
+	El mapa de segmentos a la izquierda y, al pulsar en un segmento, su
+	panel de propiedades a la derecha. Debajo, la misma información que
+	en el simulador, ampliada con los datos del diseño.
+	
+	\item \textbf{Segmentos y Sprites}:
+	La lista de todos los segmentos del cartucho y, junto a cada uno, la
+	imagen asociada si la tiene. Sustituye a la antigua tira de sprites,
+	que mostraba las imágenes y no los segmentos. Aparecerán todos los segmentos y sus imágenes asociadas, separados en sublistas:
+	\begin{itemize}
+		\item Segmentos sin imagen
+		\item Segmentos visibles con imagen
+		\item Segmentos no visibles con imagen (los que se han unido con otros)
+		\item Imágenes sin segmento (si las hay)
+	\end{itemize}
+\end{itemize}
+
+Las tres pestañas se definen en \texttt{index.html}. Es un cambio
+solo de presentación: el motor, el puente y el módulo de cartuchos no
+cambian.
+
+\subsection{La barra de botones}
+\label{sec:F5I7Botones}
+
+La barra superior es única y común a las tres pestañas, pero cada
+pestaña solo muestra los botones que tienen sentido en ella. Los que no
+corresponden se ocultan, no se deshabilitan, para que la barra quede
+limpia:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lccc}
+		\hline
+		\textbf{Botón} & \textbf{Simulador} & \textbf{Editor} & \textbf{Segmentos y Sprites} \\
+		\hline
+		Cargar Setup        & Sí & Sí & No \\
+		Cargar Cartucho\footnotemark & No & Sí & No \\
+		Cargar GWI (ZIP)    & Sí & Sí & No \\
+		Cargar GWC          & Sí & No & No \\
+		Verificar y Guardar & No & Sí & No \\
+		Generar GWI+GWC     & No & Sí & No \\
+		Deshacer / Rehacer  & No & Sí & No \\
+		\hline
+	\end{tabular}
+	\caption{Botones visibles en cada pestaña}
+	\label{tab:F5I7Botones}
+\end{table}
+\footnotetext{Se cambió el nombre a \textbf{Cargar GWB} en la novena iteración, ver sección \ref{sec:F5I9Entrada}.}
+
+
+\texttt{baseDirector} decide qué botones se ven al cambiar de pestaña
+y \texttt{estilos.css} los oculta. La línea de estado, donde aparecen
+los avisos y los errores, queda siempre visible, sea cual sea la
+pestaña.
+
+\subsection{La información de cada pestaña}
+\label{sec:F5I7Informacion}
+
+El panel de información deja de ser común y \texttt{baseDirector} pasa
+a mostrar en cada pestaña solo lo que interesa en ella:
+
+\begin{itemize}
+	\item \textbf{Simulador}: el nombre del cartucho, la resolución de
+	la pantalla y los botones que maneja la máquina (2, 4 o 5).
+	
+	\item \textbf{Editor}: lo mismo que en el simulador, añadiendo el
+	número de segmentos, el número de imágenes del cartucho, el tamaño
+	del GWI (aproximado) y el tamaño del GWC (si se han generado o cargado).
+
+	\item \textbf{Segmentos y Sprites}: sin panel de información; la propia lista
+	es la información.
+\end{itemize}
+
+El objetivo de los dos tamaños es ver lo que se gana al pasar del GWI
+al GWC, no la ocupación en disco, por eso el del GWI no es el del ZIP
+comprimido sino la suma de lo que contiene: el JSON más las imágenes
+PNG, cada fichero con sus bytes reales y no con lo que ocupa en el
+disco (un sprite de 978 bytes suma 978, aunque en el disco ocupe un
+bloque de 1 KB). Es una aproximación: no hace falta que sea exacta, y
+lo que añadan las cabeceras del PNG al guardarlo no se descuenta. El
+del GWC sí es exacto, es el tamaño del fichero binario.
+
+\subsection{La lista de segmentos}
+\label{sec:F5I7Lista}
+
+La lista la construye \texttt{BaseDescomponer}, sustituyendo a la tira
+de sprites. Cada fila muestra el identificador del segmento, su tipo y
+la imagen asociada. Cada segmento aparece en una de estas sublistas:
+
+\begin{itemize}
+	\item \textbf{Segmentos sin imagen:} los dígitos y los contadores,
+	cuyo gráfico son las barras que los componen, que aparecen en la
+	lista como segmentos propios, y el segmento de cartucho, que es la
+	ficha de configuración y nunca se presenta.
+
+	\item \textbf{Segmentos visibles con imagen:} los segmentos normales
+	con su imagen, y las piezas de unión con la imagen combinada de sus
+	miembros, que es la que se presenta en pantalla.
+
+	\item \textbf{Segmentos no visibles con imagen:} los miembros que
+	una unión ha absorbido, cada uno con su imagen original.
+
+	\item \textbf{Imágenes sin segmento:} las que no utiliza ningún
+	segmento, información que antes daba la tira de sprites y que así
+	no se pierde. Si no hay ninguna, el apartado no aparece.
+\end{itemize}
+
+Al pulsar un segmento de la lista se pasa a la pestaña Editor con ese segmento seleccionado.
+
+\subsection{Pestañas disponibles y partida en marcha}
+\label{sec:F5I7Estados}
+
+Las pestañas solo se pueden usar cuando tienen algo que mostrar, y lo
+controla \texttt{baseDirector}:
+
+\begin{itemize}
+	\item Sin setup cargado solo está disponible el Simulador.
+	
+	\item La pestaña «Editor» se habilita al cargar el setup, ya que es
+	desde ella donde se carga la carpeta del cartucho base.
+
+	\item La pestaña «Segmentos y Sprites» se habilita al cargar un
+	cartucho editable, ya sea el base en su carpeta o el GWI en su ZIP.
+	La carga del GWC se define en la siguiente iteración.
+	
+	\item Al pulsar Start la partida se juega en el Simulador. Mientras
+	dura, las otras pestañas y los botones de carga quedan
+	deshabilitados (no ocultos), y vuelven a estar disponibles al
+	terminar la partida. Hasta ahora, al pulsar Start se ocultaban y no volvían a
+	aparecer, y había que recargar la página.
+\end{itemize}
+
+
+\subsection{Pruebas}
+\label{sec:F5I7Pruebas}
+
+\begin{itemize}
+	\item \textbf{Botones:} en cada pestaña se ven exactamente los de la
+	Tabla~\ref{tab:F5I7Botones}, sin setup, con cartucho y con GWC.
+	
+	\item \textbf{Información:} el Simulador muestra nombre, resolución
+	y botones, y el Editor añade segmentos, imágenes y los tamaños del
+	GWI y del GWC, con los valores correctos del Parachute; el tamaño
+	del GWI es la suma del JSON y de los PNG, no el del ZIP.
+
+	\item \textbf{Lista:} cada segmento aparece en su sublista con su
+	imagen, las piezas de unión con la imagen combinada, las imágenes
+	sin segmento aparecen al final solo si las hay, y al pulsar un
+	segmento se abre en el Editor.
+	
+	\item \textbf{Partida:} durante la partida no se puede cambiar de
+	pestaña ni cargar; al terminar, todo vuelve a estar disponible sin
+	recargar la página.
+\end{itemize}
+
+\subsection{Parar el juego}
+\label{sec:F5I7Parar}
+Como he visto en la última prueba, no es posible parar la partida a mitad. 
+Al lanzar el juego todos los botones quedan desactivados mientras se juega, 
+lo que no permite pararlo hasta que no termina. Hay que hacer algo sobre esto. 
+
+Aunque no sea igual en la máquina real, solo para el emulador cambio el manejo, 
+de forma que el botón B pase a ser stop y pare el juego como si fuera el
+final del mismo, y durante el juego el A pause el juego. Para esto:
+
+\begin{itemize}
+	\item Al cargar el Setup, aparecen los botones A como Start y B como Stop. 
+ 
+	\item Durante el juego, el botón A pasa a ser Pausa, pulsando se detiene, volviendo 
+	a pulsar continúa. Para no romper mucho, la pausa es al final de un tick, no a 
+	medias, así todo está completado y el siguiente pude comenzar sin problemas.
+	
+	\item Al pulsar B, el juego llama a la rutina del fin de juego directamente.
+	
+\end{itemize}

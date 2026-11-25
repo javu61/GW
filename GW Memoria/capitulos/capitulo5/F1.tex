@@ -1,0 +1,294 @@
+\section{Fase 1: Desarrollo del entorno de autoría}
+\label{sec:Fase1Resumen}
+
+La primera fase del proyecto tuvo como objetivo desarrollar una
+herramienta gráfica que permitiera crear los cartuchos del sistema de
+forma visual, evitando la edición manual de ficheros de configuración
+complejos. Esta herramienta constituye el punto de partida de todo el
+ecosistema, ya que es la encargada de generar la información utilizada
+posteriormente por los motores de simulación y ejecución.
+
+Su desarrollo se organiza en dos bloques claramente diferenciados: la
+\textbf{base} —la carga del \emph{setup} que describe la máquina física
+y los formatos de cartucho que viajan entre las etapas del sistema— y
+el \textbf{diseñador gráfico}, la herramienta de edición visual que es
+el corazón de la fase y el auténtico generador de datos del proyecto.
+
+\subsection{Objetivos de la fase}
+\label{sec:F1Objetivos}
+
+Los objetivos principales fueron:
+
+\begin{itemize}
+	\item Cargar y validar la configuración hardware de una máquina
+	Game \& Watch.
+	\item Cargar un cartucho definido mediante imágenes y ficheros JSON.
+	\item Extraer automáticamente los segmentos gráficos a partir de una
+	imagen fuente.
+	\item Permitir definir visualmente propiedades y relaciones entre
+	segmentos.
+	\item Generar un formato de cartucho intermedio reutilizable por el
+	simulador.
+	\item Facilitar la modificación posterior de los cartuchos mediante
+	mecanismos de edición, guardado y recarga.
+\end{itemize}
+
+\subsection{La base: el setup de la máquina y los formatos de cartucho}
+\label{sec:F1Base}
+
+El punto de partida del entorno es la carga de dos tipos de información
+(las primeras iteraciones de la fase): un fichero de configuración
+general (\textbf{setup}) que describe las características de la máquina,
+y un \textbf{cartucho} que contiene las imágenes y parámetros
+específicos del juego. Sobre ellos se establecieron los mecanismos
+básicos de validación, detección de errores y presentación de mensajes
+al usuario.
+
+\textbf{Decisiones de diseño y arquitectura.}
+
+\begin{itemize}
+	\item \textbf{Aislamiento del entorno local:} se prohibió el uso de
+	módulos ECMAScript (import/export) en favor de scripts clásicos con un
+	ámbito global compartido. Esta decisión neutralizó las restricciones
+	del modelo CORS, permitiendo ejecutar el diseñador abriendo
+	directamente el archivo \texttt{index.html} mediante el protocolo
+	\texttt{file://}, sin servidores de compilación.
+	\item \textbf{Abstracción de estilos de máquina:} los botones de
+	hardware analizados se tipificaron en una matriz de tres estructuras
+	fijas (Estilos 2, 4 y 5). El motor altera el árbol del DOM y traslada
+	el lienzo de dibujo al hueco exacto del esqueleto de cada estilo sin
+	provocar re-flujos visuales.
+	\item \textbf{Tres estados del cartucho:} se definió el ciclo de vida
+	del JSON en tres estados de representación: \textbf{GWB} (Base, solo
+	geometría), \textbf{GWI} (Intermedio, fuente de verdad de la geometría
+	con la lógica acoplada) y \textbf{GWC} (Compilado final binario
+	optimizado para el firmware del ESP32).
+	\item \textbf{Determinismo indexado:} para que los datos de autoría
+	sobrevivan a futuras alteraciones de la imagen, los cambios manuales
+	se registran vinculados a los índices primitivos de las componentes
+	extraídas, estrictamente estables mientras la geometría base no
+	sufra modificaciones por píxeles.
+\end{itemize}
+
+\textbf{Problemas detectados y soluciones implementadas.}
+
+\begin{itemize}
+	\item \textbf{El problema de la inconsistencia en la botonera:} el
+	intento de instanciar la botonera directamente desde la configuración
+	de hardware generaba desbordamientos visuales cuando el cartucho
+	declaraba un subconjunto de controles inferior al del estilo base de
+	la máquina.
+	\item \textbf{La solución de diseño:} un sistema de validación
+	bidireccional con destrucción selectiva del DOM. El subsistema
+	verifica la restricción de compatibilidad (cartucho $\leq$ setup),
+	renombra dinámicamente las etiquetas físicas según el identificador de
+	autoría y elimina del árbol los nodos sobrantes, garantizando que el
+	aparato permanezca libre de referencias colgadas.
+	\item \textbf{El problema de la escritura en disco:} el modelo de
+	aislamiento (\emph{sandbox}) de los navegadores modernos bloqueaba el
+	guardado asíncrono mediante la API de acceso al sistema de archivos
+	en entornos no basados en Chromium, impidiendo la descarga autónoma
+	del proyecto.
+	\item \textbf{La solución de diseño:} se integró la librería de
+	compresión JSZip inyectada como script tradicional. El guardado
+	empaqueta el manifiesto (una línea compacta por elemento) junto con
+	las imágenes de los fragmentos y los lienzos originales, y al
+	finalizar crea un nodo temporal de anclaje de descarga en el DOM que
+	fuerza de forma universal la descarga del archivo
+	\texttt{cartucho\_gwi.zip}.
+\end{itemize}
+
+	\subsection{Formato del fichero de setup}
+
+En este fichero se define la máquina que vamos a usar a nivel de hardware.
+Se puede disponer de varios ficheros de configuración de tipo \textbf{json}, dependiendo de los elementos existentes y sus conexiones en la máquina de destino. 
+\clearpage
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Estructura del archivo setup.json},
+	label={lst:setup_base}
+	]
+	{
+		'tipo': 'GW',                                       
+		'version': '1.1',                                   
+		'nombre': 'ESP32 GW con 5 botones',                 
+		'estilo': '5',                                      
+		'pantalla': { 'ancho': 320, 'alto': 240 },          
+		'botones': [                                        
+		{ 'numero': '0', 'puerto': 13, 'tecla': 'Q' },  
+		{ 'numero': '1', 'puerto': 14, 'tecla': 'P' },  
+		{ 'numero': '2', 'puerto': 25 },                
+		{ 'numero': '3', 'puerto': 26 },                
+		{ 'numero': '4', 'puerto': 27 },
+		{ 'numero': '5', 'puerto': 32 },
+		{ 'numero': '6', 'puerto': 33, 'alias': 'A' },
+		{ 'numero': '7', 'puerto': 16, 'alias': 'B' },
+		{ 'numero': '8', 'puerto': 17, 'alias': 'R' }
+		]
+	}
+\end{lstlisting}
+
+\subsection{El diseñador gráfico: extraer la imagen maestra}
+\label{sec:F1Extraccion}
+
+En lugar de obligar al creador del juego a importar decenas de
+archivos PNG individuales, el diseñador ingiere una única imagen
+maestra con todos los elementos activados a la vez
+(\texttt{referencia.png}) y localiza y aísla cada geometría de manera
+automática.
+
+\textbf{Decisiones de diseño y arquitectura.}
+
+\begin{itemize}
+	\item \textbf{Modelado por componentes conexas:} el algoritmo de
+	inspección implementa una búsqueda en anchura (BFS) optimizada
+	mediante una pila nativa, evaluando el mapa de píxeles con
+	conectividad-8, de modo que los trazos diagonales continuos se
+	registran como una misma entidad visual.
+	\item \textbf{Deduplicación píxel-exacta:} para mitigar la huella de
+	memoria de cara al hardware embebido, el software calcula una firma
+	de igualdad lógica en tres dimensiones estrictas: ancho, alto y
+	coincidencia binaria de la máscara de píxeles. Las geometrías
+	idénticas que se repiten en pantalla se almacenan una única vez en la
+	tabla de \emph{sprites}, mientras que sus posiciones individuales se
+	segregan en la tabla de instancias.
+\end{itemize}
+
+\textbf{Problemas detectados y soluciones implementadas.}
+
+\begin{itemize}
+	\item \textbf{El problema del ruido geométrico en el lienzo:} los
+	restos accidentales de las herramientas de dibujo digital (píxeles
+	sueltos, suavizados involuntarios en los contornos, motas
+	imperceptibles) eran detectados por el motor BFS como segmentos
+	independientes válidos, generando decenas de archivos fantasma que
+	colapsaban la memoria dinámica y corrompían el orden determinista de
+	la numeración.
+	\item \textbf{La solución de diseño:} un filtro de descarte de ruido
+	por umbral de masa geométrica. Cualquier componente conexa con un área
+	estrictamente inferior a 4 píxeles reales se intercepta en tiempo de
+	ejecución, se purga de las colas de asignación y se notifica con un
+	mensaje de advertencia en la consola de depuración para su subsanación
+	en el origen gráfico: nada falla en silencio.
+\end{itemize}
+
+\subsection{El primer gran replanteamiento: la semántica abandona la imagen}
+\label{sec:F1Replanteo}
+
+La propuesta original para dotar de comportamiento lógico a las
+geometrías extraídas consistía en codificar parte de la semántica del
+juego en la propia imagen origen mediante una convención de colores:
+negro para los segmentos normales, verde para el jugador, azul para
+las secuencias de movimiento y rojo para las relaciones especiales.
+La solución parecía atractiva porque describía gran cantidad de
+información con una única imagen; el extractor llegó a realizar un
+censo cromático previo que exponía la paleta detectada para que el
+usuario la mapeara con los roles del sistema antes de procesar.
+
+\textbf{Problemas detectados y soluciones implementadas.}
+
+\begin{itemize}
+	\item \textbf{El problema del colapso cromático por anti-aliasing:}
+	las pruebas de estrés con imágenes generadas por editores
+	convencionales arrojaron 119 tonos distintos en un lienzo diseñado
+	conceptualmente con solo 8 colores puros. Los algoritmos invisibles de
+	suavizado periférico de los programas comerciales destruían la
+	conectividad exacta del modelo, rompiendo secuencias y uniones de
+	manera silenciosa. El comportamiento hacía imposible garantizar una
+	interpretación consistente de la imagen en todos los casos.
+	\item \textbf{La solución de diseño (primer gran replanteamiento):} se
+	determinó que delegar la precisión semántica en un editor de imágenes
+	de terceros constituía un defecto de diseño arquitectónico. Se
+	rediseñó el flujo por completo: las imágenes quedaron limitadas
+	estrictamente a la información geométrica en blanco y negro, y toda
+	la lógica de relaciones, secuencias y roles fue trasladada al dominio
+	exclusivo del diseñador gráfico mediante operaciones visuales de
+	selección. La información gráfica y la información semántica quedan
+	desde este hito separadas: las imágenes representan; el editor
+	significa.
+\end{itemize}
+
+Esta decisión es la que convierte al diseñador gráfico en la pieza
+más fundamental del ecosistema: si toda la semántica vive en él, es
+el editor —y no un artefacto externo— quien garantiza la coherencia
+de los cartuchos.
+
+\subsection{El diseñador gráfico: edición visual de la semántica}
+\label{sec:F1Editor}
+
+Sobre el nuevo modelo, las iteraciones restantes de la fase
+construyeron la herramienta de edición: paneles de propiedades y
+relaciones por segmento, unión de fragmentos, la visualización
+simultánea del lienzo de trabajo y de la pantalla real del aparato, y
+el mecanismo de deshacer/rehacer.
+
+\textbf{Decisiones de diseño y arquitectura.}
+
+\begin{itemize}
+	\item \textbf{Flujo cronológico atómico:} se sustituyeron las matrices
+	de estados dispersas por una única lista lineal de operaciones
+	atómicas. Cada acción del usuario se inserta con un identificador de
+	operación correlativo; si una manipulación provoca múltiples
+	mutaciones en cascada, todos los registros comparten el mismo
+	identificador de enlace, y deshacer y rehacer revierten o reponen el
+	grupo completo sin corromper la integridad del formato intermedio.
+	\item \textbf{Visualización transitiva y direccional:} el mapa de
+	edición traza las relaciones por color de selección: el componente
+	activo en rojo, sus cadenas salientes en azul (calculadas de forma
+	transitiva hasta agotar la ruta) y los enlaces entrantes directos en
+	magenta.
+	\item \textbf{Renderizado fiel al cristal líquido:} el motor gráfico
+	de la autoría se independizó como lector puro de la lista de memoria,
+	con repintado completo por cambio de estado (fondo estático más
+	segmentos activos) y escalado por vecino más cercano, que estira las
+	imágenes al vuelo según la escala por eje del simulador sin difuminar
+	los contornos del LCD original.
+\end{itemize}
+
+\textbf{Problemas detectados y soluciones implementadas.}
+
+\begin{itemize}
+	\item \textbf{El problema de la colisión de cajas en el trazado de
+		sprites:} las cajas envolventes de los segmentos son rectángulos
+	rígidos, pero las formas físicas del cristal líquido son irregulares y
+	curvas. Al pintar un segmento con una máscara rectangular sobre una
+	zona adyacente, el recuadro opaco borraba los detalles gráficos de
+	los elementos que residían inmediatamente debajo.
+	\item \textbf{La solución de diseño:} se implementó la mezcla por
+	operación binaria XOR canal a canal sobre el vector de bytes del
+	lienzo. Los píxeles oscuros se combinan algebraicamente con el fondo
+	manteniendo la transparencia absoluta de los píxeles blancos, y el
+	borrado exacto de una geometría se ejecuta repitiendo la misma
+	función con idénticos argumentos, restituyendo el fondo sin necesidad
+	de mapas de bits de respaldo en memoria.
+	\item \textbf{El problema de las referencias colgantes por
+		desaparición de segmentos:} al unificar múltiples elementos en un
+	único sprite compuesto, el componente seleccionado absorbía a los
+	secundarios y los enlaces lógicos (\emph{anterior}/\emph{siguiente})
+	de otros segmentos quedaban apuntando a identificadores numéricos
+	obsoletos que ya no existían en el mapa, colapsando el bucle del
+	futuro simulador.
+	\item \textbf{La solución de diseño:} se reestructuró la función de
+	fusión (\emph{merge}) como una transacción de base de datos: al
+	consolidarse una unión, un barrido automático recorre la totalidad de
+	la lista y re-apunta cualquier enlace externo que hiciese referencia a
+	un miembro absorbido, redirigiéndolo al identificador del nodo raíz
+	resultante. Los elementos anulados se transforman en nodos
+	informativos fantasma (tipo 99) para preservar estables los índices
+	deterministas de la extracción primaria.
+\end{itemize}
+
+\subsection{Cierre de la fase}
+\label{sec:F1Cierre}
+
+Con la arquitectura del editor congelada, la fase se cierra con la
+herramienta de autoría completa: el \emph{setup} describe la máquina,
+la imagen maestra aporta la geometría, y el diseñador gráfico —
+mediante operaciones visuales, historial atómico y validaciones que
+nunca fallan en silencio— produce el GWI, el formato intermedio que
+es la fuente de verdad de todo el sistema y el punto de partida de la
+fase siguiente: el motor gráfico del simulador.
+\clearpage

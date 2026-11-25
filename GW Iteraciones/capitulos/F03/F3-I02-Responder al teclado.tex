@@ -1,0 +1,98 @@
+\section{Segunda iteración de la Fase 3: El motor de estados responde al teclado}
+\label{sec:MotorRespondeTeclado}
+
+El análisis de la iteración anterior (\emph{F3-I1}) dejó las cuatro decisiones cerradas:
+el canal (la pulsación como dato que entra por el director), el ritmo (el buffer de
+movimientos pendientes), la combinación de teclas (propiedad del cartucho) y la regla de
+compatibilidad (setup $\geq$ cartucho). Esta iteración las hace carne: el motor de estados
+deja de ser un reloj que recorre una secuencia y aprende a \textbf{responder}: una
+pulsación encola, el tick la consume y \textbf{el jugador se mueve por la pantalla}. El
+motor gráfico no se toca ---se congeló al cerrar la Fase 2--- y no hace falta tocarlo:
+moverse es escribir \texttt{x}/\texttt{y} en la lista, y la composición pura presenta lo
+que la lista dice.
+
+\subsection{Qué se construye}
+\label{subsec:QueSeConstruyeF3I2}
+
+\begin{itemize}
+	\item \textbf{La vía del dato: \texttt{pulsar(numero)}}. El \texttt{baseDirector}
+	cablea la nueva llamada en los dos caminos de entrada de la máquina: el
+	\texttt{pointerdown} del botón físico y la tecla del teclado
+	(\texttt{alPulsarTecla}), siempre con el número físico del botón. El
+	\texttt{JuegoDirector} acepta la pulsación \emph{solo con el juego en marcha} y la
+	reenvía tal cual al motor usando la función: \texttt{juegoMotorEstados.pulsar}. Sin partida no hay
+	entrada; el Start sigue siendo el Start (relanza, no se encola).
+
+	\item \textbf{El buffer de movimientos pendientes}. El motor posee una cola FIFO con
+	tapa (8): \texttt{pulsar} encola (y descarta con aviso si está llena, diagnóstico bajo
+	\texttt{GW\_DEBUG}); \texttt{tick} la vacía \textbf{al empezar el ciclo}, en un paso
+	(0) previo al apagado de banderas. El orden sagrado queda: (0) entrada, (1) apagar
+	\texttt{cambiar}, (2) secuencia.
+
+	\item \textbf{El jugador}. Un índice de segmento quemado en el código del motor (como
+	la \texttt{SECUENCIA}) y una tabla \texttt{MOVER} número $\rightarrow$ vector, también
+	quemada. Al \texttt{iniciar()} el motor guarda las posiciones originales de la lista;
+	mover es escribir \texttt{seg.x}/\texttt{seg.y} directamente y marcar
+	\texttt{cambiar} en lo tocado. Relanzar restaura las posiciones de origen en el mismo
+	barrido que limpia banderas. Sin límites ni colisiones todavía: el jugador puede
+	salirse por los bordes.
+
+	\item \textbf{La combinación viaja por el puente}. \texttt{comunListas} gana una
+	casilla de configuración del juego: \texttt{fijarReglas} (la autoría la escribe al
+	cargar el cartucho con el nuevo indicador \texttt{combinar} del JSON) y
+	\texttt{reglas} (el motor la lee en cada tick). Con combinación activa, todo el buffer
+	del tick se \emph{reduce a ejes} y el jugador da un solo paso combinado (ARRIBA y
+	DERECHA en la misma ventana = un salto diagonal; una sola dirección = paso normal;
+	opuestas = quieto). Sin combinación, cada entrada del buffer es un paso en orden de
+	llegada.
+
+	\item \textbf{setup $\geq$ cartucho, con dientes}. La validación de carga endurece el
+	aviso que era solo de consola: si el cartucho declara un botón que la máquina del
+	\textit{setup} no tiene, el cartucho \textbf{NO carga} (error bloqueante en la barra
+	de estado). Jugar con menos botones que la máquina ofrece sigue funcionando: los no
+	usados se eliminan de la botonera, como ya ocurría.
+\end{itemize}
+
+\subsection{Detalles de realización}
+\label{subsec:DetallesF3I2}
+
+\begin{itemize}
+	\item \textbf{El motor no conoce el DOM}: recibe un número, nunca un evento. La
+	misma tabla \texttt{MOVER} será la que el firmware del ESP32 consulte con el número de
+	puerto; cuando las reglas vengan del cartucho, la tabla viajará en el GWC y la vía del
+	dato no cambia.
+	\item \textbf{El buffer pertenece al motor, la aduana al director}: el
+	\texttt{JuegoDirector} no interpreta entradas (solo reenvía con el juego en marcha),
+	igual que no interpreta estados; el motor es el único que toca el buffer y la lista.
+	\item \textbf{La secuencia de fondo sigue latiendo}: el paracaidista del GWI de
+	prueba no se detiene porque el jugador se mueva; ambos comparten el mismo tick y la
+	misma lista, y la composición pura presenta los dos a la vez.
+	\item \textbf{Diagnóstico con la llave de siempre}: con \texttt{GW\_DEBUG} activa,
+	el motor cuenta cada pulsación encolada (y las descartadas por tapa) y cada paso del
+	jugador; con ella apagada, silencio total y juego funcional.
+	\item \textbf{Mayúsculas o minúsculas}: Las teclas se pueden definir indiferentemente en mayúsculas o minúsculas, y la respuesta al teclado también debe capturarse tanto en mayúsculas o minúsculas.
+\end{itemize}
+
+\subsection{Verificación}
+\label{subsec:VerificacionF3I2}
+
+La simulación ejercita el contrato completo con el caso del paracaidista (setup estilo 2,
+GWI en ZIP, jugador encendido desde el arranque):
+
+\begin{itemize}
+	\item \textbf{Canal}: pulsación con el juego parado no se encola; en marcha sí; el
+	Start relanza y no entra al buffer; la tecla llega igual que el botón
+	físico.
+	\item \textbf{Buffer y ritmo}: la pulsación espera al tick siguiente; con
+	\texttt{combinar} activo, dos pulsaciones en la misma ventana dan UN paso diagonal
+	verificado a píxel; sin \texttt{combinar}, dos pasos en orden; IZQ+DER no mueve; la
+	tapa descarta el exceso con aviso.
+	\item \textbf{Píxeles}: el jugador deja su caja negra en origen $+$ vector; la caja
+	anterior vuelve al fondo (sin rastro); la secuencia de fondo sigue su bucle en
+	paralelo.
+	\item \textbf{Ciclo de vida}: relanzar restaura la posición de origen;
+	\texttt{GW\_DEBUG} apagada = consola limpia y movimiento funcional; cero errores.
+	\item \textbf{Compatibilidad}: un cartucho que pida un botón inexistente en la
+	máquina NO carga; uno que use un subconjunto carga y elimina los botones no usados.
+\end{itemize}
+

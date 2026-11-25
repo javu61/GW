@@ -1,0 +1,70 @@
+\section{Duodécima iteración de la Fase 1: Pruebas de la Fase 1}
+\label{sec:PruebasFase1}
+
+Con los requisitos funcionales de la \textbf{Fase 1 (Editor Gráfico)} completados en la iteración anterior, y aunque durante y tras cada iteración se han efectuado pruebas individuales de cada desarrollo, esta duodécima iteración no incorpora funcionalidad nueva: es la \textbf{iteración de validación} que certifica el cierre de la fase. Su único artefacto es la batería de pruebas que recorre, de principio a fin, todo el flujo de autoría sobre un cartucho real, verificando a nivel de píxel cuando es posible y de comportamiento observable en el resto de los casos.
+
+El criterio de la batería es sencillo: cada requisito de la fase debe tener al menos una prueba que lo ejercite de extremo a extremo, en el orden natural de trabajo (cargar, descomponer, editar, guardar, recargar). La columna \textbf{Resultado} se rellena conforme se ejecuta cada prueba en el navegador; el estado inicial previsto es que todas concluyan satisfactoriamente, dado que cada mecanismo ha sido verificado de forma individual durante su desarrollo y ahora se valida su convivencia.
+
+\subsection{Batería con las pruebas efectuadas y su resultado}
+\label{sec:BateriaPruebasFase1}
+
+% Configuración para que las columnas X justifiquen a la izquierda en lugar de centrado/justificado completo
+\newcolumntype{L}{>{\raggedright\arraybackslash}X} 
+
+\begin{small} 
+	\begin{tabularx}{\textwidth}{c >{\hsize=0.4\hsize}L >{\hsize=1.6\hsize}L c}
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endfirsthead % Cabecera de la primera página
+		
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endhead % Cabecera que se repite en las páginas siguientes
+		
+		\midrule
+		\multicolumn{4}{r}{\small Continúa en la página siguiente...} \\
+		\endfoot % Pie de página en páginas intermedias
+		
+		\bottomrule
+		\endlastfoot % Cierre definitivo al final de toda la tabla
+		
+		1 & Carga de setup & Cargar \texttt{setup.json} v1.1: la barra de estado refleja nombre, estilo y resolución de pantalla. & OK \\ 
+		2 & Carga de cartucho & Cargar carpeta GWB (\texttt{gwb.json}, \texttt{img\_f}, \texttt{img\_s}): descomposición completa con recuento de sprites y componentes. & OK \\ 
+		3 & Avisos & Con \texttt{img\_s} de resolución distinta a \texttt{img\_f}, el aviso informativo de tamaño aparece sin bloquear la carga. & OK \\ 
+		4 & Composición & GWB recién cargado: el aparato muestra SOLO el arte fijo (máquina apagada, cero segmentos pintados). & OK \\ 
+		5 & Composición & Tras accionar el guardado: el aparato compone fondo + segmentos en negro LCD; lo que se ve es lo empaquetado. & OK \\ 
+		6 & Composición & Con \texttt{img\_s} de tamaño y proporción distintos a la pantalla (p. ej. 740$\times$500 sobre 320$\times$204): los segmentos caen en su posición correcta pese a la escala por eje fraccionaria. & OK \\ 
+		7 & Color LCD & El segmento se presenta en negro puro sobre cualquier arte del fondo (no inversión del color de fondo). & OK \\ 
+		8 & Mapa de trabajo & El mapa muestra \texttt{img\_s} con los sprites teñidos por su tipo y las cajas/números coloreados. & OK \\ 
+		9 & Mapa de trabajo & Clic sobre un componente: se selecciona y abre el panel de propiedades. & OK \\ 
+		10 & Mapa de trabajo & Recuadro elástico de selección múltiple: marca todos los grupos que corta; un clic normal los desmarca. & OK \\ 
+		11 & Relaciones & Seleccionado en rojo; cadena saliente en azul (transitiva); enlaces entrantes en magenta (salto directo). & OK \\ 
+		12 & Panel de propiedades & Cambio de tipo de un componente: los enlaces se habilitan/deshabilitan según el nuevo tipo. & OK \\ 
+		13 & Panel de propiedades & Establecer enlace de campo a destino: el mapa refleja la relación al seleccionar cada extremo. & OK \\ 
+		14 & Uniones & Unir dos o más componentes: el resultado hereda posición y tipo; el mapa y los recuentos se actualizan. & OK \\ 
+		15 & Uniones & Deshacer una unión: los componentes originales reaparecen y los enlaces re-apuntados se restauran. & OK \\ 
+		16 & Uniones & Fantasma tipo 99 del componente absorbido, sin fantasma de la raíz. & OK \\ 
+		17 & Posicionado & Posicionar juntos (enlace de unión): los offsets relativos sitúan los componentes contiguos en el mapa y en el aparato. & OK \\ 
+		18 & Orden & Subir/Bajar en la lista: el orden del mapa cambia y persiste tras guardar y recargar. & OK \\ 
+		19 & Deshacer & Ctrl+Z revierte el último bloque atómico (enlace, tipo, unión, offset, orden), incluyendo los valores previos registrados. & OK \\ 
+		20 & Deshacer & Ctrl+Y / Ctrl+Shift+Z rehace el bloque deshecho; una acción nueva vacía la pila de rehacer. & OK \\ 
+		21 & Verificación & Con errores bloqueantes (p. ej. jugador sin sprite) el guardado se detiene con aviso; con solo avisos, consulta antes de continuar. & OK \\ 
+		22 & Guardado ZIP & Guardar produce \texttt{cartucho\_gwi.zip} con \texttt{cartucho\_gwi.json}, \texttt{segmentos/img\_NNN.png} e \texttt{img\_f}/\texttt{img\_s} dentro (autónomo). & OK \\ 
+		23 & Carga ZIP & Cargar el ZIP como fichero GWI: sprites, segmentos, autoría (uniones, enlaces, offsets) y composición del aparato se restauran. & OK \\ 
+		24 & Carga carpeta & Cargar el ZIP descomprimido como carpeta GWI: mismo resultado que la vía de fichero. & OK \\ 
+		25 & Autonomía & El GWI cargado desde su ZIP funciona SIN la carpeta del GWB original al lado. & OK \\ 
+		26 & Reset & Recargar setup + GWB tras una sesión de autoría: historial limpio, aparato de nuevo solo fondo (sin composición heredada). & OK \\ 
+		27 & Sin librería & Con \texttt{jszip.min.js} ausente: guardar y cargar ZIP avisan explícitamente; el resto del editor funciona. & OK \\ 
+		28 & Portabilidad & Todo el flujo anterior funciona abriendo \texttt{index.html} por \texttt{file://} en un navegador sin extensión alguna. & OK \\
+	\end{tabularx}
+	\nopagebreak
+	\captionof{table}{Batería de pruebas de validación de la Fase 1.}
+	\label{tab:PruebasFase1}
+\end{small}
+
+Con la superación completa de esta batería podemos efectuar el cierre de la Fase 1 y habilita el arranque de la \textbf{Fase 2: motor gráfico}, que dotará de movimiento a los segmentos.
+
+\clearpage
+

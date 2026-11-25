@@ -1,0 +1,14 @@
+{
+  "tipo": "GWS", 
+  "version": "1",
+  "nombre": "ESP32 GW 2 botones",
+  "estilo": "2",
+  "resolucion": { "ancho": 320, "alto": 240 },
+  "botones": [
+    { "numero": "0", "puerto": 13, "tecla": "O" },
+    { "numero": "4", "puerto": 14, "tecla": "P" },
+    { "numero": "6", "puerto": 33, "tecla": "Z", "alias": "A" },
+    { "numero": "7", "puerto": 16, "tecla": "X", "alias": "B" },
+    { "numero": "8", "puerto": 17, "tecla": "C", "alias": "R" }
+  ]
+}

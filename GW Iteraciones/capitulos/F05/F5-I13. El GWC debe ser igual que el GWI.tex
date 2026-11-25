@@ -1,0 +1,147 @@
+\section{Decimotercera iteración de la Fase 5: el GWC no coincidía con el GWI}
+\label{sec:F5I13}
+
+Al probar el simulador con los dos tipos de cartucho aparece un error importante: cargando el GWI el juego funciona bien, pero cargando el GWC generado del mismo cartucho junto al GWI aparecen discrepancias, por ejemplo aparecen varias rutas a la vez desde el inicio, como si no se hubieran cargado bien los datos de base del cartucho. Un cartucho compilado que se comporta distinto del que sale de la autoría es un fallo grave, porque el GWC es lo que acabará leyendo el ESP32 y ya no habrá un GWI con el que comparar.
+
+El principio que fija esta iteración, y que desde ahora se cumple y se prueba:
+
+\begin{quote}
+\textbf{Un GWC debe contener exactamente los mismos datos que el GWI del que sale, y el juego debe funcionar igual cargando uno u otro.}
+\end{quote}
+
+\subsection{El error}
+\label{sec:F5I13Error}
+
+La política de rutas del Director (iteración~F4-I2) permite lanzar una nueva ruta mientras las que están vivas sean menos que el máximo de simultáneas, que nace en 1 y sube cada \texttt{rutas.aumentarCada} lanzamientos. Un GWI que no declara \texttt{rutas} no aumenta nunca ese máximo: es la regla histórica de una sola ruta.
+
+El generador del GWC, en cambio, escribía \texttt{aumentarCada = 1} cuando el GWI no lo declaraba, y el lector lo devolvía como una política declarada. Con \texttt{aumentarCada = 1} el máximo sube en cada lanzamiento, y a las pocas rutas el simulador juega con varias a la vez.
+
+La comprobación fue directa: tras cargar el GWC, \texttt{comunListas.rutasDeCartucho()} devolvía \texttt{\{aumentarCada: 1\}}, y tras cargar el GWI devolvía \texttt{null}.
+
+\subsection{Por qué no se había detectado}
+\label{sec:F5I13Porque}
+
+No existía ninguna prueba que comparase el GWC con el GWI. Las pruebas de la iteración~F5-I6 comprobaban que el GWC se escribía y se leía de vuelta (ida y vuelta del propio formato), pero no que lo leído fuese lo que había en el GWI. Un valor por defecto inventado al escribir se leía de vuelta sin problema, y solo se notaba jugando.
+
+\subsection{Auditoría completa: no es el único dato que difiere}
+\label{sec:F5I13Auditoria}
+
+Aunque no todos son errores, se presenta en este punto todas las diferencias entre ambos formatos de cartucho. Para hacerlo se comparó campo a campo todo lo que el GWI lleva con lo que el GWC conserva (primero con un programa de comparación y después con la prueba real). Aparecieron cuatro diferencias importantes:
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabularx}{\textwidth}{p{0.8cm} >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\multicolumn{2}{l}{\textbf{Dato:} \texttt{rutas.aumentarCada}} \\
+		& \textbf{GWI:} Sin declarar (máximo siempre 1) \\
+		& \textbf{GWC:} Se escribía \texttt{1} si faltaba \\
+		& \textbf{Efecto:} Varias rutas a la vez \\
+		\midrule
+		\multicolumn{2}{l}{\textbf{Dato:} \texttt{pausas.simulador} y \texttt{pausas.externo}} \\
+		& \textbf{GWI:} Sin declarar si el cartucho no las define \\
+		& \textbf{GWC:} Se escribía \texttt{500} si faltaban \\
+		& \textbf{Efecto:} Mismo comportamiento hoy (500\,ms), pero datos distintos: el ESP32 no sabría si \texttt{500} es declarado o inventado \\
+		\midrule
+		\multicolumn{2}{l}{\textbf{Dato:} Contador de iconos de vida y de muerte} \\
+		& \textbf{GWI:} Orden del icono en su familia ($1\text{--}N$) \\
+		& \textbf{GWC:} No viajaba \\
+		& \textbf{Efecto:} El motor ordena los iconos por él; con el GWC solo contaba la posición en la lista \\
+		\midrule
+		\multicolumn{2}{l}{\textbf{Dato:} Regla \texttt{combinar}} \\
+		& \textbf{GWI:} La lleva el cartucho \\
+		& \textbf{GWC:} Se perdía (el simulador la ponía siempre a \texttt{false}) \\
+		& \textbf{Efecto:} Un cartucho con \texttt{combinar} jugaba distinto como GWC \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Diferencias detectadas entre el GWI y el GWC}
+	\label{tab:gwi-gwc-f5-i13}
+\end{table}
+
+Y aunque no son errores, sino particularidades del formato, enumero estas otras diferencias por completitud:
+
+\begin{itemize}
+	\item \textbf{Identificadores de segmento.} El GWC no lleva identificadores legibles: el segmento número $n$ del GWC es el $n$-ésimo segmento que viaja, con el identificador \texttt{seg\_}$n$. No cambia el juego.
+	\item \textbf{Fondo.} El GWC no lleva la imagen de fondo, que si incluye el GWI, pero es un tema que se dejó pendiente de una próxima iteración.
+	\item \textbf{Escala.} Las posiciones y los sprites del GWC están escalados a la pantalla del setup para que se puedan mostrar en el sistema externo sin recalcular nada.
+\end{itemize}
+
+\subsection{Cambios en la definición del formato GWC}
+\label{sec:F5I13Formato}
+
+El principio se cumple con tres cambios de formato. Los dos primeros no cambian el tamaño del fichero:
+
+\begin{enumerate}
+	\item \textbf{Lo no declarado viaja como nulo.} En el Bloque 1, \texttt{pausas.simulador}, \texttt{pausas.externo} y \texttt{rutas.aumentarCada} se escriben con \texttt{0xFFFF} cuando el GWI no los declara (como ya se hacía con la aceleración y el fin). El lector devuelve entonces \texttt{null}, igual que el GWI. Quien consume el dato aplica el valor por defecto (500~ms, sin aumento de rutas), igual con GWI y con GWC. El GWC deja de decidir por su cuenta.
+
+	\item \textbf{Orden de los iconos en el registro del segmento.} El byte «valor inicial» del registro de 32 bytes pasa a llamarse «valor inicial u orden»: en un segmento de tipo contador sigue siendo su valor inicial; en un icono de vida o de muerte es su orden en la familia (1..N), y el lector lo devuelve como \texttt{contador}. En el resto de tipos vale 0. No se amplía el registro: ese byte no tenía uso en vida y muerte.
+
+	\item \textbf{Reglas del juego en el Bloque 1.} El Bloque 1 pasa de 8 a 9 valores de 16 bits. El noveno es el campo de reglas: el bit~0 es la regla \texttt{combinar} y el resto, reservados a 0. El contenido del bloque pasa de 16 a 18 bytes.
+\end{enumerate}
+
+\paragraph{Compatibilidad.} Los GWC anteriores a esta iteración (Bloque 1 de 16 bytes) se siguen leyendo: el lector acepta 16 o 18 bytes y toma las reglas a 0 si faltan. Pero esos ficheros conservan los valores inventados de la tabla, así que \textbf{hay que regenerarlos}. Como el «Código GWC» del par se calcula sobre el fichero y el Bloque 1 ha cambiado, el GWI y el GWC existentes dejan de ser un par: hay que volver a generar los dos con «Generar GWB+GWI+GWC» (iteración~\ref{sec:F5I10}).
+
+La versión del formato sigue siendo \texttt{GWC1}: el formato todavía no se ha entregado a ningún lector externo y la lectura de los ficheros antiguos queda cubierta.
+
+\subsection{Cambios en el código}
+\label{sec:F5I13Codigo}
+
+\begin{itemize}
+	\item \textbf{BaseCartucho.js.} \texttt{montarConfiguracion} escribe nulo en lugar de valores por defecto y añade el noveno valor; \texttt{montarSegmentos} escribe el orden de los iconos en el byte «valor inicial u orden»; \texttt{leerConfiguracionGWC} admite 16 o 18 bytes, devuelve \texttt{null} para lo no declarado y devuelve \texttt{combinar}; el lector del registro devuelve \texttt{contador} para vida y muerte; \texttt{leerGWC} incluye \texttt{combinar} en su resultado.
+	\item \textbf{baseDirector.js.} Al cargar un GWC la regla \texttt{combinar} sale del propio cartucho y no de un \texttt{false} fijo, como en el flujo del GWI.
+	\item \textbf{pruebas/equivalenciaGWC.js.} Nuevo módulo js para efectuar las pruebas de coherencia entre ambos cartuchos (ver sección siguiente). Este no es un fichero necesario en la distribución final del sistema, ya que solo se utiliza para comparar internamente los cartuchos, pero se mantiene para poder seguir efectuando pruebas en cualquier momento.
+\end{itemize}
+
+\subsection{Pruebas de la iteración}
+\label{sec:F5I13Pruebas}
+
+La prueba \texttt{equivalenciaGWC.js} (desde F5-I15, \texttt{pruebas/pruebasGWI\_GWC.js}, ver~\ref{sec:F5I15Pruebas}) se ejecuta con un navegador automático y comprueba el principio en dos niveles:
+
+\begin{enumerate}
+	\item \textbf{Datos.} Carga el GWI, genera el GWC con el propio generador (sin escalar), lo relee con \texttt{leerGWC} y compara la configuración (pausas, aceleración, rutas, fin, reglas) y, para cada segmento que viaja, el tipo, la posición, los 20 enlaces, los contadores, la ruta, el marcador de primer jugador, el orden de los iconos y las propiedades de los contadores.
+	\item \textbf{Juego.} Ejecuta la partida con el GWI y con el GWC, con el mismo arranque, la misma semilla del generador de aleatorios y el reloj sustituido por una cola que se vacía a mano, y compara tick a tick qué segmentos están encendidos.
+\end{enumerate}
+
+Con una variante opcional (\texttt{VARIANTE=1}) la prueba declara además rutas, aceleración, pausas y la regla \texttt{combinar}, que el cartucho de ejemplo no usa, para comprobar que también viajan los valores \emph{declarados} y no solo los ausentes.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X l}
+		\toprule
+		\textbf{Situación} & \textbf{Antes de la corrección} & \textbf{Después} \\
+		\midrule
+		Datos & 9 diferencias. & Iguales. \\
+		\cmidrule(lr){1-3}
+		Juego & Distinto desde el primer tick; 32 ticks con el GWI y 29 con el GWC. & Igual tick a tick (32 y 32). \\
+		\cmidrule(lr){1-3}
+		\texttt{VARIANTE=1} & --- & Iguales. \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Resultado de la prueba de equivalencia.}
+	\label{tab:prueba-equivalencia}
+\end{table}
+
+
+Además se repitieron las pruebas anteriores de la aplicación (cargar, aplicar, generar y jugar un GWC con Start y Stop) sin errores.
+
+\subsection{Documentación afectada}
+\label{sec:F5I13Doc}
+
+\begin{itemize}
+	\item \textbf{F5-I02 Formato del GWC} Describir el Bloque 1 con 9 valores (campo de reglas), el byte «valor inicial u orden» del registro de segmento y que \textbf{un valor sin declarar es siempre 0xFFFF}, nunca un valor por defecto.
+	\item \textbf{F5-I06 (par GWI/GWC).} El código del par cambia al regenerar; hay que regenerar los dos ficheros.
+\end{itemize}
+
+\subsection{Reflexión metodológica}
+\label{sec:F5I13Reflexion}
+
+El error no estaba en una línea sino en un criterio: el generador \emph{decidía} valores que el cartucho no declaraba, y la única prueba existente comprobaba que el formato era coherente consigo mismo, no que fuese fiel al origen. La corrección es el criterio inverso (un dato ausente viaja como ausente y lo interpreta quien lo lee, igual para todos) y una prueba que compara los dos cartuchos. Siempre que se añada un campo al GWI hay que añadirlo también al GWC y ampliar esta prueba; si no, el siguiente fallo de este tipo volverá a aparecer solo jugando.
+
+\subsection{Mejoras pendientes}
+\label{sec:F5I13Pendientes}
+
+\begin{itemize}
+	\item Ejecutar la prueba de equivalencia sobre cartuchos completos con fin de partida, secuencia, aceleración y rutas declarados, y sobre varias semillas del generador de aleatorios.
+	\item Sustituir la suma de verificación por un CRC-16 
+	\item Valorar si el fondo del GWC debe llevar un color calculado de la imagen del GWI en lugar de blanco.
+	\item Que Generar avise si el par GWI/GWC existente en el destino está desequilibrado (códigos distintos).
+\end{itemize}

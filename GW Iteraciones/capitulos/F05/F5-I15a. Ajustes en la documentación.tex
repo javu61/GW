@@ -1,0 +1,180 @@
+\section{Decimoquinta iteración de la Fase 5. Anexo: Ajustes en la documentación}
+\label{sec:F5I15a}
+
+Aplica la tabla \emph{«Desajustes del texto a mejorar»} del F5-I15
+(ver~\ref{sec:F5I15Docs}): tocar el texto para que se adapte al código
+real, que es más amplio de lo previsto. Cada punto indica fichero
+(ruta completa del repositorio), línea de la versión actual y el texto
+que se sustituye. Todos los cambios se integran en su lugar, se mantienen aquí como referencia.
+
+
+\subsection{Memoria, capítulo F3 (motor de estados)}
+\label{sec:F5I16F3}
+
+Fichero: \texttt{GW Memoria/capitulos/capitulo5/F3.tex}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}p{3.6cm} >{\hsize=0.7\hsize\RaggedRight\arraybackslash}X >{\hsize=1.3\hsize\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Asunto} & \textbf{Texto actual} & \textbf{Texto nuevo} \\
+		\midrule
+		\textbf{[Lin 53--57]} Canal de la entrada: cómo llega la pulsación al motor &
+		«\ldots el director solo acepta pulsaciones con el juego en
+		marcha y las reenvía tal cual al motor. \ldots La tabla número
+		$\rightarrow$ dirección viaja en el código del motor, \ldots» &
+		«\ldots el director, aduana de la entrada, acepta la pulsación con
+		el juego en marcha (y sin pausa ni Stop pendiente; F5-I10) y la
+		encola en la cola FIFO del puente \texttt{comunListas} (tapa de
+		8). El motor de estados es quien la vacía, en el paso (1) del
+		\textit{tick}. \ldots La tabla número $\rightarrow$ dirección
+		sigue en el código del motor, con la misma silueta que tendrá el
+		día que las reglas viajen en el cartucho.» \\
+		\midrule
+		\textbf{[Lin 65--66]} Orden del tick (F5-I15) &
+		«\ldots el orden del \textit{tick} queda sagrado: (0) entrada,
+		(1) apagar banderas de cambio, (2) secuencia» &
+		«\ldots el orden del \textit{tick} queda sagrado: (0) limpiar las
+		banderas \texttt{cambiar} del tick anterior, (1) entrada,
+		(2) cómputo (rutas y resto). La limpieza va \textbf{antes} de la
+		entrada para que las banderas que mueve el jugador sobrevivan al
+		tick, como lee el repintado selectivo del ESP32 (F5-I15,
+		ver~\ref{sec:F5I15OrdenTick}).» \\
+		\midrule
+		\textbf{[Lin 70--75]} La combinación declarada en el cartucho &
+		«\ldots declarado como un indicador más del JSON
+		(\texttt{combinar}): \ldots» &
+		«\ldots declarado en el GWI como campo \texttt{combinar} al nivel
+		superior; en el GWC viaja en el \emph{byte de Reglas} del
+		Bloque 0 (bit \texttt{0x01}; F5-I14) y el puente lo expone como
+		reglas del cartucho: \ldots» \\
+		\midrule
+		\textbf{[Lin 97--99]} La combinación viaja por el puente (iteración 2) &
+		«\ldots \texttt{comunListas} gana una casilla de configuración del
+		juego que la autoría escribe al cargar el cartucho y el motor lee
+		en cada \textit{tick}» &
+		«\ldots la autoría escribe las reglas del juego en el puente al
+		cargar el cartucho (hoy solo \texttt{combinar}, en
+		\texttt{fijarReglas}) y el motor las lee en cada \textit{tick};
+		en el GWC residen en el byte de Reglas del Bloque 0 (F5-I14)» \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Cambios en la Memoria F3.}
+\end{table}
+
+\subsection{Memoria, capítulo F4 (director del juego)}
+\label{sec:F5I16F4}
+
+Fichero: \texttt{GW Memoria/capitulos/capitulo5/F4.tex}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}p{3.6cm} >{\hsize=0.7\hsize\RaggedRight\arraybackslash}X >{\hsize=1.3\hsize\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Asunto} & \textbf{Texto actual} & \textbf{Texto nuevo} \\
+		\midrule
+		\textbf{[Lin 34--38]} Los parámetros «pueden llegar del setup» &
+		«Al igual que en las fases anteriores, los parámetros pueden
+		llegar opcionalmente del archivo de setup, pero la fuente de
+		verdad durante la autoría es siempre el diseñador gráfico: \ldots» &
+		«Con esta fase los parámetros salen definitivamente del
+		\emph{setup} y del código: nacen en el cartucho (GWI) y viajan al
+		Bloque 1 del GWC (F5-I02); lo que el GWI no declara viaja como
+		\textbf{nulo} (F5-I13) y el valor por defecto (los 500~ms
+		históricos, una sola ruta\ldots) lo aplica quien lee, igual en el
+		simulador y en el ESP32. La fuente de verdad durante la autoría
+		es siempre el diseñador gráfico: cualquier edición en la ficha
+		del cartucho se sincroniza con el motor al instante, sin guardar
+		ni recargar.» \\
+		\midrule
+		\textbf{[Lin 103--107]} Fragmento JSON del GWI &
+		\texttt{\char34 pausas\char34: \{...\},}\par
+		\texttt{\char34 aceleracion\char34: \{...\},}\par
+		\texttt{\char34 rutas\char34: \{...\}} &
+		Añadir al listado \texttt{\char34 combinar\char34: true}, con nota de que en
+		el GWC viaja al Bloque 0, byte de Reglas (F5-I14). \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Cambios en la Memoria F4.}
+\end{table}
+
+El resto del fichero ya refleja el código (tamaños 36/16 de los
+Bloques 0 y 1 tras F5-I14, regla \emph{combinar} en el byte
+\texttt{p+11}, enlaces como índices de 1 byte con el nulo 0xFF,
+\texttt{codigoGWC} formato \texttt{\#FFFF\#}) y no se toca.
+
+\subsection{Iteración F5-I02 (formato del GWC)}
+\label{sec:F5I16F5I02}
+
+Fichero: \texttt{GW Iteraciones/capitulos/AnexoA/F5-I02. Formato del Cartucho.tex}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}p{4.2cm} >{\RaggedRight\arraybackslash}X}
+		\toprule
+		\textbf{Lugar} & \textbf{Cambio} \\
+		\midrule
+		\textbf{[Lin 14]} Nota al pie de la alineación &
+		Mover del pie al cuerpo del texto (decisión del F5-I15): «Los
+		contenidos multibyte (\texttt{u16}/\texttt{u32}) van siempre en
+		\textit{little-endian}; en el ESP32, si el bloque se lee con una
+		estructura de C en \textit{offsets} impares, un \textit{cast} a
+		\texttt{uint16\_t*} puede dar excepción de alineación: declarar
+		la tabla como \texttt{uint8\_t} y ensamblar los enteros por
+		bytes (estructura \texttt{packed}).» \\
+		\midrule
+		\textbf{[Lin 219, 221, 223]} Tabla del Bloque 1, filas \texttt{02}, \texttt{03},
+		\texttt{04} (\emph{Acelerar cada}, \emph{Resta}, \emph{Mínimo}) &
+		Añadir a las tres descripciones: «si el GWI no declara
+		aceleración, \textbf{los tres campos viajan como nulo} (\texttt{0xFFFF});
+		sin aceleración la pausa permanece fija». Ya lo indica la fila
+		\texttt{00} de las pausas; el generador lo aplica igual a todos
+		(F5-I13). \\
+		\midrule
+		\textbf{[Lin 227]} Tabla del Bloque 1, fila \texttt{06} (\emph{Mecanismo de fin}) &
+		Escribir los códigos reales: «\texttt{1} = vida (familia de
+		iconos), \texttt{2} = muerte (familia de iconos),
+		\texttt{3} = por contador; \textbf{nulo} (\texttt{0xFFFF}) si el cartucho
+		no declara fin. Un código desconocido es error claro del lector
+		(F5-I14).» \\
+		\midrule
+		\textbf{[Lin 377]} Tabla del registro de segmento, fila \emph{Contador interno} &
+		Sustituir «número de contador (1--4) en los contadores; en el
+		resto 0» por «número de contador (1--4) en los contadores;
+		\textbf{nulo} (\texttt{0xFF}) en el resto», con el convenio del valor
+		nulo de la tabla de tipos. \\
+		\midrule
+		\textbf{[Lin 379]} Tabla del registro de segmento, fila \emph{Valor inicial} &
+		Sustituir «valor de arranque del contador o Cero» por «en un
+		contador, su valor inicial; en un icono de vida o muerte, su
+		\textbf{ORDEN en la familia} (\texttt{1..N}, el que el motor usa para
+		ordenar los iconos; F5-I13); 0 en el resto». El lector ya lo
+		interpreta así. \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Cambios en el F5-I02.}
+\end{table}
+
+\subsection{Hecho y no documentado (nota por iteración)}
+\label{sec:F5I16Hecho}
+
+\begin{itemize}
+\item \textbf{Start reinicia.} En
+\texttt{GW Iteraciones/capitulos/AnexoA/F4-I02-Cambios necesarios.tex}
+(al final, tras el último \texttt{itemize}, línea 110), añadir
+apartado corto: «\textbf{Relanzar con Start.} Mientras hay partida
+(o tras el fin), pulsar de nuevo el botón que el cartucho llama
+\emph{Start} llama de nuevo a \texttt{arrancar()}: nueva partida,
+nueva semilla; reinicia contadores, política de rutas y cola de
+pulsaciones, y reparte el estado inicial de los tres
+componentes.»
+\item \textbf{\texttt{jugar()} oculta la interfaz de carga.} En
+\texttt{GW Iteraciones/capitulos/AnexoA/F5-I10. Pestaña
+Cartucho.tex} (junto al apartado del trío de sistema, tras la
+línea 120), añadir: «En modo juego, \texttt{jugar()} oculta los
+botones de carga, el panel de estado y las pestañas
+Editor/Sprites/Pruebas; \texttt{finDePartida()} es la única salida
+(botón Stop o fin del juego, F3-I11) y los restaura; la pantalla
+queda congelada tal cual, como en la máquina real.»
+\end{itemize}
+

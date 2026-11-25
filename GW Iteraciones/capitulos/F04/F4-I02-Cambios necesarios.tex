@@ -1,0 +1,111 @@
+\subsection{Segunda iteración de la Fase 4: Cambios necesarios}
+\label{subsec:F4I2}
+
+\subsubsection{Velocidades por plataforma}
+
+\begin{itemize}
+	\item El GWI gana el campo \texttt{pausas\{simulador, externo\}}: un
+	solo archivo de cartucho define las dos velocidades de reloj. El
+	simulador lee siempre, como es lógico, \texttt{simulador}; el firmware
+	del ESP32 leerá \texttt{externo}. La lógica del motor de estados no
+	cambia en absoluto: es determinista en \textit{ticks}, y la pausa solo
+	decide a qué velocidad real se consumen.
+	
+	\item Si el campo no está presente en el \emph{setup.json} o en el
+	cartucho, el Director usa por defecto 500 ms en ambas plataformas.
+	
+	\item La ficha del cartucho del diseñador gráfico (la que se abre al
+	pulsar en una zona vacía) gana los dos campos, con validación de entero
+	positivo. Los valores viajan en el historial (deshacer y rehacer) y en
+	el GWI al guardar.
+	
+	\item El puente de datos (\texttt{comunListas}) gana los accesos
+	\texttt{fijarPausas} y \texttt{pausasDeCartucho}, siguiendo el patrón de
+	la Secuencia y del fin de partida: \texttt{baseDirector} los escribe al
+	cargar el cartucho y el diseñador los sincroniza en vivo al final de cada
+	reconstrucción de la ficha, de modo que cualquier edición es visible para
+	el motor sin guardar ni recargar.
+\end{itemize}
+
+\subsubsection{Aceleración del juego}
+
+\begin{itemize}
+	\item El GWI gana el campo
+	\texttt{aceleracion \{ cada, resta, minimo \}}: cada \texttt{cada}
+	\textit{ticks} de partida, la pausa vigente se reduce en \texttt{resta}
+	milisegundos, sin bajar nunca de \texttt{minimo}.
+	
+	\item Un solo conjunto de parámetros sirve a ambas plataformas: la
+	aceleración se aplica sobre la pausa inicial de cada una, por lo que el
+	efecto es proporcional y no hace falta duplicar los campos.
+	
+	\item Si el campo no está presente, la pausa permanece fija durante toda
+	la partida, por tanto la velocidad será constante.
+	
+	\item El Director aplica la reducción en su contador de \textit{ticks} y
+	expone la pausa vigente, que la barra de estado con \texttt{GW\_DEBUG}
+	presenta junto al número de \textit{tick}, para poder verificar la
+	aceleración durante las pruebas.
+	
+	\item La aceleración cuenta \textit{ticks} de partida, no de reloj: el
+	motor de estados sigue siendo determinista, de modo que dos partidas con
+	la misma semilla atraviesan exactamente los mismos estados, solo que a
+	velocidad creciente.
+\end{itemize}
+
+\subsubsection{Política de lanzamiento de rutas}
+
+\begin{itemize}
+	\item El GWI gana el campo \texttt{Nº para aumentar rutas}
+	(clave \texttt{rutas.aumentarCada}).
+	
+	\item El Director inicia cada partida con el \textbf{total de rutas
+		lanzadas} en 0 y el \textbf{máximo de rutas simultáneas} en 1; ambos
+	valores se reinician con cada partida.
+	
+	\item Cada vez que se lanza una nueva ruta, el \textbf{total de rutas
+		lanzadas} aumenta en 1; cuando una ruta muere, este total no cambia.
+	
+	\item Cuando el \textbf{total de rutas lanzadas} es múltiplo del campo
+	\texttt{Nº para aumentar rutas}, el \textbf{máximo de rutas
+		simultáneas} aumenta en 1, sin superar nunca el número de rutas
+	definidas en el cartucho.
+	
+	\item El Director lleva además el \textbf{contador de rutas vivas}: el
+	número de rutas en pantalla en cada momento. En cada \textit{tick}, si
+	las rutas vivas son menos que el máximo de simultáneas, se lanza una
+	nueva ruta. La regla actual (nacer cuando no queda ninguna viva) es el
+	caso particular de \emph{máximo de rutas simultáneas = 1}.
+\end{itemize}
+
+\subsubsection{Combinación de pulsaciones del teclado}
+Este era un tema pendiente, se creó para permitir combinar teclas para ejecutar saltos. La regla \texttt{combinar} decide cómo se procesan las pulsaciones encoladas del teclado: con ella activa, el buffer se reduce a ejes y el jugador da un paso por eje (dos pulsaciones iguales en la misma ventana cuentan como una, y las opuestas se anulan, permitiendo el movimiento diagonal); sin ella, cada pulsación es un paso independiente por orden de llegada. Hoy esta regla vive únicamente en el \emph{setup}, fuera del cartucho, de modo que no es editable desde el diseñador gráfico ni viaja en el GWI: un cartucho definitivo no puede reproducir el comportamiento de su teclado.
+
+Pero es un tema que solo usaban algunos cartuchos de última generación, por lo que finalmente \underline{la decisión ha sido dejarlo como posible ampliación del proyecto}.
+
+\subsubsection{Validación de los cambios}
+
+\begin{itemize}
+	\item \textbf{Contador de rutas vivas atascado en la decisión inmediata
+		de colisión}: Al probar la nueva política de rutas con un máximo de
+	simultáneas mayor que 1, el contador de rutas vivas se quedaba
+	atascado en 1: solo se producía una muerte de ruta y, a partir de ahí,
+	el motor dejaba de lanzar rutas nuevas aunque el máximo lo permitía.
+	La causa era que el decremento del contador al morir una ruta solo
+	se aplicaba en cuatro de los cinco puntos del motor donde una ruta
+	muere; faltaba el de la decisión inmediata al avanzar a un punto de
+	colisión (la ruta muere \emph{en el momento} de chocar, sin esperar al
+	tick siguiente). Con el decremento llamado también desde ese punto, el
+	contador baja en todas las muertes y el lanzamiento vuelve a
+	funcionar. Este error es invisible con la regla histórica (máximo de
+	simultáneas = 1), porque la ruta nueva nace justamente cuando no queda
+	ninguna viva: por eso no apareció hasta que la fase dio al cartucho el
+	control de la política de lanzamiento.
+	
+	\item \textbf{Error de escritura en el nombre del puente.} Durante el
+	desarrollo, una línea del \texttt{JuegoDirector} llamaba al puente con
+	una doble eme (\texttt{CommunListas}), lo que en el navegador habría
+	provocado un fallo silencioso de la aceleración (el Director no
+	encuentra el campo y aplica la pausa fija). Cazado en la simulación
+	antes de la prueba en navegador.
+\end{itemize}

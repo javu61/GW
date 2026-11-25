@@ -1,0 +1,166 @@
+**********************************************************************************\\
+**********************************************************************************\\
+**********************************************************************************\\
+
+\section*{Temas pendientes}
+\begin{itemize}
+	
+	\item Bloque A: motor y editor 
+	\begin{itemize}			
+		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetro Campo que retorne nombre en el json, valor min y valor max, y que la lectura del json la haga con json[nombre] en lugar de como json.nombre, recorriendo la lista de valores. Cuidado que esto es bueno para lectura y grabación, pero no para los ajustes al vuelo de los valores máximos de los campos en el interface. Hay que pensarlo bien.
+	\end{itemize}
+	
+	\item Bloque C: documentación (cuando el código y el formato ya no cambien)
+	\begin{itemize}
+		\item PC1. Cerrar F5-I11 y F5-I12 con las dos decisiones pendientes: Generar pide Aplicar, y el campo \texttt{descripcion}.
+	
+		\item PC2. F5-I10: correcciones de A/B/R, resolución opcional u obligatoria, y pruebas.
+			
+		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
+		
+		\item PC5. Anexo de formatos como anexo general en los dos documentos, con el Bloque 1 de 8 valores y el Bloque 0 de 36 bytes (ColorFondo y reglas).
+		
+		\item PC6. Integración de textos
+	\end{itemize}
+	
+	\item Bloque D: Fase 6
+	\begin{itemize}
+		\item PD1. Fase 6 (ESP32): capas del motor gráfico, puertos GPIO, LCG portable y firmware C++ que lee el GWC. La estrategia de presentación se decide midiendo en hardware real.
+	\end{itemize}
+	
+\end{itemize}
+\clearpage
+
+\section*{Refactorizar}
+
+Nota: durante la refactorización (R01--R09), mantener las suites
+      Playwright en verde (S1--S7, red de seguridad; F5-I18).
+
+\begin{xltabular}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
+	\toprule
+	\textbf{Nro} & \textbf{Descripción} \\
+	\midrule
+	\endhead
+	R01 & \textbf{Funciones gigantes:}\newline \texttt{BaseDescomponer.mostrarPanel} ($\sim$1300 líneas $\to$ \texttt{panelMarcados}, \texttt{panelCartucho}, \texttt{panelOrden}, \texttt{panelTipo}, \texttt{panelEnlaces}, \texttt{panelColision}, \texttt{panelDigito}, \texttt{panelContador}, \texttt{panelUnion}); \texttt{aplicarEleccion} (279); manejador del selector de tipo ($\sim$175); \texttt{JuegoMotorEstados.tick} (que sea una lista de llamadas), \texttt{iniciar} (110), \texttt{decidirColision} (100), \texttt{prepararContadores} (80); \texttt{BaseDirector.procesarCartucho} (110), \texttt{generarGWIyGWC} (75), \texttt{montarGWI} (80). \\
+	\midrule
+	
+	R02 & \textbf{Patrones repetidos:}\newline \texttt{filaEnlace(...)} (6$\times$); \texttt{confirmar(g, entradas)} (19$\times$); \texttt{encender(seg, v)} en el motor ($\sim$6$\times$); \texttt{escribirInverso}/\texttt{retirarInverso} (4 sitios); \texttt{publicarEnPuente(cfg)} (7 llamadas \texttt{ComunListas.fijar*} en \texttt{procesarCartucho} y \texttt{procesarGWC}); \texttt{accionarBoton(numero)} (Start/pulsar duplicado); \texttt{tomarFichero(id)} (4 \texttt{alSeleccionar*}); \texttt{envolvente(cajas)} (6$\times$); \texttt{aplicarAlta}/\texttt{aplicarBaja} (3 sitios); \texttt{\_descargarGWC} copia una descarga genérica y \texttt{\_validarCabeceraGWC} repite la suma de verificación. \\
+	\midrule
+	
+	R03 & \textbf{GWC: una sola tabla de layout por registro}\newline \texttt{[\{campo, bytes, escala, nulo\}]} con escritor y lector con cursor (\texttt{DataView}) y aserción $\Sigma\texttt{bytes} === 32$; sirve de especificación para el \texttt{.tex} y el C del ESP32. \\
+	\midrule
+	
+	R04 & \textbf{Guardas defensivas innecesarias:}\newline \texttt{typeof ComunListas/JuegoDirector/BaseDirector !== 'undefined'} por todas partes (el orden de carga lo fija \texttt{index.html}) y enums de respaldo que copian \texttt{ComunListas.tipos}. \\
+	\midrule
+	
+	R05 & \textbf{Portabilidad al ESP32 (motor):}\newline ids de texto $\to$ índices al cargar (\texttt{\_indiceDe} busca linealmente); bits por segmento en lugar de mapas por id; quitar \texttt{sort}/\texttt{filter} del tick (calcular en \texttt{iniciar}); \texttt{'ascendente'/'descendente'} $\to$ booleano; en el motor gráfico \texttt{\_pixelesDe} crea un canvas por segmento en cada tick: guardar siluetas al cargar. \\
+	\midrule
+	
+	R06 & \textbf{Pintado duplicado:}\newline el aparato tiene su copia de \texttt{DibujarFondo}/\texttt{DibujarSegmento}; unificar en \texttt{BaseGraficos.pintarSprite(...)} o recortar \texttt{BaseGraficos}. \\
+	\midrule
+	
+	R07 & \textbf{Código muerto o sobrante (comprobado 22-11):}\newline Limpieza de elementos sin uso verificados en los módulos principales: \\
+
+		& A. \textbf{BaseDirector:}\newline parte de dibujo de \texttt{mostrarSprites} (siempre con \texttt{[]}), variables privadas \texttt{sprites}/\texttt{segmentos}, \texttt{ESTILOS.*.descripcion}, exports \texttt{pestanna} e \texttt{imagenBlob}. \\
+	
+		& B. \textbf{BaseCartucho:}\newline exports \texttt{leerGWB}, \texttt{leerGWI}, \texttt{leerJSON}, \texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}; \texttt{cargarDelMapa} (lógica copiada en \texttt{BaseDirector}); \texttt{'GWC'} en \texttt{TIPOS\_CARTUCHO} (acepta un \texttt{.json} de tipo GWC); \texttt{json.img\_s} en la raíz. \\
+	
+		& C. \textbf{BaseDescomponer:}\newline parámetro \texttt{codigo} de \texttt{montarGWI}; \texttt{dx}/\texttt{dy} (restos de «Posicionar»); compatibilidad con GWI antiguos (\texttt{uniones}, \texttt{\{unir\}}, tipo 99, «Deshacer unión»): aislar o retirar. \\
+	
+		& D. \textbf{JuegoMotorEstados:}\newline \texttt{splice} de \texttt{iniciar} sin efecto; \texttt{pruebaAleatorios}, \texttt{jugadorActual}, \texttt{rutasVivas}, \texttt{congelada}, \texttt{estadoRutas} y \texttt{MOVER} exportados sin uso (\texttt{estadoRutas} y \texttt{BasePACK.verificarPACK} se dejan: API del Anexo A). \\
+	
+		& E. \textbf{JuegoDirector:}\newline 14 líneas de prueba comentadas en \texttt{arrancar}, \texttt{pausaVigente} y comprobación redundante \texttt{ticks > 0}. \\
+	
+	\midrule
+
+	R08 & \textbf{Comentarios y BaseGraficos.js:}\newline mezclan historial («23-10», «F4-I9», «v12.5», \texttt{@since}) con la explicación; dejar el \textbf{qué} y el \textbf{por qué}, la historia al LaTeX (P17: cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los \texttt{Juego*.js}). Desactualizados: motor («nace un tick tras morir», «interrumpida con cada colisión», \texttt{rutasVivas} «0 o 1», errata «ATRIZA»); \texttt{BaseCartucho} («GWC > GWI > GWB», «little-endian» aplicado a RGB); \texttt{BaseDirector} (comentario de \texttt{imagenBlob}, «único miembro público», «combinar viene del setup», «pantalla en blanco» pinta gris); \texttt{BaseDescomponer} (JSDoc duplicados en $\sim$542--580 y $\sim$2583--2593, frases cortadas en $\sim$743, 1114, 1135--1141, 4706). \textbf{BaseGraficos.js:} mojibake («INVERSIÓN», «públic») y 29 guiones blandos \texttt{U+00AD} (recontados). \\
+	\midrule
+
+	R09 & \textbf{Pestañas / accesibilidad:}\newline faltan \texttt{role="tablist"/"tab"} y \texttt{aria-selected}; no hay \texttt{:focus-visible}; los botones de la máquina solo responden a \texttt{pointerdown} (sin Enter/Espacio); \texttt{mostrarPestanna} sobrescribe \texttt{className} (mejor \texttt{classList.toggle} o \texttt{data-vista}); el nombre se escribe de tres formas: \texttt{pestanna}, \texttt{pestanaVista}, \texttt{\#pestanas}. \\
+	\bottomrule
+\end{xltabular}
+\clearpage
+
+\section*{Textos a revisar}
+
+\begin{xltabular}{\textwidth}{l >{\RaggedRight\arraybackslash}X}
+	\toprule
+	\textbf{Nro} & \textbf{Descripción} \\
+	\midrule
+	\endhead
+	T01 & \textbf{Integrar los cambios de textos:}\newline los detallados en F5-I15a. \\
+	\midrule
+	T02 & \textbf{Orden del tick (F3-I01, Memoria F3):}\newline el código ya hace (0) limpieza, (1) entrada, (2) rutas (el comentario del motor ya está corregido); el texto de la Memoria F3 (l.~65--66) sigue con el orden antiguo. Texto nuevo propuesto en F5-I15a (l.~34--41), sin aplicar. \\
+	\midrule
+	T03 & \textbf{«combinar»:}\newline la explicación de la Memoria F3 ya está actualizada con el texto de F5-I15a; quedan el «Hoy esta regla vive únicamente en el \textit{setup}» de F4-I02 (l.~82) y los pasos diagonales de F3-I01 (l.~78) y F3-I02 (l.~87) --- el código hace dos movimientos encadenados y \texttt{MOVER} solo tiene izquierda y derecha. \\
+	\midrule
+	T04 & \textbf{Cadenas por vida/muerte (F3-I08):}\newline la cabecera del motor ya está corregida; quedan dos «atraviesa» en la Memoria F3 (l.~580 y 597, filas descriptivas de la tabla de pruebas) por revisar. \\
+	\midrule
+	T05 & \textbf{F5-I03:}\newline planificaba \texttt{guardarGWC} y \texttt{estadistica} con el ahorro de deduplicación; se hizo distinto; anotarlo (aún no está en F5-I15a). \\
+	\midrule
+	T06 & \textbf{F3-I06 y F3-I10:}\newline usan \texttt{salvadoIndicador}/\texttt{ColisionPositiva}; el código, \texttt{salvadoContador}/\texttt{muerteContador} con valores \texttt{'1'}--\texttt{'4'}. F3-I10 dice \texttt{seg\_F01}, el código \texttt{F01}. Dígito y contador usan otro mecanismo de absorción, que no hereda ni re-apunta. \\
+	\midrule
+	T07 & \textbf{Memoria F1.tex (260--281):}\newline presenta el XOR y la unión con fantasmas tipo 99; hoy el color se escribe directo y la unión crea una pieza F con \texttt{fusionadoPor}. \\
+	\midrule
+	T08 & \textbf{F1-I08:}\newline dice que el JSDoc lleva \texttt{@iteracion} (l.~113); no aparece. \\
+	\midrule
+	T09 & \textbf{F1-I11:}\newline se contradice sobre \texttt{DibujarSegmento} o funciones propias (l.~21 y 36; usa propias). \\
+	\midrule
+	T10 & \textbf{F1-I01:}\newline dice «A y B arrancan\ldots{} Solo se usa actualmente el botón A» (l.~17); hoy el arranque por defecto es el 8, R. (La validación de \texttt{puerto} con aviso quedó resuelta en F5-I16.) \\
+	\midrule
+	T11 & \textbf{C4-diseño (l.~195, 204 y 232):}\newline dice que \texttt{tiempoEspera} lo cambia la máquina de estados según puntuación; lo cambia el director según los ticks. \\
+	\bottomrule
+\end{xltabular}
+
+
+\clearpage
+
+
+**********************************************************************************\\
+**********************************************************************************\\
+**********************************************************************************\\
+
+\section*{Ampliaciones futuras}
+\label{sec:Ampliaciones}
+
+
+
+\begin{itemize}
+	\item Bloque A: Mejoras a incluir en el desarrollo cuando sea posible
+	
+		\item MA01 \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría. Es necesario «decidir el transporte de nombre+portada antes de cerrar el anexo de formatos (PC5)»
+		
+	\item Bloque B: Mejoras interesantes que se pueden incluir
+		\begin{itemize}
+		\item MB02 Al cargar imágenes \textbf{img\_s}, poder cargar cualquier imagen y convertirla a blanco y negro.
+		
+		\item MB03 En la pestaña del cartucho, poder cambiar el estilo de la máquina, con las limitaciones necesarias.
+		
+		\item MB04 Que al guardar el GWC se generen el propio fichero y, además, un GWS con los datos del setup, y se empaqueten ambos en un ZIP, disponiendo de ambos cartuchos: el binario para usar en el ESP y el empaquetado usable en el emulador, si se carga el empaquetado se carga primero el setup, si se carga el binario se verifica que exista un setup.
+
+		\end{itemize}
+
+
+	\item Bloque C: Temas fuera del alcance del proyecto actual:	
+		\begin{itemize}
+		
+		\item MC01 \textbf{Game B}: el segundo juego de las máquinas reales depende del diseño de cada máquina.
+		En el Parachute existe una cuarta ruta que hace oscilar un tiempo a un paracaidista en el extremo derecho; en otro juego puede ser lanzar las rutas más rápido, aumentar la velocidad de salida o añadir segmentos con obstáculos.
+		La política de rutas ya viaja en el cartucho, así que Game B sería un segundo conjunto de parámetros de lanzamiento, más la oscilación temporal del paracaidista (bucles temporales).
+		
+		\item MC02 \textbf{Multi-colisión}: que un mismo segmento de jugador sea punto de colisión de varios elementos; hoy «un jugador, un punto de colisión» es bloqueante en el diseñador.
+		
+		\item MC03 \textbf{Más de una Secuencia}: el cartucho admite una sola animación de fondo.
+		
+		\item MC05 \textbf{Generador inverso de colores} (F1): graficar el GWI como imagen con colores por rol, útil como visualización del cartucho.
+		
+		\item MC06 \textbf{Cambios en las secuencias}: en Donkey Kong un barril puede cambiar su secuencia de caída según el tiempo de juego y la dificultad; sería una regla del cartucho para bifurcaciones de ruta según el progreso.
+		
+		\item MC07 \textbf{Uniones de segundo nivel}.
+		
+		\item MC08 \textbf{Sonido}.
+		
+		\item MC09 \textbf{Deduplicación de imágenes aproximadas}: aporta poco, pero es abordable.
+		
+		\end{itemize}
+\end{itemize}

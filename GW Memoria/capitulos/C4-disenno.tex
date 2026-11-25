@@ -1,0 +1,271 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+	\chapter{Diseño}
+	\label{C:disenno}
+
+Este capítulo recoge el proceso de desarrollo e implementación del sistema propuesto. Para gestionar la complejidad derivada de trabajar con múltiples lenguajes (JavaScript, html, css y C++) y plataformas (navegador web y hardware embebido), se ha adoptado una metodología de desarrollo evolutivo e incremental. 
+
+\section{Prototipado evolutivo y Desarrollo incremental}
+\label{sec:desarrollo-incremental}
+
+Dado que el proyecto abarca varios programas y plataformas diferentes, se ha optado por un desarrollo evolutivo a lo largo de todo el proyecto: en cada iteración del ciclo se recorren las fases de análisis, diseño, desarrollo y pruebas. De esta manera se consigue un desarrollo ágil, en el que los primeros prototipos pueden verse rápidamente, sin necesidad de realizar un análisis detallado de todos los elementos antes de comenzar.
+
+Los tres puntos clave del prototipado evolutivo son:
+\begin{itemize}
+	\item Los prototipos no se descartan: A diferencia del prototipado desechable, el código y las estructuras desarrolladas se reutilizan y evolucionan para formar parte del sistema definitivo.
+
+	\item Crecimiento iterativo: Cada ciclo añade nuevas características o mejora las existentes según el objetivo fijado en el ciclo.
+
+	\item Visibilidad temprana: Se puede probar una versión funcional desde el inicio del proyecto, por lo que es sencillo efectuar cambios en el alcance no considerados antes de comenzar el proceso, pero detectados interactuando con el sistema desarrollado.
+\end{itemize}
+
+El desarrollo evolutivo e incremental resulta especialmente adecuado para evitar definir de antemano elementos que, conforme avanza el proyecto, requieren ajustes continuos. Por ello, se ha considerado más adecuado definir bien el sistema general y dejar que cada parte sea lo más independiente posible, en lugar de cerrar todos los detalles desde el principio.
+
+Se ha priorizado, además, un enfoque de desarrollo descendente (\textit{top-down}), tal y como lo describe Knuth \cite{knuth1_es}: descomponer el programa en funciones, que a su vez pueden descomponerse en otras más pequeñas, permite obtener funciones sencillas de entender, de tamaño reducido y fácilmente modificables. Este enfoque permite incluso definir funciones sin código que solo retornen inicialmente datos fijos, a la espera de su implementación definitiva, de forma que el sistema pueda probarse de manera incremental durante todo el desarrollo.
+
+El prototipado evolutivo es muy adecuado para el scrum, y aunque no hay un equipo detrás, usaré la misma filosofía de desarrollo rápido que sigue estos pasos:
+
+\begin{enumerate}
+	\item Partimos del artefacto de la iteración anterior, que debe estar operativo.
+	\item Definimos lo que deseamos obtener en la iteración.
+	\item Incorporamos cambios, mejoras o nuevas funcionalidades.
+	\item Afinamos el desarrollo, resolvemos los errores, hacemos pruebas, hasta que el nuevo artefacto funcione sin problemas.
+	\item Cerramos la iteración entregando un artefacto operativo.
+\end{enumerate}
+
+\section{Fases del proyecto}
+\label{sec:fases}
+
+El ciclo de vida del proyecto se ha estructurado de forma deliberada en tres fases estratégicas independientes y consecutivas, detalladas en la Tabla~\ref{tab:fases_proyecto}. Cada fase representa un hito arquitectónico concreto que debe quedar completamente validado antes de iniciar el trabajo con la posterior. En cada fase, la primera interacción seria siempre el análisis de lo que se desea obtener, imprescindible para poder alcanzar el objetivo, pero el desarrollo evolutivo permite ir afinando el sistema poco a poco, añadiendo alguna característica no contemplada inicialmente, pero que en la fase de pruebas de la iteración se ve conveniente o incluso necesaria.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{@{} p{3.0cm} p{6.0cm} p{6.0cm} @{}}
+		\toprule
+		\textbf{Fase} & \textbf{Objetivo Principal} & \textbf{Alcance y Hitos Clave} \\ 
+		\midrule
+		\textbf{A: Autoría} & Diseño del conjunto de segmentos, sus propiedades y relaciones. & El objetivo es disponer de un Diseñador Gráfico de los segmentos y un test funcional de movimiento aislado para probar los gráficos extraidos. \\ 
+		\addlinespace
+		\textbf{B: Simulador} & Implementación del bucle secuencial del Director del sistema, el Motor Gráfico y el Motor de Juego en JavaScript. & Simulación de un juego en el navegador, gestión de estados complejos, colisiones discretas y aceleración por reloj. \\ 
+		\addlinespace
+		\textbf{C: ESP32} & Traslado arquitectónico (\textit{porting}) a la plataforma física basada en el microcontrolador ESP32. & Reescritura del simuladro en C++, lectura del formato binario compacto (\texttt{GWC}) y cableado físico de botones y pantalla SPI. \\ 
+		\bottomrule
+	\end{tabular}
+	\caption{Fases estratégicas del ciclo de desarrollo incremental.}
+	\label{tab:fases_proyecto}
+\end{table}
+
+Cada una de estas fases maestras se pueden subdividir en fases mas pequeñas para mejorar el tratamiento de cada parte, siempre pensando en poder finalziar cada fase con un artefacto funcional. 
+
+	\section{Entornos de desarrollo}
+	\label{sec:entornos-desarrollo}
+
+	Se ha optado por Visual Studio Code como entorno principal, ya que permite unificar en una sola herramienta los distintos desarrollos del proyecto:
+
+	\begin{itemize}
+		\item \textbf{JavaScript}: al tratarse de ficheros de texto plano, cualquier editor es válido para su desarrollo; por comodidad se emplea Visual Studio Code, que ofrece resaltado de sintaxis y control de errores básico.
+
+		\item \textbf{HTML}: aunque solo es necesario un pequeño \texttt{index.html} para cargar el JavaScript, VS Code permite editarlo con las mismas comodidades.
+
+		\item \textbf{Firmware para el ESP32}: se empleará VS Code junto con \textbf{pioarduino} (un \textit{fork} mantenido de PlatformIO; la extensión PlatformIO clásica está descontinuada para el \textit{core} Arduino-ESP32 v3). Esta combinación permite no solo desarrollar y cargar el firmware en el ESP32, sino también depurarlo, lo cual resulta especialmente importante. Como alternativa, puede emplearse la extensión oficial de Arduino para VS Code (que utiliza \texttt{arduino-cli} internamente).
+	\end{itemize}
+
+	Se contempla además la posibilidad de establecer \textit{pipelines} de integración continua independientes en GitHub Actions: uno para el Diseñador (JavaScript, sin proceso de \textit{build} real) y otro para el firmware (compilación en modo \textit{headless}).
+
+
+\section{Arquitectura prevista}
+\label{sec:Arquitectura}
+
+El objetivo final es completar esta arquitectura general del sistema, donde se indican los formatos de cartucho a usar o generar y los procesos generales previstos:
+
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics[width=5.0cm]{../imagenes/Propias/c01-001}}
+	\caption[Arquitectura general]{Arquitectura general del sistema previsto}
+	\label{fig:c01-001}
+\end{figure}
+
+
+	\section{Formato del cartucho}
+	\label{sec:formato-cartucho}
+
+	Conviene distinguir dos ejes independientes relacionados con el cartucho.
+
+	En primer lugar, el \textbf{origen del contenido}: un cartucho puede generarse escribiendo directamente su fichero \texttt{JSON} de forma manual, o bien empleando el propio Diseñador como herramienta asistida (véase la Sección~\ref{sec:arquitectura} del capítulo de Propuesta). Ambas vías producen el mismo formato de autoría, y se mantendrán disponibles simultáneamente para dar flexibilidad al desarrollo.
+
+	En segundo lugar, el \textbf{formato de representación}, que varía según la fase de uso:
+
+	\begin{itemize}
+		\item \textbf{Formato de autoría}: un fichero \texttt{JSON} junto con un conjunto de ficheros PNG con las imágenes correspondientes. Es amigable con Git (diferencias legibles en el \texttt{JSON}, imágenes como ficheros binarios normales, sin necesidad de codificación base64 embebida). Es el formato que se emplea tanto en la creación manual como en la asistida por el Diseñador.
+		\item \textbf{Cartucho compilado}: un binario compacto, generado en un paso de exportación a partir del formato de autoría. El ESP32 no debe decodificar PNG ni analizar \texttt{JSON} en tiempo de ejecución, por requerir demasiados recursos; por ello, todo el procesamiento pesado se realiza en el exportador, en el PC. Este formato es candidato a cargarse desde la tarjeta microSD del propio módulo, siguiendo el símil de 'cartucho intercambiable'.
+	\end{itemize}
+
+A modo de resumen, en la Tabla~\ref{tab:comparativa_formatos} se presenta la estructura, el propósito y el componente encargado de procesar cada una de las variantes del formato de cartucho planteadas en la arquitectura:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{@{} p{3.7cm} >{\centering\arraybackslash}p{3.5cm} X p{3.5cm} @{}}
+		\toprule
+		\textbf{Formato} & \textbf{Archivos} & \textbf{Rol} & \textbf{Consumidores} \\ 
+		\midrule
+		
+		\textbf{GWS} \textbf{(Setup)} & \texttt{JSON} & Definición del aparato de destino final (ESP32). & Editor Visual \\ 
+		\addlinespace
+		
+		\textbf{GWB} \textbf{(Base)} & \texttt{JSON} + \texttt{PNG} & Definición básica del cartucho y gráficos a utilizar. & Editor Visual \\ 
+		\addlinespace
+		
+		\textbf{GWI} \textbf{(Intermedio)} & \texttt{JSON} + \textit{sprites} & Definición de geometría y lógica acoplada. & Editor Visual\newline Simulador PC \\ 
+		\addlinespace
+		
+		\textbf{GWC} \textbf{(Compilado)} & Binario & Datos optimizados para lectura directa. & Simulador PC\newline ESP32 \\ 
+		\bottomrule
+	\end{tabularx}
+	\caption{Formatos de cartucho en el sistema.}
+	\label{tab:comparativa_formatos}
+\end{table}
+
+\section{Modelo gráfico: fondo fijo y segmentos}
+	\label{sec:modelo-grafico}
+
+	En el hardware original, el arte fijo se imprime en una capa situada \textbf{detrás} del cristal líquido, dejando huecos en los lugares donde posteriormente aparecen los segmentos animados. Nunca existe solape entre fondo y segmento: si un segmento cayera sobre una zona con arte fijo impreso, se perdería visualmente. Esto no constituye una limitación técnica del diseño propuesto, sino una regla real del propio hardware que se está emulando.
+
+	Se emplearán dos imágenes maestras por pantalla:
+	\begin{itemize}
+		\item \texttt{fondo.png}: la pantalla en reposo, con todos los segmentos apagados; representa únicamente la imagen fija de fondo.
+		\item \texttt{referencia.png}: la pantalla con el fondo y todos los segmentos encendidos a la vez, representados como una única imagen. Resulta más cómodo de elaborar que gestionar transparencias o canal alfa por segmento de forma individual, y permite además comprobar visualmente que no existan conflictos de ubicación entre segmentos. A partir de esta imagen, el sistema puede identificar automáticamente cada segmento, separarlo y generar los recortes necesarios.
+	\end{itemize}
+
+	\subsection{Segmentos}
+	\label{sec:segmentos}
+
+	Cada colocación de segmento se define por su posición y tamaño dentro de \texttt{referencia.png} (X, Y, Ancho, Alto), y no mediante una imagen propia, lo que simplifica considerablemente el proceso de diseño.
+
+	El contenido visual de cada segmento se obtiene recortando la zona correspondiente en tiempo de simulación o exportación. Concretamente, se generan dos imágenes por segmento: una para el estado \emph{encendido} (recorte de \texttt{referencia.png} en esa posición) y otra para el estado \emph{apagado} (el mismo recorte, pero tomado de \texttt{fondo.png}). De esta manera, el motor realiza siempre la misma operación para mostrar u ocultar un segmento —pintar la imagen correspondiente en su posición—, cambiando únicamente cuál de las dos imágenes utiliza en cada caso.
+
+	\subsection{Renderizado}
+	\label{sec:renderizado}
+
+	El proceso de renderizado parte de una copia de \texttt{fondo.png} como lienzo base; por cada segmento activo, se pinta sobre dicho lienzo el recorte correspondiente de \texttt{referencia.png} en su posición.
+
+	Esto aporta una ventaja relevante de cara a la exportación: el recorte y la conversión de formato se realizan una única vez, en el exportador (PC); el firmware del ESP32 se limita a copiar bytes ya preparados, sin procesamiento adicional.
+
+	Es posible, además, reutilizar segmentos repetidos, ya que un mismo segmento (misma forma o gráfico) puede aparecer en varias posiciones de la pantalla. Para ello se separan dos conceptos:
+	\begin{itemize}
+		\item el \textbf{gráfico del segmento} (el contenido visual, identificado una única vez);
+		\item la \textbf{instancia o colocación del segmento} (una posición X,Y concreta que hace referencia a un gráfico de segmento).
+	\end{itemize}
+
+	Esta separación evita duplicar procesamiento o almacenamiento cuando una misma forma se repite (por ejemplo, dígitos de un marcador o iconos repetidos), y resulta fiel al funcionamiento de muchos Game~\&~Watch reales. Queda pendiente de detallar en el modelo de datos el mecanismo exacto de referencia (identificador de gráfico compartido junto con la lista de instancias/posiciones).
+
+	Un matiz importante es que los segmentos no son rectangulares: la caja definida por (X, Y, Ancho, Alto) es únicamente un contenedor, no la forma real del segmento, que es arbitraria, tal como ocurría en el hardware original.
+
+	Esto obliga a que la validación de solapamiento sea más cuidadosa: no basta con comparar las áreas de los rectángulos, ya que dos formas irregulares pueden tocarse —o no— sin que sus cajas envolventes lo reflejen con precisión. El método adoptado consiste en lo siguiente: cuando dos rectángulos se solapan en área, se comparan en la zona de intersección los píxeles de \texttt{referencia.png} frente a los de \texttt{fondo.png}. Si existen píxeles 'con contenido' (distintos del fondo) en dicha zona compartida, se considera un conflicto real de solapamiento, que debe revisarse; si la zona compartida coincide con el fondo, no existe conflicto real.
+
+	Como regla de negocio, los segmentos pueden tocarse (compartir un borde) pero nunca solaparse (compartir píxeles reales) —una limitación física real, ya que en una máquina real los segmentos son siempre independientes entre sí.
+
+	\subsection{Referencia de estado del arte}
+	\label{sec:estado-arte-mame}
+
+	El proyecto MAME, mediante el controlador \texttt{hh\_sm510} para la familia de procesadores Sharp de la gama SM5xx (SM500, SM511, SM512, entre otros), confirma el modelo conceptual adoptado: segmentos LCD predibujados que se muestran u ocultan, sin necesidad de un \textit{framebuffer}. Para lograr la máxima fidelidad, MAME emplea ficheros SVG vectoriales trazados a partir de escaneos reales de la pantalla LCD, en los que cada elemento lleva asociado un identificador vinculado a una salida del hardware emulado.
+
+	Se ha optado, de forma razonada, por un modelo de bitmaps, rectángulos y validación por diferencia de píxeles —más sencillo de implementar en un editor visual básico— en lugar de polígonos vectoriales al estilo MAME. Esta decisión se documenta como una simplificación deliberada, adecuada para un motor orientado a la autoría rápida de juegos, y no a la reconstrucción arqueológica pixel a pixel del hardware original.
+
+	\section{Arquitectura de ejecución: Director y dos motores}
+	\label{sec:arquitectura-ejecucion}
+
+	Se adopta un patrón inspirado directamente en el funcionamiento secuencial real de los chips Sharp SM5xx, sin concurrencia: todo el procesamiento es estrictamente secuencial.
+
+	El bucle del Director sigue el siguiente esquema:
+
+	\begin{quote}
+		\textbf{mientras} el juego esté activo:
+		\begin{itemize}
+			\item ejecutar el Motor de Juego (máquina de estados, colisiones, generación de valores pseudoaleatorios si procede);
+			\item ejecutar el Motor Gráfico (localiza los segmentos con \texttt{CambiarEstado = true}, los pinta y restablece el indicador);
+			\item esperar(\texttt{tiempoEspera}).
+		\end{itemize}
+	\end{quote}
+
+	El Director invoca a ambos motores de forma secuencial, uno tras otro, tal como sucedía en las máquinas reales, sin paralelismo alguno.
+
+	La variable \texttt{tiempoEspera} es una variable ordinaria que las propias acciones de la máquina de estados pueden modificar —por ejemplo, al superar un umbral de puntuación o tras un determinado número de iteraciones del bucle, reduciendo su valor para acelerar el ritmo del juego—. De esta manera se logra la aceleración progresiva de la dificultad sin necesidad de un reloj físico independiente ni de un 'tick lógico' adicional: basta un único bucle con tiempo de espera variable.
+
+	Esto preserva el determinismo del sistema: el contador del generador pseudoaleatorio avanza una vez por iteración del bucle, no en función del tiempo real transcurrido, de modo que la secuencia pseudoaleatoria sigue siendo reproducible con la misma configuración inicial, independientemente del ritmo de ejecución.
+
+	La implementación prevista, en JavaScript, se basa en \texttt{setTimeout}, reprogramado en cada iteración con el valor vigente de \texttt{tiempoEspera} (en lugar de un \texttt{setInterval} de periodo fijo). En el ESP32 (fase futura), se empleará un bucle con \texttt{delay()} o \texttt{vTaskDelay} (FreeRTOS, ya integrado en el SDK de Espressif), siguiendo el mismo patrón sin necesidad de reinterpretación alguna.
+
+	\section{Motor de Juego}
+	\label{sec:motor-juego}
+
+	El Motor de Juego procesa la máquina de estados: evalúa las transiciones, actualiza el estado de los segmentos, controla las colisiones y aplica las acciones correspondientes (activar o desactivar un segmento, modificar un contador, iniciar un temporizador, reproducir un sonido o modificar \texttt{tiempoEspera}).
+
+	Genera, asimismo, los valores pseudoaleatorios que requiera una transición.
+
+	\section{Motor Gráfico}
+	\label{sec:motor-grafico}
+
+	El Motor Gráfico recorre únicamente los segmentos marcados con \texttt{CambiarEstado = true} (redibujado selectivo o \textit{dirty-segment redraw}), actualiza su representación en pantalla y restablece el indicador a \texttt{false}.
+
+	Este comportamiento es fiel al funcionamiento real de una pantalla LCD segmentada, y resulta eficiente en microcontroladores de recursos limitados. Cuando el juego emplea el modo de doble pantalla, el Motor Gráfico agrupa los segmentos según su \texttt{PantallaDestino}.
+
+	Cada segmento dispone de dos indicadores:
+	\begin{itemize}
+		\item \textbf{Encendido} (S/N): indica si el segmento se muestra o no.
+		\item \textbf{CambiarEstado} (S/N): indica si el valor de \texttt{Encendido} ha cambiado desde el último ciclo y, por tanto, necesita repintarse.
+	\end{itemize}
+
+	El Motor de Juego determina si un segmento está o no encendido en cada momento y, si su estado ha cambiado respecto al ciclo anterior, activa también \texttt{CambiarEstado}. El Motor Gráfico, por su parte, revisa únicamente los segmentos marcados con dicho indicador, pinta el segmento o el fondo según corresponda, y desactiva el indicador \texttt{CambiarEstado} una vez procesado.
+
+	En el primer ciclo de ejecución, se fuerza \texttt{CambiarEstado = true} en todos los segmentos que arrancan con \texttt{Encendido = true} (alternativamente, puede pintarse el fondo completo una única vez al inicio).
+
+	\section{Máquina de estados}
+	\label{sec:maquina-estados}
+
+	La máquina de estados no dispone necesariamente de un único 'estado actual' global: cuando el juego modela varios elementos independientes (correspondientes, por ejemplo, a distintos segmentos), cada uno puede disponer de su propia instancia o posición dentro de la máquina de estados, avanzando de forma independiente pero evaluada dentro del mismo ciclo del Director.
+
+	Una transición puede dispararse por: la pulsación de un botón, la expiración de un temporizador, una condición sobre un contador, o la disponibilidad de un nuevo valor pseudoaleatorio.
+
+	Una acción puede consistir en: activar o desactivar un segmento, modificar un contador, iniciar un temporizador, reproducir un sonido, o modificar \texttt{tiempoEspera}.
+
+	\section{Generador pseudoaleatorio (PRNG)}
+	\label{sec:prng}
+
+	La documentación técnica de MAME y de retroreversing.com confirma que los Game~\&~Watch originales (familia SM5xx) empleaban un registro de desplazamiento con retroalimentación lineal (LFSR) de 6 bits como contador de programa, generando secuencias deterministas a partir de una semilla fija almacenada en la ROM. Esto explica que la secuencia de aparición de elementos en los juegos se repita partida tras partida.
+
+	Como decisión de diseño simplificada para el motor, se ha optado por no implementar un LFSR completo, sino un contador que indexa una tabla fija embebida de valores precalculados, emulando la técnica real de 'leer la ROM en la posición indicada por el contador'. Se trata de una técnica sencilla, documentada en otros sistemas retro de recursos mínimos, y de fácil traducción a C++.
+
+	La tabla se mantendrá fija y embebida en el propio motor (no configurable por cartucho), por simplicidad y fidelidad histórica. La dificultad progresiva no depende del generador pseudoaleatorio en sí, sino de la máquina de estados, que modifica \texttt{tiempoEspera} (véase la Sección~\ref{sec:arquitectura-ejecucion}) en función de umbrales definidos sobre un contador.
+
+	\section{Referencia de juego: 'Parachute' (PR-21)}
+	\label{sec:parachute}
+
+	Por tratarse de una unidad con la que el autor de este trabajo jugó a mediados de los 80, y que desde entonces conserva en su poder, se emplea como  caso de estudio y demostración. Sus características principales son:
+
+	\begin{itemize}
+		\item Modelo PR-21
+		\item Primer modelo de la Serie \textit{Wide Screen}, lanzado el 19 de junio de 1981 en Japón, que introducía una pantalla de cristal líquido significativamente más grande que las series previas (Silver y Gold).
+		\item Chip: Sharp SM5A, a 32.768~kHz.
+		\item Mecánica: mover un bote para rescatar a los paracaidistas lanzados desde un helicóptero; un tiburón captura a quien cae al agua; tres fallos terminan la partida. El Modo~B añade una palmera en la que los paracaidistas pueden quedar atrapados.
+	\end{itemize}
+
+	Se trata de un candidato razonable como juego de demostración del motor: pantalla simple, pocos segmentos, mecánica de colisión y temporización sencilla, y un buen banco de pruebas tanto para el generador pseudoaleatorio como para la aceleración progresiva mediante la reducción del \texttt{tiempo de Espera}.
+
+	\section{Temas pendientes de definir}
+	\label{sec:pendientes-disenno}
+
+	Los siguientes aspectos se definirán en la fase e iteración correspondiente, ya que su desarrollo puede requerir ajustes durante su elaboración:
+
+	\begin{itemize}
+		\item Esquema detallado del formato de autoría (\texttt{JSON}): campos exactos, incluyendo el modelo de gráfico de segmento reutilizable y sus instancias de colocación.
+		\item Diseño de las pantallas y el flujo del Diseñador en HTML/JS (datos generales de pantalla → botones → fondo/todo → segmentos → máquina de estados → guardado).
+		\item Editor visual de la máquina de estados (nodos y transiciones), incluyendo la edición de múltiples instancias simultáneas.
+		\item Formato exacto de la tabla embebida del generador pseudoaleatorio (tamaño y valores).
+		\item Formato binario del cartucho compilado para el ESP32.
+		\item Fichero JSON inicial de base, preparado manualmente, para iniciar el desarrollo del sistema.
+	\end{itemize}
+
+\end{document}

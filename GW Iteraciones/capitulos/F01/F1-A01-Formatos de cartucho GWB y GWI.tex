@@ -1,0 +1,378 @@
+\section*{Anexo 1 de la Fase 1: definición formal de los formatos}
+\label{sec:F1A01}
+
+\subsection*{Nota previa}
+\label{sec:F1A01Nota}
+
+La definición de los formatos no se incluyó de forma formal y
+completa durante las iteraciones anteriores: a medida que el proyecto las
+necesitaba los formatos se fueron añadiendo, ampliando y afinando en cada iteración
+(el setup al comenzar la Fase 1, el GWB al empezar la autoría, el GWI al aparecer el primer guardado). Este anexo se adjunta al final de la iteración como referencia:
+recoge la definición rigurosa y completa de los tres formatos tal y como están
+implementados, y sirve de contrato para las fases siguientes.
+
+\subsection*{Conceptos comunes a los tres formatos}
+\label{sec:F1A01Comun}
+
+Todo documento JSON del proyecto comparte dos datos comunes, la pareja de
+identificación: \texttt{tipo} (GWS para el setup, GWB para el cartucho base, GWI para el 
+cartucho de autoría) y \texttt{version} con un numero que la identifica. 
+
+El campo \texttt{tipo} del JSON distingue el
+formato. Cuando la carga de un cartucho recibe una carpeta o un ZIP con varios
+\texttt{.json}, se elige uno por prioridad de tipo: GWC, luego GWI, luego
+GWB, avisando por consola de la elección.
+
+La validación de entrada (el contrato de lo que puede ENTRAR) exige incluir en todos los 
+formatos de cartucho estos datos básicos:
+
+\begin{itemize}
+	\item \texttt{Tipo} presente y válido (GWB, GWI o GWC): sin tipo no se
+	asume nada.
+
+	\item \texttt{Version} para poder cargar datos correctamente según la versión del fichero (actualmente todos tienen versión 1).
+
+	\item \texttt{imagenes} con las tres posibles imágenes relacionadas con el juego: \texttt{img\_s} OBLIGATORIA (de ella se extrae la geometría) e \texttt{img\_f} e \texttt{img\_m} OPCIONALES. Si una imagen se declara, su fichero DEBE estar presente; sin fondo, el simulador pinta la pantalla en blanco. (El GWC es binario y se valida por su propio camino, en la lectura del fichero.)
+	
+	\item \texttt{memoria}: OPCIONAL en los tres formatos JSON, incluido
+	desde F5-I20 (ver \ref{sec:F5I20}): \texttt{\{RAM, FLASH\}} en
+	KB, enteros $\ge 0$, que pueden quedar a cero (o no venir, vale lo
+	mismo): la memoria que el hardware pone a disposición del cartucho.
+	Es SOLO informativo: al generar el GWC se muestra el porcentaje de
+	ocupación (RAM con los bytes del GWC; FLASH con el bloque del fondo,
+	hoy 0 KB). La memoria vigente es la del cartucho, subcampo a subcampo
+	(la RAM que él declara manda; lo que no declara, de la máquina); si
+	todo está a cero o ausente, no se muestra porcentaje ni aviso.
+\end{itemize}
+
+\subsection*{El formato GWS: el setup de la máquina}
+\label{sec:F1A01GWS}
+
+El GWS \footnote{En la Fase 1 se usó como nombre general setup, pero en la fase 5 se decidió unificar y denominarlo GWS} (Game \& Watch Setup) es el JSON que define el HARDWARE destino final: describe la
+máquina fija sobre la que se cargan y ejecutan finalmente los cartucho. 
+
+No es un cartucho: no lleva imágenes ni juego, y se carga con su propio botón (Cargar
+Setup) como un único fichero \texttt{.json}. Recargar el setup
+reinicia pantalla y botones y limpia el cartucho en memoria.
+
+Los campos del JSON del setup:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{10cm}}
+		\toprule
+		Campo & Tipo & Contenido \\
+		\midrule
+		\texttt{tipo} & cadena & \texttt{"GWS"}\footnotemark \\
+		\texttt{version} & cadena & Versión del formato (actualmente \texttt{"1.1"}) \\
+		\texttt{nombre} & cadena & Nombre de la máquina \\
+		\texttt{estilo} & cadena & Estilo de la máquina (\texttt{"2"}, \texttt{"4"} o \texttt{"5"}): elige el esqueleto físico del simulador \\
+		\texttt{resolucion} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD \\
+		\texttt{botones} & array & Un \texttt{\{numero, puerto, alias?, tecla?\}} por botón físico \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Campos del json del setup GWS}
+	\label{tab:F1A01GWS}
+\end{table}
+\footnotetext{Inicialmente se definió como GW, en fase 5 se unificó a GWS.}
+
+
+Los campos de cada botón:
+
+\begin{itemize}
+	\item \texttt{numero}: el número físico del botón, cadena
+	\texttt{"0"}--\texttt{"8"} (se aceptan números sin comillas y se
+	convierten con aviso). Los números 6, 7 y 8 son el trío de sistema
+	(A / B / TIME).
+	\item \texttt{puerto}: el GPIO del ESP32 al que va conectado. El
+	simulador no lo usa: es el dato que leerá el firmware de la Fase 6.
+	\item \texttt{alias}: OPCIONAL. Nombre corto de sistema para los
+	botones 6, 7 y 8 (\texttt{A}, \texttt{B}, \texttt{R}).
+	\item \texttt{tecla}: OPCIONAL. La letra del teclado del PC que
+	acciona el botón; si falta, se aplica la tabla por defecto del
+	motor.
+\end{itemize}
+
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Ejemplo de json para un setup GWS},
+	label={lst:EjemploSetup_GWS}
+	]
+	{
+		"tipo": "GWS",
+		"version": "1.1",
+		"nombre": "Parachute",
+		"estilo": "2",
+		"resolucion": { "ancho": 156, "alto": 156 },
+		"memoria": { "RAM": 216, "FLASH": 128 },
+		"botones": [
+		{"numero": "0", "puerto": 4, "tecla": "A"},
+		{"numero": "4", "puerto": 5, "tecla": "L"},
+		{"numero": "6", "puerto": 18, "alias": "A", "tecla": "1"},
+		{"numero": "7", "puerto": 19, "alias": "B", "tecla": "2"},
+		{"numero": "8", "puerto": 21, "alias": "R", "tecla": "3"}
+		]
+	}
+\end{lstlisting}
+
+\subsection*{El formato GWB: la base de trabajo}
+\label{sec:F1A01GWB}
+
+El cartucho de tipo GWB (Game \& Watch Base) es el cartucho de PARTIDA de la autoría: contiene sobre todo la imagen de partida con los objetos dibujados, todavía sin
+segmentos identificados. Se \emph{entrega como una CARPETA} (no un ZIP) con estos ficheros en su interior:
+
+\begin{itemize}
+	\item Un \texttt{.json} con los datos del cartucho GWB (cualquier nombre; si hay
+	varios, la prioridad del apartado anterior).
+	
+	\item \texttt{imagenes.img\_f}: OPCIONAL. La imagen de fondo sin los segmentos. Hay 
+	cartuchos sin arte de fondo. Si \texttt{img\_f} está declarada, el 	fichero referenciado
+	DEBE estar presente en la carpeta; sin fondo, el simulador pinta la pantalla en blanco.
+	
+	\item \texttt{imagenes.img\_s}: OBLIGATORIO. La imagen con todos los segmentos encendidos pero sin 
+	el fondo, OBLIGATORIA siempre (de ella se extrae la geometría): el fichero DEBE estar presente en la carpeta. Si existe \texttt{img\_f}
+	debe medir exactamente lo mismo; si no es así hay que dar un aviso por consola NO bloqueante.
+	
+	\item \texttt{imagenes.img\_m}: OPCIONAL. La portada de la máquina, que se usará en la
+	pantalla de selección de juegos como referencia gráfica del cartucho a cargar. Si se declara, el fichero referenciado DEBE estar presente.
+\end{itemize}
+
+Los campos del JSON asociado a un GWB:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{10cm}}
+		\toprule
+		Campo & Tipo & Contenido \\
+		\midrule
+		\texttt{tipo} & cadena & \texttt{"GWB"} \\
+		\texttt{version} & número & Versión del formato (actualmente 1) \\
+		\texttt{nombre} & cadena & Nombre del cartucho \\
+		\texttt{estilo} & cadena & Estilo de la máquina (debe coincidir con el setup) \\
+		\texttt{imagenes} & objeto & Tres campos \texttt{\{img\_m, img\_f, img\_s\}} con los  nombres de los ficheros de imagen \\
+		\texttt{resolucion} & objeto & OPCIONAL: \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Si este dato no se indica usará la definida en el GWS cargado. \\
+		\texttt{botones} & array & OPCIONAL: Los nombres que damos a los botones. \texttt{[\{numero, id\}]} por cada botón \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Campos del json del GWB}
+	\label{tab:F1A01GWB}
+\end{table}
+
+Un GWB NO lleva sprites, segmentos ni autoría: al cargarlo, el editor
+descompone \texttt{img\_s} automáticamente (extracción de componentes
+negras) y el diseñador trabaja a partir de ahí. 
+
+El campo \texttt{numero} de un botón es el número físico del hardware (los
+\texttt{id} son etiquetas legibles como \texttt{IZQ} o \texttt{Start}).
+
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Ejemplo de json para un cartucho GWB},
+	label={lst:EjemploCartucho_GWB}
+	]
+	{
+		"tipo": "GWB",
+		"version": 1,
+		"nombre": "Parachute",
+		"estilo": "2",
+		"imagenes": {
+			"img_m": "parachute_m.png",
+			"img_f": "parachute_f.png",
+			"img_s": "parachute_s.png"
+		},
+		"botones": [
+		{"numero": 0, "id": "IZQ"},
+		{"numero": 4, "id": "DER"},
+		{"numero": "A", "id": "Start"}
+		]
+	}
+\end{lstlisting}
+
+\subsection*{El formato GWI: el cartucho con autoría}
+\label{sec:F1A01GWI}
+
+El GWI (Game \& Watch Intermedio) es el cartucho con los datos del juego y los comandos efectuados, mas los datos de intercambio: guarda las listas que produce el editor (sprites y segmentos),
+las imágenes desglosadas y el HISTORIAL de la autoría. Se guarda como un ZIP
+(\texttt{cartucho\_gwi.zip}), aunque se puede descomprimir y usar la carpeta generada \footnote{Esto se decide realmente en la Fase 5 Iteración 9 (ver sección \ref{sec:F5I9Usuario})} con esta disposición (el simulador lo carga
+IGUAL en ZIP que descomprimido en carpeta: la forma la detecta el
+programa por el contenido, no el botón):
+
+\begin{itemize}
+	\item \texttt{cartucho\_gwi.json} en la raíz: el JSON del cartucho.
+	\item La imagen de segmentos, en la raíz, con el nombre 
+	\texttt{img\_s}. OBLIGATORIA también en el GWI (mismo contrato que el GWB): si el ZIP no la lleva, el GWI no carga; al guardar se avisa en consola si no hay imagen de segmentos en memoria.
+	\item La imagen de fondo, en la raíz, con el nombre \texttt{img\_f}. OPCIONAL, igual que en el GWB: los cartuchos sin arte de fondo no la llevan y el ZIP prescinde de ella; sin fondo, el simulador pinta la pantalla en blanco.
+	\item La imagen del selector, en la raíz, con el nombre \texttt{img\_m}. OPCIONAL, igual que en el GWB: los cartuchos sin imagen para el selector no la llevan incluida.
+	\item Carpeta \texttt{segmentos/} con UN PNG por cada sprite, llamado
+	\texttt{img\_NNN.png} (y \texttt{img\_FNN.png} los de las piezas
+	ficticias); el campo \texttt{fichero} de cada sprite referencia su
+	PNG, y la resolución por nombre base hace indiferente la carpeta al
+	cargar.
+\end{itemize}
+
+El json es un formato que permite ignorar estacios y saltos de línea no significativos, por lo que se genera de forma compacta para mejorar su lectura, si no el tamaño puede ser muy grande para una cómoda visualziación.
+
+Los campos incluidos en el json son:
+
+% Si ya declaraste estos contadores antes, omite las dos líneas \newcounter
+\newcounter{fnGWIuno}
+\newcounter{fnGWIdos}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{@{} l l X @{}}
+		\toprule
+		\textbf{Campo} & \textbf{Tipo} & \textbf{Significado} \\
+		\midrule
+		\texttt{tipo} & cadena & \texttt{"GWI"} \\
+		\texttt{version} & número & Versión del formato (1) \\
+		\texttt{nombre} & cadena & Nombre del cartucho \\
+		\texttt{estilo} & cadena & Estilo de la máquina \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\texttt{resolucion}\footnotemark\setcounter{fnGWIuno}{\value{footnote}} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Este dato es necesario para escalar, por lo que es obligatorio incluirlo siempre.\\
+		\texttt{botones} & array & \texttt{[\{numero, id\}]} por botón \\
+		\texttt{codigoGWC}\footnotemark\setcounter{fnGWIdos}{\value{footnote}} & cadena & OPCIONAL: El Código GWC del par, un texto con formato \texttt{"\#HHHH\#"}. Se guarda al generar el GWC y GWI a la vez; si solo se guarda el GWI, se genera sin este campo \\
+		\texttt{imagenes} & objeto & \texttt{\{img\_m, img\_f, img\_s\}} (igual que el GWB) \\
+		\texttt{fin} & objeto & OPCIONAL: \texttt{\{mecanismo, contador\}} con \texttt{mecanismo} en \texttt{vida}, \texttt{muerte} o \texttt{contador} (contador solo con el tercero, 1--4). Propiedad del cartucho, no un segmento \\
+		\texttt{secuencia} & objeto & OPCIONAL: \texttt{\{ticks, segmentos\}}: animación periódica, hasta 5 segmentos lanzados en orden, uno por tick \\
+		\texttt{pausas} & objeto & OPCIONAL: \texttt{\{simulador, externo\}} en ms; ausente o sin pausa: 500 ms \\
+		\texttt{aceleracion} & objeto & OPCIONAL: \texttt{\{cada, resta, minimo\}}: cada \texttt{cada} ticks la pausa vigente baja \texttt{resta} ms sin pasar de \texttt{minimo} \\
+		\texttt{rutas} & objeto & OPCIONAL: \texttt{\{aumentarCada\}}: cada N rutas lanzadas el máximo de rutas simultáneas sube en 1 (ausente: máximo 1) \\
+		\texttt{sprites} & array & Los sprites, ver más abajo \\
+		\texttt{segmentos} & array & Los segmentos, ver más abajo \\
+		\texttt{autoria} & objeto & El historial de la autoría, ver más abajo \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Campos del GWI}
+	\label{tab:F1A01GWI}
+\end{table}
+
+\footnotetext[\value{fnGWIuno}]{Este campo se incluyó en la Fase 5 para tener emparejados GWI y GWC.}
+\footnotetext[\value{fnGWIdos}]{Este campo se incluyó en la Fase 5 para tener todos los datos necesarios para poder generar el GWC completo tras cargar el GWI sin necesidad de informar nada manualmente.}
+
+
+
+Viajan en este json \underline{todos los datos necesarios para diseñar y montar el
+cartucho}, incluyendo el setup de la máquina para el que se ha diseñado. Los campos opcionales usan los valores
+por defecto del motor cuando no viajan: el GWI no lleva sobras (los defaults pueden 
+no escribirse, aunque en este momento se rellenan todos para poder verificarlos).
+
+\subsubsection*{Los segmentos}
+\label{sec:F1A01Segmentos}
+
+Cada segmento lleva los campos comunes \texttt{\{id, x, y, sprite, tipo,
+	estado, cambiado\}}: identificador \texttt{seg\_NNN}, posición en
+coordenadas de la imagen fuente, el sprite que lo dibuja, el tipo, y el
+estado y el indicador de cambio que el motor de estados escribe en cada
+tick (la lista ES el estado). Los enlaces válidos dependen del tipo:
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{l l l X}
+		\toprule
+		Nº & Tipo & Enlaces propios & Otros campos \\
+		\midrule
+		0 & jugador & \makecell[tl]{\texttt{izquierda,}\\ \texttt{derecha,}\\ \texttt{arriba,}\\ \texttt{abajo}} & \texttt{primero} (jugador inicial),\newline \texttt{colision},\newline \texttt{salvadoContador},\newline \texttt{muerteContador} \\
+		
+		\cmidrule(lr){1-4}
+		
+		1 & juego & \makecell[tl]{\texttt{siguiente,}\\ \texttt{salvado,}\\ \texttt{muerte,}\\ \texttt{mostrarJunto}} & \texttt{ruta} (nº de ruta),\newline \texttt{contador} \\
+		
+		\cmidrule(lr){1-4}
+		
+		2 & inicio & como juego & El arranque de una ruta \\
+		
+		\cmidrule(lr){1-4}
+		
+		3 & vida & como juego & \texttt{contador} (orden en la cadena de vidas) \\
+		
+		\cmidrule(lr){1-4}
+		
+		4 & muerte & como juego & \texttt{contador} \\
+		
+		\cmidrule(lr){1-4}
+		
+		5 & dígito & \texttt{barra\_a}\ldots{}\texttt{barra\_g} & Las siete barras del «8» \\
+		
+		\cmidrule(lr){1-4}
+		
+		6 & contador & \texttt{digito\_1}\ldots{}\texttt{digito\_4} & \texttt{contadorInterno} (1--4),\newline \texttt{valorInicial},\newline \texttt{direccion} (ascendente/descendente),\newline \texttt{presentarCero} \\
+		
+		\cmidrule(lr){1-4}
+		
+		7 & cartucho & --- & La ficha de datos generales del cartucho: NO viaja en la lista (su mecanismo de fin es el campo \texttt{fin} del nivel superior) \\
+		
+		\cmidrule(lr){1-4}
+		
+		8 & adicional & \texttt{siguiente} & Pieza adicional \\
+		
+		\cmidrule(lr){1-4}
+		
+		9 & inicioAdicional & \texttt{siguiente} & Arranque de una cadena adicional \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Tipos de segmento y sus enlaces válidos}
+	\label{tab:F1A01Tipos}
+\end{table}
+
+A ellos se añaden los campos transversales: \texttt{visible} (falso en los
+segmentos ocultos: absorbidos y piezas internas), \texttt{fusionadoPor} (el
+identificador de la pieza ficticia que lo absorbió: viaja \texttt{marcado} y el
+compilador del GWC lo eliminará), y los \texttt{inversos} calculados por la
+verificación al guardar: \texttt{colisionDe} (inverso de \texttt{colision})
+y \texttt{mostradoJunto} (inverso de \texttt{mostrarJunto}). 
+
+Los inversos
+viajan de forma deliberadamente redundante: el compilador trabaja en el PC
+sin cálculo extra. Los enlaces apuntan a identificadores legibles
+(\texttt{seg\_NNN} o \texttt{FNN}); un enlace nulo (\texttt{null}) significa
+sin enlace.
+
+\subsubsection*{Los sprites}
+\label{sec:F1A01Sprites}
+
+Cada sprite es \texttt{\{id, ancho, alto, fichero\}}: el identificador
+legible (\texttt{img\_NNN}, o \texttt{img\_FNN} para las piezas ficticias),
+sus dimensiones en píxeles de la imagen fuente y la ruta de su PNG dentro
+del ZIP. Los sprites se comparten POR IDENTIDAD cuando varios segmentos
+nacen de la misma componente o pieza: la deduplicación de imágenes es parte
+del formato desde el origen (una imagen, una entrada en la lista, un PNG).
+
+
+\subsubsection*{La autoría: el historial}
+\label{sec:F1A01Autoria}
+
+La sección \texttt{autoria} guarda \texttt{\{cambios, ultimoOp\}}: el
+registro CRONOLÓGICO de acciones es la única fuente de verdad de la
+autoría. Cada entrada lleva al menos \texttt{\{n, relacionados\}} (número de
+acción, que CONTINÚA entre guardados, y nº de elementos tocados) más los
+campos de la acción con sus valores nuevos; el par
+\texttt{\{segmento, campo, antes\}} describe el cambio y \texttt{antes}
+conserva el valor previo (\texttt{null} si el campo nace). Al cargar un GWI,
+el historial se REPRODUCE en orden sobre el estado de nacimiento (la
+geometría extraída de \texttt{img\_s}): así el fichero es replay-safe y
+deshacer/rehacer funciona tras recargar. Las altas y bajas de piezas
+ficticias viajan como acciones (\texttt{altaFicticio}, \texttt{bajaFicticio})
+con su caja y sus componentes absorbidas.
+
+\subsubsection*{Serialización}
+\label{sec:F1A01Serializacion}
+
+El JSON se escribe legible pero COMPACTO: los arrays largos (sprites,
+segmentos, cambios) van a UNA línea por elemento, el resto de campos a una
+línea por campo, todo en UTF-8. 
+
+El objetivo es doble: que el fichero sea
+diff-friendly (una acción de la autoría, una línea del historial) y que un
+diseñador pueda de manera sencilla crearlo o editarlo a mano, si lo ve 
+necesario (aunque no se recomienda, el sistema está pensado para usar el 
+entorno gráfico que permite definir el juego sin necesidad de editar el json).

@@ -1,0 +1,110 @@
+\section{Cuarta iteración de la Fase 5: Traspaso de la funcionalidad existente}
+\label{sec:F5I4}
+
+Antes de añadir el manejo del GWC, todo lo relativo a los cartuchos que ahora está en otros módulos se reúne en su módulo definitivo. Esta iteración es un
+\textbf{traspaso puro}: mover a \texttt{BaseCartucho.js} la
+lectura y la grabación que hoy funcionan repartidas por otros
+módulos, sin cambiar su comportamiento — el editor sigue
+editando, el motor jugando, y el nuevo módulo lee y escribe los
+ficheros.
+
+
+\subsection{El módulo \texttt{BaseCartucho.js}}
+\label{sec:F5I4Modulo}
+
+El nuevo módulo javascript, cargado en el \emph{Index.html} tras el descomponedor, asume la lectura y la grabación de los cartuchos que el proyecto ya tiene:
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}l l X@{}}
+		\toprule
+		\textbf{Formato} & \textbf{Función} & \textbf{Descripción} \\
+		\midrule
+		
+		\texttt{GWB} & \texttt{leerGWB} & Carga el cartucho de gráficos de
+		la máquina tras el setup: sus imágenes y sus botones \\
+		
+		\texttt{GWI} & \texttt{leerGWI} & Carga el cartucho de autoría: el
+		JSON y las imágenes PNG del ZIP, y reconstruye las listas en
+		memoria con las mismas formas que produce el editor \\
+		
+		& \texttt{guardarGWI} & Graba el cartucho de autoría: la
+		verificación completa previa y el ZIP con el JSON y las
+		imágenes \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Las funciones traspasadas a \texttt{BaseCartucho.js}.}
+	\label{tab:funcionesTraspaso}
+\end{table}
+
+Cada función llega con su código tal cual funciona en este momento, con su origen anotado en la cabecera del módulo: \texttt{leerGWB} y \texttt{leerGWI} vivían en el director, \texttt{guardarGWI} en el descomponedor. El módulo no conoce al editor ni al motor: recibe ficheros y reconstruye la estructura en memoria, o recibe la estructura y produce ficheros, avisando en la barra de estado como siempre — es el mismo contrato de la planificación, aplicado a lo que ya existe.
+
+Las funciones del GWC descritas en la iteración anterior —
+\texttt{leerGWC}, \texttt{generarGWC} y sus auxiliares — se
+añadirán al mismo módulo en la siguiente iteración, en la sección delimitada ya reservada para el lector del firmware del ESP32.
+
+\subsection{Los cambios en los módulos}
+\label{sec:F5I4Cambios}
+
+El traspaso es de mudanza, no de reescritura: los módulos
+afectados pierden las funciones movidas y quedan con su llamada:
+
+\begin{itemize}
+	\item \textbf{baseDirector} delega en \texttt{BaseCartucho} la
+	carga del GWB tras el setup y la carga del GWI al abrir un
+	cartucho de autoría; su lógica de arrastre de las listas al
+	puente sigue igual. 
+	
+	\begin{itemize}
+		\item Se mudan desde baseDirector: leerJSON, crearURL, cargarImagen, cargarImagenAux, imagenBlob, construirMapaFicheros, elegirJSONCartucho, validarCartucho, validarTamanoImgS y la apertura del ZIP.
+	\end{itemize}
+	
+	\item \textbf{BaseDescomponer} delega en \texttt{BaseCartucho}
+	el guardado del GWI en «Verificar y Guardar»; su verificación
+	previa del diseñador sigue siendo suya y no se toca.
+		\begin{itemize}
+			\item Se mudan desde BaseDescomponer: formatearGWI, guardarGWI (avisos y bloqueo del botón «Guardar») y guardarGWIEnDisco (el ZIP entero, incluida la descarga).
+			
+			\item Se queda en BaseDescomponer: el montaje del JSON con la autoría (idF/cambiosLegibles, fin, secuencia, pausas…), la verificación del diseñador y el check del «cartucho en edición perdido» — son conocimiento del editor. BaseDescomponer pasará el GWI ya montado a BaseCartucho.guardarGWI.		
+		\end{itemize}
+	
+	\item \textbf{index.html} carga el módulo nuevo tras el
+	descomponedor, en su posición de la lista de carga.
+\end{itemize}
+
+Ningún otro módulo cambia: el motor, el puente y el generador
+gráfico quedan exactamente como están.
+
+La API pública que se crea es:
+\begin{itemize}
+	\item leerCartucho(ficheros, estiloMaquina) → devuelve {nombre, json, mapa, imgF, imgS, imgM}: hace la lectura COMPLETA (mapa, JSON prioritario, validación, las tres imágenes). Es por donde pasará baseDirector, que luego despacha por tipo como hoy.
+	\item leerGWB / leerGWI existen como envoltorios que exigen el tipo (error explícito si no coincide) — útiles para cargar estricto y para el futuro GWC. La lectura común no podía separarse antes de parsear el JSON, de ahí el núcleo compartido.
+	\item abrirZIP(fichero) → los Blobs con .name base, para reusar el mismo flujo de carpeta.
+	\item guardarGWI(json, sprites, imgF, imgS, nAvisos) → devuelve true/false para que BaseDescomponer repinte solo si se guardó.
+	\item revocarURLs() — nueva: las object URLs ahora las crea el módulo, así que limpiarCartucho del director tendrá que llamarla (cambio del fichero 2).
+\end{itemize}
+
+\textbf{Una adaptación necesaria}: \textbf{validarCartucho} recibe el estilo de la máquina por parámetro (antes usaba las variables privadas de baseDirector \emph{setup} y \emph{ESTILOS}); el mensaje de estilo inválido ya no lista el catálogo de estilos. El resto es copia literal del código original.
+
+\subsection{Pruebas del traspaso}
+\label{sec:F5I4Pruebas}
+
+El traspaso es puro, así que la prueba es una sola: \textbf{el
+	comportamiento no cambia}. En simulación y en navegador real:
+
+\begin{itemize}
+	\item \textbf{GWB:} la carga del cartucho de gráficos tras el
+	setup presenta la misma máquina, con sus imágenes y sus botones.
+	\item \textbf{GWI:} la carga del cartucho de autoría del
+	Parachute reconstruye las mismas listas — los bloques en su
+	sitio, los enlaces atados, la partida terminando por fin de
+	muerte como siempre.
+	\item \textbf{Guardado:} el botón «Verificar y Guardar» produce
+	un ZIP con el mismo contenido de siempre; guardado antes y
+	después del traspaso sobre el mismo cartucho, ambos ZIP son
+	\textbf{idénticos byte a byte}, validable con los comandos
+	estándar del sistema.
+	\item \textbf{Errores:} un cartucho corrupto o una imagen que
+	falta dan el mismo aviso de siempre, ahora saliendo del módulo
+	nuevo.
+\end{itemize}

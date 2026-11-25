@@ -1,0 +1,128 @@
+\section{Primera iteración de la Fase 3: Análisis del manejo del teclado}
+\label{sec:AnalisisEntrada}
+
+En esta iteración se inicia  el desarrollo del motor de estados, el auténtico procesador del juego, falta mucho para convertir el mini motor de secuencia fija anterior en un motor de juego completo, pero el primer paso es interactuar con el teclado.
+
+\subsection{El teclado}
+
+El primero punto a definir es decidir como se manejan las pulsaciones de los botones, que actualmente solo dejan constancia en consola de su pulsación.
+Esta primera iteración construye el proceso de \textbf{entrada}: que una pulsación ---por el botón asociado o por el teclado --- llegue al motor de estados, con el objetivo de que textbf{mueva el segmento del jugador}, con la referencia visual inmediata de su funcionamiento:  pulso $\rightarrow$ el jugador se mueve, pulso $\leftarrow$ el jugador se mueve, esto se ve en la pantalla. 
+
+Antes del código, el análisis de las cuatro decisiones que la entrada del teclado plantea : el canal, el ritmo, la combinación de teclas y qué máquina puede ejecutar qué cartucho.
+
+\subsection{El canal: la pulsación como dato, no como evento de DOM}
+\label{subsec:CanalEntrada}
+
+Los botones físicos los crea el \texttt{baseDirector} a partir del \textit{setup}: la
+máquina es de la autoría. El juego no debe conocer el DOM, igual que el firmware del ESP32
+no conoce ``botones'', solo pines que se ponen a nivel. La silueta es la misma que la del botón 
+Start (\emph{F2-I2}), solo que en el otro sentido:
+
+\begin{itemize}
+	\item El \texttt{baseDirector}, en sus eventos \texttt{pointerdown} y en
+	\texttt{alPulsarTecla}, llama a la función \texttt{JuegoDirector.pulsar(numero)} con el
+	\textbf{número físico} del botón. Nada más: ni id del cartucho, ni el evento del DOM.
+	El número físico es el identificador estable de la máquina (el mismo que viajará al
+	puerto del ESP32); la traducción número $\rightarrow$ acción es cosa del juego.
+
+	\item El \texttt{JuegoDirector} solo acepta pulsaciones \emph{con el juego en marcha};
+	si no está en marcha, la pulsación no existe (y el Start, que ya está cableado, sigue
+	siendo el que relanza). Él se limita a reenviar al motor:
+	\texttt{juegoMotorEstados.pulsar(numero)}. El director no interpreta entradas, igual
+	que no interpreta estados: solo mantiene el bucle.
+
+	\item El director del juego es quien inserta en el buffer de pulsaciones, por tanto es 
+	quien decide qué hace cada número: la tabla número $\rightarrow$ dirección (\texttt{MOVER})
+	va \emph{fijada en el código}, igual que ahora se hace con la \texttt{SECUENCIA} de prueba de segmentos a presentar en pantalla. En otra iteración las reglas se leerán del cartucho, por lo que esa tabla viajará con el GWC; hoy basta con que exista la vía del dato.
+\end{itemize}
+
+\subsection{El ritmo: un buffer de movimientos pendientes}
+\label{subsec:BufferEntrada}
+
+Las máquinas reales \emph{muestrean} la entrada al ritmo del juego, no en el instante en
+que el dedo toca el botón físico. La decisión que se toma para contorlarlo es \textbf{las pulsaciones se encolan en un buffer y el motor las procesa al empezar el ciclo siguiente},
+en un paso (0) previo a todo lo demás. Esto se hace por tres razones:
+
+\begin{itemize}
+	\item \textbf{Es la silueta del firmware}: \emph{leer pines al inicio del frame,
+		computar, presentar}. Lo que decidamos aquí viaja sin traducción al ESP32.
+	
+	\item \textbf{El estado nunca cambia a mitad de presentación}: dentro de un tick, el
+	orden es entrada $\rightarrow$ cómputo $\rightarrow$ presentación, sin sorpresas
+	intermedias. Una pulsación que llega a mitad de ciclo espera al siguiente: la latencia
+	percibida es la misma ($\leq$ pausa del reloj), pero el estado queda siempre
+	consistente con lo presentado.
+	
+	\item \textbf{Procesar al empezar el ciclo, no al terminar el actual}: el efecto en
+	pantalla es idéntico (en ambos casos lo presenta el tick siguiente), pero procesar al
+	principio mantiene el tick del motor con su orden sagrado ---(0) entrada, (1) apagar las
+	banderas \texttt{cambiar}, (2) secuencia--- y evita que el apagado de banderas del paso (1)
+	se coma la suciedad recién escrita por la entrada en el mismo tick.
+\end{itemize}
+
+El buffer es una \textbf{cola FIFO con tamaño}: si llega más de lo que cabe (tamaño de 8, más en un tick es un martilleo, no un jugador), se descarta lo que excede y se avisa con
+\texttt{GW\_DEBUG}. Sin cartucho en marcha, nada se encola.
+
+\subsection{Dos teclas a la vez: la combinación es una propiedad del cartucho}
+\label{subsec:CombinarTeclas}
+
+En el Donkey Kong de bolsillo, ARRIBA+DERECHA no son dos movimientos: es
+\emph{un salto diagonal}. Pero no todos los juegos lo permiten. La decisión ta tomará el 
+diseñador del cartucho: \textbf{si un juego combina dos teclas es una propiedad del cartucho},
+declarada en su JSON como un indicador más, igual que el número de botones que usa. El campo es opcional, si no existe \texttt{combinar} o si tiene un valor booleano que se resuelve como falso = cada pulsación es independiente.
+
+\begin{itemize}
+	\item \textbf{Cuando combinación=falso}, cada entrada del buffer es un paso independiente
+	aplicado en orden de llegada.
+	
+	\item \textbf{Cuando combinación=cierto}, el motor vacía todo el buffer del tick y lo
+	\emph{reduce a las cuatro direcciones posibles}, así puede moverse: a la izquierda (1,0,0,0), a la derecha (0,1,0,0), arriba (0,0,1,0), abajo (0,0,0,1), salto a la derecha (1,1,0,0), salto a la izquierda (0,0,1,1). El jugador se mueve \textbf{una sola vez} por tick con el vector
+	resultante: ARRIBA+DERECHA en la misma ventana = un salto diagonal, el movimiento
+	`más parecido a posibl a la máquina real'. Si solo llega una dirección, es
+	un paso normal: la máquina real no espera a la segunda. Si llegan dos opuestas en la
+	misma ventana (IZQ+DER), se anulan: no se mueve.
+	
+	\item \textbf{El motor no lee el cartucho}: Para conocer el tipo de movimiento del teclado, se usará \texttt{comunListas}, con una variable booleana de
+	configuración del juego: la autoría la escribe al cargar el cartucho
+	(\texttt{fijarReglas}) y el motor la lee (\texttt{reglas}). El puente sigue siendo
+	solo datos; el ESP32 hará lo mismo leyendo la configuración del GWC.
+\end{itemize}
+
+\subsection{Qué máquina ejecuta qué cartucho: setup $\geq$ cartucho}
+\label{subsec:SetupSuperiorCartucho}
+
+Hasta ahora la validación exigía el mismo \emph{estilo} en el setup y en el cartucho. Pero el \textit{setup}
+declara la máquina física y el cartucho usa un subconjunto de sus botones: se puede jugar
+a un juego de dos botones en una máquina de cuatro, \textbf{pero no al contrario}. La
+regla que fija esta iteración: \textbf{todo botón declarado por el cartucho debe existir
+	en la máquina del setup}; si usa uno que la máquina no tiene, el cartucho NO carga
+(error bloqueante en la barra de estado, no un aviso en consola como hasta ahora). El
+camino inverso ya funcionaba: los botones de la máquina que el juego no usa se eliminan de
+la botonera. Esta comprobación vive en la autoría (validación de carga de
+\texttt{baseDirector}), no en el juego.
+
+\subsection{El jugador: moverse es escribir en la lista}
+\label{subsec:Jugador}
+
+Los segmentos del jugador y su posición no se ha usado todavía. Ahora al \texttt{iniciar()} el motor guarda las \textbf{posiciones originales} de la lista; mover es escribir directamente \texttt{visible=true} y \texttt{cambiar=true} en la posición del jugador que tengamos en la memoria), de modo que el motor gráfico lo presenta sin saber nada más. Relanzar restaura las posiciones de origen en el mismo barrido que apaga banderas:
+la partida siempre empieza como el cartucho la dibujó. \textbf{Sin límites ni colisiones
+	todavía}: el jugador solo puede moverse según los enlaces de izquierda-derecha-arriba-abajo, por tanto no se mueve libremente, no puede caerse por los bordes, pero se requiere guardar su posición actual, lo que además se usará cuando se aborde el tema de las colisiones.
+
+\subsection{Plan de verificación}
+\label{subsec:VerificacionF3I1}
+
+\begin{itemize}
+	\item Pulsación en marcha $\rightarrow$ encola; sin juego en marcha $\rightarrow$ no
+	existe; el Start no entra al buffer (relanza).
+	\item Buffer: se procesa al empezar el tick; con dos pulsaciones encoladas y
+	combinación activa el jugador da UN paso combinado; sin combinación, dos pasos en
+	orden; opuestas se anulan; la tapa descarta el exceso con aviso.
+	\item En pantalla: el jugador deja su segmento de color negro en la posición nueva, y la anterior queda limpia (fondo); la secuencia del paracaidista sigue latiendo
+	en paralelo.
+	\item Relanzar restaura la posición de origen; \texttt{GW\_DEBUG} apagada = consola
+	limpia y juego funcional; sin errores.
+	\item Validación: cartucho con un botón que la máquina no tiene $\rightarrow$ NO
+	carga; con subconjunto $\rightarrow$ carga y elimina los no usados.
+\end{itemize}
+
+\clearpage

@@ -1,0 +1,91 @@
+\section{Quinta iteración de la Fase 1: Nuevo análisis del sistema gráfico}
+\label{sec:NuevoAnalisisSistemaGráfico}
+
+La interacción anterior ha detectado un problema en el diseño: el sistema de autoría descansaba íntegramente en el gráfico coloreado (img\_s): los colores clasificaban (jugador/juego/fondo), conectaban (puente rojo, secuencia azul) y dirigían el flujo (inicio, bifurcación, indicador). El objetivo declarado era correcto en dos pasos: 'un cartucho se dibuja, no se programa', y luego 'el sistema extrae los datos del gráfico'. Dibujar líneas de colores en un editor gráfico es muy sencillo, pero tras las pruebas se demuestra que la segunda parte no lo es tanto.
+
+Siempre he pensado que el ciclo de vida que compañías como \textbf{Microsoft} con su \textbf{SureStep} proponen tiene un problema de ejecución en las empresas españolas, una vez has decidido un camino no se cambia, ya que lo has acordado antes de empezar con el cliente. Esto encierra dos riesgos:
+\begin{itemize}
+	\item Debes acordar con el cliente \underline{el análisis funcional}, en el que describes lo que hace la empresa y lo que quiere conseguir, pero \textbf{no debes definir cómo hacerlo} (aquí es donde más a menudo se comete el error).
+	\item No ser rígidos, hay que estar dispuesto a cambiar cuando encuentras un problema, y no seguir adelante, si ves un obstáculo importante siempre es mejor hacer reingeniería que permanecer en el camino erróneo. 
+\end{itemize}
+
+\subsection{El obstáculo}
+La implementación de prueba con una imagen real reveló un problema estructural, no puntual:
+\begin{itemize}
+	\item \textbf{Los editores gráficos generalistas no garantizan colores planos exactos}: al escalar, mover o componer, generan tonos intermedios. Una imagen de 8 colores producida con Paint arrojó 119 colores distintos en el censo.
+	\item \textbf{La conectividad del modelo es por color exacto}: dos tonos del 'mismo' color son componentes distintas, rompiendo puentes y secuencias de forma silenciosa o difícil de diagnosticar.
+\end{itemize}
+Cada ampliación del modelo (inicio, bifurcación, indicador) exigía un color nuevo, encareciendo la paleta y multiplicando las probabilidades de confusión del editor.
+
+Había pensado en usar una cuantización por semejanza con umbral para mitigar el síntoma, incluso funcionando, pero pensando en que en lugar de 8 aparecerían 10 o 12 colores, no más de 100.
+
+Lo descarto porque intentar seguir este camino añadía complejidad al extractor, pero no garantizaba el resultado correcto, seguía a merced de la calidad del fichero PNG que entregara cada editor gráfico.
+
+Conclusión del diagnóstico: el problema no era un defecto de implementación sino \textbf{una decisión de diseño equivocada}: confiar a un editor gráfico generalista la precisión semántica que el sistema necesita.
+
+\subsection{Metodología: Reingeniería frente a permanencia}
+La tentación en un desarrollo incremental es 'seguir por ahí': ya está diseñado, ya está documentado, ya está parcialmente construido. Este proyecto asume la filosofía contraria, heredada de la experiencia con ciclos en cascada excesivamente rígidos (donde lo acordado al inicio bloquea las correcciones de mitad de camino): \textbf{ante un obstáculo importante, es más barato desechar la solución y buscar la alternativa que permanecer en el camino erróneo}. El coste de la reingeniería aquí es acotado (una pieza del flujo de autoría), mientras que el coste de permanecer crece con cada color, cada editor y cada cartucho futuro. \textbf{Desechar una solución probada y fallida no es retroceder: es el propio ciclo incremental funcionando}.
+
+\subsection{La alternativa}
+La observación clave es que la imagen es excelente para la geometría y mala para la semántica. Por tanto, se reparte el trabajo según lo que cada parte hace mejor:
+\begin{itemize}
+	\item \textbf{La imagen aporta la geometría}: los segmentos base, en blanco y negro, se extraen y numeran (seg\_000...) exactamente igual que ya hacía el extractor (componentes conexas, deduplicación de sprites img\_NNN, orden determinista). Nada de esto cambia.
+	\item \textbf{Las relaciones se asignan por selección}: el sistema presenta el mapa de segmentos, con su numeración; al pulsar sobre uno, un panel permite darle propiedades — tipo (jugador/juego), unión con otro segmento (lo que antes definí como el puente rojo), elemento siguiente/anterior de su secuencia (lo que antes definí como las líneas en azul), marca de salida, ramas de bifurcación, condición de indicador. Las relaciones se visualizan como flechas sobre el mapa y se validan en el momento de crearlas (segmento en dos cadenas, bucle sin salida, siguiente duplicado...), no tras la extracción.
+\end{itemize}
+
+Esto exige más intervención del usuario que define el cartucho que usar el dibujo coloreado, pero garantiza el resultado, evita toda una familia de errores y sigue siendo sencillo de usar y de implementar.
+
+Los roles ya no se asocian a colores, se definen manualmente, por lo que el resultado final será el mismo, el diccionario de tipos numéricos se conserva íntegro (0 jugador, 1 juego, ...) — solo cambia el canal por el que se asignan: de ser pintados a ser señalados.
+
+\subsection{Qué se conserva y qué se descarta}
+
+No es necesario descartar todo lo desarrollado hasta el momento, ya que hay muchas cosas que se pueden mantener:
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+		\toprule
+		\textbf{Se conserva} & \textbf{Se descarta} \\ 
+		\midrule
+		Extractor B/N: componentes, deduplicación, numeración determinista & La clasificación por color como entrada \\ \addlinespace
+		Las dos listas img\_NNN/seg\_NNN y todos sus campos & El censo de colores obligatorio \\ \addlinespace
+		Formato GWI (producto generado, fuente de verdad) & La cuantización por semejanza (innecesaria: solo hay B/N) \\ \addlinespace
+		Avisos de autoría, nada falla en silencio & El mapa color $\rightarrow$ rol del cartucho \\ \addlinespace
+		Flujo GWB $\rightarrow$ GWI $\rightarrow$ GWC y el destino ESP32 (consume el GWI igual) & La regla de orden ``arriba-abajo'' de las secuencias (el autor marca el orden directamente) \\ 
+		\bottomrule
+	\end{tabularx}
+	\caption{Cambios en el sistema de extracción de datos gráficos}
+	\label{tab:cambiosExtraccion}
+\end{table}
+
+\subsection{Consecuencias}
+\begin{itemize}
+	\item \textbf{La filosofía de autoría se matiza}: Pasa de 'todo se dibuja' a 'la geometría se dibuja, la lógica se señala'. Se reconoce explícitamente este cambio como decisión deliberada, no como concesión.
+	\item \textbf{El flujo queda}: cargar cartucho (GWB con img\_s en B/N) $\longrightarrow$ descomponer (segmentos numerados) $\longrightarrow$ mapa de objetos (propiedades por selección, con validación en vivo) $\longrightarrow$ guardar GWI $\longrightarrow$ motor/ESP32.
+	\item \textbf{El generador inverso}: De momento el producir el gráfico coloreado a partir de los datos, como documentación visual verificable, queda anotado como ampliación futura: los colores pasan de ser entrada a poder ser salida.
+	\item \textbf{El producto para el motor no cambia}: el GWI es idéntico, por lo que el objetivo ESP32 y las iteraciones del motor no se ven afectadas.
+\end{itemize}
+
+\subsection{Secuencia de trabajo}
+
+La nueva secuencia de trabajo a implementar es la siguiente:
+
+\begin{itemize}
+	\item Cargamos el setup de la máquina.
+	\item Cargamos un cartucho (GWB con img\_s).
+	\item Verificamos que la imagen es estrictamente B/N, damos un error bloqueante si no lo es (aunque es posible dejar cierto margen, pero lo más sencillo es hacerlo así, se deja como posible ampliación).
+	\item Descomponemos: extraemos y numeramos los segmentos (seg\_000, seg\_001, etc.).
+	\item Presentamos el mapa numerado como referencia.
+	\item Al pulsar un segmento: lista de datos a definir (unión, tipo, anterior/siguiente, rama de muerte, indicador de vidas...).
+	\item Con un botón final: revisar que todo esté definido (avisos si algo falta) y, si es correcto, guardar en disco (segmentos/ con las imágenes y el \texttt{JSON} del GWI).
+\end{itemize}
+
+
+
+
+
+
+
+
+\clearpage
+

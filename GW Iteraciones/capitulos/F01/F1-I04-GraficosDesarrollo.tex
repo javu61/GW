@@ -1,0 +1,76 @@
+\section{Cuarta iteración de la Fase 1: Gráfico como generador de datos. Desarrollo}
+\label{sec:GeneradorGraficoDesarrollo}
+
+La interacción anterior han sido solo el análisis de como desarrollar la descomposición, y el proceso detallado es el que se realiza en esta iteración.
+
+
+\subsection{Secuencia de trabajo}
+
+La secuencia de trabajo a implementar es la siguiente:
+
+\begin{itemize}
+	\item Cargamos el setup de la máquina. 
+	\item Cargamos un cartucho.
+	\item Buscamos los colores en la imagen y sacamos la lista, dejando cambiar los roles (aceptaremos que varios colores pueden usar el mismo rol, azul calro y azul oscuro por ejemplo pueden ser lo mismo, de esta manera pequeños cambios de tono de colores en el editor gráfico no afectan al resultado final). 
+	\item Definidos los roles de los colores, nuevo botón con el que generamos ya todo lo necesario y mostramos la lista de imágenes y las dos listas de datos. Se presentan en consola, pero no en pantalla, así no colapsamos la pantalla con datos.
+	\item Al final mediante otro botón guardamos ya esto en disco, en un directorio llamado segmentos con las imágenes por un lado y la configuración y las listas en un \texttt{JSON} por otro.
+\end{itemize} 
+
+Además los \texttt{JSON} de los cartuchos deben tener un tipo y versión para definir correctamente su contenido (no lo hicimos en la iteración dos más que para la configuración general):
+\begin{itemize}
+	\item Si no tienen dará un error
+	\item Si tiene 'GWB' se entiende que es la inicial antes de descomponer
+	\item Si tienen tipo 'GWD' es cuando ya está descompuesto y montadas las listas.
+	\item En iteraciones posteriores podemos definir otras versiones del cartucho.
+\end{itemize}
+
+\subsection{Varios colores con el mismo rol}
+El censo lista colores reales, y el mapa asigna roles en la forma [N colores $\rightarrow$  1 rol], lo que es natural. Cubre el caso del editor (azul claro y azul oscuro, ambos 'secuencia') y también el futuro (dos zonas de juego con distinto color pero mismo rol). Hay que tener en cuenta:
+\begin{itemize}
+	\item Dos componentes de distinto color, aunque se toquen, son componentes separados: la conectividad es por color exacto, no por rol. O sea: azul claro y azul oscuro tocándose = dos secuencias, no una. Eso es lo correcto (y protege de fusiones accidentales),y claramente significa que 'si son el mismo rol NO se unen', esto lo hacen los conectores, no los colores.
+	\item El aviso de «color sin rol» debe listar cada color con su \texttt{pixel-count}: por ejemplo \texttt{\#0088FF} sin rol (312 px), \texttt{\#0044FF} sin rol (58 px), ya que así se ve exactamente en cuál te equivocaste al pintar.
+	
+	
+\end{itemize}
+
+\subsection{botón «Guardar»}
+Escribir en disco desde una página no es posible directamente en JavaScript por seguridad. Hay alguna opción:
+\begin{itemize}
+	\item \textbf{File System Access API} (showDirectoryPicker): el usuario elige la carpeta una vez y el sistema escribe dentro lo necesario $\longrightarrow$ segmentos/img\_0.png, img\_1.png... + \texttt{segmento.json}.  
+ 	\item \textbf{Descarga}: Montar todo en un ZIP y descargarlo. Universal, aunque menos elegante y más manual, el usuario descarga el fichero, lo pone en el lugar donde desea y lo descomprime.
+\end{itemize}
+
+Por comodidad \underline{he usado el primer sistema en la fase de desarrollo}, pero se cambiará al final por el segundo método por ser universal.
+
+El contenido de \texttt{segmento.json} sería: el mapa de colores resuelto + las dos listas (sprites con id/dimensiones/fichero, segmentos con todo) — o sea, el GWI que defines a continuación.
+
+\subsection{Los tipos de \texttt{JSON}}
+Definir varios tipos como GWB (base, para descomponer) / GWI (descompuesto, generado) / GWC (cartucho final) es necesario ya que:
+\begin{itemize}
+	\item \textbf{Cierra el ciclo de autoría con artefactos concretos}: GWB se dibuja a mano, GWI lo genera el sistema, GWC se monta.
+	\item \textbf{Da respuesta a la pregunta de '¿quién es la fuente de verdad de las listas?'}: el GWI. El motor de la iteración 4 ya no ejecutará la extracción — cargará el GWI. Esto es importante para el ESP32 también: el microcontrolador cargará directamente las listas ya generadas, sin extractor.
+	\item \textbf{La regla 'sin tipo' = 'GWB'}: no la usaremos por mantener una estructura homogénea.
+	\item \textbf{Campo adicional 'version'}: Necesaria en cambios sucesivos.
+	\item \textbf{El GWI es generado, no editable a mano}: Si se necesita cambiar algo, cambias la imagen y lo regeneras. Eso evita que las listas y la imagen se desincronicen. \textbf{El GWI es un producto, no un origen} (para pruebas puntuales siempre se podrá editar, pero la regla formal es no hacerlo nunca y evitar errores).
+\end{itemize}
+
+
+\subsection{Colorear el gráfico}
+
+Es el momento de colorear el gráfico de segmentos para generar la imagen generadora de las listas, partimos de usar un programa sencillo de dibujo, en este caso he usado \textbf{Paint}, y coloreado con cuidado para obtener colores puros, este es el resultado:
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-D7}
+	\caption{Gráficos de definición con colores}
+	\label{fig:c05-D7}
+\end{figure}
+
+Una vez desarrollado el proceso que detecta los colores en el gráfico para hacer la asignación de roles, al cargar el gráfico \underline{el proceso detecta 119 colores en total}, en lugar de los 8 que he usado, por tanto aunque no lo he configurado así, \textbf{Paint} ha efectuado el antialising al guardar el gráfico.
+
+\subsection{Resultado de esta iteración}
+
+\textbf{Proceso erróneo}, la teoría era buena, la práctica requiere usar un programa gráfico propio, ya que no podemos fiarnos de que los programas comerciales hagan las cosas como queremos.
+
+\clearpage
+

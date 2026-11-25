@@ -1,0 +1,174 @@
+\section{Tercera iteración de la Fase 1: Análisis del editor Gráfico como generador de datos}
+\label{sec:GeneradorGraficoAnalisis}
+
+Esta es una iteración dedicada solo al análisis, en la siguiente haremos los cambios para implementar lo definido aquí, ya que es necesario pensar bien y anticipar al máximo todo lo necesario para ahorra mucho tiempo posteriormente, no ir adelante y atrás con los desarrollos y corregir muchas cosas. 
+
+Todo lo que se pueda definir en el gráfico de segmentos nos evitará hacerlo manualmente, evitando muchos errores y ajustes manuales más complejos. En esta iteración usaremos \textbf{Img\_s} como la fuente de datos para que el motor obtenga sprites, posiciones, rutas y roles. 
+
+El usuario dibuja en su editor de imágenes, no escribe coordenadas ni código. Solo la lógica irreducible del juego vive como parámetros en el \texttt{JSON} del cartucho.
+
+Como aclaración definiré como \textbf{segmentos del jugador} a los que puede manejar este con los mandos, y \textbf{segmentos del juego} los que maneja el sistema automáticamente. Para su manejo interno se asocian a 0 o 1, falso o cierto, pero en las pantallas donde se soliciten datos se usará las palabras \textbf{jugador} y \textbf{juego} para su manejo por el usuario. Cuando sea necesario se acepta la palabra legible, aunque internamente se traduce al tipo numérico.
+
+\subsection{Filosofía}
+
+Todo lo que se pueda dibujar, se dibuja. Por tanto img\_s no es una imagen decorativa: es la fuente de datos de la que el motor obtiene sprites, posiciones, rutas y roles. El autor de cartuchos dibuja en su editor de imágenes — no escribe coordenadas ni código. Solo la lógica irreducible del juego vive como parámetros en el \texttt{JSON} del cartucho.
+
+\subsection{El sistema de colores}
+
+En los G\&W los segmentos realizan siempre su encendido en una secuencia, en el parachute comienzan por la esquina superior derecha, y caen en una trayectoria u otra de tres posibles, siguiendo un camino fijo, si se lanza desde la posición izquierda, solo puede seguir esa ruta de caída. En un Donkey Kong los barriles van cayendo por las rampas siguiendo una trayectoria. Voy a ampliar el sistema de colores para que permitan definir las rutas que siguen los segmentos. Los posibles usos serán 'fondo', 'juego', 'jugador', 'puente', 'secuencia', y en la siguiente tabla se definen los colores por defecto a usar:
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{lllp{6.5cm}}
+		\toprule
+		\textbf{Tipo} & \textbf{Rol} & \textbf{Color} & \textbf{Produce} \\ 
+		\midrule
+		0 & jugador & Verde & segmentos manejados por el jugador que responden a los botones de movimiento \\ \addlinespace
+		1 & juego & Negro & segmentos manejados por el juego \\ \addlinespace
+		2 & fondo & Blanco & se ignora \\ \addlinespace
+		3 & puente & Rojo & agrupa segmentos en un sprite \\ \addlinespace
+		4 & secuencia & Azul &  ruta ordenada de posiciones que puede seguir una secuencia de segmentos \\ 
+		\bottomrule
+	\end{tabular}
+	\caption{Roles del sistema, tipos internos y colores por defecto}
+	\label{tab:coloresRoles}
+\end{table}
+
+En esta tabla:
+\begin{itemize}
+	\item Los tipos 0 y 1 corresponden al campo tipo de los segmentos; los roles 2–4 son de procesamiento (fondo y conectores) y no generan entradas en las tablas.
+	\item Que el fondo tenga número y no sea un caso especial se hace por definir un mapa de colores completo, donde todo color de la imagen tiene entrada, incluido el blanco, y el motor trata el fondo como un producto más.
+\end{itemize}
+La tabla muestra la propuesta por defecto; los colores \textbf{no serán fijos}: la asociación color→rol es también redefinible para poder generar mejor el mapa del cartucho. El vocabulario de roles lo define el motor: 'juego', 'jugador', 'puente', 'secuencia' (más los que incluiré un poco más adelante), pero el color real que use el diseñador del gráfico será libre y redefinible.
+
+\textbf{Reglas de dibujo:}
+
+\begin{enumerate}
+	\item \textbf{Colores planos}, \underline{sin antialiasing}.
+	\item \textbf{Contenido}: un segmento = componente conexa de un color de contenido (conectividad 8). Dos segmentos del mismo color que se tocan \textbf{son} el mismo segmento. Es importante definir que \textbf{dos imágenes con el puente rojo son realmente un solo segmento}, se encienden ambos o ninguno. Si queremos tener dos posibilidades de encendido, uno solo o los dos, entonces serán dos segmentos independientes que se deben encender a la vez o no según el estado del juego.
+	\item \textbf{Conectores}: deben \textbf{tocar} el contenido que afectan (sin hueco blanco). Nunca aparecen en las imágenes extraídas ni en las cajas.
+	\item \textbf{Puente rojo} = une en un mismo sprite todos los segmentos que toca (grafo; las cadenas A–B–C acaban en un sprite). Estilo de autoría: puentes mínimos — \textbf{un puente = una unión}.
+	\item \textbf{Línea azul} = una secuencia: une las posiciones por las que un objeto pasa en orden. Cada componente conexa azul = una secuencia. Una posición tocada por dos secuencias = aviso de autoría.
+	\item \textbf{Orden de la secuencia}: regla determinista del proyecto — arriba-abajo, a igualdad de altura izquierda-derecha. Ya que el orden de dibujo no sobrevive en un PNG; por eso el orden es por regla, pero es posible modificarlo añadiendo más características a los conectores, aunque esto no se contempla en este proyecto, se deja como ampliación añadir un sistema que permita definir un orden usando otros colores por ejemplo.
+\end{enumerate}
+
+\subsection{Dos pasadas: censo y extracción}
+
+Para poder usar colores variables se deben definir estos primero de forma unívoca. Usaremos un análisis en dos pasadas de la imagen para lograrlo sin ambigüedades. Para ello se emplearán tres pasos:
+
+\begin{enumerate}
+	\item \textbf{Pasada 1 — Censo}: el extractor recorre todos los puntos guardando una lista de los colores encontrados.	
+	\item \textbf{Definición}: Se presentan los colores con los roles por defecto (blanco fondo, negro segmento, rojo conector, azul secuencia), pero se permite al usuario redefinir los que se han encontrado.
+	\item \textbf{Pasada 2 — Extracción}: cada color de contenido produce sus componentes; los conectores se procesan según su rol. Los colores no mapeados se ignoran con aviso (nunca en silencio).
+\end{enumerate}
+
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Mapa de colores en el JSON del cartucho},
+	label={lst:setupColores}
+	]
+	{
+		'colores': {
+			'#FF0000': 'puente',
+			'#0000FF': 'secuencia',
+			'#000000': 'juego',
+			'#00AA00': 'jugador',
+			'#FFFFFF': 'fondo'
+		}
+	}
+\end{lstlisting}
+
+De esta forma el ciclo de autoría del cartucho es el bucle natural de crear la imagen, descomponerla, si hay errores efectuar las correcciones necesarias y volver a descomponer, hasta que esté todo correcto y se pueda generar las tablas, sin manipular datos en estas, solo ajustamos la imagen, y no se requiere un interfaz especial.
+	
+\subsection{Productos de la extracción (las tablas)}
+
+Tras la descomposición y sus posibles ajustes, disponemos de las dos tablas de datos generadas de manera automática por el sistema, con estas características:
+
+\begin{itemize}
+	\item \textbf{Deduplicación}: huella = dimensiones + mapa de píxeles. Píxel-exacta a propósito ('casi iguales' no se fusionan).
+	\item \textbf{IDs deterministas}: mismo PNG → mismos IDs, siempre (orden arriba-abajo/izquierda-derecha; numeración por primera aparición). Las referencias son estables.
+	\item \textbf{Ruido}: componentes de menos de 4 px descartadas con aviso.
+	\item \textbf{Etiquetas} opcionales (\textbf{'seg\_N': 'nombre'}) para nombres legibles en la tira, la consola y los futuros estados. Para mantener los tamaños homogéneos, usaremos números de 3 cifras (000, 001 ...) así visualmente son todos homogéneos y es más sencillo de ver una pantalla con datos del mismo tamaño
+\end{itemize}
+
+Las dos tablas que generamos son:
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{lp{10cm}}
+		\toprule
+		\textbf{Lista} & \textbf{Contenido} \\ 
+		\midrule
+		\textbf{sprites} & Lista de las imágenes de los segmentos que usaremos en el juego. Cada uno contiene: \\
+		& • Un identificador único \textbf{img\_N} \\
+		& • La \textbf{Imagen}, esta siempre es única por el proceso que elimina repetidas, y en formato blanco y negro (B/N). \\
+		& • Dimensiones físicas de la caja: \textbf{ancho} y \textbf{alto}. \\ \addlinespace
+		
+		\textbf{segmentos} & Lista de todos los segmentos definidos en el sistema del juego. Cada componente cuenta con: \\
+		& • Su propio \textbf{ID} único de segmento (\texttt{seg\_N}). \\
+		& • Coordenadas de la posición en pantalla (\textbf{x, y}). \\
+		& • El \textbf{sprite} referenciado mediante su identificador correspondiente. \\
+		& • El \textbf{tipo} 0 para segmento manejado por el jugador, 1 para segmento manejado por el juego. \\
+		& • El segmento siguiente a encender tras apagar este, y para el jugador el segmento anterior (para poder moverse por las secuencias del jugador); quedarán vacíos si no existe. \\ 
+		& • Estado actual: 0 para apagado, 1 para encendido (se usará solo en los motores, se define en otra iteración, se crea a 0 por defecto). \\
+		& • Si ha cambiado el estado: 0 para indicar no, 1 para indicar si (se usará solo en los motores, se define en otra iteración, se crea a 0 por defecto). \\ 
+		\bottomrule
+	\end{tabular}
+	\caption{Productos de la extracción estructurados en listas}
+	\label{tab:productosExtraccionListas}
+\end{table}
+
+
+\subsection{Modelo de ejecución}
+
+\begin{itemize}
+	\item \textbf{Todo es secuencia}: un objeto activo recorre una \textit{instancia} de una ruta; el motor lleva el progreso de cada objeto por separado.
+	\item \textbf{Impulsores}: \textbf{reloj} (avanza solo cada tick), \textbf{jugador} (botones avanzan/retroceden — p. ej. el bote con IZQ/DER), \textbf{sistema} (GAME A / GAME B / TIME).
+	\item \textbf{Colisión por visibilidad}: la ruta del juego llega a una posición que coincide con una posición de jugador → \textit{¿está visible?} → vida o muerte según la polaridad del cartucho. Posiciones fijas, sin reglas geométricas ni distancias: los segmentos no se mueven por píxeles.
+	\item \textbf{Polaridad (parámetro del cartucho)}: contacto salva (Parachute, Fire) o contacto mata (juegos de esquivar).
+	\item \textbf{Muerte como ruta encadenada}: la secuencia de muerte empieza donde termina la caída (posición compartida) y es \textbf{compartida} por todos los objetos que mueren; cada uno la recorre en su instancia. Fiel al LCD real: un segmento está encendido si cualquier instancia lo usa.
+	\item Resultados: salvación = el objeto desaparece (y se anota); muerte = recorrer la ruta de muerte + reducir vida.
+\end{itemize}
+
+\subsection{Desarrollo}
+
+Las secciones anteriores han sido el análisis, pasamos a definir el proceso detallado que sería el siguiente:
+
+
+\subsection{Avisos de autoría (nada falla en silencio)}
+
+Todos por consola; los bloqueantes también en la barra superior y el panel.
+
+\begin{itemize}
+	\item Cartucho sin \textbf{img\_f}
+	\item Cartucho sin \textbf{img\_s}
+	\item Tamaño de \textbf{img\_s} diferente al de \textbf{img\_f}. 
+	\item Puente suelto.
+	\item Puente que solo toca un segmento
+	\item Ruido descartado
+	\item Posición en dos secuencias
+	\item Color sin rol asociado
+	\item Etiqueta sin sprite
+
+\end{itemize}
+
+\subsection{Decisiones a resolver en siguientes iteraciones}
+
+Esta es una lista de elementos que no están definidos completamente en este punto ni es necesario resolverlos en este momento, pero que hay que tener presentes para las siguientes iteraciones del ciclo incremental:
+
+\begin{enumerate}
+	\item Encadenado caída→muerte: confirmar el mecanismo de posición compartida (¿y si dos caídas aterrizan en el mismo punto?).
+	\item Cuándo cuenta la muerte: al entrar en la ruta o al completar la animación.
+	\item Cómo se declara la correspondencia caída $\longleftrightarrow$ hueco del bote (¿posición compartida también?).
+	\item Formato de eventos: ocultar objeto, puntuación, vidas, disparar animaciones.
+	\item GAME A vs GAME B: mismos datos, otros parámetros (velocidad, dificultad).
+	\item Nuevos roles (puntuación, vidas): ¿color propio o dato del cartucho?
+\end{enumerate}
+
+
+
+\clearpage
+

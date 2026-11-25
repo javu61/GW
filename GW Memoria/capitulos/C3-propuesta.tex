@@ -1,0 +1,117 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+	\chapter{Propuesta}
+	\label{C:propuesta}
+
+	En este capítulo se presentan las principales decisiones de arquitectura y diseño adoptadas como base para el desarrollo del sistema.
+
+	\section{Planteamiento}
+	\label{sec:planteamiento}
+
+	El objetivo es desarrollar un motor para la creación de juegos inspirados en las consolas Game \& Watch que pueda ejecutarse inicialmente en un ordenador y ampliarse posteriormente para su implementación sobre hardware real.
+
+	El diseño debe ser abierto, de forma que cualquiera pueda implementarlo en el lenguaje y hardware de su elección con mínimas modificaciones, lo que requiere partir de un desarrollo sencillo como base.
+
+	El motor del juego se articula mediante una máquina de estados, junto con los gráficos necesarios; todo ello se empaqueta en lo que se denominará un \textbf{cartucho}, una estructura de datos compacta que contiene toda la información necesaria para ejecutar un juego concreto. Por tanto, el sistema se divide en un proceso de creación de cartuchos en un PC, un proceso para simularlos en el propio PC y poder verificar que funcionan correctamente, y su traspaso a una máquina externa.
+
+	\section{Arquitectura del proyecto}
+	\label{sec:arquitectura}
+
+	El proceso de desarrollo se divide en tres partes independientes y complementarias, lo que facilita la implementación final del proyecto:
+
+	\begin{itemize}
+		\item \textbf{Diseñador}: proceso de creación de cartuchos.
+		\item \textbf{Simulador}: ejecución en PC del resultado, utilizado para las pruebas de diseño y la afinación del motor del juego.
+		\item \textbf{Despliegue}: puesta en marcha en un sistema externo del motor del juego y los cartuchos.
+	\end{itemize}
+
+	No obstante, por simplicidad, se ha decidido alterar el orden inicialmente previsto para el desarrollo:
+
+	\begin{itemize}
+		\item Diseñar en primer lugar el simulador, partiendo de un fichero \texttt{JSON} preparado manualmente.
+		\item Una vez depurado el simulador, abordar el proceso de generación de la estructura de los cartuchos.
+		\item Adaptar el simulador para que utilice la estructura de cartuchos diseñada, manteniendo a la vez la posibilidad de trabajar con el fichero \texttt{JSON}. De esta manera se ofrecen dos vías de creación de cartuchos: mediante \texttt{JSON} (modo manual) o mediante el propio sistema de diseño (modo asistido).
+		\item Montar el sistema externo, incluyendo la placa base, la pantalla y los botones.
+		\item Implementar el mecanismo de carga de cartuchos, ya sea mediante tarjeta SD o mediante conexión Bluetooth o Wi-Fi.
+		\item Realizar el traslado (\textit{porting}) del motor al sistema externo, reimplementando el motor del simulador en el lenguaje C++, empleado habitualmente en dichos dispositivos.
+	\end{itemize}
+
+\subsection{Lenguaje y entorno del Diseñador/Simulador}
+\label{sec:LenguajeEntorno}
+
+Se ha optado por desarrollar la herramienta de PC en JavaScript puro. De esta manera el código resulta sencillo, portable y ejecutable en cualquier navegador moderno, ya sea de forma local (abriendo directamente el fichero \texttt{index.html} con doble clic, protocolo \texttt{file://}) o publicado en un servidor, incluyendo alguno gratuito como el que ofrece GitHub Pages.
+
+También se ha considerado y descartado TypeScript. Aunque aporta ventajas en cuanto al tipado estático y la detección temprana de errores, introduce una fase adicional de compilación que se ha considerado innecesaria para los objetivos del proyecto, cuya prioridad es que terceras personas puedan modificar el código con la menor fricción posible.
+
+Igual que TypeScript, se ha descartado el uso de módulos ES (\texttt{import/export}) en favor de \emph{scripts clásicos} compartiendo un ámbito global. Los módulos ES requieren servirse los ficheros mediante HTTP (no funcionan abriendo el fichero directamente con \texttt{file://}) por las restricciones de seguridad del modelo CORS, lo que obligaría al usuario a montar un servidor local solo para abrir la herramienta. Con scripts clásicos, abrir \texttt{index.html} con doble clic y \emph{todo funciona}: es la opción que menos fricción introduce para cualquiera que descargue el proyecto y quiera probarlo o modificarlo. Como contrapartida, el orden de carga de los scripts en el \texttt{index.html} es significativo (primero las librerías, después quien las usa), y se mantiene de forma explícita en el fichero.
+
+El motor de ejecución en JavaScript se implementará teniendo en cuenta que posteriormente será reescrito en C++ para el ESP32: usar estructuras simples (objetos planos, funciones puras), evitando construcciones excesivamente específicas del lenguaje JavaScript que dificultarían dicha traducción.
+
+La estructura del repositorio se divide en dos bloques principales: el entorno de diseño y simulación, desarrollado en JavaScript, y el firmware destinado al ESP32, cuya implementación se abordará en una fase posterior. Su estructura será inicialmente esta:
+
+\begin{verbatim}
+	GW/
+		index.html          	-> Página base: controles, carcasa y panel de estado
+		designer/				-> Desarrollo en JavaScript y auxiliares
+			director.js     		-> Director: orquesta setup, cartuchos y motores
+			extractor.js    		-> Extracción de segmentos desde imágenes
+			motor-grafico.js		-> Motor Gráfico
+			motor-juego.js			-> Motor del Juego
+			estilos.css     		-> Hoja de estilos de la herramienta			
+		firmware/           	-> Port C++ al ESP32
+			gw.hpp					-> Includes necesarios
+			motor-grafico.cpp		-> Motor Gráfico
+			motor-juego.cpp			-> Motor del Juego
+\end{verbatim}
+
+El modelo de trabajo elegido sigue el esquema \emph{subir $\rightarrow$ procesar $\rightarrow$ descargar}, ejecutado en su totalidad en el navegador:
+
+\begin{itemize}
+	\item \textbf{Carga:} de los ficheros de configuración (\texttt{.json} sueltos o carpetas completas del cartucho) y de los ficheros gráficos, mediante elementos \texttt{<input type="file">} y selectores de carpeta (\texttt{webkitdirectory}).
+	\item \textbf{Procesado:} en memoria, de los elementos gráficos —mediante \texttt{Canvas} para el análisis de píxeles— y del modelo de datos, representado mediante objetos y arrays de JavaScript.
+	\item \textbf{Guardado:} empaquetado de la información en una estructura \texttt{JSON} y escritura en disco mediante la API del navegador (véase la sección del botón «Guardar» del capítulo de desarrollo).
+\end{itemize}
+
+No se emplea ningún proceso de \emph{build} ni \emph{bundler}: el proyecto se clona y se abre directamente, sin necesidad de \texttt{npm install} ni de ninguna otra herramienta de compilación.
+
+	\section{Plataformas hardware analizadas}
+	\label{sec:plataformas-analizadas}
+
+	Para la implementación final se han analizado diversas plataformas hardware actuales, algunas de ellas ya disponibles previamente por afición a la electrónica, aunque la mayoría se han descartado por los motivos que se detallan a continuación:
+
+	\begin{itemize}
+		\item \textbf{ESP32} (seleccionado): su capacidad de procesamiento resulta suficiente, su velocidad es adecuada, dispone de memoria RAM suficiente para almacenar el motor y sus datos, e integra periféricos de interés como lector de tarjeta SD, Wi-Fi y Bluetooth.
+
+		\item \textbf{Arduino estándar y Arduino Nano} (descartados por completo): potencia de ejecución insuficiente para mover los gráficos con la fluidez requerida.
+
+		\item \textbf{Arduino Mega (ATmega2560)} (descartado parcialmente): se trata de una plataforma técnicamente viable (16~MHz de frecuencia de reloj, 8~KB de SRAM), pero el reto asociado a sus limitaciones —principalmente de memoria RAM— no aporta un valor significativo al Trabajo dentro del tiempo disponible para su desarrollo. No obstante, esta alternativa queda planteada como una posible línea de trabajo futuro, ya que permitiría demostrar la portabilidad del diseño a hardware con recursos muy limitados. En caso de abordarse dicha implementación, sería necesario tener en cuenta las siguientes consideraciones:
+		\begin{itemize}
+			\item Emplear un motor gráfico ligero adaptado al hardware disponible, evitando el uso de librerías gráficas genéricas y pesadas, como \texttt{Adafruit\_GFX}.
+			\item Realizar acceso directo a los puertos de entrada/salida en lugar de emplear funciones de alto nivel como \texttt{digitalWrite()}.
+			\item Prescindir del uso de números en coma flotante (\texttt{float}), dado que el sistema no los requiere y el ATmega2560 carece de unidad de coma flotante (FPU) por hardware.
+			\item Almacenar los mapas de bits (\textit{bitmaps}) en memoria \texttt{PROGMEM}.
+			\item Tener en cuenta que, al tratarse de un juego sencillo y sin gráficos en movimiento continuo, el principal cuello de botella sería la cantidad de memoria RAM disponible, más que la velocidad de dibujado propiamente dicha.
+		\end{itemize}
+
+		\item \textbf{Raspberry Pi} (descartada): permitiría ejecutar directamente el mismo entorno JavaScript empleado durante el desarrollo, sin necesidad de traducción a otro lenguaje. Sin embargo, sus prestaciones exceden ampliamente los requisitos del proyecto, por lo que la mayor parte de su capacidad quedaría desaprovechada.
+
+		\item \textbf{Familia de microcontroladores Teensy} (descartada): resultarían igualmente apropiados, ya que mueven los gráficos con gran fluidez al disponer de una unidad de coma flotante (FPU) propia y una frecuencia de reloj notablemente superior a la del ESP32. No obstante, sus prestaciones exceden los requisitos identificados para el proyecto y, a diferencia del ESP32, no incorporan conectividad Wi-Fi ni Bluetooth de fábrica, lo que obligaría a añadir un módulo adicional si en el futuro se quisiera dotar al sistema de dicha conectividad.
+	\end{itemize}
+
+	\section{Plataforma seleccionada}
+	\label{sec:plataforma-seleccionada}
+
+	De entre las plataformas disponibles, se ha elegido el \textbf{ESP32}, alineado con la variante propuesta por los directores y con el requisito de emplear 'tecnologías actuales': dispone de un procesador de doble núcleo a 240~MHz, memoria RAM y PSRAM suficientes para las necesidades del proyecto, así como conectividad Wi-Fi y Bluetooth integrada, y un ecosistema de desarrollo maduro (ESP-IDF, Arduino-ESP32, PlatformIO/pioarduino).
+
+	Para la pantalla se empleará una única pantalla física. El modo de 'doble pantalla' (como el de los juegos tipo Donkey Kong o Zelda) se resuelve dividiendo lógicamente el área gráfica en dos paneles, sin necesidad de dos pantallas físicas independientes.
+
+	Se descarta el uso de pantalla táctil: las pantallas resistivas no pueden emplearse por no soportar la pulsación simultánea de varios botones, requisito necesario en distintos juegos originales de la serie Game~\&~Watch; y las capacitivas, aunque sí lo permiten, complican innecesariamente la gestión de 'botones virtuales' superpuestos al área de juego, sin aportar un valor claro al alcance actual del proyecto. Esta opción queda abierta como posible ampliación futura.
+
+	En su lugar se empleará una pantalla con interfaz serie. Se ha seleccionado el módulo Waveshare \textbf{ESP32-S3-LCD-2.8} (variante sin táctil): pantalla IPS de 2.8', resolución 240×320, controlador ST7789 mediante bus SPI, procesador ESP32-S3R8 (doble núcleo LX7 a 240~MHz, 8~MB de PSRAM), e integra además altavoz, sensor inercial (IMU), reloj en tiempo real (RTC), lector de microSD y gestión de carga de batería LiPo. Estos elementos adicionales aportan, como posible ampliación, la posibilidad de emitir sonidos sencillos, aunque su gestión no se contempla en el alcance actual del proyecto.
+
+	Para el manejo de la entrada se emplearán botones físicos conectados por GPIO, con resistencias de \textit{pull-up} internas activadas por software, sin necesidad de resistencias externas. Esta solución permite detectar la pulsación simultánea de dos botones, requisito necesario en varios juegos originales de la serie Game~\&~Watch.
+
+	Aunque conceptualmente se contemplan varias funciones de control, se reutilizarán los mismos botones físicos mediante pulsaciones cortas, largas o combinadas, reduciendo así el número total de controles necesarios.
+
+\end{document}

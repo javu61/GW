@@ -1,0 +1,441 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+	\chapter{Lista de funciones desarrolladas}
+	\label{sec:ListaFuncionesDerarrolladas}
+	
+	Se listan a continuación las funciones de cada fichero JavaScript
+	del proyecto, en el orden en que los carga \texttt{index.html},
+	agrupadas por etapa: el puente de datos, la autoría (\texttt{Base*}),
+	y el juego (\texttt{Juego*}). Para cada una se detalla su nombre y una
+	s
+	\textbf{ESTA LISTA ES PROVISIONAL}. Comprende unas 200 funciones desarrolladas hasta el fin de la fase 4 inclusive, se irá ampliando.
+	
+	\subsection*{comunListas.js — el puente de datos}
+	
+	\begin{itemize}
+		\item \texttt{cargar}: guarda en el puente el setup y la lista de
+		segmentos del GWI (filtra los fantasmas tipo 99).
+		\item \texttt{limpiar}: vacía todo el puente (listas, fondo,
+		configuraciones).
+		\item \texttt{segmentos} / \texttt{sprites} / \texttt{fondo}:
+		lectores de las referencias vivas (el juego lee; nunca escribe).
+		\item \texttt{fijarFondo}: fija la imagen de fondo del cartucho.
+		\item \texttt{fijarReglas} / \texttt{reglas}: escribe la autoría /
+		lee el motor la regla de combinación de pulsaciones del setup.
+		\item \texttt{fijarFin} / \texttt{finDeCartucho}: fija / lee el
+		mecanismo de fin de partida del cartucho.
+		\item \texttt{fijarSecuencia} / \texttt{secuenciaDeCartucho}: fija /
+		lee la Secuencia (animación de fondo).
+		\item \texttt{fijarPausas} / \texttt{pausasDeCartucho}: fija / lee
+		las pausas por plataforma (\texttt{simulador}, \texttt{externo}).
+		\item \texttt{fijarAceleracion} / \texttt{aceleracionDeCartucho}:
+		fija / lee la aceleración (\texttt{cada}, \texttt{resta},
+		\texttt{minimo}).
+		\item \texttt{fijarRutas} / \texttt{rutasDeCartucho}: fija / lee la
+		política de rutas (\texttt{aumentarCada}).
+		\item \texttt{encolar}: encola una pulsación en el buffer FIFO con
+		tapa (8); lo descarta y devuelve false si está lleno.
+		\item \texttt{colaPulsaciones}: el buffer de pulsaciones pendientes
+		(lo vacía el motor al empezar el tick).
+	\end{itemize}
+	
+	\subsection*{BaseExtractor.js — extracción de la imagen maestra}
+	
+	\begin{itemize}
+		\item \texttt{verificarBN}: bloqueante si \texttt{img\_s} no es
+		blanco y negro puros; lista los colores intrusos.
+		\item \texttt{leerImagen}: vuelca una imagen a canvas y devuelve
+		sus píxeles (\texttt{getImageData}).
+		\item \texttt{extraerBN}: máscara negra + componentes conexas;
+		devuelve las componentes elementales, el índice píxel→componente y
+		el ruido descartado.
+		\item \texttt{componentes}: búsqueda en anchura con pila explícita y
+		conectividad-8 sobre la máscara; calcula la caja de cada componente.
+		\item \texttt{reagrupar}: aplica las uniones (union-find) y produce
+		grupos ordenados de forma determinista y sprites únicos
+		deduplicados por huella píxel-exacta.
+		\item \texttt{crearUnionFind}: estructura de conjuntos disjuntos
+		para las fusiones.
+		\item \texttt{buscar}: raíz de una componente en el union-find
+		(con compresión de caminos).
+		\item \texttt{unir}: une dos componentes en el union-find.
+		\item \texttt{hex}: color RGB a notación hexadecimal (para los
+		avisos del verificador).
+	\end{itemize}
+	
+	\subsection*{BaseGraficos.js — dibujo del mapa de autoría}
+	
+	\begin{itemize}
+		\item \texttt{fijarFondo} / \texttt{fijarSegmentos}: estado interno
+		del dibujante: la imagen de fondo y la lista de segmentos residente.
+		\item \texttt{pixelesDe}: los píxeles de una imagen como máscara
+		B/N.
+		\item \texttt{escalaDe}: escala por eje del destino (aparato o
+		mapa).
+		\item \texttt{DibujarFondo}: pinta la imagen de fondo estirada sobre
+		el destino.
+		\item \texttt{DibujarSegmento}: pinta un segmento sobre el destino
+		(XOR en modo simulador; color de tipo en modo autoría).
+	\end{itemize}
+	
+	\subsection*{BaseDescomponer.js — la autoría: mapa, panel, verificación y GWI}
+	
+	\textbf{Ciclo de vida:}
+	\begin{itemize}
+		\item \texttt{inicializar}: registra los listeners del mapa y de los
+		botones del editor.
+		\item \texttt{arrancar}: arranque de la autoría según el tipo:
+		GWB $\rightarrow$ descomposición; GWI $\rightarrow$ carga directa de
+		listas y edición.
+		\item \texttt{reset}: limpieza total de la autoría (selección,
+		marcas, historial, ficticios).
+		\item \texttt{reconstruir}: mezcla extracción + ficticios +
+		historial y produce los grupos finales (hereda props, calcula
+		\texttt{oculto}, fusiona por absorción).
+		\item \texttt{refrescar} / \texttt{refrescarInfo}: repinta mapa,
+		aparato, panel y lista auxiliar.
+	\end{itemize}
+	
+	\textbf{Interacción con el mapa:}
+	\begin{itemize}
+		\item \texttt{alPulsarMapa}: clic del mapa: aplica la elección
+		pendiente, selecciona la pieza o inicia el recuadro de selección.
+		\item \texttt{alMoverMapa}: arrastra la banda elástica del recuadro
+		de selección múltiple.
+		\item \texttt{alSoltarMapa}: cierra el recuadro (marca los grupos
+		cortados) o confirma la selección simple.
+		\item \texttt{puntoDe}: coordenadas de un evento sobre el canvas.
+		\item \texttt{grupoDelPixel}: grupo en las coordenadas del mapa
+		(vía el índice píxel$\rightarrow$componente del extractor).
+		\item \texttt{grupoDeComp}: grupo actual que contiene una componente.
+		\item \texttt{piezaDe}: sube toda la jerarquía de la pieza clicada
+		(barra $\rightarrow$ dígito $\rightarrow$ contador).
+	\end{itemize}
+	
+	\textbf{Panel de propiedades:}
+	\begin{itemize}
+		\item \texttt{mostrarPanel}: pinta el panel según el tipo y la
+		selección (incluida la ficha del cartucho).
+		\item \texttt{camposDe}: los campos y enlaces que el panel ofrece a
+		cada tipo de segmento.
+		\item \texttt{aplicarEleccion}: aplica el enlace o unión elegida con
+		las validaciones de destino.
+		\item \texttt{moverNumero}: Subir/Bajar el número de presentación de
+		un segmento (materializa \texttt{orden}, acción atómica).
+		\item \texttt{numeroDe}: orden de presentación de los grupos
+		(\texttt{orden} o índice).
+	\end{itemize}
+	
+	\textbf{Agrupaciones (unión, dígito, contador):}
+	\begin{itemize}
+		\item \texttt{unirMarcados}: une por absorción los grupos del
+		recuadro (delega en \texttt{hacerDigito} si es un «8»).
+		\item \texttt{unirGrupos}: unión por absorción: crea la pieza nueva
+		(Fnn), hereda props y re-apunta los enlaces externos.
+		\item \texttt{hacerDigito}: clasifica y agrupa las 7 barras de un
+		«8» en un dígito (\texttt{barra\_a}\ldots\texttt{barra\_g}).
+		\item \texttt{clasificarBarras}: asigna las letras a--g a las barras
+		por su geometría (horizontales por altura, verticales por lado).
+		\item \texttt{hacerContador}: agrupa de 1 a 4 dígitos en un
+		contador (\texttt{digito\_1} = unidades, obligatorio).
+		\item \texttt{separarAgrupado}: disuelve una pieza (baja el
+		ficticio y anula los enlaces externos que le apuntaban).
+		\item \texttt{crearFicticio}: alta de una pieza ficticia (unión,
+		dígito o contador) con su número de pieza.
+		\item \texttt{barrasDe} / \texttt{digitoDeBarra} /
+		\texttt{contadorDeDigito}: navegación de la jerarquía de los
+		contadores.
+		\item \texttt{esBarraDeDigito} / \texttt{esDigitoDeContador}:
+		pertenencia a una agrupación (viajan con \texttt{visible:false}).
+		\item \texttt{esAbsorbido} / \texttt{ficticioAbsorbente}: grupo
+		absorbido por una unión / la pieza que lo absorbió.
+		\item \texttt{fusionarGrupos} / \texttt{imagenFusionada} /
+		\texttt{firmaPieza} / \texttt{pixelesDeImagen}: composición OR de
+		los píxeles de las piezas fusionadas y su imagen resultante.
+		\item \texttt{aportantes}: los grupos que aportan el primer valor no
+		nulo de cada prop a la pieza fusionada.
+	\end{itemize}
+	
+	\textbf{Historial (deshacer/rehacer):}
+	\begin{itemize}
+		\item \texttt{registrarCambio} / \texttt{registrarCambios}: añaden
+		entradas al historial (asignan \texttt{n} y \texttt{relacionados};
+		vacían la pila de rehacer).
+		\item \texttt{deshacer}: revierte el último bloque atómico aplicando
+		los \texttt{antes} en orden inverso (fallback por replay en GWI
+		antiguos).
+		\item \texttt{rehacer}: reaplica el bloque desde la pila de
+		rehacibles.
+		\item \texttt{invertirEntrada}: aplica el \texttt{antes} de una
+		entrada (o la opuesta estructural de unir/separar).
+		\item \texttt{quitarParUnion}: retira un par de unión (inversa del
+		unir).
+		\item \texttt{reproducirCambios}: replay de las entradas del
+		historial (reconvierte los \texttt{Fnn} a raíz negativa).
+	\end{itemize}
+	
+	\textbf{Verificación y guardado:}
+	\begin{itemize}
+		\item \texttt{verificarYGuardar}: la verificación completa
+		(bloqueantes y avisos) y el empaquetado del GWI.
+		\item \texttt{verificarReferencias}: enlaces colgantes y campos
+		obligatorios al cargar un GWI.
+		\item \texttt{guardarGWI}: escribe el GWI (campos al nivel
+		superior, piezas Fnn, \texttt{visible:false} en lo agrupado).
+		\item \texttt{guardarGWIEnDisco}: empaqueta el ZIP con JSZip
+		(sprites en \texttt{segmentos/}, \texttt{img\_f}/\texttt{img\_s})
+		y fuerza la descarga.
+		\item \texttt{formatearGWI}: serializa el GWI compacto (una línea
+		por sprite, botón y segmento).
+	\end{itemize}
+	
+	\textbf{Datos del cartucho y del puente:}
+	\begin{itemize}
+		\item \texttt{cargarAutoria}: carga y reproduce el historial
+		\texttt{autoria.cambios} del GWI.
+		\item \texttt{cargarListas} / \texttt{segmentosEnMemoria}: vuelcan
+		las listas al puente \texttt{comunListas}.
+		\item \texttt{asegurarCartucho}: crea la ficha del cartucho (tipo 7)
+		si el GWI no la trae.
+		\item \texttt{cartuchoDe} / \texttt{esCartucho}: acceso a la ficha
+		del cartucho / identificación del tipo 7.
+		\item \texttt{pausasDelCartucho} / \texttt{aceleracionDelCartucho}
+		/ \texttt{rutasDelCartucho} / \texttt{secuenciaDelCartucho} /
+		\texttt{finDelCartucho}: lectura de las propiedades del cartucho
+		para la ficha del editor.
+		\item \texttt{sincronizarDirector} /
+		\texttt{sincronizarSecuencia}: vuelcan en vivo ficha y Secuencia al
+		puente en cada reconstrucción (editar = visible para el motor).
+		\item \texttt{propPorDefecto} / \texttt{propsDe}: props por defecto
+		de una componente / las persistidas de una raíz.
+	\end{itemize}
+	
+	\textbf{Presentación:}
+	\begin{itemize}
+		\item \texttt{pintarMapa}: el mapa de objetos (cajas, números,
+		colores de tipo y de relación, recuadro en curso).
+		\item \texttt{listaMotor}: la lista \texttt{\{x, y, imagen, color\}}
+		que pintan el mapa y la pantalla de autoría.
+		\item \texttt{cajaPresentable}: caja del grupo con el offset aplicado
+		(posición presentada, no original).
+		\item \texttt{pintarPantallaAutoria}: la pantalla del aparato según
+		la fase real de autoría (solo fondo o composición completa).
+		\item \texttt{pintarGWI}: composición fondo + segmentos del GWI
+		cargado.
+		\item \texttt{pintarFondoAparato} / \texttt{pintarSegmentoAparato}:
+		fondo estirado / segmento (negro o color de tipo) en la pantalla del
+		aparato.
+		\item \texttt{fijarEscalaAparato}: escala por eje de la pantalla del
+		aparato (\texttt{canvas}/\texttt{img\_s}).
+		\item \texttt{colorRGB}: notación hexadecimal a componentes RGB.
+		\item \texttt{relacionadosDe}: cadena saliente transitiva del
+		seleccionado (azul).
+		\item \texttt{entrantesDe}: enlaces entrantes directos al
+		seleccionado (magenta).
+		\item \texttt{numRuta} / \texttt{numContador}: número de ruta de un
+		inicio / de contador de un segmento vida o muerte.
+		\item \texttt{segId}: identificador legible de un grupo
+		(\texttt{seg\_NNN} o \texttt{Fnn} en los ficticios).
+		\item \texttt{resolverEnlace}: índice de componente a su
+		\texttt{segId} legible (para el GWI y el panel).
+		\item \texttt{listar}: la lista auxiliar de lo numerable (rutas,
+		contadores, primer jugador).
+		\item \texttt{segmentos}: los segmentos finales (sin fantasmas
+		tipo 99).
+	\end{itemize}
+	
+	\subsection*{baseDirector.js — orquestación de máquina y cartucho}
+	
+	\begin{itemize}
+		\item \texttt{inicializar}: registra los listeners globales
+		(botones, ficheros, teclado).
+		\item \texttt{alSeleccionarSetup} / \texttt{alSeleccionarCartucho}
+		/ \texttt{alSeleccionarGWIZip}: los selectores de fichero; validan
+		y lanzan el flujo.
+		\item \texttt{validarSetup} / \texttt{validarCartucho}: validación
+		bloqueante del setup (estilo, pantalla, botones) y del cartucho
+		(tipo y versión obligatorios, estilo compatible).
+		\item \texttt{aplicarSetup}: construye la máquina del estilo y
+		muestra el canvas en su hueco.
+		\item \texttt{aplicarBotonesCartucho}: renombra los botones usados
+		con su \texttt{id} y elimina del DOM los no usados
+		(setup $\geq$ cartucho).
+		\item \texttt{construirBotonera}: esqueleto del estilo con huecos
+		anclados en rejilla (sin re-flujos).
+		\item \texttt{crearBotonFisico}: nodo DOM de un botón físico con su
+		número, alias y tecla.
+		\item \texttt{procesarCartucho}: el flujo según el tipo de
+		cartucho: GWB $\rightarrow$ descomposición; GWI $\rightarrow$ carga
+		directa; GWC $\rightarrow$ sin procesar (futuro ESP32).
+		\item \texttt{elegirJSONCartucho}: elige el JSON de la carpeta por
+		prioridad GWC $>$ GWI $>$ GWB.
+		\item \texttt{descomponerImagen}: \texttt{verificarBN} +
+		\texttt{extraerBN} + arranque de la autoría.
+		\item \texttt{construirMapaFicheros}: la lista de ficheros a un mapa
+		nombre $\rightarrow$ File.
+		\item \texttt{leerJSON}: lectura y \texttt{parse} de un JSON con
+		mensajes de error legibles.
+		\item \texttt{cargarImagen} / \texttt{cargarImagenAux} /
+		\texttt{imagenBlob} / \texttt{crearURL}: carga de imágenes desde
+		fichero o blob (con object URLs revocables).
+		\item \texttt{validarTamanoImgS}: valida \texttt{img\_s} contra
+		\texttt{img\_f} (aviso si difieren).
+		\item \texttt{pintarFondoCartucho} / \texttt{pintarFondoNeutro}:
+		\texttt{img\_f} estirada en la pantalla / pantalla sin cartucho.
+		\item \texttt{mostrarSprites}: tira de miniaturas con su id bajo la
+		máquina.
+		\item \texttt{mostrarListaFicheros}: lista de ficheros leídos con
+		tamaños en el panel inferior.
+		\item \texttt{resetInfoCartucho} / \texttt{limpiarCartucho}: limpian
+		la línea de cartucho del panel y revocan las URLs al recargar.
+		\item \texttt{avisar} / \texttt{avisarError} / \texttt{avisarEtiquetas}:
+		la barra de estado (última operación, errores en rojo).
+		\item \texttt{normalizarNumeroBoton}: acepta «A»/«6»/números sin
+		comillas y devuelve el número físico 0--8.
+		\item \texttt{alPulsarTecla} / \texttt{alSoltarTecla}: el teclado de
+		la máquina: resaltado del botón y reenvío al \texttt{JuegoDirector}
+		(con el juego en marcha).
+		\item \texttt{buscarBotonPorTecla}: tecla $\rightarrow$ botón físico.
+		\item \texttt{alAtajoTeclado}: los atajos de edición
+		(Ctrl+Z/Ctrl+Y deshacer/rehacer).
+		\item \texttt{jugar}: el puente del botón Start hacia el
+		\texttt{JuegoDirector}.
+		\item \texttt{comprobarSalud}: diagnóstico: ficheros cargados,
+		globales esperados y avisos.
+		\item \texttt{verificarYGuardar}: delega en
+		\texttt{Descomponer.verificarYGuardar} el botón de guardado.
+	\end{itemize}
+	
+	\subsection*{JuegoDirector.js — el reloj del simulador}
+	
+	\begin{itemize}
+		\item \texttt{arrancar}: relanza la partida: reinicia semilla, cola,
+		contadores de rutas y llama a \texttt{iniciar()} del motor; arranca
+		el reloj.
+		\item \texttt{programar}: programa el siguiente tick con la
+		\textbf{pausa vigente} (\texttt{setTimeout} encadenado, nunca
+		\texttt{setInterval}).
+		\item \texttt{detener} / \texttt{enMarcha}: detiene el reloj /
+		pregunta si el juego está en marcha.
+		\item \texttt{tick}: un tick de reloj: pasa al motor y actualiza la
+		barra de diagnóstico (ticks, vidas, muertes, Secuencia, pausa).
+		\item \texttt{pulsar}: acepta una pulsación solo con el juego en
+		marcha y la encola (el director no interpreta entradas).
+		\item \texttt{pausaVigente}: la pausa actual aplicando la
+		aceleración (nunca por debajo del mínimo).
+		\item \texttt{aleatorio}: el generador LCG de 16 bits: única puerta
+		del azar, rango $[0, max)$.
+		\item \texttt{reiniciarAleatorios}: reinicia el estado del LCG a la
+		semilla (misma semilla, misma partida).
+		\item \texttt{rutaLanzada}: cuenta el total de rutas lanzadas
+		(monótono, contador de progresión).
+		\item \texttt{maxRutasSimultaneas}: máximo de rutas simultáneas (+1
+		en cada múltiplo de \texttt{aumentarCada}, tope el número de rutas).
+	\end{itemize}
+	
+	\subsection*{juegoMotorEstados.js — el motor de estados del juego}
+	
+	\textbf{Ciclo de vida:}
+	\begin{itemize}
+		\item \texttt{iniciar}: restaura la partida como el cartucho la
+		dibujó: posiciones originales, contadores, familias de iconos y
+		rutas.
+		\item \texttt{lista}: pide la lista de segmentos al puente en cada
+		uso (nunca guarda una referencia muerta).
+		\item \texttt{tick}: el orden sagrado: (0) entrada, (1) apagar
+		banderas \texttt{cambiar}, (2) barrido de rutas y desenlaces; tras
+		él evalúa el fin de partida.
+		\item \texttt{terminada} / \texttt{congelada}: estado del juego
+		partida terminada / congelada por cadena de desenlace.
+	\end{itemize}
+	
+	\textbf{Entrada y jugador:}
+	\begin{itemize}
+		\item \texttt{pulsar}: recibe el número físico del botón (nunca un
+		evento del DOM).
+		\item \texttt{aplicarEntrada}: vacía el buffer del tick y mueve al
+		jugador por los enlaces de dirección.
+		\item \texttt{combinar}: reduce el buffer a ejes cuando la regla
+		está activa (un solo paso por tick, diagonales permitidas).
+		\item \texttt{moverJugador}: mueve por el enlace de dirección
+		(escribir en la lista: posición y bandera de cambio).
+		\item \texttt{jugadorActual} / \texttt{buscarJugador}: el índice del
+		segmento jugador / su búsqueda (marca del diseñador primero,
+		salvavidas después).
+		\item \texttt{indiceDe}: localiza un segmento por su id
+		(\texttt{seg\_NNN}).
+	\end{itemize}
+	
+	\textbf{Rutas y colisiones:}
+	\begin{itemize}
+		\item \texttt{esDeRuta} / \texttt{esCadena}: pertenencia a rutas
+		(tipos juego/inicio) / a cadenas de desenlace (todo menos jugador).
+		\item \texttt{lanzarRuta}: lanza si hay hueco según el máximo de
+		simultáneas (elige ruta con el PRNG y su lista de repeticiones).
+		\item \texttt{rutasVivas} / \texttt{estadoRutas} / \texttt{muereRuta}:
+		el número de rutas vivas / el estado completo de rutas / la baja de
+		una ruta (cinco puntos de muerte).
+		\item \texttt{decidirColision}: el corazón: lee la bandera
+		\texttt{visible} del jugador señalado y sigue \texttt{salvado} o
+		\texttt{muerte} (el contador indicado sube una sola vez, en la
+		decisión).
+	\end{itemize}
+	
+	\textbf{Contadores y familias de iconos:}
+	\begin{itemize}
+		\item \texttt{prepararContadores}: localiza los contadores de
+		dígitos del cartucho (qué segmentos los componen).
+		\item \texttt{ajustarContador}: fija el valor de uno de los cuatro
+		contadores internos.
+		\item \texttt{numeroDeContador}: el índice de contador (0--3) que
+		declara el desenlace de una colisión.
+		\item \texttt{familiaIconos} / \texttt{esIconoFamilia} /
+		\texttt{ordenFamilia}: la familia de iconos vida/muerte / su
+		identificación / su orden por la cadena de ruta.
+		\item \texttt{sincronizarIconos} / \texttt{setVis}: enciende o apaga
+		cada icono de la familia según el contador correspondiente.
+		\item \texttt{contarAterrizaje}: acumula en el icono que le toca por
+		el orden de la familia.
+		\item \texttt{filaDe}: las barras de un dígito por su letra (a--g).
+		\item \texttt{presentarContadores}: enciende en la pantalla los
+		dígitos de cada contador (tabla de siete segmentos, rellenos).
+		\item \texttt{contadores}: los contadores internos para la barra de
+		diagnóstico.
+	\end{itemize}
+	
+	\textbf{Animaciones y desenlaces:}
+	\begin{itemize}
+		\item \texttt{avanzarSecuencia}: la Secuencia de fondo: un segmento
+		por tick y el ciclo $n + m$.
+		\item \texttt{secuenciaInfo}: el estado de la Secuencia para la
+		barra de diagnóstico.
+		\item \texttt{avanzarAdicionales}: el bucle de los elementos sin
+		interacción (el helicóptero, las aspas).
+		\item \texttt{sincronizarAcompanantes}: enciende o apaga el
+		secundario «Mostrado junto a» siempre con su principal.
+		\item \texttt{comprobarFin}: evalúa el mecanismo de fin elegido
+		(contador a cero, iconos de vida o de muerte completos).
+		\item \texttt{debug} / \texttt{pruebaAleatorios}: diagnóstico bajo
+		GW\_DEBUG / la función de prueba del generador (10 números, dos
+		pasadas idénticas).
+	\end{itemize}
+	
+	\subsection*{juegoMotorGrafico.js — el motor gráfico}
+	
+	\begin{itemize}
+		\item \texttt{inicializar}: pinta solo el fondo; avisa si no hay
+		cartucho.
+		\item \texttt{tick}: el repintado completo de la escena: fondo + todos
+		los segmentos visibles (lectura pura de la lista).
+		\item \texttt{pintarFondo}: blanco + \texttt{img\_f} estirado (del
+		puente).
+		\item \texttt{pintarSegmento}: un segmento en negro puro, escalado
+		por vecino más cercano y por eje, con la caja recortada al canvas.
+		\item \texttt{pixelesDe}: los píxeles del sprite como máscara.
+		\item \texttt{debug}: diagnóstico bajo GW\_DEBUG.
+	\end{itemize}
+	
+	\clearpage
+	
+\end{document}

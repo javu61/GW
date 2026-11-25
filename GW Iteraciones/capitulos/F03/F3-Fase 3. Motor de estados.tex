@@ -1,0 +1,54 @@
+\section{Fase 3: El motor de estados}
+\label{sec:FaseTres}
+
+La Fase 2 dejó la \emph{presentación} resuelta: el reloj late, el motor de
+estados escribe el estado en la lista de segmentos y el motor gráfico compone la pantalla
+con repintado completo --- fondo fijo y segmentos encendidos en negro puro. Un paracaidista
+cae al agua presentando sus segmentos en bucle, y las dos etapas del sistema
+(autoría y juego) viven inconexas, comunicadas solo por el puente de datos. 
+
+Pero lo que lo controla es todavía una \emph{demostración}: una secuencia fija definida en el código, sin entrada, sin reglas, sin jugador, solo sirve para el desarrollo del motor gráfico. La \textbf{Fase 3} construye la parte más compleja del simulador: \textbf{el motor de estados} --- el juego de verdad.
+
+\subsection{Qué es un motor de estados en una máquina Game \& Watch}
+\label{subsec:QueEsMotorEstados}
+
+El contrato fundacional de la Fase 2 ---«la lista ES el estado»--- definió la forma de
+trabajar: una sola lista de segmentos en memoria, un solo escritor (el motor de estados) y
+tantos lectores como vías de presentación existan (hoy el canvas del navegador; mañana el
+LCD del ESP32). El motor de estados es, por tanto, \emph{la pieza que piensa}: en cada tick
+lee las pulsaciones pendientes, aplica las reglas del juego y decide qué segmentos están
+encendidos y dónde, si hay colision con el jugador aumentando o disminuyendo contadores y controlando la vida restante. La Fase 3 se desarrolla desde su forma actual (una secuencia fija solo para prueba) hasta un motor capaz de ejecutar un cartucho: entrada de botones, posiciones del jugador, movimiento, y reglas.
+
+\subsection{La parte delicada: colisiones con segmentos separados}
+\label{subsec:ColisionesDelicadas}
+
+La dificultad propia de esta fase no es mover figuras: es \textbf{el control de colisiones}, y es delicado por una razón de fondo del modelo físico elegido: los segmentos de un cartucho Game \& Watch son \emph{piezas separadas}, cada una con su sprite completamente independiente y su posición no es un recuadro, no hay por tanto un tablero de celdas ni una escena continua. En las máquinas reales la colisión ni siquiera se calcula: el cristal líquido enciende lo que el juego le dice, y es el \emph{firmware} original el que, en su ROM de unos pocos kilobytes, decide con tablas y comparaciones cuándo el paracaidista toca el tiburón. Aquí el motor tendrá que hacer ese
+trabajo de forma explícita:
+
+\begin{itemize}
+	\item \textbf{La posición ya no es solo un dato de dibujo}: comparar posiciones exige
+	que el estado del juego sepa \emph{guardarlas} y que el movimiento sea deliberado, no
+	una animación de secuencia. Este punto se definirá en la iteración de análisis.
+	
+	\item \textbf{Colisionar es comparar cajas}: dos segmentos ocupan la pantalla como
+	cajas con posición y tamaño; detectar el solape es sencillo ---decidir qué significa
+	es el diseño del juego (¿muerte, rebote, puntos?). Las reglas de colisión estarán definidas en el cartucho, no en el motor: el motor las ejecuta, el autor las describe.
+	
+	\item \textbf{La lista única obliga a la disciplina}: como el estado vive en los
+	propios objetos de la lista (y en lo que el motor guarde aparte solo como
+	\emph{variables de ejecución}, como las banderas), una colisión mal calculada no
+	corrompe el dibujo --- el motor gráfico presenta lo que la lista dice, sea correcto o
+	no. La corrección del juego depende entera del motor de estados; esa es su
+	responsabilidad y su complejidad.
+\end{itemize}
+
+\subsection{Enlaces y cambios}
+\label{subsec:AlcanceFaseTres}
+
+El motor de estados debe ser independiente, lo que recibe del director es el tick únicamente para arrancar, el resto de datos se manejará a partir del módulo de listas de datos que definimos anteriormente, y no debe interactuar con nadie mas, por tanto habrá que cambiar el modulo \emph{baseDirector}, que es el que maneja realmente las pulsaciones de los botones definidas en el fichero \emph{Index.html}.
+
+Si una iteración del motor de estados necesita cambiar algo de la presentación (un efecto, una nueva forma de componer), se tocará el mínimo imprescindible y con el mismo contrato de lector puro.
+
+Lo mismo vale para el \texttt{JuegoDirector}, que se ajustará si el motor de estados lo necesitara, ya que el cambio principal de este será en la fase 4, cuando ajustemos la aceleración del reloj y el afinado de las pausas.
+
+\clearpage

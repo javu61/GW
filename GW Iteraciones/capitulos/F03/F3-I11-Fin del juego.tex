@@ -1,0 +1,163 @@
+\section{Undécima iteración de la Fase 3: El fin de la partida}
+\label{sec:FinPartida}
+
+Hasta ahora una partida no terminaba nunca: se movian los segmentos,  los contadores internos subían y
+bajaban, pero nada ocurría al agotarse las vidas o alcanzarse el límite de
+muertes. Esta iteración construye el \textbf{fin de partida}, con las dos piezas que faltaban:
+\begin{itemize}
+	\item Definir características generales del juego, con el mecanismo exacto de fin de partida.
+	\item Incluir en el motor de estado el evento de fin de partida y que pasa a continuación.
+\end{itemize}
+
+\subsection{Un nuevo tipo de segmento para propiedades del cartucho}
+\label{subsec:SegmentoCartuchoF3I11}
+
+Todos los segmentos hasta hoy describían el \emph{arte}: algo que se enciende y se
+apaga en la pantalla. Pero un cartucho tiene además características propias
+que no pertenecen a ningún segmento de juego: cómo termina la partida, la política de lanzamiento de rutas, la combinación de teclas o la aceleración. Como el JSON no se monta manualmente sino con el editor gráfico, es necesario incluir un mecanismo en el diseñador gráfico para su manejo.
+
+En esta iteración se crea un tipo nuevo de segmento,
+\textbf{cartucho} (tipo 7): una pieza \emph{ficticia} que nunca se pinta, ni
+en el mapa ni en la pantalla, y que alberga las características del juego que no se pueden definir de forma gráfica. Se crea siempre al iniciar la edición de un
+cartucho si no tuviera una, y su panel se abre con un clic en
+\textbf{cualquier punto vacío} del mapa. Su panel es distinto de todos
+los demás: aquí se define el mecanismo de fin, y aquí irán llegando en fases
+posteriores los demás parámetros del cartucho.
+
+La ficha es solo la forma de manejar estas características en el editor: en el
+GWI no viaja ningún segmento de tipo 7, sino que el mecanismo de fin se
+materializa como \textbf{propiedad del cartucho}, en el campo \texttt{fin} al
+nivel superior del JSON, solo si está definido:
+
+\begin{lstlisting}[
+	language=json,
+	frame=single,
+	breaklines=true,
+	basicstyle=\ttfamily\small,
+	caption={Campo fin al nivel superior del GWI},
+	label={lst:finCartucho}
+	]
+	{ "fin": { "mecanismo": "vida" } }
+	{ "fin": { "mecanismo": "contador", "contador": 1 } }
+\end{lstlisting}
+
+Al crearse siempre automáticamente, hay \textbf{exactamente una} ficha en cada
+cartucho: el autor no puede borrarla ni duplicarla, y el desplegable de tipos
+no la ofrece para los segmentos de arte.
+
+\subsection{Dos mecanismos de fin posibles}
+\label{subsec:MecanismosFinF3I11}
+
+El autor del cartucho elige uno de dos mecanismos, que no pueden convivir porque responderían al evento de finalización del juego con criterios distintos:
+
+\begin{itemize}
+	\item \textbf{Por contador}: Se usa uno de los 4 contadores posibles, con cuenta descendente siempre, e iniciado al número de vidas máximo asignadas al jugador. La partida termina cuando el contador elegido \textbf{transiciona de mayor que cero a cero}. Empezar en cero significa que nunca termina, y la verificación lo señala con un aviso bloqueante al guardar el cartucho. El contador debe estar presente en pantalla, aunque esto realmente no limita el sistema, si no hay ninguno se dará un error bloqueante al guardar el cartucho. 
+	
+	\item \textbf{Iconos de vida/muerte} (las familias de tipos 3 y 4). Estos permiten controlar visualmente con iconos el número de vidas restante del jugador, con dos posibilidades a su vez:
+	\begin{itemize}
+		\item 	Los segmentos de \emph{muerte} (por ejemplo, los tres tiburones bajo el aviso), nacen con los iconos no visibles, y cada muerte enciende el último no visible (la primera enciende el último, la segunda el penúltimo, la tercera el antepenúltimo, etc.); la partida \textbf{termina al encender el último posible}, cuando todos están visibles. 
+		
+		\item 	Para segmentos de \emph{vida} es al contrario: los iconos nacen todos encendidos y cada pérdida apaga el último; cuando \textbf{no queda ninguno visible} finaliza la partida.
+	\end{itemize}
+	Esto es automático y fácil de controlar por el motor, sabe que segmentos están encendidos y apagados en todo momento, por lo que es sencillo controlarlo al recorrer la secuencia. Las vidas iniciales NO hay que definirlas: salen contando el número de iconos de la familia, y no hace falta almacenarlas en ningún lugar.
+	
+	Solo puede haber \textbf{una} familia de vida o una de muerte por cartucho.
+	Varias familias solo tendrían sentido en un juego multi-jugador, que no es el
+	caso, y la verificación al guardar el cartucho lo trata como error bloqueante.
+	
+\end{itemize}
+
+Si en el cartucho se han definido segmentos de tipo vida o de tipo muerte, no se permitirá definir el contador de vidas a usar, ya que ambos sistemas son excluyentes.
+
+\subsection{Asociación automática del fin}
+\label{subsec:AsociacionFinF3I11}
+
+Al convertir un segmento a tipo vida o muerte desde el panel, si la ficha del
+cartucho tiene el mecanismo de fin \textbf{sin definir}, se asocia
+automáticamente a esa familia, con su aviso en la barra. En el caso más común
+el autor no tiene que pasar por la ficha: dibuja los iconos, los marca como
+vida en el panel, y el fin ya está elegido.
+
+La retirada es simétrica: si el segmento era el \textbf{último de su familia} y
+el fin apuntaba a ella, al dejar de ser vida o muerte el fin se retira con su
+aviso, para no dejar un mecanismo apuntando a una familia que ya no existe.
+
+Si el fin ya está definido, a mano o por contador, la conversión de tipos
+\textbf{no lo toca}: manda el autor. Y tanto la asociación como la retirada
+viajan en la \textbf{misma acción atómica del historial} que el cambio de
+tipo, de modo que deshacer y rehacer revierten ambas cosas juntas, y el
+\emph{replay} del GWI recrea el estado final correctamente.
+
+\subsection{Los estados con nombre: la enumeración en el puente}
+\label{subsec:EnumeracionF3I11}
+
+El tipo de un segmento ha viajado siempre como número (0 = jugador, 1 = juego,
+\dots), ya que estos números no cambian nunca, pero por legibilidad, es mejor comparar contra constantes escritas en el código (\texttt{if (segmento.tipo === tipos.jugador)}), es mucho más
+legible que comparar contra dígitos mágicos (\texttt{if (segmento.tipo === 1)}).
+
+La enumeración vive en el \textbf{puente} \texttt{comunListas}, junto a los demás datos compartidos entre autoría y juego, para que las dos etapas hablen el mismo idioma y ninguna duplique la tabla. El mecanismo de fin se enumera igual (\texttt{fin.vida}, \texttt{fin.muerte}, \texttt{fin.contador}, \texttt{fin.ninguno}).
+
+\subsection{Aplicación en el motor de estados}
+\label{subsec:MotorFinF3I11}
+
+El motor de estados descartaba los segmentos de tipo 7 al arrancar, un resto
+defensivo de cuando ese número no significaba nada. Ese descarte desaparece:
+el tipo 7 \emph{es} el segmento cartucho. Como el fin es ahora una propiedad
+del cartucho, es el \textbf{director} quien fija el campo \texttt{fin} del GWI
+en el puente (\texttt{comunListas.fijarFin}) al cargar el cartucho, y
+\texttt{iniciar()} lee de él (\texttt{finDeCartucho()}) la configuración del
+fin del juego. Se conserva de forma defensiva la lectura del viejo segmento de
+tipo 7, para que los GWI generados por la primera versión de esta iteración
+sigan funcionando sin cambio alguno.
+
+La sincronización de los iconos marca el camino existente: el motor escribe la bandera \texttt{visible} de la familia de iconos al iniciar el  juego según la cadena de ruta:
+\begin{itemize}
+	\item las de vida: quedan encendidos todos, apagándose desde el último al primero.
+	\item las de muerte: quedan apagados todos, encendiéndose desde el último al primero.
+\end{itemize}
+
+Tras cada tick, el motor evalúa la condición del mecanismo elegido: para
+vida, que no quede ningún icono visible; para muerte, que lo estén todos; para
+contador, la transición de mayor que cero a cero. Al cumplirse, la partida
+pasa al estado \textbf{terminada}.
+
+\subsection{Final de la partida}
+\label{subsec:CongelarF3I11}
+
+En las máquinas reales el fin de partida no borra nada: la pantalla queda congelada tal
+cual estaba, el jugador debe pulsa Start para empezar de nuevo. El estado
+\texttt{terminada} \textbf{congela} la partida: el barrido de rutas y la
+entrada del jugador dejan de avanzar y el reloj se detiene, con el aviso
+«Partida terminada — pulsa Start» en la barra de estado. El botón Start
+existente reinicia semilla, cola, contadores e \texttt{iniciar()}, así que la
+nueva partida no necesita ninguna pieza nueva: es el arranque de siempre.
+
+\subsection{Decisiones menores}
+\label{subsec:DecisionesF3I11}
+
+\begin{itemize}
+	\item El GWI emite el campo \texttt{fin} solo si el mecanismo está
+	definido, auto explicativo y editable a mano como el resto de campos.
+	\item Un cartucho con un segmento de tipo cartucho pero \emph{sin} mecanismo de fin
+	elegido es un error de verificación: no hay fin declarado y el cartucho
+	estaría declarando que nunca termina.
+	\item El contador elegido para el fin debe existir (haber un segmento contador de
+	tipo 6 asociado al interno elegido) y ser descendente; empezar en cero es
+	un aviso error bloqueante.
+	\item El segmento cartucho se crea siempre al iniciar la edición del cartucho, con datos por defecto.
+\end{itemize}
+
+\subsection{Verificación}
+\label{subsec:VerificacionF3I11}
+
+Se prueban independientemente los tres mecanismos de fin del juego establecidos:
+
+\begin{itemize}
+	\item \textbf{Por contador}: Se crea un contador con inicio a 3, se asocian las colisiones negativas al contador, y al llegar a cero el juego se queda congelado, funciona perfectamente sin necesidad de ajustes.
+	
+	\item \textbf{Por iconos de muerte}: Se asocian los tres tiburones como segmentos de tipo muerte, y se hace que las colisiones negativas llegan hasta ellos. Al iniciar no se muestra ninguno, con la primera muerte falla porque el tiburón que queda fijo es el primero en lugar del último, pero tras ajustarlo funciona ya bien, enciende tercero+MISS, luego también segundo, después añade el primero, y al encenderse este el juego queda congelado.
+	
+	\item \textbf{Por iconos de vidas}: Se asocian tres iconos como segmentos de tipo vida, las colisiones negativas llegan hasta ellos. En la primera muerte apaga uno, en la segunda otro, y en la tercera se apagan todos y el sistema queda congelado. Funciona perfectamente tras el ajuste anterior pues usan casi el mismo mecanismo.
+\end{itemize}
+
+\clearpage

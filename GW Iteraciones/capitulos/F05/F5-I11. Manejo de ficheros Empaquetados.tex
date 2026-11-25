@@ -1,0 +1,141 @@
+\section{Undécima iteración de la Fase 5: Ficheros ZIP}\label{sec:F5I11}
+
+Esta iteración es una pequeña mejora del código. Para guardar el cartucho GWB se usa un paquete con el json y las imágenes, al añadirlo vi que la comprobación de que existe el módulo de manejo de ficheros ZIP (la librería \emph{JSZip}) se repetía en varias funciones, lo que no es adecuado, al verlo empecé a unificar en una sola función, pero al final decidí añadir un nuevo módulo que se encargue de manejar los ficheros comprimidos, e independizarlo al máximo.
+
+\subsection{Nuevo módulo}
+\label{sec:F5I11Modulo}
+
+Se crea un nuevo módulo denominado \textbf{basePack.js} que independiza por completo el manejo de los ficheros comprimidos del resto del sistema, por lo que será sencillo cambiar el tipo de compresión a utilizar (RAR o 7z en lugar de ZIP), o combinar por ejemplo el empaquetado de los ficheros en un \emph{TAR} con su compresión posterior en un \emph{GZ}.
+
+Todas las llamadas a funciones que manejan los ZIP en el resto de los módulos \emph{javascript} se dirigen a este nuevo módulo, y se renombran para que usen nombres con \emph{PACK}, que es más genérico: de esta manera el resto del sistema ya no habla de ZIP, sino de \emph{paquetes}.
+
+En el nuevo módulo se crea una lista de posibles formatos de compresión (zip, tar, rar, 7z, etc.) con propiedades que permiten independizar al máximo su manejo. Así se incluyen para cada formato:
+\begin{itemize}
+	\item el \textbf{nombre} del formato y su \textbf{extensión} (\texttt{.zip}, \texttt{.tar}, \dots)
+	\item el nombre de la \textbf{librería} que lo maneja y el nombre del \textbf{fichero} \emph{javascript} que hay que colocar junto a los demás \emph{scripts} para poder dar mensajes adecuados
+	\item las \textbf{tres funciones} que lo manejan: verificar que la librería está cargada, leer un paquete y construir un paquete, estas funciones se llaman desde le código, sin saber nada del fichero que van a generar.
+\end{itemize}
+
+En este momento solo está definido correctamente el formato \textbf{ZIP} que usa la librería \emph{JSZip}; el resto de formatos se incluyen en el código únicamente como ejemplos, pero sin verificar su funcionamiento, con sus funciones sin definir. Una variable (\texttt{TIPO\_COMPRESION}) indica cuál de los formatos de la lista está en uso.
+
+\begin{lstlisting}[caption={Definición de formatos de compresión}]
+	// ---------------- Tabla de formatos ----------------
+	const FORMATOS_COMPRESION = Object.freeze({
+		ZIP: {
+			nombre: 'ZIP', extension: '.zip', modulo: 'JSZip', fichero: 'jszip.min.js',
+			verificar: verificarZIP, leer: leerZIP, construir: construirZIP
+		},
+		TAR: {
+			nombre: 'TAR', extension: '.tar', modulo: 'libarchive', fichero: 'libarchive.min.js',
+			verificar: null, leer: null, construir: null
+		},
+		RAR: {
+			nombre: 'RAR', extension: '.rar', modulo: 'libarchive', fichero: 'libarchive.min.js',
+			verificar: null, leer: null, construir: null
+		},
+		SEVENZIP: {
+			nombre: '7ZIP', extension: '.7z', modulo: '7z-wasm', fichero: '7z-wasm.min.js',
+			verificar: null, leer: null, construir: null
+		},
+		TAR_GZ: {
+			nombre: 'TAR.GZ', extension: '.tar.gz', modulo: 'fflate', fichero: 'fflate.min.js',
+			verificar: null, leer: null, construir: null
+		}
+	});
+\end{lstlisting}
+
+\subsection{Funciones del módulo}
+\label{sec:F5I11Funciones}
+
+El módulo se organiza en dos niveles: una interfaz pública que usa el resto del sistema, y las funciones propias de cada formato, que solo se llaman desde la interfaz.
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|p{9cm}|}
+		\hline
+		\textbf{Función} & \textbf{Misión} \\ \hline
+		\texttt{verificarPACK} & Comprueba que la librería del formato en uso está cargada y lanza un error si no. \\ \hline
+		\texttt{nombreFichero} & Añade al nombre base la extensión del formato en uso. \\ \hline
+		\texttt{esPACK} & Indica si un nombre de fichero es un paquete, por su extensión. \\ \hline
+		\texttt{leerPACK} & Abre un paquete y devuelve sus ficheros, tratables igual que los de una carpeta. \\ \hline
+		\texttt{construirPACK} & Valida las entradas y construye el paquete en memoria. \\ \hline
+		\texttt{guardarPACK} & Construye el paquete y lo descarga con la extensión del formato. \\ \hline
+		\texttt{descargarBlob} & Fuerza la descarga de un fichero con un nombre dado. \\ \hline
+	\end{tabular}
+	\caption{Funciones públicas del módulo \texttt{basePack.js}.}
+\end{table}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|p{9cm}|}
+		\hline
+		\textbf{Función} & \textbf{Misión} \\ \hline
+		\texttt{verificarZIP} & Verifica que esite el módulo \emph{JSZip}. \\ \hline
+		\texttt{leerZIP} & Lee un fichero en formato ZIP con \emph{JSZip}. \\ 
+		\hline
+		\texttt{construirZIP} & Monta un fichero en formato ZIP con \emph{JSZip}. \\ \hline
+
+	\end{tabular}
+	\caption{Funciones privadas del módulo para ficheros ZIP \texttt{basePack.js}.}
+\end{table}
+
+
+Las funciones públicas \textbf{despachan} según el formato en uso: buscan en la lista de formatos las funciones del formato activo y las llaman. Una función interna comprueba antes que el formato tiene todas sus funciones definidas y lanza un error de \emph{formato no soportado} en caso contrario.
+
+Para añadir otros formatos, solo hay que incluir nuevas funciones, por ejemplo para manejar fichero TAR hay que:
+\begin{itemize}
+	\item Revisar o crear la entrada en la tabla de formatos.
+	\item Crear las funciones verificarTAR, leerTAR y contruirTAR.
+\end{itemize} 
+
+\subsection{Decisiones de diseño}
+\label{sec:F5I11Decisiones}
+
+\begin{itemize}
+	\item \textbf{Una única comprobación de existencia de la librería.} Cada formato tiene su propia función de verificación, que es el único sitio donde se comprueba que la librería existe (el tener repetido este código en varias funciones ha sido precisamente el motivo de esta iteración). Las funciones de lectura y construcción de ese formato la llaman, de modo que al mover un formato a otro fichero se lleva con él su comprobación.
+	
+	\item \textbf{Errores como excepciones.} El módulo no conocen a quien le llama: comunica los fallos lanzando excepciones, y el llamador decide cómo mostrarlos. Los módulos que guardan cartuchos conservan su \texttt{try/catch} y muestran el mensaje.
+	
+	\item \textbf{Validación común.} La comprobación de las entradas (lista vacía, entrada sin nombre o sin contenido) y del paquete vacío al leer se hace una sola vez, en la interfaz, para cualquier formato.
+	
+	\item \textbf{Nombres sin extensión.} Quien desea guardar un fichero pasa su nombre \emph{sin extensión} al módulo (por ejemplo \texttt{cartucho\_GWB}), y será el módulo de empaquetado el que le añade la extensión según el formato. Los mensajes al usuario componen el nombre con \texttt{nombreFichero}, de modo que seguirán siendo correctos si cambia el formato.
+	
+	\item \textbf{Detección por extensión.} El director ya no comprueba si un fichero termina en \texttt{.zip}, sino que pregunta a \texttt{esPACK}.
+	
+	\item \textbf{Funciones de formato autosuficientes.} Las funciones de un formato no usan nada del resto del módulo salvo su librería, por lo que si se desea crear módulos independientes para cada formato, pasarlas al módulo es cortar y pegar. En ese caso la lista debe referenciarlas de forma diferida (\texttt{(f) => Modulo.leer(f)}) para no depender del orden de carga de los \emph{scripts}.
+	
+	\item \textbf{Todo formato debe poder leer y escribir.} Se descartó marcar los formatos como de solo lectura o solo escritura: en nuestro caso el mismo programa crea y lee los paquetes, y no se mezclan formatos. Tampoco se incluyen \emph{gzip} ni \emph{zlib} solos, porque comprimen un único flujo y no un paquete de varios ficheros; solo aparecen combinados con \emph{TAR}. 
+	
+	\item \textbf{No añadir lo que no se usará.} De los formatos que se estudiaron (\emph{fflate}, \emph{zip.js}, \emph{libarchive}, \dots) no se implementa ninguno mas que JZIP, ya que los paquetes GWB y GWI los crea y los lee este programa, por lo que con un soloformato es suficiente.
+\end{itemize}
+
+Tambiñen hay que considerar que el cartucho GWC, que es el cartucho más importante para el sistema externo donde se ejecutará, no va comprimido y es un fichero binario puro mínimo, para evitar sobrecargar de procesos en el sistema embebido que dispone de recursos y memoria limitados.
+
+\subsection{Cambios en los demás módulos}
+\label{sec:F5I11Cambios}
+
+\begin{itemize}
+	\item \textbf{BaseCartucho.js:} desaparecen las tres comprobaciones de \emph{JSZip} y su propia función de descarga. \texttt{abrirZIP} pasa a llamarse \texttt{abrirPACK} y delega en \texttt{leerPACK}. Las funciones que guardan el GWI y el GWB solo preparan la lista de entradas (el JSON y las imágenes) y llaman a \texttt{guardarPACK}, con un nombre sin extensión.
+	\item \textbf{baseDirector.js:} la detección de paquetes por extensión pasa a \texttt{esPACK} y la apertura a \texttt{abrirPACK}.
+	\item \textbf{index.html:} se añade el nuevo \emph{script} antes de \texttt{BaseCartucho.js}, que lo usa.
+\end{itemize}
+
+Los nombres de los botones y de los campos de fichero de la interfaz (``Cargar GWB (ZIP)'' y similares) no cambian en esta iteración, porque describen el fichero real que ve el usuario; se unificarán en otra iteración con el cambio previsto sobre la carga unificada de cartuchos, que no dependerá de si son comprimidos o no, y del formato de compresión usado.
+
+\subsection{Pruebas}
+\label{sec:F5I11Pruebas}
+
+\begin{itemize}
+	\item Ida y vuelta con \emph{JSZip}: se construye un paquete con un JSON y una imagen en una subcarpeta, se lee y se comprueba que se recuperan los nombres base y el contenido, y que el tamaño devuelto es la suma de los bytes de las entradas.
+	\item Entradas inválidas: una entrada sin contenido y una lista vacía producen un error con un mensaje claro.
+	\item Sin la librería cargada: \texttt{verificarPACK}, \texttt{leerPACK} y el guardado de un GWB muestran el mensaje único que indica qué fichero colocar.
+	\item Nombres: \texttt{nombreFichero} añade la extensión del formato y \texttt{esPACK} reconoce el paquete sin distinguir mayúsculas.
+\end{itemize}
+
+\subsection{Mejoras futuras}
+\label{sec:F5I11Futuro}
+
+\begin{itemize}
+	\item Si se necesita otro formato, escribir sus tres funciones en este módulo (o en un módulo propio por formato) y registrarlas en la lista.
+	\item Aprovechar la unificación de la carga de cartuchos prevista para unificar también los textos de la interfaz, que hoy aún hablan de ZIP.
+\end{itemize}

@@ -1,0 +1,46 @@
+\section{Primera iteración de la Fase 2: Análisis del motor mínimo}
+\label{sec:AnalisisMotorMinimo}
+
+La iteración anterior dejó decidida la estrategia de presentación del simulador (repintado completo por estado) y un compromiso de diseño: una \emph{composición pura} que reciba el fondo, la lista de segmentos encendidos con sus posiciones, y produzca la pantalla. 
+
+Comenzaremos por el diseño de un motor gráfico mínimo que permita ver cosas en pantalla, y como siempre primero hay que diseñarlo. Esta iteración se analiza \textbf{cómo se va a probar} esa composición, porque un motor de presentación no se puede verificar en solitario ---necesita que alguien le pida pantallas y que alguien decida qué está encendido.
+
+
+\subsection{Objetivo a alcanzar}
+\label{subsec:ObjetivoF2I2}
+
+El objetivo de la iteración es \textbf{ver el motor gráfico funcionando}: cargar un cartucho GWI y observar cómo la pantalla del aparato presenta, en un ciclo continuo, una secuencia fija de segmentos encendiéndose y apagándose uno a uno, sin dejar rastro del anterior y sin parpadeos.
+
+Todo lo demás queda fuera: no hay teclado, no hay reglas de juego, no hay análisis del cartucho (las rutas, contadores y relaciones definidos en la autoría se ignoran por completo), no hay azar. Si al final de la iteración un espectador que no conoce el proyecto no distingue esa pantalla de una máquina real encendida, el motor gráfico habrá pasado su primera prueba.
+
+\subsection{Los tres componentes del mínimo}
+\label{subsec:TresComponentes}
+
+Para que el sistema funcione no solo hay que diseñar un motor gráfico, ya hay que plantear un sistema completo reducido, pero que incluye sus tres componentes:
+
+\begin{itemize}
+	\item \textbf{Director mínimo.} Su única responsabilidad es el \emph{reloj}: en cada tick llama al motor de juego para que cambie el estado de visible de algunos segmentos, luego al motor gráfico para que presente la pantalla; después hace una \textbf{pausa fija} y repite. La pausa es un valor constante, elegido para que el ojo siga la secuencia con comodidad (del orden de medio segundo); la calibración fina del ritmo no es un tema de esta iteración. No lee botones, no valida nada, no conoce el cartucho: \texttt{tick() $\rightarrow$ estado $\rightarrow$ presentar $\rightarrow$ esperar}.
+	
+	\item \textbf{Motor de juego mínimo.} Es deliberadamente tonto: ignora el contenido real del cartucho y contiene una \textbf{secuencia fija de números de segmento} (del tipo $4, 12, 7, 25$). En cada tick avanza un paso por la secuencia y cambia el estado del segmento anterior de la lista a invisible y el actual a visible, realiza por tanto \emph{apagado: [X-1]} \emph{encendido: [X]}, donde X es el segmento del paso actual. Al llegar al final de la secuencia vuelve al principio, en bucle. Dos reglas de diseño lo blindan para el futuro: \textbf{habla solo en estados} (``está encendido el 12''), nunca en órdenes de dibujo (``dibuja el 12 y borra el 4''), de modo que la dependencia entre motores apunta en un solo sentido; y no toca pantalla alguna: su salida es un dato. 
+	
+	El motor es el único que altera la lista de segmentos, por lo que el sistema cuando recibe el control desde el director primero pone a \emph{false} todas las banderas de cambiar, luego mira los segmentos que debe activar, les cambia la bandera de visible y poner a \emph{true} la de cambiar.
+	
+	\item \textbf{Motor gráfico (la pieza real).} Es lo único que sobrevive a la iteración. Maneja los recursos del cartucho (el arte fijo y los segmentos con imagen, posición, escala y estado). El director le da instrucciones de inicializar el sistema por lo que presenta el fondo fijo (operativo antes de iniciar el juego), y luego la de presentar pantalla actual, donde presenta el fondo, busca los segmentos visibles y los dibuja encima. La escala del aparato ya está resuelta (\texttt{fijarEscalaAparato} desde \texttt{img\_s}); nada de esto se reinventa. 
+	
+	No altera nada en la lista de segmentos: es un lector puro. La bandera \emph{cambiar} marca qué segmentos se han alterado en este tick; en el simulador, como la composición repinta desde el fondo la pantalla completa, solo tiene que dibujar los visibles y la bandera no se consume. Queda definida desde ahora como contrato para la plataforma de hardware, donde la actualización por cajas sucias hará de ella la optimización real: presentar o borrar la caja marcada sin restaurar el resto.
+\end{itemize}
+
+\subsection{Detalles de realización}
+\label{subsec:DetallesRealización}
+
+\begin{itemize}
+	\item \textbf{Fuente de datos}: los segmentos ya están en memoria tras cargar el GWI (sprites leídos una vez, posiciones en el espacio de \texttt{img\_s}); el mínimo no añade formatos nuevos. La secuencia fija se escribe como constantes del motor de juego mínimo y se eligen números \emph{de un cartucho real} para que la prueba sea representativa (los índices son los $\texttt{seg\_NNN}$ del GWI, ordenados como el editor los numeró).
+	\item \textbf{Contrato del estado}: el motor de juego devuelve la lista de índices encendidos; el motor gráfico la interpreta y todo lo no listado se considera apagado. Este contrato de ``la lista ES el estado'' ---sin operaciones incrementales--- es el mismo que podrán consumir las vías de hardware cuando se decidan en su fase.
+	\item \textbf{El bucle y la pausa}: el director usa la pausa fija del reloj del navegador (\texttt{setTimeout} encadenado, nunca \texttt{setInterval}, para que un tick no se solape con el anterior si la presentación se alargase). El bucle arranca al cargar un GWI y se detiene al cargar otro cartucho o al reset; ningún ciclo queda huérfano.
+	\item \textbf{Aislamiento de las piezas mínimas}: director mínimo y motor de juego mínimo viven separados del código definitivo (sus ficheros o secciones se marcan como andamiaje desde el nombre); cuando el motor de juego real exista, se sustituyen sin tocar el motor gráfico.
+	\item \textbf{Qué se verifica}: que cada segmento de la secuencia aparece en su posición y tamaño correctos (la escala de la Fase 1), que el anterior desaparece sin rastro ni parpadeo (el repintado completo hace la restauración gratis), y que el ciclo es estable en bucle largo.
+\end{itemize}
+
+El resultado buscado no es un juego: es la certeza de que la composición pura, el contrato de estados y el reloj funcionan juntos. Con eso, las iteraciones siguientes pueden llenar el motor de juego de contenido real ---teclado, reglas del cartucho, azar--- sin volver a tocar la presentación.
+
+\clearpage

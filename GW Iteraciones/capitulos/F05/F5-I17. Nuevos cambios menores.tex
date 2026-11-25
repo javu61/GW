@@ -1,0 +1,152 @@
+\section{Decimoséptima iteración de la Fase 5: Dos cambios menores}
+\label{sec:F5I17}
+
+Iteración de cierre de dos pendientes menores, antes de abordar otros temas de mayor complejidad. Son dos temas sin relación entre sí, cada uno con su alcance:
+
+\begin{itemize}
+	\item \textbf{Avisos} — El ciclo GWI/GWC y su par, mostrar \texttt{codigoGWC} en la ficha y dar dos avisos:
+	 \begin{itemize}
+	 	\item Par del destino desequilibrado al generar
+	 	\item La autoría se pierde al aplicar un cartucho
+	 	\end{itemize}
+	 	
+	\item \textbf{Cursores} — Las flechas de los cursores del teclado del PC como teclas del simulador, definibles en el setup igual que las letras actuales. La tecla también puede llevarla el propio cartucho (GWI y GWB, editable en su ficha de Cartucho), con precedencia GWI $>$ GWB $>$ GWS.
+\end{itemize}
+
+\subsection{Criterios de trabajo}
+\label{sec:F5I17Criterios}
+
+\begin{enumerate}
+	\item Las teclas solo afectan al \textbf{editor y el simulador de PC}: Ya que en el sistema externo no se emplean. La tecla es solo la forma de jugar con el teclado del PC; lo que manda en la máquina real sigue siendo el \texttt{puerto}. La tecla la puede declarar la máquina (GWS), el juego compatible (GWB) o el juego con autoría (GWI); manda el nivel más alto: GWI $>$ GWB $>$ GWS. Tampoco afectan al ESP32 u otro firmware futuro.
+	
+	\item \textbf{Sin cambios de formato}: El GWB y el GWI también cambian en sentido amplio: el campo \texttt{tecla} de \texttt{botones[]} pasa a admitir los mismos valores que el GWS (letra o nombre de cursor, opcional; un cartucho sin teclas sigue cargando igual); un cartucho con tecla dígito NO carga, salvo el 1/2/3 declarado en un botón del trío de sistema A/B/R. El GWC sigue sin llevar teclas.
+	
+	\item \textbf{Avisos con los mismos puntos de salida que F5-I16}: Los avisos nuevos salen en la barra superior \texttt{\#estado} y, si tocan a una ficha, en su zona de mensajes; quedan fuera del alcance del recorte y del silencio de F5-I16: aquí solo se añaden avisos.
+	
+	\item \textbf{Un cambio, una prueba}: Cada punto se anota con su prueba, y cada punto reproduce primero con el código actual.
+\end{enumerate}
+
+\subsection{Avisos: el ciclo GWI/GWC y su par}
+\label{sec:F5I17Par}
+
+\subsubsection{Cómo funciona hoy}
+\label{sec:F5I17ParHoy}
+
+El GWI lleva \texttt{codigoGWC} (\#HHHH\#, la suma de verificación del GWC), y solo lo estampa \texttt{Generar GWI+GWC}, con el código del GWC recién calculado. 
+La serialización decide el \texttt{BaseCartucho.\_formatearGWI}. \texttt{Verificar y Guardar} guarda el GWI SIN \texttt{codigoGWC}: esa es la decisión de la F5-I6 (el código acompaña solo a un GWC recién generado; un GWI guardado a secas no puede declarar un código que quizá ya no corresponde).
+
+La consecuencia práctica es la que motiva este tema: el autor no ve ni un aviso en los puntos donde el par puede quedar descompensado en su carpeta de destino:
+
+\begin{itemize}
+	\item Si carga un GWI que traía \texttt{codigoGWC} (viene de un \texttt{Generar} previo), lo edita y usa \texttt{Verificar y Guardar}: el GWI guardado suelta el código, y el GWC GUARDADO en el destino (el de la pareja anterior) queda huérfano: ya no corresponde a ningún GWI de la carpeta, y el simulador no se entera de que sobra.
+	\item Si usa \texttt{Generar GWI+GWC} y guarda los dos ficheros, el par está en equilibrio; pero si después recarga un GWI viejo (con \texttt{codigoGWC} \#X\#) y genera de nuevo (\#Y\# $\neq$ \#X\#), el GWC \#X\# del destino queda desfasado en el mismo acto.
+\end{itemize}
+
+Además, \texttt{codigoGWC} no se ve por ninguna parte de la ficha de Cartucho aunque el GWI cargado lo lleve: solo está en el JSON del fichero.
+
+\subsubsection{Qué se hará}
+\label{sec:F5I17ParQue}
+
+\begin{itemize}
+	\item \textbf{Mostrar \texttt{codigoGWC} en la ficha} (pestaña Cartucho): campo de solo LECTURA con el código del GWI cargado, o el símbolo «---» si no trae (GWI guardado a secas, o GWB). Se rellena al poblar la ficha y se refresca tras generar (el nuevo código). El autor siempre puede ver QUÉ GWC empareja con el cartucho que tiene en memoria.
+	\item \textbf{Aviso al generar si el par queda desequilibrado.} En \texttt{\_generarPar}, tras calcular el nuevo código \#Y\#: si el GWI cargado traía \texttt{codigoGWC} \#X\# y \#Y\# $\neq$ \#X\#, aviso explícito con ambos códigos: «el GWC \#X\# de la carpeta de destino queda desfasado: guarda también el nuevo GWC (\#Y\#)». Si el GWI no traía código, no hay nada que desparejar: sin aviso.
+	\item \textbf{Aviso al guardar el GWI a secas (\texttt{Verificar y Guardar}).} Si el GWI cargado traía \texttt{codigoGWC} (o el editor conoce un último código generado en esta sesión) y la secuencia de guardado lo va a soltar: aviso «el GWI se guarda SIN codigoGWC: el GWC del destino (\#X\#) queda desparejado; usa Generar GWI+GWC para mantener el par». Es un AVISO, no bloquea: la decisión F5-I6 de guardar sin código no cambia.
+\end{itemize}
+
+\subsubsection{Autoría que se pierde}
+\label{sec:F5I17Autoria}
+
+Hoy, cargar cualquier cartucho hace \texttt{BaseDescomponer.reset()} (por tanto la «autoría anterior se elimina») en \texttt{BaseDirector.\_procesarCartucho}. Si lo cargado es un GWI, el historial vuelve desde SU \texttt{autoria}; si es un GWB (o un GWC), el editor arranca sin autoría. El caso a avisar: el cartucho en memoria es un GWI CON autoría (el historial tiene acciones, propias del GWI o rejugadas tras cargarlo) y el autor carga un GWB encima: la autoría del GWI se pierde SIN aviso, aunque ese historial solo viva en memoria (si no se llegó a guardar el GWI, se pierde entera).
+
+Aviso (no bloqueante) al cargar un GWB cuando el GWI en memoria tiene al menos una acción de historial: «Has cargado un GWB sobre un GWI con autoría: se descarta el historial (N acciones). Si lo querías conservar, guarda el GWI y empieza de nuevo.» La N la da el propio editor (función pública nueva del editor, p. ej. \texttt{numeroDeCambios()}; alternativa: lo que ya informa \texttt{resumen()} — se decide en la implementación). Queda FUERA del alcance cargar un GWI encima de otro GWI: el nuevo trae su historial, que ES la autoría que el autor pide; no se avisa.
+
+\subsection{Cursores: flechas del teclado en el PC}
+\label{sec:F5I17Flechas}
+
+Hoy cada botón físico del simulador lleva una tecla de letra: la del setup (\texttt{botones[].tecla}, un carácter validado por \texttt{validarSetup}) o la de la tabla \texttt{TECLAS\_POR\_DEFECTO} (\texttt{BaseDirector.js}). El simulador pulsa el botón asociado comparando \texttt{ev.key} con el \texttt{dataset.tecla} del botón en minúsculas (\texttt{\_buscarBotonPorTecla}), y la pista del botón pinta la letra.
+
+Se amplía para que el setup y la ficha del cartucho puedan asignar a un botón una \textbf{tecla de cursor} del PC, al lado de la letra (o en su lugar):
+
+\begin{itemize}
+	\item \textbf{Nombres de cursor en el GWS} (lista cerrada, sin distinguir mayúsculas/minúsculas): \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} (se escriben completos, sin abreviar). Esto es lo más natural en el vocabulario del proyecto (izquierda, derecha, arriba, abajo como los enlaces del editor).
+	
+	\item \textbf{\texttt{validarSetup}} acepta la tecla si es una letra \texttt{A..Z} (la letra va desde F5-I6; esta iteración retira los dígitos: el 1/2/3 queda reservado al trío de sistema A/B/R, botones 6/7/8, donde sí se admite como tecla, y fuera de ese trío un dígito NO carga) O uno de los cuatro nombres de cursor. Sin repetir, como las letras.
+	
+	\item \textbf{El simulador} mapea las teclas de flecha del PC (\texttt{ev.key} \texttt{ArrowLeft}, \texttt{ArrowRight}, \texttt{ArrowUp}, \texttt{ArrowDown}) al nombre de cursor, y \texttt{\_buscarBotonPorTecla} las encuentra en los dos sentidos (pulsar con la flecha, resaltar y soltar igual que una letra). La pista del botón muestra un símbolo ($\leftarrow$/$\rightarrow$/$\uparrow$/$\downarrow$) en lugar de texto largo.
+	\item \textbf{La ficha del setup} (pestaña Setup): el campo \texttt{tecla} de cada botón se elige en una lista desplegable con cinco valores: los cuatro cursores y «tecla»; al elegir «tecla» aparece una casilla aparte para escribir la letra ($A \dots Z$). Ya no se admite teclear el nombre a mano.
+	
+	\item \textbf{La ficha del cartucho} (pestaña Cartucho): nueva columna Tecla en la tabla de botones, con el mismo desplegable del setup (cuatro cursores y «Propia (letra)» con casilla aparte). Solo editable si el botón está Usado. Se guarda en \texttt{botones[].tecla} del GWB/GWI; un botón sin tecla no escribe el campo.
+	
+	\item \textbf{Precedencia de la tecla: GWI $>$ GWB $>$ GWS $>$ defecto del estilo, botón a botón y sin avisos.} El GWI es la fuente primaria: sus \texttt{botones[].tecla} mandan y al exportar/volcar a GWB se copian, de modo que el GWB puede jugarse solo. El GWB manda sobre el setup: si el GWB declara tecla para un botón, se usa esa; si no, la del GWS cargado; si tampoco, la de por defecto del estilo. La resolución es silenciosa: entre niveles no hay aviso, gana el nivel más alto, igual que una tecla declarada del setup ya gana hoy a la de por defecto.
+	
+	\item \textbf{Las teclas por defecto} (\texttt{Q/A/W/S/P/L/G/B/T}) CAMBIAN por estilo de máquina (ver los puntos definidos); un setup que declare \texttt{tecla} explícita sigue teniendo la última palabra.
+\end{itemize}
+
+\textbf{Puntos definidos}
+\begin{enumerate}
+	\item Nombres de cursor: en español \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba},  \texttt{cursor-abajo}.
+	
+	\item Para ponerlos en la ficha no se admite el nombre a mano, se valida sobre una lista con los 4 valores, y como quinto \texttt{tecla}, si se selecciona este nuevo valor se permite definir la tecla a usar (una letra $A \dots Z$; sin dígitos) en una casilla aparte. 
+	
+	\item Cambiamos la asignación de las teclas por defecto:
+	\begin{enumerate}
+		\item Para las máquinas de 2 botones las teclas por defecto son \texttt{cursor-izquierda}, \texttt{cursor-derecha}. 
+			
+		\item Para las de 4 botones es difícil usar los cursores, dejaremos \texttt{W-S} en un lado y \texttt{O-K} en el otro.
+		
+		\item Para las máquinas de 5 botones \texttt{cursor-izquierda}, \texttt{cursor-derecha}, \texttt{cursor-arriba}, \texttt{cursor-abajo} y \texttt{Z}.
+	\end{enumerate}
+	
+	\item El trío sistema A/B/R usa \texttt{1}/\texttt{2}/\texttt{3} (antes \texttt{G}/\texttt{B}/\texttt{T}): separa el sistema de los botones y deja las 26 letras libres para los botones, sin reservas ni colisiones.
+\end{enumerate}
+
+En el sistema externo no influye en nada: ni el GWB/GWI cambian su sentido: \texttt{botones[].tecla} es informativo para el editor y el simulador de PC.
+
+\subsection{Cambios necesarios en el código}
+\label{sec:F5I17Codigo}
+
+\begin{xltabular}{\textwidth}{l c >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+	\toprule
+	\textbf{Módulo} & \textbf{\#} & \textbf{Qué se hará} & \textbf{Prueba / estado} \\
+	\midrule
+	\endhead
+	BaseFicha & M1 & Campo \texttt{codigoGWC} de solo lectura en la ficha de Cartucho; se rellena al poblar con el del GWI cargado («---» si no trae) y se refresca tras generar & Cargar el GWI de Parachute: la ficha muestra su \texttt{codigoGWC}; cargar un GWB: «---» \\
+	\midrule
+	BaseDescomponer & M2 & En \texttt{\_generarPar}: aviso si el GWI cargado traía \#X\# y el nuevo código es \#Y\# $\neq$ \#X\#; en \texttt{verificarYGuardar}: aviso si el guardado suelta un \texttt{codigoGWC} que existía & GWI con \#X\# editado: \texttt{Verificar y Guardar} avisa «queda desparejado (\#X\#)»; \texttt{Generar} con código distinto avisa con ambos códigos \\
+	\midrule
+	BaseDirector & M3 & Aviso al cargar un GWB sobre un GWI con autoría (N acciones), antes del \texttt{reset}; N desde función pública nueva del editor & GWI de Parachute cargado, cargar un GWB: aviso visible con el número de acciones; cargar el MISMO GWI de nuevo: sin aviso \\
+	\midrule
+	BaseDirector & M4 & \texttt{validarSetup}: la tecla admite letra o nombre de cursor (lista cerrada, sin repetir; los dígitos se retiran y el 1/2/3 queda reservado al trío de sistema A/B/R); \texttt{\_buscarBotonPorTecla} normaliza \texttt{Arrow*} y la pista del botón muestra el símbolo del cursor & GWS a mano con \texttt{tecla: "cursor-izquierda"}: carga; la flecha izquierda del PC pulsa ese botón; \texttt{tecla: "cursorziq"}: NO carga; \texttt{tecla: "1"}: NO carga (fuera del trío) \\
+	\midrule
+	BaseSetup & M5 & La ficha del setup elige la tecla en la lista desplegable (los cuatro cursores y «tecla», con casilla de letra aparte cuando toca) & Elegir \texttt{cursor-derecha} para el botón derecho y aplicar: el botón del simulador lleva $\rightarrow$ y la flecha derecha del PC lo pulsa; elegir «tecla», escribir M y aplicar: el botón lleva M \\
+	\midrule
+	BaseDirector & M6 & \texttt{TECLAS\_POR\_DEFECTO} pasa a depender del estilo: 2 botones 0/4 $\to$ cursor-izquierda/derecha; 4 botones 0/1 $\to$ W/S y 4/5 $\to$ O/K; 5 botones cruceta 0--3 $\to$ los cuatro cursores y 4 $\to$ Z; trío sistema 6/7/8 $\to$ 1/2/3 & Cargar cada estilo sin setup de teclas: en el de 5 la cruceta responde a las flechas del PC; en todos, el trío A/B/R responde a 1/2/3 \\
+	
+	BaseFicha & M7 & La tabla de botones de la ficha de Cartucho incorpora la columna Tecla, mismo desplegable que el setup (lista + casilla de letra); solo editable con el botón Usado; se serializa en \texttt{botones[].tecla} del GWI o GWB & GWI o GWB con \texttt{tecla: "cursor-izquierda"} en un botón: la pista lleva $\leftarrow$ y la flecha lo pulsa; recargar: la ficha muestra la tecla guardada; caja T3 (S6) \\
+	
+	BaseDirector & M8 & Resolución de tecla botón a botón: GWI $>$ GWB $>$ GWS $>$ defecto del estilo; al verificar el cartucho se valida su tecla (letra o cursor, sin repetir entre las declaradas; dígito fuera del trío rechaza; 1/2/3 admitido solo en el trío A/B/R) & Cartucho con teclas propias: mandan sobre el setup; al borrarlas vuelve la del setup; \texttt{tecla: "5"} NO verifica; \texttt{tecla: "2"} en el 6 carga y fuera del trío no; dígito y repetidas NO cargan: caja T3 (S6) \\
+	
+	BaseDescomponer & M9 & El botón pasa a «Generar GWS+GWB+GWI+GWC»: junto al GWC se descarga TAMBIÉN el GWS del setup vigente (real o derivado del cartucho, vía \texttt{BaseDirector.datosSetup}), así la carpeta de destino queda con todo lo necesario sin carga adicional & Generar un cartucho: la carpeta de destino recibe \{nombre\}.GWS (el GWS; M11), \{nombre\}\_GWB.zip, \{nombre\}\_GWI.zip y \{nombre\}.GWC; con el GWS al lado, el GWC ya se puede volver a cargar desde cero \\
+	
+	BaseCartucho & M10 & Los ficheros guardados se nombran con el nombre del cartucho (\texttt{json.nombre}, saneado para disco) en lugar del genérico «cartucho»: \{nombre\}\_GWI.zip, \{nombre\}\_GWB.zip, \{nombre\}.GWC; «Guardar GWS» ya lo hacía (ahora con la extensión «.GWS» de M11). Obliga a poner el nombre antes de guardar; sin nombre, queda «cartucho» de salvavidas. (Los textos de aviso siguen el mismo nombre) & Guardar con nombre «Parachute»: Parachute\_GWI.zip, Parachute\_GWB.zip, Parachute.GWC; los mensajes de la barra citan los mismos nombres \\
+	
+	BaseSetup / BaseDirector & M11 & Unificación de extensiones: el GWS usa SU extensión \texttt{.GWS} (los cartuchos la llevan en MAYÚSCULAS: .GWS/.GWC) (lo crean «Guardar GWS» y «Generar»); los JSON interiores de los paquetes GWB/GWI siguen como \texttt{.json} (nunca bajan solos). La CARGA decide por contenido (F5-I9) pero FILTRA por extensión en dos puntos: acepta \texttt{.json} y \texttt{.gws} (minúsculas o mayúsculas) (el fichero único de \texttt{\_cargarCartucho} y el filtro de carpeta de \texttt{\_elegirJSONCartucho}); el \texttt{accept} del input incluir \texttt{.gws} & Un \texttt{Parachute.GWS} carga por el selector y por carpeta; un \texttt{.json} de antes sigue cargando; los avisos de carpeta sin setup citan «.json/.gws» \\
+	
+	\bottomrule
+\end{xltabular}
+
+
+\subsection{Pruebas}
+\label{sec:F5I17Pruebas}
+
+Las cajas de prueba se integran en el catálogo de pruebas del proyecto (ficheros registrados en \texttt{pruebas/pruebas.js}; se lanzan desde la pestaña «Pruebas» con botones o desde consola con \texttt{pruebas\textbackslash Lanzar.bat}): una por punto.
+
+Puntos M1/M2 (grupo «\texttt{gwi\_gwc}», fichero \texttt{pruebasGWI\_GWC.js}; códigos C): el \texttt{codigoGWC} del GWI cargado se ve en la ficha de Cartucho (C5); guardar el GWI a secas avisa de que el GWC queda desparejado y la ficha vuelve a «---» (C6); generar el par con un GWI cuyo código queda desfasado avisa con los dos códigos y la ficha enseña el nuevo (C7). C6 y C7 solo desde consola: el paso descarga los ficheros.
+
+Punto M3 (grupo «\texttt{director}», \texttt{pruebasDirector.js}, D4): recargar el mismo GWI no avisa de historial; cargar un GWB sobre un GWI con autoría avisa de las acciones descartadas.
+
+Puntos M4/M5/M6 (grupo «\texttt{teclas}», fichero nuevo \texttt{pruebasTeclas.js}): un GWS a mano (construido en página desde los de \texttt{pruebas/cartuchos}) con \texttt{cursor-izquierda} carga, su botón lleva la pista «←» y la flecha del PC lo pulsa y suelta (\texttt{KeyboardEvent}); un nombre de cursor mal escrito no carga; una tecla dígito no carga. Y los defaults por estilo (T2): setups sin teclas derivados de \texttt{setup2.json} (estilo 2) y \texttt{setup5.json} (estilo 5, añadido a \texttt{pruebas/cartuchos}).
+
+Los puntos M9/M10/M11 no añaden cajas: son guardado (descarga al usuario), y las cajas C6/C7 que lo ejercitan ya son solo de consola y verifican la barra de estado por REGEX, no los nombres.
+
+En \texttt{pruebasGWI\_GWC} la equivalencia con los ficheros del par debe seguir en verde (los avisos no tocan bytes). Al cierre se re-lanzan las suites (los grupos pueden lanzarse de una con \texttt{pruebas\textbackslash Lanzar.bat todas}); los avisos nuevos no tocan el orden del tick ni el formato del GWC.

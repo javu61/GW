@@ -1,0 +1,153 @@
+\section{Vigésima iteración de la Fase 5: Tamaño de la Memoria}
+\label{sec:F5I20}
+
+En esta iteración incluimos información sobre el sistema externo, en cuanto a la cantidad de memoria de que disponer, de forma que al generar los cartuchos GWC se indique el porcentaje que van a ocupar, como dato informativo para el usuario. Como cada sistema externo pude disponer de una cantidad de memoria diferente, y el programa final puede ocupar mas o menos de esa memoria, solo damos el tamaño y el porcentaje, y será el usuario quien decide después; la información nunca bloquea.
+
+\subsection{Análisis del estado actual}
+\label{sec:F5I20Analisis}
+
+\begin{itemize}
+	\item De los dos datos que hacen falta para el porcentaje, el sistema ya
+	conoce uno: los bytes del GWC recién creado
+	(\texttt{BaseCartucho.generarGWC}, presentados en el panel del Editor por
+	\texttt{informarTamanos}). El otro, la memoria de que dispone la máquina
+	externa, no se declara actualmente en ningún sitio.
+	\item El GWS describe la máquina externa (estilo, resolución, botones,
+	teclas, \ldots) pero no dice cuánta memoria tiene el hardware que la
+	ejecuta; y desde F5-I19 los cartuchos (GWB/GWI) llevan la información de
+	la autoría, con lo cual el sitio natural para declararla son PANTALLAS Y
+	CARTUCHOS.
+	\item La RAM la ocupa lo que viaja dentro del GWC (sus bytes); la FLASH la
+	ocupará el fondo (img\_f), que todavía no se guarda en el cartucho, pero el sistema considerará que si, mirará la ocupación del bloque del fondo, hoy será cero, y dará la ocupación. Cuando guardemos el fondo no hay que tocar nada para que siga funcionando.
+\end{itemize}
+
+\subsection{Diseño: el campo \texttt{memoria} (RAM y FLASH)}
+\label{sec:F5I20Diseno}
+
+\begin{itemize}
+	\item \textbf{Campo opcional \texttt{memoria}, con dos subcampos \texttt{RAM} y \texttt{FLASH},} en KB, enteros $\ge 0$, que PUEDEN QUEDAR A CERO (o simplemente no venir, lo que vale lo mismo). Se incluye en PANTALLAS (GWS) y CARTUCHOS (GWB/GWI), en la raíz del JSON: 
+	\texttt{<<memoria>>: \{<<RAM>>: 216, <<FLASH>>: 0\}}.
+	
+	\item \textbf{¿De dónde sale la memoria vigente al calcular?} De lo que
+	MANDA: la memoria del cartucho (GWB/GWI) si la declara; si no, la del
+	setup (GWS); si ninguna existe o ambas están a cero, NO se muestra
+	ningún porcentaje ni ningún aviso (nada que informar).
+	
+	\item \textbf{¿Dónde se informa?} Solo cuando tenemos el tamaño definido, que es al generar el GWC (botón <<Generar GWC>>), junto a los
+	tamaños del par: en la línea de \texttt{informarTamanos} del panel del
+	Editor y en el aviso final de \texttt{\#estado} (p.~ej.
+	<<RAM: 4 de 216 KB (2\,\%) \textperiodcentered{} FLASH: 0 de 216 KB
+	(0\,\%)>>). El porcentaje es un entero (redondeo clásico);
+	si el cálculo da menos de 1\,\%, se muestra <<$< 1$\,\%>> para no leer un 0 engañoso.
+	
+	\item \textbf{FLASH:} Tamaño del bloque del fondo, si no existiera será 0 KB y 0\,\%, si existe el tamaño del bloque. 
+	\item \textbf{Validación:} si un valor declarado no
+	es un entero $\ge 0$, aviso y se trata como 0 (es decir, sin
+	porcentaje); no bloquea nada, coherente con el carácter informativo de
+	toda la iteración.
+	
+	\item \textbf{Los datos comunes pasan al aplicar (ajuste tras la
+		primera prueba):} al aplicar o cargar un GWS, la ficha de Cartucho
+	recibe TODOS los datos comunes del setup, no solo el estilo y la
+	resolución que ya iban: nombre, \texttt{memoria} y \texttt{ColorFondo}.
+	Y a la inversa: al aplicar la ficha de Cartucho o cargar el cartucho,
+	la memoria del setup derivado sale del CARTUCHO, subcampo a subcampo
+	(lo que él no declara, de la máquina previa, que es del hardware). Un
+	GWB montado desde la ficha sale así completo y sus ficheros llevan el
+	nombre del setup (F5-I17, M10); los ids, las teclas propias y las
+	imágenes siguen siendo del cartucho.
+	
+	\item \textbf{La pérdida de datos SIEMPRE pide confirmación (ajuste):}
+	aplicar el setup, guardar el GWS o cargar un GWS descarta el cartucho
+	en memoria, con los datos de juego que llevaría (la autoría del GWI):
+	se pide confirmación cuando hay algo que perder (cancelar conserva
+	todo), con el mismo criterio del botón <<Limpiar>> (F5-I19): con
+	\texttt{GW\_DEBUG} no se pide, porque las suites corren solas y el
+	navegador de Playwright descarta los diálogos. Lo mismo al aplicar la
+	ficha de Cartucho con un cartucho en memoria (que ya avisaba
+	DESPUÉS de perderlo, caja D4, F5-I17 M3).
+\end{itemize}
+
+
+\subsection{Plan de cambios}
+\label{sec:F5I20Plan}
+
+\begin{itemize}
+	\item \texttt{BaseSetup.js}: en la ficha de Setup, campos
+	«RAM (KB)»{} y «FLASH
+	(KB)»{} (enteros $\ge 0$, vacío vale 0); los recoge
+	\texttt{estado()}; la serialización del GWS solo escribe
+	\texttt{memoria} (subcampo a subcampo) con los valores distintos de 0;
+	la repoblación muestra la del GWS cargado.
+	\item \texttt{BaseFicha.js}: los mismos dos campos en la ficha de
+	Cartucho; \texttt{poblar} los lee del GWB/GWI; la serialización los
+	escribe en la raíz del JSON (solo los subcampos distintos de 0).
+	\item \texttt{BaseCartucho.js}: \texttt{validarSetup} (GWS) y
+	\texttt{validarComunes} (cartucho) aceptan \texttt{memoria} si sus dos
+	subcampos son enteros $\ge 0$ (o no vienen); valor no válido $\to$
+	aviso (F5-I16) y 0. \texttt{\_formatearGWI} y \texttt{\_formatearGWB}
+	serializan \texttt{memoria} según lo dicho.
+	\item \texttt{BaseDescomponer.js}: en \texttt{generarGWIyGWC}, junto a
+	\texttt{informarTamanos}, el cálculo del porcentaje (precedencia
+	cartucho $>$ setup) y la línea/aviso de ocupación.
+	\item \texttt{BaseDirector.js} (ajuste tras la primera prueba):
+	\texttt{\_aplicarJSONSetup} repuebla la ficha de Cartucho con TODOS los
+	datos comunes del setup (nombre, memoria y ColorFondo, además del
+	estilo y la resolución); \texttt{\_setupDerivadoDe} toma la memoria
+	del cartucho, subcampo a subcampo (lo que él no declara, de la máquina
+	previa); función \texttt{\_confirmarDescarteCartucho}
+	(igual que el Limpiar: se omite con \texttt{GW\_DEBUG}) llamada desde
+	los DOS botones Aplicar, desde «Guardar GWS» y desde la carga de un
+	GWS: ninguna vía descarta datos sin preguntar antes.
+	Cabeceras de módulos al día; A5-anexo, una línea de
+	\texttt{\textbackslash input} nueva.
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F5I20Pruebas}
+
+\begin{itemize}
+	\item Caja nueva C8 (grupo \texttt{gwi\_gwc}, solo consola, al estilo de
+	C7), registrada y REFERENCIADA EN F5-I18 (la norma vigente): generar el
+	par con un setup cuya \texttt{memoria.RAM} es pequeña y distinta de 0
+	$\to$ sale el porcentaje (línea del panel y aviso final); con la
+	memoria a cero o sin ella $\to$ sin porcentaje y sin avisos; FLASH
+	siempre 0 KB y 0\,\%.
+	\item Caja nueva D9 (grupo \texttt{director}, destructiva, al final de
+	la suite S2), registrada y REFERENCIADA EN F5-I18 (la norma vigente):
+	cargar un GWS con nombre, \texttt{memoria} y ColorFondo $\to$ la ficha
+	de Cartucho recibe los cuatro datos comunes; y un GWB que declara su
+	propia memoria pasa al setup derivado subcampo a subcampo (su RAM
+	manda; la FLASH sin declarar sigue siendo la del GWS); con un
+	cartucho en memoria, aplicar el setup PIDE confirmación (capturada en
+	la prueba): cancelar conserva el cartucho y avisa de «NO aplicado»;
+	confirmar aplica y vuelve a propagar; con \texttt{GW\_DEBUG} no se
+	pide (criterio D8).
+	\item S2 y S5 completas en verde; el cambio no toca el formato GWC ni el
+	orden del tick.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F5I20Criterios}
+
+\begin{enumerate}
+	\item Un GWS o cartucho sin \texttt{memoria} (o con RAM/FLASH a cero)
+	genera SIN porcentajes y SIN avisos de memoria.
+	\item Con \texttt{memoria.RAM} declarada, al generar el GWC se muestra el
+	porcentaje de RAM junto a los tamaños y en el aviso final; solo
+	información, nunca bloqueo.
+	\item FLASH queda preparada (campo, cálculo y mensaje) con hoy 0 KB y
+	0\,\%: cuando exista el fondo, contará allí sin cambiar el diseño.
+	\item RAM y FLASH visibles y editables en las pestañas Setup y Cartucho;
+	a cero no se serializan en el JSON.
+	\item Al aplicar (o cargar) un GWS, la ficha de Cartucho recibe todos
+	los datos comunes (nombre, memoria, ColorFondo, estilo y resolución);
+	y al aplicar la ficha o cargar el cartucho, la memoria del setup
+	derivado sale del cartucho, subcampo a subcampo. El GWB montado desde
+	la ficha sale completo.
+	\item Ninguna vía descarta datos sin confirmación: aplicar el setup,
+	guardar el GWS, cargar un GWS o aplicar la ficha de Cartucho con
+	cartucho en memoria piden confirmación (cancelar conserva todo);
+	con \texttt{GW\_DEBUG} no se pide.
+	\item S2 y S5 en verde al cerrar la iteración.
+\end{enumerate}

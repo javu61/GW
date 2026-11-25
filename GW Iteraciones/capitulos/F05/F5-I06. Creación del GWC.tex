@@ -1,0 +1,336 @@
+\section{Sexta iteración de la Fase 5: Creación del GWC}\label{sec:F5I6}
+
+Con el módulo preparado, llega el nuevo código: generar el
+\textbf{GWC}, el cartucho de ejecución definido en el formato de la
+segunda iteración definida en la sección \ref{sec:F5I2}. Todo se
+incluye en \texttt{BaseCartucho.js} que ya se preparó para el
+traspaso, con dos nuevas funciones: la \textbf{lectura} y la
+\textbf{grabación}.
+
+\subsection{El botón «Generar GWI+GWC»}
+\label{sec:F5I6Boton}
+
+La generación se lanza desde el editor gráfico, que tiene toda la
+información, con un botón nuevo junto al de «Verificar y Guardar».
+El botón del GWI solo SE MANTIENE: poder dejar un cartucho a medias
+y seguir luego es importante. El nuevo botón encadena los procesos
+sobre las mismas listas en memoria, con la verificación completa del
+diseñador al frente, bloqueante:
+
+\begin{enumerate}	
+	\item \textbf{Generación del GWC}: ensamblado de los bloques,
+	cabecera con su suma de verificación y descarga
+	(\texttt{cartucho\_gwc.gwc}).	
+	
+	\item \textbf{Guardado del GWI} con el campo \texttt{codigo}
+	igual a la \textbf{suma de verificación del GWC} recién
+	generado, y su descarga (\texttt{cartucho\_gwi.zip}).
+\end{enumerate}
+
+La razón del encadenamiento es la atomicidad: si la validación
+falla, no se genera ninguno de los dos; si tiene éxito, ambos salen
+de la misma información de la memoria y son \textbf{siempre copia
+	uno del otro}. No existe la situación de un GWC huérfano de un GWI
+más nuevo. Los avisos de la barra de estado acompañan cada paso
+(«Generando GWC…», «Guardando GWI…»), y cualquier fallo es visible
+con su mensaje, como en todo el proyecto.
+
+La verificación de los topes acompaña este reparto, y lo hace como
+función independiente: \texttt{validarTopes(listas)} —en el
+\texttt{BaseCartucho.js}— devuelve \textbf{cierto o falso}, y es el
+punto de llamada quien decide su tratamiento: tras descomponer los
+segmentos y al guardar el GWI su fallo es solo un \textbf{aviso}
+—el diseñador sabe que se ha pasado del tope y decide si seguir—, y
+al pulsar «Generar GWI+GWC» es \textbf{bloqueante}: no da el error
+cuando uno piensa que está todo bien, sino en el único momento en
+que el GWC ya no puede salir correcto.
+
+Lo mismo ocurre con la verificación del diseñador: la coherencia de
+enlaces, contadores y tipos que se lanzaba antes de guardar el GWI pasa a
+su \textbf{propia función independiente}, que los dos botones de
+guardar llaman \textbf{siempre antes de empezar} su proceso —un
+solo código de verificación, sin copias— y que es bloqueante en
+ambos: si la verificación falla, ni el GWI ni el par se guardan.
+
+\subsection{La grabación: \texttt{generarGWC(listas)}}\label{sec:F5I6Grabacion}
+
+Para poder leer los datos, primero hay que generarlos, razón por la
+que primero abordo el tema de la grabación y luego el de la lectura.
+Se definen estas funciones:
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}l X@{}}
+		\toprule
+		\textbf{Función} & \textbf{Descripción} \\
+		\midrule
+		
+		\texttt{leerGWC(bytes)} & La lectura: valida la
+		cabecera y la suma de verificación, recorre los bloques y
+		reconstruye las listas en memoria con las mismas formas que
+		produce el editor \\
+		
+		\texttt{generarGWC(listas)} & La grabación: valida los
+		topes, escala, ensambla los bloques en orden, escribe la
+		cabecera con la suma de verificación y devuelve los bytes
+		junto a la estadística de tamaños \\
+		
+		\texttt{validarTopes(listas)} & Comprueba que sprites,
+		segmentos y secuencias no superan los 255 elementos
+		direccionables con índices de 1 byte: en el editor es un
+		\textbf{aviso} —tras descomponer los segmentos y al guardar
+		el GWI—, y en el botón «Generar GWI+GWC» es
+		\textbf{bloqueante}: no se genera nada \\
+		
+		\texttt{escalar(sprite, pantalla)} & Convierte un sprite en
+		su máscara de 1 bit escalada a la pantalla declarada, con el
+		muestreo por vecino más cercano y escala por eje del
+		simulador: lo que viaja es lo que el simulador pinta al vuelo \\
+		
+		\texttt{indiceDe(id)} & Traduce los \texttt{seg\_NNN} del
+		GWI a índices del GWC, con el \textbf{nulo} para los enlaces
+		ausentes; los campos \emph{salvadoContador} y
+		\emph{muerteContador} viajan con el contador correcto o
+		nulos \\
+		
+		\texttt{bloque(tipo, contenido)} & Escribe la estructura
+		común de todos los bloques: tipo, tamaño del contenido de 4
+		bytes y contenido \\
+		
+		\texttt{estadistica(bytes)} & Presenta el tamaño final del
+		GWC generado, con la descomposición por bloques \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Las funciones del GWC en \texttt{BaseCartucho.js}: leer antes que grabar, como los otros dos formatos.}
+	\label{tab:funcionesGWC}
+\end{table}
+
+El generador no usa el azar en ninguna parte: recorre las listas
+siempre en el mismo orden y escribe siempre lo mismo. La generación
+es \textbf{determinista}: el mismo GWI produce el mismo GWC byte a
+byte, con la misma suma de verificación —el equivalente del
+compilador reproducible, y la base de su prueba de regresión.
+
+El descarte también vive aquí: los identificadores legibles, los
+fantasmas tipo 99, los enlaces inversos calculados y toda la
+sección de autoría no viajan; el generador los descarta al vuelo,
+un segmento que nadie enciende ni pinta no existe en el GWC.
+
+\subsection{La lectura: \texttt{leerGWC(bytes)}}\label{sec:F5I6Lectura}
+
+La función de lectura es pura de bytes a listas, sin DOM, sin ZIP y
+sin imágenes PNG: recorre la cabecera —identificador «GWC»,
+versión, tamaño del fichero y suma de verificación—, la
+\textbf{valida}, y recorre los bloques en su orden, reconstruyendo
+las listas en memoria con las mismas formas que produce el editor:
+los índices binarios vuelven a ser referencias de segmento, las
+máscaras de 1 bit vuelven a ser imágenes en memoria, y los campos
+de configuración vuelven al puente como si vinieran de un GWI.
+
+El bloque que no existe no se echa en falta: el registro de
+secuencias ausente deja la Secuencia a \texttt{null} y el bloque de
+fondo ausente deja el color de fondo declarado en el Bloque 0.
+Cualquier desviación —identificador equivocado, versión no
+soportada, tamaño que no cuadra con el fichero, suma de
+verificación que no coincide— es un error explícito con su
+mensaje, como en todo el proyecto: un cartucho corrupto no se
+carga a medias, y el cartucho anterior se conserva.
+
+Esta función queda en la \textbf{sección delimitada y
+	autocontenida} del módulo: sin dependencias del GWB, del ZIP ni del
+editor, para servir —con los cambios oportunos— como lector del
+firmware del ESP32 de la siguiente fase.
+
+\subsection{El código del par: la suma de verificación}\label{sec:F5I6Codigo}
+
+Para asegurarse de que un GWI y un GWC salieron juntos de la misma
+memoria, el GWI lleva un campo \texttt{codigo} que, al generar el
+par, vale exactamente \textbf{la suma de verificación del GWC}
+—el mismo dato de 16 bits que el GWC lleva en su cabecera. El
+formato del GWC no gana ningún byte: su identificador de par ya
+existe, es su propia firma.
+
+El reparto es el mismo de siempre:
+
+\begin{itemize}	
+	\item \textbf{«Verificar y Guardar»} deja el GWI
+	\textbf{en blanco}: guardado a solas, un GWI no está emparejado
+	con nada.	
+	\item \textbf{«Generar GWI+GWC»} escribe primero el GWC y
+	traslada su suma de verificación al campo \texttt{codigo} del
+	GWI: ambos ficheros quedan sellados con el mismo dato.
+\end{itemize}
+
+Comprobar que van de la mano es leer dos valores: el
+\texttt{codigo} del GWI y la suma de verificación de la cabecera
+del GWC. Que un par coincida por casualidad exigiría que dos
+cartuchos distintos compartieran suma de verificación —la
+probabilidad de que los cambios se anulen es despreciable en
+nuestro caso. Y la determinación del código no rompe nada: como la
+generación es determinista, un mismo GWI produce siempre el mismo
+GWC y por tanto el mismo código —la ida y vuelta sigue siendo
+válida byte a byte.
+
+\subsection{La carga en el simulador y la verificación}\label{sec:F5I6Carga}
+
+El generador gráfico permite cargar un cartucho GWC con
+\texttt{leerGWC}: se verifica que su contenido es válido, que
+visualmente carga lo mismo que un GWI, que los segmentos conservan
+sus propiedades y que el simulador ejecuta el mismo juego.
+
+Y esto permite la verificación más exigente, el \textbf{ciclo de
+	ida y vuelta}:
+
+\begin{enumerate}	
+	\item Se carga un GWI.	
+	\item Sin tocar nada se genera el GWI+GWC.	
+	\item Se carga el GWC generado.	
+	\item Sin tocar nada se genera de nuevo el GWI+GWC.
+\end{enumerate}
+
+Los dos GWC —el del punto 2 y el del punto 4— deben ser
+\textbf{idénticos byte a byte}, muy sencillo de validar con los
+comandos estándar del sistema. El GWI regenerado es
+\textbf{equivalente en su contenido de juego}: la autoría y los
+gráficos originales no viajan en el GWC, así que los GWI no pueden
+ser idénticos, pero las listas que producen deben ser las mismas
+—y el campo \texttt{codigo}, que es la firma del GWC, también debe
+salir el mismo en ambos guardados.
+
+\subsection{Simulación}\label{sec:F5I6Simulacion}
+
+El generador y el lector son puro pasar listas en memoria a bytes
+y al contrario, sin DOM, así que la batería de pruebas los ejercita
+enteros con listas sintéticas y con el GWI real del Parachute:
+
+\begin{itemize}	
+	\item \textbf{Determinismo:} dos generaciones del mismo GWI
+	producen bytes idénticos y la misma suma de verificación.	
+	
+	\item \textbf{Estructura:} los conteos de la cabecera cuadran
+	con las tablas; toda dirección apunta dentro del fichero; la
+	suma de verificación recomputada coincide; los punteros de los
+	bloques opcionales ausentes son nulos.	
+	
+	\item \textbf{Contenido:} los enlaces del registro se resuelven
+	contra los índices reales; ningún enlace válido apunta al nulo
+	ni al revés; \emph{salvadoContador} y \emph{muerteContador}
+	viajan correctos o nulos; no viajan fantasmas tipo 99 ni
+	absorbidos.	
+	
+	\item \textbf{Escalado:} posiciones y máscaras coinciden a
+	píxel con lo que el simulador pinta al vuelo con la misma
+	pantalla declarada.	
+	
+	\item \textbf{Topes:} un GWI con más de 255 segmentos produce el
+	aviso tras descomponer y al guardar el GWI, y el error
+	bloqueante al pulsar «Generar GWI+GWC», sin generar ningún
+	fichero.	
+	
+	\item \textbf{Código del par:} «Verificar y Guardar» produce un
+	GWI sin código; «Generar GWI+GWC» pone en el campo
+	\texttt{codigo} del GWI la misma suma de verificación que la
+	cabecera del GWC; el código sobrevive a la ida y vuelta.	
+	
+	\item \textbf{Ida y vuelta:} cargar el GWC generado y volver a
+	generar produce el mismo GWC byte a byte; el GWI regenerado es
+	equivalente en su contenido de juego.	
+	
+	\item \textbf{Lectura corrupta:} un byte cambiado en la suma de
+	verificación, un identificador equivocado o un tamaño que no
+	cuadran dan su error explícito y el cartucho anterior se
+	conserva.
+\end{itemize}
+
+Y en navegador real, con el cartucho del Parachute: el botón
+produce ambos ficheros seguidos; un cartucho con un error de
+verificación no produce ninguno; las cifras de la estadística se
+presentan en la barra; la inspección del GWC (volcado hexadecimal)
+muestra el identificador «GWC», su versión y el recorrido de
+bloques en orden.
+
+\subsection{La estadística de tamaños}\label{sec:F5I6Estadistica}
+
+Al terminar, la generación presenta en la barra de estado y en
+detalle bajo GW\_DEBUG una única cifra: el \textbf{tamaño final del
+	GWC}, con la descomposición por bloques. El ahorro de la
+deduplicación de sprites y la comparación frente al ZIP del GWI son
+un tema aparte, más propio de la presentación final del proyecto, y
+queda anotado como posible ampliación.
+
+El Parachute real es el caso de estudio: su tamaño final en el GWC
+—recogido en la memoria al cierre de la fase— ilustra la distancia
+entre un formato de autoría (legible, editable, con historial e
+imágenes PNG) y uno de ejecución (binario, mínimo, listo para el
+microcontrolador). Los datos finales para la pantalla declarada de $320 \times 240$ han sido:
+
+
+% ---------------------------------------------------------------
+% Cifras del cartucho Parachute (F5-I7)
+% ---------------------------------------------------------------
+\begin{table}[H]
+	\centering	
+	\begin{tabular}{lr}
+		\toprule
+		Concepto & Valor \\
+		\midrule
+		Segmentos en el editor & 139 \\
+		Imágenes en el editor & 125 \\
+		GWI (JSON + PNG, aproximado) & 285\,558 bytes \\
+		PNG de segmentos & 129\,352 bytes \\
+		GWC generado & 7\,342 bytes \\
+		\bottomrule
+	\end{tabular}
+	\caption{Cifras del cartucho Parachute en el editor y en la generación}
+	\label{tab:F5I7CifrasParachute}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llrr}
+		\toprule
+		Tipo & Bloque & Tamaño & Contenido \\
+		\midrule
+		- & Cabecera & 14 & \texttt{GWC1\#0BAD\#} + tamaño \\
+		0 & Datos & 40 & estilo, pantalla, conteos, direcciones \\
+		1 & Configuración & 21 & pausas, aceleración, rutas, fin \\
+		2 & Sprites & 5\,523 & 52 máscaras \\
+		3 & Segmentos & 1\,733 & 54 registros de 32 bytes \\
+		4 & Secuencias & 11 & 1 secuencia de 5 segmentos \\
+		5 & Fondo & -- & reservado (nulo) \\
+		\midrule
+		&Total & 7\,342 & \\
+		\bottomrule
+	\end{tabular}
+	\caption{Desglose del GWC del Parachute por bloques}
+	\label{tab:F5I7BloquesParachute}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lr}
+		\toprule
+		Concepto & Valor \\
+		\midrule
+		Imágenes deduplicadas (compartidas en el editor) & 8 \\
+		Ahorro en el GWI & 3\,829 bytes ($\approx 1'1\%$) \\
+		Ahorro en el GWC & 52 bytes ($\approx 1'1\%$) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Ahorro por deduplicación de sprites en el Parachute}
+	\label{tab:F5I7DedupParachute}
+\end{table}
+
+\subsection{Deduplicación aproximada}
+\label{sec:F5I6Tabla♠Estadistica}
+
+
+Si buscamos imágenes que sean casi iguales aunque no idénticas, analizando el porcentaje de diferencia entre ambas, para intentar fusionarlas y reducir un poco mas el tamaño, vemos que hay 3 pares «casi iguales» que la deduplicación exacta no fusiona:
+
+\begin{itemize}
+	\item par 24×20: 8 píxeles distintos (1,67\% de diferencia entre ambos)
+	\item par 13×10: 3 píxeles distintos (2,31\% de diferencia entre ambos) 
+	\item par 4×10: 3 píxeles distintos (7,5\% de diferencia entre ambos)
+\end{itemize}
+
+Con umbral del dos y medio por ciento entrarían los dos primeros, con un ahorro adicional de unos 88-102 bytes de GWC (~1,3\%). Es decir, usar una deduplicación de imágenes que sea aproximada añadiría poco sobre la actual que busca imágenes exactamente iguales, \underline{por lo que creo que no merece la pena implementarla}.

@@ -1,0 +1,78 @@
+\section{Octava iteración de la Fase 5: Las tres imágenes y el GWC solo para ejecución}
+\label{sec:F5I8}
+
+Esta iteración cierra dos frentes abiertos por el uso real del
+simulador: el contrato de las imágenes de pantalla en la validación
+de entrada, que quedaba a medias tras hacer opcional la imagen de
+fondo, y la carga del GWC, que jugaba pero dejaba la máquina a
+medias (botones sin restaurar y pestañas heredadas del cartucho
+anterior).
+
+\subsection{El contrato de las tres imágenes}
+\label{sec:F5I8Imagenes}
+
+La validación de entrada (\texttt{validarCartucho}, en
+\texttt{BaseCartucho.js}) es el contrato de lo que puede ENTRAR, y es
+COMÚN a los cartucho JSON: GWB y GWI (el GWC es binario y se valida
+por su propio camino, en la lectura del fichero). Con ella se fija el
+contrato de las tres imágenes de pantalla, que el anexo
+\ref{sec:F1A01} recoge ya de forma formal:
+
+\begin{itemize}
+	\item \texttt{pantalla} es OBLIGATORIA como objeto: sin ella no
+	hay ni geometría ni presentación.
+	\item \texttt{pantalla.img\_s} es OBLIGATORIA: de ella se extrae
+	la geometría, así que debe estar declarada Y su fichero presente
+	en la carpeta o en el ZIP. Un GWI cuyo ZIP no la lleve ya no
+	carga.
+	\item \texttt{pantalla.img\_f} (el fondo) es OPCIONAL (punto 8 de
+	la Fase 5): hay cartuchos sin arte de fondo. Si se declara, su
+	fichero DEBE estar presente; sin fondo, el simulador pinta la
+	pantalla en blanco (el color real del LCD apagado).
+	\item \texttt{pantalla.img\_m} (la portada) es OPCIONAL, y AHORA
+	TAMBIÉN se valida: si se declara, su fichero debe estar. Antes una
+	portada ausente se toleraba en silencio al cargar.
+\end{itemize}
+
+La regla común es simple y uniforme: una imagen es opcional a la
+hora de DECLARARSE, pero declarada su fichero es obligatorio. El
+guardado del GWI se alinea con el mismo criterio: el ZIP incluye
+img\_f solo si el cartucho la declara; el aviso de error se reserva
+al caso incoherente (declarada y sin imagen en memoria), y un
+cartucho sin fondo deja solo constancia en consola, porque es
+legítimo.
+
+\subsection{El GWC como cartucho de pura ejecución}
+\label{sec:F5I8GWC}
+
+Cargar el GWC generado y comprobarlo en el PC es parte del ciclo de
+trabajo: es jugable y sirve para verificar que el binario es
+correcto. Pero el GWC NO lleva la parte PC del cartucho: no trae
+img\_s (sin geometría no hay mapa de trabajo ni autoría) ni los
+botones con sus nombres. La carga quedó por tanto definida como
+EJECUCIÓN PURA, con tres ajustes en \texttt{procesarGWC}:
+
+\begin{enumerate}
+	\item \textbf{Botonera completa}: el GWC no declara botones (son
+	físicos del setup), así que se restaura la botonera COMPLETA de la
+	máquina, por si un cartucho anterior había eliminado o renombrado
+	alguna, y el botón de Start vuelve al valor por defecto (el 8).
+
+	\item \textbf{Pestañas}: con un GWC cargado, solo la pestaña del
+	Simulador está activa; Editor y Segmentos y Sprites quedan
+	deshabilitados, porque no hay nada de la parte PC que editar ni
+	listar de forma fiable.
+
+	\item \textbf{La máquina delante}: al terminar la carga, la vista
+	Simulador queda delante y el juego listo para el Start, venga de
+	la pestaña que viniera.
+\end{enumerate}
+
+Se valoró reconstruir el estado del editor a partir de las listas
+del GWC (sprites desde sus máscaras, segmentos con sus propiedades,
+historial vacío) para poder editar un GWC sin GWI al lado; y también
+un fichero secundario con la parte PC. Ambos caminos se descartaron
+por innecesarios: el par (GWI, GWC) que el botón «Generar GWI+GWC»
+ya produce ES la pareja de parte PC y parte de ejecución, y el GWC
+solo cumple su papel: verificar el binario jugando. La edición de un
+GWC sin su GWI queda anotada como AMPLIACIÓN del proyecto.

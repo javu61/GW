@@ -1,0 +1,90 @@
+\section{Novena iteración de la Fase 3: Los contadores en pantalla}
+\label{sec:ContadoresPantalla}
+
+Esta iteración ha sido fallida, no se ha resuelto el tema que se deseaba implementar en el sistema, pero el desarrollo evolutivo permite solucionarlo sin intentar sontionuar por un camino erróneo.
+
+La iteración anterior dejó los contadores \emph{internos} del motor presentados
+solo en la barra de estado del modo depuración (\texttt{Tick N · Vidas: V · Muertes: M});
+en la pantalla del simulador no aparecían. Esta iteración se
+propone que los contadores pasen a ser parte de la \textbf{presentación en pantalla}.
+
+\subsection{Qué se construye}
+\label{subsec:QueSeConstruyeF3I9}
+
+\begin{itemize}
+	\item \textbf{La presentación la decide el autor}, sin posiciones calculadas:
+	como en las máquinas reales, el arte lleva un «8» impreso en CADA posición del
+	número. El autor dibuja los «8» donde van los dígitos y el sistema los
+	convierte en el contador; donde dibujó cada «8» aparece el número.
+	
+	\item \textbf{La información viaja en el cartucho}. Los agrupamientos viajan
+	enteros en el GWI: los segmentos individuales que los componen siguen
+	existiendo con sus sprites (el motor necesita encender cada barra por
+	separado), aunque el editor ya no los maneje.
+	
+	\item Si el contador sobrepasa el número de dígitos previstos, $n$, y sigue
+	creciendo, no se corta su crecimiento, pero solo se presentan los últimos
+	$n$ dígitos del número, aunque sean cero, por tanto si $n=2$, contaría:
+	\begin{center}
+		\ttfamily{$\sqcup$0, $\sqcup$1, $\sqcup$2, $\sqcup$3, ..., 10, 11, ... 98, 99, 00, 01, ...}
+	\end{center}
+\end{itemize}
+
+\subsection{El dígito de siete segmentos}
+\label{subsec:SieteSegmentosF3I9}
+
+El sistema real usa un LCD para representar los números, por tanto cualquier
+dígito numérico se debe dibujar como un \textbf{display de siete segmentos}, con
+las barras del «8» marcadas con las letras clásicas \texttt{a}--\texttt{g}:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.1\linewidth]{imagenes/propias/C05-I025}
+	\caption[]{Display de 7 segmentos.}
+	\label{fig:c05-i025}
+\end{figure}
+
+El autor del cartucho dibuja un «8» en cada posición del número y el sistema sabe
+qué barras enciende cada dígito (un 1 es \texttt{b+c}, un 2 es
+\texttt{a,b,g,e,d}, etcétera): la tabla es fija y la trae el sistema. Con esto
+el autor no dibuja los diez dígitos posibles ni declara qué número representa
+cada uno. El 8 se puede dibujar tanto normal como en cursiva, el único requisito
+es que se puedan extraer correctamente los 7 segmentos del gráfico unívocamente.
+
+Con esto, en el diseñador se añaden DOS nuevos tipos de segmento,
+\textbf{dígito} y \textbf{contador}, con un \textbf{agrupamiento jerárquico en
+	dos niveles}: contador $\rightarrow$ dígitos $\rightarrow$ barras.
+
+\subsection{El callejón sin salida}
+\label{subsec:CallejonF3I9}
+
+La implementación se apoyó en el mecanismo de agrupación existente, la
+\emph{unión} de segmentos, y lo estiró para cubrir la jerarquía. Los intentos
+fueron varios y ninguno cerró:
+
+\begin{itemize}
+	\item Primero se probó a construir el dígito \emph{reciclando} una de las
+	barras: el dígito \emph{era} la barra \texttt{a}, y el contador \emph{era}
+	el dígito de las unidades. Ahorraba segmentos, pero la semántica salía
+	torcida: al guardar, un contador recién creado llegaba con su contador
+	interno vacío (el panel nunca escribía sobre el segmento reciclado) y la
+	verificación lo rechazaba.
+	
+	\item Después se separaron los agrupados en piezas propias («segmentos
+	ficticios»), pero conviviendo con la unión clásica: DOS sistemas de
+	agrupación en el mismo editor. El resultado fue frágil — piezas agrupadas
+	que no respondían al clic, «Separar» que no separaba, dígitos que seguían
+	viendo tras crear el contador, errores de guardado — y cada arreglo
+	tapaba un agujero abriendo otro.
+\end{itemize}
+
+La decisión tras varios intentos de solucionar los problemas que surgían en las pruebas fue que \textbf{el problema no eran los contadores, era el sistema de unión}. Fusionar los segmentos en uno de los
+existentes (el absorbido desaparece y el superviviente hereda todo) no podía
+sostener encima una jerarquía de dos niveles con piezas que nacen y se separan.
+
+La ventaja de usar iteraciones pequeñas es que cuando ves que algo no se puede solucionar con el sistema actual, puedes parar, volver atrás, solucionar los problemas que solucionaban algo anterior, pero no servian para un nuevo requerimiento, y arreglarlo antes de continuar.
+
+\textsc{Reitero que esta iteración ha llevado a un error, y que hay que retroceder un poco antes de seguir avanzando.}
+
+\clearpage
+

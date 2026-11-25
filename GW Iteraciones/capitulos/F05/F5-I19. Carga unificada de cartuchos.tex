@@ -1,0 +1,133 @@
+\section{Decimonovena iteración de la Fase 5: Carga unificada de cartuchos}
+\label{sec:F5I19}
+
+En esta iteración abordamos unificar la carga de ficheros para el manejo de los cartuchos: Una nueva pestaña para la carga de cartucho sustituye a los botones de carga repartidos por el resto de  pestañas; Al cargar un cartucho, como se ha incluido la información de los anteriores en el sistema ya no es necesario cargar en el orden predefinido: GWS $\to$ GWB $\to$ GWI, cualquier cartucho nos dará los datos de la pestaña Setup. No cambia el núcleo de carga (F5-I9): cambia la puerta.
+
+La excepción es que para los cartuchos GWC es necesario cargar antes uno que incluya los datos del setup, pues los datos básicos de pantalla y botones no viajan en el cartucho GWC.\footnote{Como posible ampliación del proyecto se puede hacer que al guardar el GWC se generan el GWS, GWB, GWI y el GWC. Podemos ampliar a un nuevo ficehro ZIP que empaquete el GWS y el GWC, así podemos disponer de ambos cartuchos: el binario para usar en el ESP y el empaquetado usable en el emulador, si se carga el empaquetado se carga primero el setup y luego el juego, si se carga solo el binario se verifica que exista un setup.}
+
+\subsection{Análisis del estado actual}
+\label{sec:F5I19Analisis}
+
+\begin{itemize}
+	\item El núcleo ya está unificado (F5-I9): \texttt{\_cargarCartucho(ficheros,
+		tipoEsperado)} decide la forma por el CONTENIDO (ZIP $\to$ descomprime,
+	\texttt{.gwc} $\to$ flujo binario, resto $\to$ flujo de carpeta) y hay un
+	mensaje de error único.
+	\item La puerta no: cinco \texttt{input} ocultos y ocho botones de carga
+	en tres vistas, encuadrados por \texttt{BOTONES\_ACCION}; los botones de
+	cartucho exigen setup aplicado y la lectura valida contra el estilo del
+	setup (\texttt{setupGWS.estilo}).
+	\item Sobran, y se retiran aquí (R07-B del I99): exports muertos
+	\texttt{leerGWB}, \texttt{leerGWI}, \texttt{leerJSON}, \texttt{escalar},
+	\texttt{indiceDe}, \texttt{bloque}; \texttt{cargarDelMapa};
+	\texttt{'GWC'} en \texttt{TIPOS\_CARTUCHO}; \texttt{json.img\_s} en la
+	raíz.
+\end{itemize}
+
+\subsection{Diseño: la pestaña de carga}
+\label{sec:F5I19Diseno}
+
+\begin{itemize}
+	\item \textbf{Una pestaña nueva, siempre activa.} En la barra de
+	pestañas, visible y habilitada como las demás, salvo durante la partida
+	(la función \texttt{jugar()} ya oculta las pestañas). Sin botón que la
+	abra: es una pestaña más.
+	\item \textbf{El panel admite todos los tipos de cartucho.} Dentro se definen estos elementos:
+	\begin{enumerate}
+		\item botón \textbf{Cargar ficheros} — \texttt{input} \texttt{multiple} para \texttt{.json}/\texttt{.GWS} (GWS; F5-I17 M11), \texttt{.zip} (GWB/GWI) y \texttt{.gwc}; 
+
+		\item botón \textbf{Cargar carpeta} — el \texttt{input} \texttt{webkitdirectory}; 
+
+		\item botón \textbf{Limpiar} — este botón dará un aviso y si se confirma se eliminaran todos los datos de la memoria, de forma que antes de cargar un nuevo cartucho podamos dejarlo todo vacío y comenzar de cero una nueva carga.
+
+		\item zona de arrastre que acepta ficheros o carpetas y el pegado con Ctrl+V donde el navegador dé \texttt{clipboardData} (con archivos; lo demás, aviso).
+	\end{enumerate}	 
+	\item \textbf{El tipo lo decide el contenido} (detector de forma F5-I9):
+	adiós al \texttt{tipoEsperado} de los botones. Un GWS pobla la pestaña
+	Setup; un GWB o un GWI poblan \textbf{ambas} pestañas (autoría y setup)
+	y construyen la máquina; un GWC solo juega con la máquina ya construida.
+	\item \textbf{El cartucho cargado manda.} En cada carga de GWB/GWI la
+	máquina se re-ajusta al estilo del cartucho y las pestañas Setup y
+	Cartucho se poblan con sus datos (teclas incluidas; los \texttt{puerto}
+	del ESP32 quedan vacíos si no hay setup previo, pues no viajan en el
+	cartucho). \texttt{\#estado} avisa cuando el setup mostrado es derivado
+	del cartucho y no un GWS cargado.
+	\item \textbf{GWC con condición.} Como el binario no viaja ni estilo ni
+	botonera, exige máquina previa: de un setup o derivada de un GWB/GWI ya
+	cargado; sin ella, error claro: falta la configuración de la
+	máquina, defínala o cargue un cartucho que la incluya».
+	\item \textbf{GWB autosuficiente al generarse}. El GWB que guarda el
+	programa declara siempre \texttt{estilo}, \texttt{botones} (con sus
+	\texttt{tecla}) y resolución, de modo que un GWB guardado carga sin
+	setup. Un GWB viejo que declare menos requiere setup previo y da un error
+	claro que lo diga.
+	\item \textbf{Adiós a las copias.} Desaparecen los ocho botones de carga
+	y los inputs \texttt{ficheroGWBZip}, \texttt{ficheroGWIZip},
+	\texttt{ficheroGWC}, \texttt{carpetaCartucho} y \texttt{ficheroSetup}
+	duplicados, sustituidos por los dos\texttt{input} del panel; las
+	listas \texttt{BOTONES\_ACCION}/\texttt{BOTONES\_CARTUCHO} se recortan a
+	lo que quede vivo. Las acciones Aplicar y Guardar conservan sus botones.
+\end{itemize}
+
+\subsection{Plan de cambios}
+\label{sec:F5I19Plan}
+
+El proceso se realiza en dos fases, en la primera se añade la nueva pestaña, con los procesos necesarios para su funcionamiento y los ajustes generales del sistema. En una segunda fase se eliminan los botones y procesos que ya no sean necesarios.
+
+
+\begin{itemize}
+	\item \texttt{index.html}: pestaña y panel nuevos; fuera los botones e
+	inputs duplicados.
+	\item \texttt{BaseDirector.js}: escuchadores del panel (change de ambos
+	inputs, dragover/drop, paste) todos hacia
+	\texttt{\_cargarCartucho(ficheros)} sin tipo esperado;
+	\texttt{validarComunes} toma la condición del GWB sin estilo (error
+	claro); la reconstrucción de máquina pobla ambas pestañas; recorte de
+	\texttt{BOTONES\_ACCION}/\texttt{BOTONES\_CARTUCHO}; cabeceras al día.
+	\item \texttt{BaseCartucho.js}: retirar restos R07-B; exclusión de
+	\texttt{'GWC'} de \texttt{TIPOS\_CARTUCHO}; cabeceras al día.
+\end{itemize}
+
+Ajustes tras las pruebas: 
+\begin{itemize}
+	\item La vista \texttt{vistaSetup} arranca OCULTA (antes dejaba ver debajo sus botones de Aplicar/Guardar al abrir la página).
+	\item El panel de arrastre aparece´cia centrado, se desplaza a la  izquierda de la página.
+	\item La pestaña de carga gana un botón \texttt{Limpiar} (\texttt{\_limpiarTodo} en \texttt{BaseDirector.js}) que reinicia TODO el diseño: sin setup ni cartucho en memoria, object URLs revocadas, máquina oculta, fichas en blanco, pestaña de Carga delante y pestañas de datos deshabilitadas, como al abrir la página.
+	\item Lo cubre la caja D8 (destructiva) del grupo \texttt{director} (ver F5-I18). El botón pide confirmación antes de borrar cuando hay datos en memoria (\texttt{window.confirm}); la omite con \texttt{GW\_DEBUG}, para que las suites corran solas (la caja D8 lo aprovecha para comprobar también que un Limpiar repetido, sin nada cargado, no rompe).
+	\item En el proceso que responde al botón de «Guardar GWB+GWI+GWC» se añade que  guarde también el cartucho GWS.
+	\item Se cambian los nombres de los botones de la pestaña Editor, «Guardar GWI» y «Guardar GWS», el tooltip de los mismos ya informa de todo lo que se va a realizar al pulsarlos.
+	\item Se hace que al generar los cartuchos, se use el nombre asignado en lugar de la palabra "cartucho" que es genérica. Así se genera por ejemplo parachute.GWB en lugar de cartucho.GWB
+\end{itemize}
+\subsection{Pruebas}
+\label{sec:F5I19Pruebas}
+
+\begin{itemize}
+	\item Las suites de pruebas S2, S3 y S5se deben ejecutar sin problemas y deben seguir en verde; sus cajas usan
+	\texttt{U.cargarEn('ficheroGWBZip'|'ficheroGWIZipe'|...)}, así que los
+	arrancadores se re-apuntan a los inputs nuevos del panel (cambio
+	mecánico, misma prueba). Las referencias de F5-I18 se actualizan si
+	cambia el id.
+	\item Cajas nuevas (grupo \texttt{director}, no destructivas, que se
+	registran y se REFERENCIAN EN F5-I18, la norma vigente):
+	(1) \textbf{carga sin setup}: GWB con \texttt{estilo} declarado y GWI
+	cargan y poblan Setup + Cartucho; \texttt{\#estado} avisa «derivado»;
+	(2) \textbf{GWC sin máquina}: error claro; (3) \textbf{cambio de
+		máquina al recargar}: tras un setup2, cargar un GWB de estilo 4 y
+	comprobar que se ajusta todo (estilo, botonera, lienzo, sprites y
+	título) — es el punto pendiente de comprobar al re-ajustar la máquina
+	en caliente.
+	\item Al cerrar la iteración: S7 completa en verde.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F5I19Criterios}
+
+\begin{enumerate}
+	\item Una sola pestaña carga GWS, GWB (carpeta o ZIP), GWI y GWC, desde
+	cualquier estado, sin orden predefinido.
+	\item El cartucho cargado manda: Setup y Cartucho quedan poblados con
+	sus datos y la máquina re-ajustada (con la caja~3 verde).
+	\item El GWC exige máquina previa, con error claro.
+	\item Un GWB generado por el programa carga solo, sin setup.
+	\item S1--S6 en verde; S7 completa al cerrar.
+\end{enumerate}

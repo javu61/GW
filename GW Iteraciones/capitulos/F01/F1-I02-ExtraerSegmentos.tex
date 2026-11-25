@@ -1,0 +1,138 @@
+\section{Segunda iteración de la Fase 1: Extraer segmentos}
+\label{sec:segunda_iteracion}
+
+En este punto hay que extraer los segmentos del fichero de imagen uno a uno, esto es mucho más sencillo que disponer de una imagen por cada segmento, y el proceso evita que se solapen segmentos cuando no deben.
+
+\subsection{Imagen de partida}
+
+La imagen tiene un fondo blanco, los segmentos están en color negro, y cuando varios segmentos se deben encender a la vez, se les conecta entre sí usando un puente en color rojo, así es más sencillo al no tener varios segmentos unidos que controlar en cada estado, evitando posibles errores.
+
+La convención de autoría del fichero \texttt{img\_s} es usar tres colores planos, \textbf{sin antialiasing}:
+
+\begin{itemize}
+	\item \textbf{Blanco} RGB 255,255,255 = fondo.
+	\item \textbf{Negro} RGB 0,0,0 = píxeles de segmento. Un segmento es una componente conexa negra (conectividad 8: los trazos en diagonal cuentan como unidos). Dos segmentos que se tocan \textbf{son} el mismo segmento (regla de autoría: no pueden separarse después). 
+	\item \textbf{Rojo} RGB 255,0,0 = puente de unión. Un puente une en un mismo sprite \textbf{todos los segmentos que toca} (debe tocarlos; sin hueco blanco). El rojo jamás forma parte de las imágenes extraídas ni de las cajas de los sprites, por tanto se convierte internamente en blanco. El tamaño de la zona roja es indiferente, pero se recomienda usar lo mínimo posible para evitar posibles errores o agrupaciones accidentales. Concepto: \textbf{un puente = una unión} es literalmente un grafo pintado sobre la imagen.
+\end{itemize}
+
+La única restricción de esta definición es que, a diferencia de los G\&W, no es posible poner dos segmentos tocándose entre sí, deben estar siempre separados unos de otros aunque sea por un solo píxel (y cuidado con las diagonales), realmente esto es evitable si se usaran más colores para los segmentos, a costa de complicar el dibujo de la imagen, lo que se deja como posible ampliación.
+
+La imagen de partida que usaremos es la siguiente:
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I004.png}
+	\caption{Segmentos de la máquina original}
+	\label{fig:c05-I004.png}
+\end{figure}
+
+Eliminamos el mono, la campana y la hora, ya que solo tienen uso en el modo reloj, y unimos con una línea roja los segmentos del paracaídas y su paracaidista cuando están separados, y la barca en sus partes, y he marcado en verde los segmentos que mueve el jugador y en morado el contador de vidas/muertes, con su ruta, se van encendiendo en secuencia comenzando en este caso por el último de la ruta y no por el primero, y no se apagan nunca, de esta manera se presenta un tiburón, luego otro y con el tercero finaliza la partida. En el juego se enciende MISS junto al primer tiburón, por eso van unidos. Las secuencias las marco en azul, como también el segmento inicial de la secuencia. Game A, Game B y los paracaidistas en naranja con sus rutas (que se usan en el juego B) no los vamos a considerar en este momento, lo dejamos como posible ampliación:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I005.png}
+	\caption{Segmentos marcados}
+	\label{fig:c05-I005.png}
+\end{figure}
+
+\subsection{Estructura del proyecto}
+Añado un nuevo fichero js para la descomposición de los segmentos, quedando el proyecto distribuido así:
+
+\dirtree{%
+	.1 GW/.
+	.2 index.html \dots{} $\Rightarrow$ Página base: controles, carcasa y panel de estado.
+	.2 designer/.
+	.3 estilos.css \dots{} $\Rightarrow$ El CSS.
+	.3 director.js \dots{} $\Rightarrow$ El motor de carga de setup y cartuchos (script clásico, sin módulos ES).
+	.3 extractor.js \dots{} $\Rightarrow$ El encargado de extraer los segmentos de la imagen de base.
+}
+
+\subsection{Descomposición en segmentos}
+Tras cargar el cartucho, he añadido un nuevo botón para descomponer la imagen de los segmentos individuales. Al pulsarlo se realiza el proceso de descomposición de segmentos individuales, que también revisa si hay duplicados para reducir la cantidad de segmentos al mínimo, y con esto se crean dos cosas:
+
+\begin{itemize}
+	\item Las imágenes en sí, tantas como sean necesarias.
+	\item Una lista con cada segmento en pantalla, con su posición y la imagen a cargar.
+\end{itemize}
+Cada imagen tiene su ID, y cada segmento apunta a una imagen por su ID y a su posición en pantalla.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-D5.png}
+	\caption{Segmentos detectados}
+	\label{fig:C05-D5.png}
+\end{figure}
+
+Debajo de la pantalla se presentan los segmentos detectados, debajo de cada uno está su ID, tamaño y número de segmentos en que se emplea, y al posicionar el ratón en cualquiera de ellos aparece una ventana con los ID de los segmentos en que se utiliza y su posición en pantalla.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/C05-D6.png}
+	\caption{Detalle de los Segmentos detectados}
+	\label{fig:C05-D6.png}
+\end{figure}
+
+\subsection{Nuevo fichero JavaScript: designer/extractor.js}
+
+Un fichero separado con una sola responsabilidad, extraer los segmentos y preparar las listas. Expone el objeto global \texttt{Extractor.extraerSprites(img)}.
+
+Algoritmo:
+
+\begin{enumerate}
+	\item Clasificación de píxeles por cercanía a los tres colores teóricos (tolerante a desvíos pequeños).
+	\item Componentes conexas negras = segmentos elementales; rojas = puentes (BFS con pila).
+	\item Union-find: fusiones en cadena (A–B–C acaban en un mismo sprite).
+	\item Ruido: componentes negras $<$ 4 px descartadas con aviso.
+	\item Por grupo: caja englobante de sus segmentos e imagen del sprite en \textbf{solo blanco y negro}.
+\end{enumerate}
+
+\textbf{Avisos de autoría} en consola: puente suelto (no toca nada), puente que solo toca un segmento (no agrupa nada), ruido descartado. Todo fallo visible; nunca silencioso.
+
+\subsection{Flujo con botón ``Descomponer Imagen''}
+
+La extracción no es automática: al cargar el cartucho, la imagen \textbf{img\_s} queda en memoria y aparece el botón (deshabilitado si el cartucho no trae una imagen del tipo \textbf{\_s}). El botón es repetible, puede pulsarse cuantas veces se quiera, resultado determinista. Limpia lo anterior y recargar cartucho. 
+
+\subsection{Las dos listas}
+
+Si un sprite se repite (p. ej. el tiburón que marca las vidas), su imagen se guarda \textbf{una sola vez} y cada aparición mantiene aparte su posición:
+
+\begin{itemize}
+	\item \textbf{sprites}: Lista de imágenes únicas, con la estructura \texttt{\{id: 'img\_N', ancho: x, alto: y,\}}
+	\item \textbf{segmentos}: Por cada aparición rellena una lista con: \texttt{\{id: 'seg\_N', sprite: 'img\_M', fila: x, columna: y\}}.
+\end{itemize}
+\textbf{Huella de igualdad} = dimensiones + estructura de segmentos + mapa de píxeles idénticos. 
+Es píxel-exacta a propósito: sprites ``casi iguales'' \textbf{no} se fusionan (será tarea del usuario que crea la imagen el ajustarlos), y dos idénticos con distinta segmentación interna tampoco (se comportarían distinto en el motor). Esto provoca una ganancia ya que el cartucho tiene menos imágenes, lo que es importante para su pase al ESP32.
+
+\subsection{IDs deterministas y etiquetas}
+
+Para asignar los ID a cada segmento en pantalla, se usan estos criterios:
+
+\begin{itemize}
+	\item \textbf{Orden de numeración}: arriba-abajo, izquierda-derecha (primera aparición). Mismo PNG $\Rightarrow$ mismos ids, de esta manera las referencias son estables.
+	\item \textbf{Etiquetas} en el \texttt{JSON} del cartucho: numeración correlativa, por ejemplo \texttt{\{'img\_003': 'helicoptero', ...\}} dan nombres legibles (visibles en la tira) para los estados del motor. Se da un aviso si una etiqueta apunta a un sprite inexistente.
+\end{itemize}
+
+\subsection{Verificación}
+Se efectúan estas verificaciones al cargar los segmentos:
+\begin{itemize}
+	\item \textbf{Tira de miniaturas}: Aparece bajo la máquina, cada sprite con su id/etiqueta, su tamaño (14$\times$22) y cuántas veces se usa ($\times$3); al dejar el ratón, aparece un tooltip con las posiciones exactas (\texttt{seg\_5} (14,22), ...).
+	\item \textbf{Consola (F12)}: Aparecen las dos listas completas con \texttt{console.table} (ordenables por columna).
+	\item \textbf{Panel superior}: Aparece la indicación \textbf{Sprites: N (P posiciones)}, con la cantidad en ambas listas.
+\end{itemize}
+
+\subsection{Resultados con el cartucho Parachute}
+
+Se aprecia que la extracción es correcta: paracaidistas (agrupados con sus copas y cuerdas), helicóptero, barco y rótulos identificados como sprites independientes.
+
+La deduplicación reduce la lista de imágenes, si el usuario detecta alguna que puede ser redundante, puede modificar la imagen de partida y volver a ejecutar el proceso.
+
+Con esto se puede ya procesar la simulación sobre la base de sprites ya construida, por lo que en la siguiente fase ya podemos:
+
+\begin{enumerate}
+	\item Definir el formato de los \textbf{estados del cartucho}: cómo un estado declara qué posiciones/sprites/segmentos están encendidos, y si los objetos móviles usan posiciones dinámicas.
+	\item \textbf{Motor de estados}: dibujar los sprites sobre \texttt{img\_f} con encendido/apagado tipo LCD, partiendo de los offsets de segmento ya guardados.
+	\item \textbf{Conectar las entradas}: botones físicos y teclado al cambio de estados.
+	\item \textbf{Director como reloj}: bucle de juego, PRNG determinista y posibles tres sistemas (GAME A / GAME B / TIME), según la arquitectura prevista en las especificaciones (Director + 3 posibles motores por cartucho).
+	\item Validaciones y avisos del nuevo formato, con la misma filosofía de fallos visibles.
+\end{enumerate}
+
+\clearpage

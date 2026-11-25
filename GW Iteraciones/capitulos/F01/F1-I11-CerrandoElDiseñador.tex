@@ -1,0 +1,54 @@
+\section{Undécima iteración de la Fase 1: Cierre del entorno de autoría}
+\label{sec:CerrandoElDisenador}
+
+Tras completar en la iteración anterior el mecanismo de deshacer y rehacer, esta undécima iteración consolida el cierre definitivo de la \textbf{Fase 1 (Editor Gráfico)}. Para concluir esta etapa metodológica y congelar el entorno de desarrollo visual, se abordan los dos últimos requisitos de infraestructura pendientes:
+
+\begin{enumerate}
+	\item \textbf{Fusión compositiva en flujos GWI:} El entorno del diseñador gestiona la visualización mediante dos lienzos diferenciados: el canvas principal, denominado \texttt{fondo}, que renderiza el arte gráfico fijo de la máquina; y el canvas auxiliar, denominado \texttt{segmentos}, que expone la matriz de componentes extraídos a mayor escala para facilitar la edición de sus propiedades semánticas. La novedad de esta iteración es que la composición del lienzo de fondo pasa a depender del estado del flujo de trabajo: al cargar un cartucho base (\texttt{GWB}) se muestra únicamente el arte fijo, mientras que al importar un cartucho intermedio (\texttt{GWI}) o al accionar el guardado se compone inmediatamente el fondo con la totalidad de los segmentos residentes en su estado base (negro LCD).
+	
+	\item \textbf{Exportación mediante paquete ZIP universal:} Se elimina la dependencia técnica de la \textit{File System Access API} ---restringida a navegadores basados en Chromium--- integrando la librería de código abierto \texttt{JSZip} como \textit{script} clásico, lo que permite empaquetar el manifiesto \texttt{JSON} y las imágenes recortadas en un único archivo comprimido descargable desde cualquier navegador moderno.
+\end{enumerate}
+
+La resolución de estos dos requisitos estabiliza por completo la arquitectura de datos del entorno de autoría antes de iniciar la \textbf{Fase 2}, orientada al desarrollo de los motores lógicos y de simulación en el PC.
+
+\subsection{Fusión compositiva de gráficos en pantalla}
+\label{subsec:FondoySegmentos}
+
+El canvas de \texttt{fondo} deja de acumular pintados y pasa a reflejar la fase real del flujo de autoría mediante un estado interno de composición, \texttt{componerPantalla}, que gobierna la función de pintado del aparato (\texttt{pintarPantallaAutoria} en \texttt{descomponer.js}) y queda definido por tres reglas:
+
+\begin{itemize}
+	\item \textbf{Flujo base (GWB recién cargado):} \texttt{componerPantalla} es falso; el lienzo muestra solo el arte fijo (\texttt{pintarFondoCartucho(img)}). El sistema parte de una descomposición limpia con todos los segmentos de tipo \emph{juego} por defecto, y el aparato se presenta ``apagado'', a la espera de autoría.
+	\item \textbf{Flujo de previsualización (GWI cargado):} al entrar en un estado de autoría preexistente, la precarga del historial activa la composición: \texttt{DibujarFondo()} y, a continuación, un barrido de \texttt{DibujarSegmento()} sobre todos los segmentos residentes con el color en falso (negro LCD), mostrando de un vistazo el punto de partida de la sesión de edición.
+	\item \textbf{Tras guardar:} la acción de almacenamiento concluye activando la composición y repintando el aparato, de modo que lo que se ve corresponde exactamente a lo que se acaba de empaquetar.
+\end{itemize}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.35\linewidth]{imagenes/propias/C05-I018}
+	\caption[]{Fondo y segmentos superpuestos.}
+	\label{fig:c05-i018}
+\end{figure}
+
+El escalado de la presentación sigue una regla de arquitectura: la resolución REAL de la pantalla la declara el \textit{setup}; tanto \texttt{img\_f} como \texttt{img\_s} se estiran AL VUELO a ese tamaño en el momento de presentarlas, y por eso pueden tener resoluciones distintas entre sí (p. ej. el arte de segmentos dibujado a más resolución que el fondo reducido al tamaño previsto del ESP32). Las coordenadas de los segmentos viven en el espacio de \texttt{img\_s}: el motor dibuja cada segmento con una escala por eje (\texttt{canvas/img\_s}, independiente en x e y, fraccionaria e incluso menor que 1) recorriendo los píxeles del destino y muestreando el sprite por proximidad. El escalado definitivo a la resolución de destino se materializa una sola vez al generar el cartucho final (\texttt{GWC}), de modo que el ESP32 no realiza cálculo de escala alguno.
+
+En el canvas de \texttt{segmentos} (la vista de trabajo) no hay cambios: mantiene su base blanca, su escala entera propia y los colores de tipo para la edición. Esta reespecificación resuelve de paso el error pendiente de la octava iteración (segmentos invisibles en el aparato): su causa raíz era que la escala del aparato se deducía de \texttt{img\_f} mientras las posiciones vivían en el espacio de \texttt{img\_s}; con imágenes de tamaños distintos todos los segmentos caían fuera del lienzo.
+
+Para digujar el fondo y los segmentos, al final he optado por usar usan dos funciones propias en este módulo, ubicadas en el fichero \textit{descomponer.js}, ya que aquí las imágenes son estáticas, y allí no es lo mismo ya que la imagen es dinámica. Aquí es más simple presentar el fondo y luego dibujar encima los segmentos, allá hay que tener en cuenta dibujar y borrar.
+
+\subsection{Generación y descarga de archivos mediante empaquetamiento ZIP}
+\label{subsec:generarZIP}
+
+Para mantener la directriz de ejecución directa mediante el protocolo \texttt{file://} sin herramientas de construcción, \texttt{JSZip} se añade a \texttt{index.html} como \textit{script} tradicional, exponiendo el objeto global \texttt{JSZip} a los módulos de autoría. El guardado del GWI pasa a empaquetarse siempre como \texttt{cartucho\_gwi.zip} bajo la siguiente secuencia lógica (\texttt{guardarGWIEnDisco} en \texttt{descomponer.js}):
+
+\begin{enumerate}
+	\item \textbf{Instanciación del contenedor:} se crea el empaquetador como sistema de archivos virtual en memoria, con la subcarpeta \texttt{segmentos/} (método \texttt{folder}) para alojar las imágenes recortadas de los \textit{sprites} únicos.
+	\item \textbf{Inyección de recursos:} el bucle de guardado vuelca cada \textit{sprite} deduplicado como PNG en \texttt{segmentos/img\_NNN.png} y, junto al manifiesto \texttt{cartucho\_gwi.json} en la raíz (el formato compacto de una línea por elemento), añade también \texttt{img\_f} e \texttt{img\_s} con el nombre exacto que el manifiesto referencia: el paquete resultante es completamente autónomo y el GWI carga sin la carpeta del GWB original. Si la referencia no puede resolverse, el sistema lo notifica como error visible (nunca en silencio).
+	\item \textbf{Compilación y descarga nativa:} \texttt{generateAsync(\{type:"blob"\})} compila el flujo de bytes comprimido y el \textit{Blob} resultante se enlaza a un elemento de anclaje efímero en el DOM (\texttt{<a>}) con el atributo \texttt{download}, simulando el clic para forzar la descarga universal; la URL de objeto se revoca al terminar. Durante el proceso asíncrono la interfaz queda bloqueada con el aviso \textit{«Guardando GWI...»} para evitar corrupciones por concurrencia, y al concluir el aparato pasa a mostrar la composición completa (regla anterior).
+\end{enumerate}
+
+\subsection{Carga de cartuchos: carpeta o paquete ZIP}
+\label{subsec:cargarZIP}
+
+La carga admite las dos vías: la carpeta descomprimida como hasta ahora (GWB o GWI) o el propio fichero ZIP para los GWI, procesado en memoria convirtiendo cada entrada del paquete en un fichero equivalente y reutilizando el mismo flujo interno de carga que la carpeta. La ausencia de la librería, ya sea al guardar o al cargar, se avisa de forma explícita en lugar de provocar un fallo silencioso.
+
+\clearpage

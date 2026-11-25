@@ -1,0 +1,91 @@
+\section{Tercera iteración de la Fase 2: El estado vive en la lista de segmentos}
+\label{sec:EstadoEnLista}
+
+La iteración anterior (F2-I2) dejó al motor de juego con una secuencia fija que solo se
+anunciaba por consola: el estado del juego era un número suelto. Esta iteración le da su
+forma definitiva de trabajo: \textbf{el motor de juego ESCRIBE el estado en la lista de
+	segmentos en memoria}, la misma que la carga del GWI dejó preparada. Es el paso clave del
+contrato de la Fase 2 ---«la lista ES el estado»--- hecho carne: a partir de aquí, todo lo
+que el juego sepa sobre sí mismo vive en los objetos de esa lista, y quien quiera conocer
+el estado (hoy la consola, mañana el motor gráfico, algún día el ESP32) solo tiene que
+leerla. Nada de estados paralelos ni copias: una lista, un escritor, muchos lectores.
+
+\subsection{Qué se construye}
+\label{subsec:QueSeConstruyeF2I3}
+
+\begin{itemize}
+	\item \textbf{Las dos banderas por segmento.} Cada segmento de la lista en memoria
+	gana dos banderas, las mismas que definió el análisis de F2-I1:
+	\texttt{visible} (el segmento está encendido en el cristal LCD) y
+	\texttt{cambiar} (el segmento cambió desde la última presentación: la ``suciedad''
+	que el motor gráfico usará para saber qué repintar). Las banderas no se añaden al
+	GWI: son \emph{estado de ejecución}, nacen y mueren con la partida; el fichero sigue
+	siendo estático.
+	\item \textbf{El tick del motor de juego, con solo dos acciones.} En cada tick el
+	motor de juego hace exactamente dos cosas, en este orden:
+	\begin{enumerate}
+		\item \textbf{Apaga las banderas de cambiado}: todo segmento con
+		\texttt{cambiar} a \texttt{true} pasa a \textbf{false}. Con esto queda
+		declarado que el estado anterior ya fue presentado (cuando exista el motor
+		gráfico, esta es la señal de ``me han leído'').
+		\item \textbf{Cambia \texttt{visible} en el segmento de la secuencia}: avanza
+		la secuencia fija, apaga el segmento que estaba encendido
+		(\texttt{visible=false}, \texttt{cambiar=true}) y enciende el nuevo
+		(\texttt{visible=true}, \texttt{cambiar=true}).
+	\end{enumerate}
+	Nada más: sin teclado, sin reglas, sin PRNG. El resto de la lista no se toca.
+	\item \textbf{Depuración con llave: \texttt{GW\_DEBUG}.} Nace una variable global
+	\texttt{GW\_DEBUG} en el \texttt{index.html}, editable a mano, que gobierna todos
+	los mensajes de diagnóstico de los motores: con ella activa, el motor de juego
+	cuenta en consola las dos cosas que hace (qué banderas de cambiado apaga, qué
+	segmento enciende o apaga); con ella apagada, la consola queda limpia y el
+	sistema corre en silencio. Los mensajes son \emph{diagnóstico del sistema}, no
+	salida del juego: la misma llave servirá en las iteraciones siguientes para
+	cualquier motor que quiera contar lo que hace.
+\end{itemize}
+
+\subsection{Detalles de realización}
+\label{subsec:DetallesF2I3}
+
+\begin{itemize}
+	\item \textbf{La lista en memoria, expuesta.} La lista de segmentos que la carga del
+	GWI deja en memoria vive (bien encapsulada) en el módulo de autoría
+	(\texttt{BaseDescomponer}); esta iteración la expone con un único accesor de
+	lectura que devuelve \emph{la referencia} al array ---no una copia---, porque el
+	contrato es escribir en ella. El motor de juego la pide al arrancar; si no hay
+	cartucho GWI cargado la lista está vacía y el motor no revienta (avisa si hay
+	depuración).
+	
+	\item \textbf{El motor de juego sigue siendo el único escritor}. Ni el director ni
+	el motor gráfico tocan las banderas; el gráfico (todavía de anuncio en consola)
+	sigue siendo lector puro. La disciplina de un solo escritor se mantiene desde el
+	primer día para que nunca haya que depurar dos escritores.
+	
+	\item \textbf{Arrancar limpia el estado}: al lanzar el juego, todas las banderas de
+	la lista se ponen a \texttt{false} y la secuencia empieza desde el principio; el
+	reloj y el estado se reinician juntos, como quedó en F2-I2.
+	
+	\item \textbf{Verificación}: la simulación comprueba que las banderas cambian de
+	verdadero en los objetos de la lista (el segmento encendido lleva
+	\texttt{visible=true, cambiar=true}, el anterior \texttt{visible=false,
+		cambiar=true}, el resto sin tocar), que el apagado de \texttt{cambiar} ocurre al
+	tick siguiente, que con \texttt{GW\_DEBUG} apagada no aparece mensaje alguno, y
+	que el bucle largo es estable.
+\end{itemize}
+
+\subsection{Ejecución}
+
+Cargamos un setup, luego un cartucho, y al pulsar sobre START vemos que el contador de ticks
+aumenta y aparecen los mensajes en la consola..
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\linewidth]{imagenes/propias/C05-I020}
+	\caption[]{Ejecución del motor de gráfico básico.}
+	\label{fig:c05-i020}
+\end{figure}
+
+
+\clearpage
+
+

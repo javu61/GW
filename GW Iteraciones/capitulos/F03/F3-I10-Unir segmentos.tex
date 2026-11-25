@@ -1,0 +1,176 @@
+\section{Décima iteración de la Fase 3: Unir segmentos y dígitos en pantalla}
+\label{sec:UnirSegmentos}
+
+Esta iteración rehace el mecanismo de unión de segmentos de arriba abajo y
+convierte su criterio en la regla general de todos los agrupamientos. Con esto resuelto, se puede finalziar el desarrollo de incluir contadores en la pantalla.
+
+\subsection{Nuevo sistema de unión}
+
+La unión \emph{fusionaba} los segmentos marcados en uno de los existentes: los
+absorbidos desaparecían y el superviviente heredaba sus píxeles, sus enlaces
+re-apuntados y un número de mapa heredado también. El sistema cambia para crear un nuevo segmento para la unión, y a partir de qauí ya es sencillos de ajustar para adaptar sus propiedades.
+
+\begin{itemize}
+	\item \textbf{Unir crea una pieza nueva}. Al unir, por ejemplo, los segmentos
+	\texttt{seg\_020} y \texttt{seg\_030}, no se fusionan en uno de los dos: se crea un
+	\emph{segmento} nuevo que se llama (\texttt{seg\_F01}), y una \emph{imagen} nueva (la fusión de ambas), que llamaremos \texttt{img\_F01}. Los
+	segmentos e imágenes originales \textbf{siguen existiendo}, marcados como
+	\emph{fusionados con F01}: no se presentan en pantalla ni se pueden manejar, pero sus datos 
+	siguen en el cartucho y la autoría los conserva. 
+	
+	\item \textbf{Un único sistema de absorción}. «Unir», «Hacer dígito» y
+	«Hacer contador» son el mismo mecanismo: crear una pieza nueva (con
+	un número Fnn correlativo) que absorbe a los originales, hereda sus
+	propiedades (el primer valor no nulo de cada campo) y se le re-apuntan
+	todos los enlaces externos que les referenciaban. «Separar» es siempre la
+	operación inversa, también deshacible.
+	
+	\item \textbf{Los fusionados no se presentan}. Un segmento fusionado lleva
+	la marca \texttt{visible:false} en el cartucho: nadie debe encenderlo ni
+	pintarlo (su imagen está dentro de la fusión de su pieza). Al generar el
+	cartucho para el ESP32 no pasarán a este los segmentos invisibles ni sus imágenes.
+\end{itemize}
+
+Sobre esta base, los contadores que no fue posible agrupar correctamente en la iteración anterior, se pueden ya montar y presentar sin problemas en la pantalla.
+
+\subsection{El dígito de siete segmentos}
+\label{subsec:SieteSegmentosF3I10}
+
+El autor del cartucho dibuja un «8» en cada posición del número y el sistema sabe
+qué barras enciende cada dígito (un 1 es \texttt{b+c}, un 2 es
+\texttt{a,b,g,e,d}, etcétera): la tabla es fija y la trae el sistema. Con esto
+el autor no dibuja los diez dígitos posibles ni declara qué número representa
+cada uno. El 8 de base se puede dibujar tanto normal como en cursiva, el único requisito
+es que se puedan extraer correctamente los 7 segmentos del gráfico unívocamente.
+
+Los elementos que se definen son:
+\begin{itemize}
+	\item \textbf{Dígito}: el autor selecciona recuadrando con el ratón las siete barras de un
+	«8» y pulsa \emph{«Hacer dígito»} (o simplemente \emph{«Unir»}: con siete
+	barras de un «8» reconocible, la unión \emph{es} hacer el dígito): el
+	sistema clasifica cada barra por su \textbf{geometría} dentro del 8 (las
+	letras \texttt{a}--\texttt{g} se asignan solas: las tres horizontales por
+	altura son \texttt{a}, \texttt{g}, \texttt{d}; las verticales de la
+	derecha \texttt{b} y \texttt{c}, las de la izquierda \texttt{f} y
+	\texttt{e}) y crea un segmento \textbf{NUEVO} de tipo dígito, llamado
+	como su imagen fusionada (\texttt{F01}, \texttt{F02}, \dots), que
+	\textbf{agrupa las barras} mediante los enlaces \texttt{barra\_a} a
+	\texttt{barra\_g} (siete enlaces; el dígito no \emph{es} ninguna barra, las
+	\emph{agrupa}). El dígito nuevo lleva una \textbf{nueva imagen que fusiona
+		las siete barras} (mapa de bits OR de sus píxeles, el mismo criterio que
+	\emph{Unir}): a partir de ese momento el editor maneja el dígito como
+	una sola pieza con esa imagen, y \textbf{las siete barras individuales dejan de verse}
+	en el mapa y en la pantalla de autoria (clicarlas selecciona el dígito),
+	pero \emph{siguen viajando en el cartucho} con sus sprites: el motor
+	necesita encenderlas una a una.
+	Como en \emph{Unir}, el grupo es una pieza nueva y \emph{Separar} la
+	elimina devolviendo las barras al editor; todo en una acción atómica del
+	historial, deshacible de un gesto. Un dígito \textbf{no se une con nada}
+	ni puede cambiarse de tipo, ya que la pieza del «8» es indivisible, y si se cambia el tipo esta información (las siete barras que lo componen) se perdería.
+	
+	\item \textbf{Contador}: el autor marca los $n$ dígitos que forman el número (\textbf{limitado a 4 dígitos como máximo}) y
+	pulsa \emph{«Hacer contador»} (con \emph{un solo} dígito seleccionado, su
+	propio panel también lo ofrece: un número de una sola posición es un
+	contador legítimo): se crea otro segmento \textbf{nuevo} de tipo
+	contador, llamado como su imagen (\texttt{Fxx}), que
+	\textbf{agrupa los dígitos} mediante los enlaces \texttt{digito\_1} a
+	\texttt{digito\_4}: \texttt{digito\_1} es el dígito de las
+	\textbf{unidades} (el más a la derecha; es \emph{obligatorio}) y los
+	demás crecen hacia la izquierda. A partir de entonces solo se ve y se
+	maneja el contador completo con todos sus dígitos: \textbf{los dígitos individuales dejan de ser accesibles} en el editor
+	(clicar en cualquier número selecciona el contador completo), aunque siguen viajando individualmente en el
+	cartucho: el motor enciende las barras reales de cada posición. Como el
+	dígito, un contador \textbf{no se puede unir con nada} ni cambia su tipo. Sus
+	propiedades son:
+	\begin{itemize}
+		\item \textbf{Contador}: Indica cual de los 4 contadores se asocia al número.
+		Se \textbf{autoasigna} al crear el contador al primero que no use
+		otro contador; el panel permite cambiarlo (no se aceptan contadores sin
+		número: la verificación exige 1--4).
+		\item \textbf{Valor inicial}: Por defecto sera 0, pero en caso de los contadores de vidas, se debe establecer el valor inicial adecuado.
+		\item \textbf{Tipo de cuenta}: si es de cuenta ascendente o descendente. La ascendente es idenfinida, la descendente hasta cero.
+		\item \textbf{Presentar el cero}: Indica si el valor \textbf{cero} se debe presentar o dejar la zona completamente en blanco.
+		\item \textbf{Cuántos dígitos presenta}: se cuentan automáticamente los
+		dígitos agrupados (\texttt{digito\_1} a \texttt{digito\_4}) y se muestra
+		como \emph{solo lectura}. Sólo sirve como verificación de que se agrupó
+		lo que el autor quería.
+	\end{itemize}
+	
+	\item \textbf{Separar}: el panel del dígito y del contador ofrecen
+	\emph{«Separar»}, que disuelve el grupo y devuelve sus piezas al editor
+	(acción inversa, deshacible con todo lo demás).
+	
+	\item \textbf{El encendido}: en cada refresco el contador toma el valor del
+	contador interno asociado, lo parte en dígitos y enciende en cada posición
+	(el dígito real que el autor dibujó, con sus barras) las que la tabla marca
+	para cada dígito; el resto apagadas. Una posición en blanco es simplemente
+	las siete apagadas. Un contador descendente no baja de cero: al llegar a 0
+	se queda presentándolo.
+\end{itemize}
+
+\subsection{Decisiones menores}
+\label{subsec:DecisionesF3I10}
+
+\begin{itemize}
+	\item \textbf{Segmentos ficticios}: dígito y contador son piezas
+	\emph{ficticias} creadas al agrupar, igual que la pieza de una unión.
+	Se llaman como su imagen (\texttt{F01}, \texttt{F02}, \dots: la pieza
+	lleva el nombre de su sprite, no un correlativo \texttt{seg\_x}), no
+	desplazan los índices de los segmentos reales y desaparecen al
+	\emph{Separar}. En el GWI el ficticio viaja con su imagen fusionada como
+	sprite, y además exporta sus enlaces: el dígito las siete barras
+	(\texttt{barra\_a} a \texttt{barra\_g}) y el contador sus dígitos
+	(\texttt{digito\_1} a \texttt{digito\_4}) más
+	\texttt{contadorInterno}, \texttt{valorInicial},
+	\texttt{direccion} y \texttt{presentarCero} (solo si es falso). Los
+	dígitos no se comparten entre contadores y las barras no se comparten
+	entre dígitos (verificación). Separar un dígito que está dentro de un
+	contador exige separar primero el contador.
+	
+	\item \textbf{Visibilidad declarada}: todo segmento lleva la propiedad
+	\texttt{visible}. La calcula el diseñador al reconstruir (un segmento
+	absorbido o agrupado está \emph{dentro} de la imagen fusionada de su
+	pieza: \texttt{visible:false}) y viaja en el GWI, de modo que ni el
+	motor ni la previsualización recalculan nada: quien lleva
+	\texttt{visible:false} no se maneja, enciende ni se pinta nunca. Es la
+	preparación del generador del cartucho para el ESP32: los fusionados
+	viajan hoy marcados (sus imágenes siguen en el paquete) y allí se
+	eliminarán directamente.
+	
+	\item \textbf{Los contadores internos son genéricos}: Hasta cuatro por cartucho que llamaremos \textbf{contador 1, contador 2, contador 3 y contador 4}. Son
+	independientes de los segmentos de tipo vida/muerte, que son 
+	iconos que los representan (p. ej. en el parachute los 3 tiburones para las muertes).
+	Ambos sistemas conviven, y el manejo de los segmentos
+	vida/muerte se definirán en otra iteración, junto al evento que determine
+	cuándo termina la partida.
+	
+	\item El contador \textbf{interno} sigue creciendo independientemente de que
+	la presentación se quede sin dígitos, y por debajo de cero no baja: el fin
+	de partida necesitará el valor real.
+	
+	\item Relleno de la izquierda: los valores menores que
+	$10^n$ van rellenos con \emph{blancos} a la izquierda si lo necesitan
+	($\sqcup$0, $\sqcup$1, \dots, 10, 11, \dots), los valores mayores o iguales a $10^n$ se
+	presentan rellenos con ceros a la izquierda (\dots, 98, 99, 00, 01, \dots).
+	
+	\item Las propiedades \texttt{ColisionPositiva}/\texttt{ColisionNegativa} de los
+	desenlaces eligen cuál de los cuatro contadores aumenta (o ninguno); la
+	decisión sigue tocando el contador elegido una sola vez.
+\end{itemize}
+
+\subsection{«Posicionar juntos» retirado}
+
+La reposición en pantalla de los segmentos definida en \ref{sec:Posicionar} (presentar un segmento en las mismas
+coordenadas de otro) nació para presentar el contador numéricos de las vidas, definiendo cada dígito como una imagen que se presentaría en el mismo lugar de pantalla. Esto era menos visual ya que obligaba a tener todos los dígitos separados, aunque luego se presentasen juntos, ocupaban una zona en la pantalla de diseño, que luego desaparecía.
+
+Con los contadores reales ya no tiene sentido y se retira esta funcionalidad
+del editor; la maquinaria interna desaparece pues no se necesita.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/c05-I013.png}
+	\caption{Numeros posicionables}
+	\label{fig:c05-I013_B.png}
+\end{figure}
+
+\clearpage

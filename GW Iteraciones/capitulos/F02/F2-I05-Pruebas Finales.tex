@@ -1,0 +1,74 @@
+\subsection{Pruebas Finales}
+\label{subsec:VerificacionF2}
+
+Como en las fases anteriores, el cierre de la fase se certifica con una
+iteración de validación que recorre todos los cambios incorporados, desde la
+carga del cartucho hasta la presentación en pantalla con el GWI real del
+Parachute. 
+
+\subsection{Batería con las pruebas efectuadas y su resultado}
+\label{sec:BateriaPruebasFase2}
+
+% Configuración para que las columnas X justifiquen a la izquierda en lugar de centrado/justificado completo
+\newcolumntype{L}{>{\raggedright\arraybackslash}X} 
+
+\begin{small} 
+	\begin{tabularx}{\textwidth}{c >{\hsize=0.4\hsize}L >{\hsize=1.6\hsize}L c}
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endfirsthead % Cabecera de la primera página
+		
+		\toprule
+		\textbf{Nº} & \textbf{Grupo} & \textbf{Prueba} & \textbf{Resultado} \\ 
+		\midrule
+		\endhead % Cabecera que se repite en las páginas siguientes
+		
+		\midrule
+		\multicolumn{4}{r}{\small Continúa en la página siguiente...} \\
+		\endfoot % Pie de página en páginas intermedias
+		
+		\bottomrule
+		\endlastfoot % Cierre definitivo al final de toda la tabla
+		
+
+
+	1 & Cartucho & Cargar un GWI real y comprobar que todos sus
+	segmentos se crean con su imagen enlazada. & OK \\
+	\hline
+	2 & Cartucho & Un GWI con uniones de segmentos carga y presenta el
+	segmento unificado con sus partes. & OK \\
+	\hline
+	3 & Presentación & Un segmento visible se presenta en pantalla y al
+	ocultarse desaparece; uno no visible no se presenta nunca. & OK \\
+	\hline
+	4 & Presentación & Al ocultar un segmento, el redibujado deja la pantalla
+	idéntica a como estaba, sin dejar rastro ni repintar las cajas
+	solapadas incorrectamente. & OK \\
+	\hline
+	5 & Presentación & Con varios segmentos solapados encendidos y apagados
+	en distinto orden, la pantalla queda siempre correcta. & OK \\
+	\hline
+	6 & Presentación & El escalado de la pantalla usa vecino más cercano,
+	sin suavizado, con el aspecto píxel a píxel de la máquina real. & OK \\
+	\hline
+	7 & Tick & El reloj del Director avanza el juego y cada cambio de las
+	banderas se presenta en el mismo tick, con limpieza síncrona y sin
+	parpadeos ni estados intermedios. & OK \\
+	\hline
+	8 & Teclado & Las pulsaciones se encolan mientras la pantalla está
+	ocupada y se atienden en orden; con la tapa colocada el teclado no
+	responde. & OK \\
+	\hline
+	9 & Depuración & Con \texttt{GW\_DEBUG} activo la barra de estado
+	muestra tick, vidas y muertes; con él inactivo no se presenta. & OK \\
+	\hline
+	10 & Integración & Flujo completo con el GWI real del Parachute: cargar,
+	arrancar y ver las tres barcas presentadas y en movimiento por el
+	reloj del Director. & OK \\
+	\hline
+	\end{tabularx}
+\nopagebreak
+\captionof{table}{Batería de pruebas de validación de la Fase 2.}
+\label{tab:PruebasFase2}
+\end{small}

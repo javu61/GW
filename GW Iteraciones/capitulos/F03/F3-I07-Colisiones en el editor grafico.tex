@@ -1,0 +1,133 @@
+\section{Séptima iteración de la Fase 3: Incluir las colisiones en el diseñador gráfico}
+\label{sec:ColisionesDisenador}
+
+Las iteraciones anteriores ya \emph{mueven los segmentos}: los del jugador recorren la pantalla mientras los de las rutas avanzan. Falta el corazón del juego: el
+momento en que ambos colisionan y la máquina \textbf{decide} que ocurre. Esta iteración declara las colisiones en el \emph{diseñador gráfico}, para que luego el motor de estados pueda consumirlas.
+
+\subsection{Qué se construye}
+\label{subsec:QueSeConstruyeF3I7}
+
+\begin{itemize}
+	\item \textbf{La colisión como enlace, no como geometría}. La forma clásica de manejar las colisiones es
+	calcular el solape de cajas en tiempo real; aquí haremos que el
+	autor \textbf{declare} para los segmentos del juego con qué segmento del jugador colisiona (campo
+	\texttt{colision}). En ejecución el motor solo comprobará si ese segmento del
+	jugador está encendido: una comparación con la bandera que indica \textbf{visible}, sin aritmética de rectángulos (realmente no se requiere siquiera comparar, se puede usar el contenido de la bandera directamente).
+	La decisión es del diseñador, no del código: cero ambigüedad de píxeles, y las
+	máquinas Game \& Watch reales funcionaban igual (el programador decidía qué
+	solapes contaban).
+	\item \textbf{El punto de colisión y sus dos desenlaces}. Un segmento que declara
+	\texttt{colision} es un \emph{punto de colisión}: una decisión con dos resultados,
+	que reutiliza los enlaces que ya existían, sin campos nuevos para la cadena:
+	\begin{itemize}
+		\item \emph{Colisión positiva}: \texttt{salvado}.
+		\item \emph{Colisión negativa}: \texttt{muerte}.
+	\end{itemize}
+	Cada desenlace sigue el mismo mecanismo usado en este desarrollo: una cadena opcional de segmentos (de juego, de inicio o de vida/muerte) y, ahora, un
+	\emph{contador} opcional.
+	\item \textbf{Los contadores de desenlace}. Campos nuevos \texttt{salvadoContador} y
+	\texttt{muerteContador}: qué contador interno aumenta con la colisión positiva o la
+	negativa --- tres valores: \emph{ninguno}, \emph{vida} o \emph{muerte}. Distinción
+	importantísima que el análisis dejó cerrada: el \emph{contador interno} de
+	vidas/muertes (el que el motor mantiene) no es lo mismo que los segmentos de tipo
+	vida (3) o muerte (4), que son su \emph{presentación} en pantalla (los tres
+	tiburones bajo el MISS). Y la cadena del desenlace (los enlaces
+	\texttt{salvado}/\texttt{muerte}) enlaza con un segmento de juego (la animación
+	previa, p. ej. las aletas bajo las barcas, que NO son segmentos de muerte), de
+	inicio o de vida/muerte. Sin contador, los contadores internos no se tocan.
+	\item \textbf{Reglas por defecto, siempre definidas}. Si un desenlace no lleva
+	cadena, el elemento simplemente desaparece; si no lleva contador, los contadores
+	quedan intactos. Ninguna colisión puede quedar sin comportamiento: el motor nunca
+	tiene que preguntarse qué pasa. El contador interno se toca \textbf{una sola vez},
+	en la decisión (no en cada desenlace por separado).
+	\item \textbf{Lo que NO es colisión}. Las aletas de los tiburones bajo las barcas en el Parachute, por ejemplo, no
+	son puntos de colisión: son el desenlace de una muerte o una animación
+	independiente. Eso se resolverá más adelante (segmentos sin
+	interacción y secuencias compartidas), y quedan fuera de esta iteración.
+	\item \textbf{Un jugador, un punto de colisión}. La regla \emph{un segmento de
+		jugador no puede ser punto de colisión de varios elementos} se sostiene: declarar
+	una segunda colisión sobre el mismo jugador es un error bloqueante en el propio
+	diseñador. Dejarlo múltiple queda como ampliación futura, no como ambigüedad
+	presente.
+\end{itemize}
+
+\subsection{Detalles de realización}
+\label{subsec:DetallesF3I7}
+
+\begin{itemize}
+	\item \textbf{Las propiedades nuevas}. \texttt{colision},
+	\texttt{salvadoContador} y \texttt{muerteContador} nacen en
+	\texttt{propPorDefecto} y entran en \texttt{CAMPOS\_PROP}: viajan en el historial
+	(una entrada más del mismo tipo), se deshacen por inversión con su \emph{antes},
+	se reproducen al recargar el GWI y --- la colisión, que es un enlace --- se
+	re-apunta al jugador resultante cuando una unión absorbe al destinatario,
+	exactamente lo que ya hacían los enlaces de cadena y dirección. Cero mecánica
+	nueva.
+	\item \textbf{El inverso de la colisión}. Igual que la verificación calcula el
+	inverso de las direcciones del jugador, ahora se calcula el inverso de la colisión: en
+	el segmento del jugador se informa \texttt{colisionDe} (quién choca contra él). Es
+	redundancia deliberada, permite simplificar los cálculos para verificar y al generar el GWC, y da al panel del
+	jugador su información completa. La unicidad del punto anterior es lo que
+	mantiene este inverso unívoco.
+	\item \textbf{El panel manda al mapa}. La fila \emph{Colisión con jugador} abre
+	la elección en el mapa, como cualquier enlace: clic en el segmento jugador y
+	hecho. El diseñador solo acepta el clic si el destino es de tipo jugador, y
+	considera la colisión activa en los tipos juego e inicio (los que forman rutas);
+	al cambiar de tipo se descarta, como ya ocurría con \texttt{primero}.
+	Las filas de los desenlaces viven en el bloque de colisiones, ordenadas como se
+	piensan: \emph{Colisión con jugador}, \emph{Colisión positiva (va a)},
+	\emph{Colisión negativa (va a)} y los contadores \emph{Contador si positiva} /
+	\emph{Contador si negativa}; TODAS dependen de la colisión declarada --- hasta
+	que no se elige el jugador con el que choca no hay decisión, y los desenlaces ni
+	se activan. En el jugador, la fila \emph{Le choca} informa en vivo de quién
+	declara su colisión contra él (sin esperar a la verificación, que es la que fija
+	el inverso en el GWI).
+	\item \textbf{El mapa habla en verde azulado}. Los puntos de colisión se pintan en color teal (\texttt{\#008080}) en el mapa y en la vista del aparato, con un trazo
+	del mismo color entre el punto y su jugador cuando cualquiera de los dos está
+	seleccionado: la relación se ve de un vistazo sin leer el panel.
+	\item \textbf{Verificación inversa}. El inverso se calcula y se guarda; un
+	jugador sin puntos de colisión produce un aviso (la partida sería injugable);
+	una colisión cuyo jugador no existe o no es de tipo jugador es \textbf{error
+	bloqueante} (no se guarda el GWI); una cadena de desenlace, que enlace con un
+	segmento de jugador, también lo es. Si faltara un desenlace, no pasa
+	nada grave: rige la	regla por defecto (desaparece sin tocar contadores), y eso queda como aviso, no como error.
+
+\end{itemize}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{imagenes/propias/C05-I024}
+	\caption[]{Definir colisiones en el diseñador.}
+	\label{fig:c05-i024}
+\end{figure}
+\subsection{Verificación}
+\label{subsec:VerificacionF3I7}
+
+\begin{itemize}
+	\item La simulación (DOM falso, canvas de píxeles) ejercita el flujo
+	completo: declarar una colisión entre un elemento de ruta y el jugador, comprobar
+	que el panel solo acepta un destino jugador, que el segundo elemento que apunta al
+	mismo jugador se rechaza con error, y que el inverso aparece en el jugador tras
+	verificar.
+	\item El historial se prueba donde más crítico es: deshacer la declaración de la
+	colisión (y su rehacer) recupera el estado exacto, y un GWI guardado con
+	colisiones recarga la autoría completa por replay del historial.
+	\item Las uniones se prueban con el caso peor: unir dos jugadores (o un jugador
+	con otro segmento) re-apunta la colisión al grupo resultante, sin referencias
+	colgantes; la verificación posterior lo confirma.
+	\item El GWI saliente se inspecciona a mano: \texttt{colision} viaja como
+	\texttt{seg\_NNN} y los contadores \texttt{salvadoContador}/\texttt{muerteContador}
+	como texto (\texttt{vida}/\texttt{muerte}), solo cuando están puestos, y
+	\texttt{colisionDe} en el
+	jugador; un GWI sin colisiones no lleva los campos (compatibilidad hacia atrás
+	total).
+	\item Prueba en navegador real con el cartucho de prueba: el segmento 21
+	colisiona con el 23; si es positiva no va a ningún lugar (el elemento
+	desaparece, regla por defecto) y aumenta el contador de vidas; si es negativa
+	va al 29 (la animación previa, una cadena de juego) y no toca contadores. El
+	panel informa en vivo, el mapa pinta el punto en teal con su trazo al jugador y
+	la verificación calcula el inverso.
+\end{itemize}
+
+\clearpage
+

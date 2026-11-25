@@ -1,0 +1,16 @@
+{
+    "tipo": "GWB",
+    "version": 1,
+    "nombre": "Parachute",
+    "estilo": "2",
+    "imagenes": {
+        "img_s": "parachute_s.png",
+        "img_f": "parachute_f.png",
+        "img_m": "parachute_m.png"
+    },
+    "botones": [
+        {"numero": 0, "id": "IZQ"},
+        {"numero": 4, "id": "DER"},
+        {"numero": "A", "id": "Start"}
+    ]
+}

@@ -1,11 +1,7 @@
-\section{Vigésima iteración de la Fase 5: Tamaño máximo del cartucho}
+\section{Vigésima iteración de la Fase 5: Tamaño de la Memoria}
 \label{sec:F5I20}
 
-En esta iteración cerramos la ampliación MA02: AVISAR cuando el cartucho no
-cabe en la memoria de la máquina externa destino (el ESP32). No es una
-verificación bloqueante: el diseño permite cartuchos grandes, lo que hace
-falta saber es si el hardware destino puede con él, con un aviso claro al
-generar y al cargar.
+En esta iteración añadimos información sobre el sistema externo, cuanta memoria dispone, para que al generar el cartucho se indique que porcentaje de la misma ocupa, y el usuario vea si cabe o no en su sistema.
 
 \subsection{Análisis del estado actual}
 \label{sec:F5I20Analisis}

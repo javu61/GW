@@ -1,0 +1,115 @@
+\section{Vigésima iteración de la Fase 5: Tamaño de la Memoria}
+\label{sec:F5I20}
+
+Reformulación de la antigua MA02 (\emph{Tamaño máximo del cartucho}): no se
+establece un límite ni se avisa de que «no cabe», sino que el sistema
+INFORMA de la ocupación de memoria, como hacen los entornos de desarrollo de
+estas máquinas (del estilo «el sketch usa el X\,\% del espacio de
+programa»): al generar el GWC, se indica el porcentaje de RAM y de FLASH
+que consume el cartucho. El usuario decide después; la información nunca
+bloquea. La entrada MA02 de I99 queda así reformulada por esta iteración.
+
+\subsection{Análisis del estado actual}
+\label{sec:F5I20Analisis}
+
+\begin{itemize}
+	\item De los dos datos que hacen falta para el porcentaje, el sistema YA
+	conoce uno: los bytes del GWC recién creado
+	(\texttt{BaseCartucho.generarGWC}, presentados en el panel del Editor por
+	\texttt{informarTamanos}). El otro, la memoria de que dispone la máquina
+	externa, NO se declara en ningún sitio.
+	\item El GWS describe la máquina externa (estilo, resolución, botones,
+	teclas, \ldots) pero no dice cuánta memoria tiene el hardware que la
+	ejecuta; y desde F5-I19 los cartuchos (GWB/GWI) llevan la información de
+	la autoría, con lo cual el sitio natural para declararla son PANTALLAS Y
+	CARTUCHOS.
+	\item La RAM la ocupa lo que viaja dentro del GWC (sus bytes); la FLASH la
+	ocupará el fondo (img\_f), que todavía no existe: hoy la ocupación de
+	FLASH es 0 KB y 0\,\%, pero conviene que el sistema quede ya preparado
+	para cuando el fondo se fabrique.
+\end{itemize}
+
+\subsection{Diseño: el campo \texttt{memoria} (RAM y FLASH)}
+\label{sec:F5I20Diseno}
+
+\begin{itemize}
+	\item \textbf{Campo opcional \texttt{memoria}, con dos subcampos
+	\texttt{RAM} y \texttt{FLASH},} en KB, enteros $\ge 0$, que PUEDEN QUEDAR
+	A CERO (o simplemente no venir, lo que vale lo mismo). Se incluye en
+	PANTALLAS (GWS) y CARTUCHOS (GWB/GWI), en la raíz del JSON:
+	\texttt{"memoria": \{"RAM": 216, "FLASH": 0\}}.
+	\item \textbf{¿De dónde sale la memoria vigente al calcular?} De lo que
+	MANDA: la memoria del cartucho (GWB/GWI) si la declara; si no, la del
+	setup (GWS); si ninguna existe o ambas están a cero, NO se muestra
+	ningún porcentaje ni ningún aviso (nada que informar).
+	\item \textbf{¿Dónde se informa? Solo al GENERAR el GWC} (botón
+	«Generar GWS+GWB+GWI+GWC»), junto a los
+	tamaños del par: en la línea de \texttt{informarTamanos} del panel del
+	Editor y en el aviso final de \texttt{\#estado} (p.~ej.
+	«RAM: 4 de 216 KB (2\,\%) · FLASH: 0 de 216 KB
+	(0\,\%)»). El porcentaje es un entero (redondeo clásico);
+	si el cálculo da menos de 1\,\%, se muestra «$< 1$\,\%
+	» para no leer un 0 engañoso.
+	\item \textbf{FLASH: hoy 0 KB y 0\,\%.} El fondo no viaja en el GWC y sus
+	bytes de FLASH son 0; el cálculo, el campo y el mensaje quedan ya
+	montados para que, cuando el fondo se fabrique y vaya a Flash, cuente
+	allí sin tocar el diseño.
+	\item \textbf{Validación con cuidado (F5-I16):} si un valor declarado no
+	es un entero $\ge 0$, aviso y se trata como 0 (es decir, sin
+	porcentaje); no bloquea nada, coherente con el carácter informativo de
+	toda la iteración.
+\end{itemize}
+
+\subsection{Plan de cambios}
+\label{sec:F5I20Plan}
+
+\begin{itemize}
+	\item \texttt{BaseSetup.js}: en la ficha de Setup, campos
+	«RAM (KB)»{} y «FLASH
+	(KB)»{} (enteros $\ge 0$, vacío vale 0); los recoge
+	\texttt{estado()}; la serialización del GWS solo escribe
+	\texttt{memoria} (subcampo a subcampo) con los valores distintos de 0;
+	la repoblación muestra la del GWS cargado.
+	\item \texttt{BaseFicha.js}: los mismos dos campos en la ficha de
+	Cartucho; \texttt{poblar} los lee del GWB/GWI; la serialización los
+	escribe en la raíz del JSON (solo los subcampos distintos de 0).
+	\item \texttt{BaseCartucho.js}: \texttt{validarSetup} (GWS) y
+	\texttt{validarComunes} (cartucho) aceptan \texttt{memoria} si sus dos
+	subcampos son enteros $\ge 0$ (o no vienen); valor no válido $\to$
+	aviso (F5-I16) y 0. \texttt{\_formatearGWI} y \texttt{\_formatearGWB}
+	serializan \texttt{memoria} según lo dicho.
+	\item \texttt{BaseDescomponer.js}: en \texttt{generarGWIyGWC}, junto a
+	\texttt{informarTamanos}, el cálculo del porcentaje (precedencia
+	cartucho $>$ setup) y la línea/aviso de ocupación. Cabeceras de módulos
+	al día; A5-anexo, una línea de \texttt{\textbackslash input} nueva.
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F5I20Pruebas}
+
+\begin{itemize}
+	\item Caja nueva C8 (grupo \texttt{gwi\_gwc}, solo consola, al estilo de
+	C7), registrada y REFERENCIADA EN F5-I18 (la norma vigente): generar el
+	par con un setup cuya \texttt{memoria.RAM} es pequeña y distinta de 0
+	$\to$ sale el porcentaje (línea del panel y aviso final); con la
+	memoria a cero o sin ella $\to$ sin porcentaje y sin avisos; FLASH
+	siempre 0 KB y 0\,\%.
+	\item S2 y S5 completas en verde; el cambio no toca el formato GWC ni el
+	orden del tick.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F5I20Criterios}
+
+\begin{enumerate}
+	\item Un GWS o cartucho sin \texttt{memoria} (o con RAM/FLASH a cero)
+	genera SIN porcentajes y SIN avisos de memoria.
+	\item Con \texttt{memoria.RAM} declarada, al generar el GWC se muestra el
+	porcentaje de RAM junto a los tamaños y en el aviso final; solo
+	información, nunca bloqueo.
+	\item FLASH queda preparada (campo, cálculo y mensaje) con hoy 0 KB y
+	0\,\%: cuando exista el fondo, contará allí sin cambiar el diseño.
+	\item RAM y FLASH visibles y editables en las pestañas Setup y Cartucho;
+	a cero no se serializan en el JSON.
+	\item S2 y S5 en verde al cerrar la iteración.
+\end{enumerate}

@@ -1,0 +1,113 @@
+\section{Vigésima iteración de la Fase 5: Tamaño máximo del cartucho}
+\label{sec:F5I20}
+
+En esta iteración cerramos la ampliación MA02: AVISAR cuando el cartucho no
+cabe en la memoria de la máquina externa destino (el ESP32). No es una
+verificación bloqueante: el diseño permite cartuchos grandes, lo que hace
+falta saber es si el hardware destino puede con él, con un aviso claro al
+generar y al cargar.
+
+\subsection{Análisis del estado actual}
+\label{sec:F5I20Analisis}
+
+\begin{itemize}
+	\item El GWC ya tiene TOPES PROPORCIONALES bloqueantes (F5-I6: Sprites,
+	Segmentos y SegmentosPantalla, tope 255), que protegen el FORMATO; pero
+	nada compara el tamaño RESULTANTE del cartucho con la memoria del
+	hardware que lo va a ejecutar.
+	\item El tamaño del GWC es un dato que el sistema YA conoce en los dos
+	momentos que importan: al generar (byte a byte en
+	\texttt{BaseCartucho.generarGWC}, presentado en el editor por
+	\texttt{informarTamanos}) y al cargar el GWC
+	(\texttt{tamGWC = fichero.size} en \texttt{\_procesarGWC}).
+	\item El GWS declara la máquina (estilo, resolución, botones, teclas,
+	\ldots) pero no dice NADA del hardware externo que la ejecutará: la
+	memoria disponible es una propiedad de CADA máquina externa, así que su
+	sitio natural es el setup: dos GWS de la misma máquina pueden
+	corresponder a hardware con memoria distinta.
+\end{itemize}
+
+\subsection{Diseño: el campo \texttt{memoria} del GWS}
+\label{sec:F5I20Diseno}
+
+\begin{itemize}
+	\item \textbf{Campo opcional del GWS: \texttt{memoria}, en KB (entero
+	positivo).} Cada máquina externa declara en su setup cuánta memoria
+	tiene el ESP32 que la ejecuta. Se escribe en el JSON del GWS como
+	\texttt{"memoria": 110}.
+	\item \textbf{Defecto 110 KB, SIN error.} Si el GWS no declara el campo
+	(o lo declara vacío), se usa 110 KB ($110 \times 1024$ bytes) sin
+	mensaje de error: es el valor razonable de un ESP32 con el reparto de
+	memoria que necesita el motor (el valor se documentará en el anexo de
+	formatos junto al resto de campos del GWS, PC5).
+	\item \textbf{Validación con cuidado:} si el valor DECLARADO no es un
+	entero positivo, aviso (F5-I16) y el sistema asume el defecto; no
+	bloquea, consistente con el carácter de defecto (sin error) del campo.
+	\item \textbf{La ficha del Setup} incorpora el campo «Memoria (KB)»
+	(placeholder 110): vacío vale 110; a la hora de serializar, solo se
+	escribe en el GWS si el autor puso un valor distinto del defecto.
+	\item \textbf{¿Dónde se compara? En los DOS momentos en que el GWC
+	existe como tal:} (1) al GENERAR, «Generar GWS+GWB+GWI+GWC» conoce los
+	bytes del GWC recién creado y compara; (2) al CARGAR un
+	\texttt{.GWC}, el tamaño ya se toma del fichero (F5-I6). El aviso es
+	NO bloqueante: el cartucho se genera o carga igualmente, con la pista
+	de cuánto excede (p.~ej. «el cartucho (X de 110 KB) supera la memoria
+	de la máquina (F5-I20)»).
+	\item \textbf{Alcance:} la memoria solo afecta al GWC: el GWB y el GWI
+	viven en el navegador del autor y no van al ESP32.
+\end{itemize}
+
+\subsection{Plan de cambios}
+\label{sec:F5I20Plan}
+
+\begin{itemize}
+	\item \texttt{BaseSetup.js}: campo nuevo de la ficha de setup
+	(«Memoria (KB)», placeholder 110); lo toma \texttt{estado()}; solo se
+	serializa en el GWS si se declaró distinto del defecto; la repoblación
+	muestra el campo del GWS cargado (o vacío, que vale 110).
+	\item \texttt{BaseCartucho.js}: \texttt{validarSetup} acepta el campo
+	si es entero positivo (o ausente); \texttt{revisarValores(F5-I16)}
+	emite aviso si el valor declarado no es válido y lo devuelve para que
+	el defecto 110 se aplique sin error. Constante de módulo
+	\texttt{MEMORIA\_POR\_DEFECTO = 110}.
+	\item \texttt{BaseDirector.js}: función pequeña reutilizable
+	(\texttt{avisarTopeMemoria(bytes)}) que compara los bytes del GWC
+	contra la memoria del setup (con el defecto cuando ausente); se llama
+	desde \texttt{\_procesarGWC} (tras tomar \texttt{tamGWC}) y se
+	exporta para quien genera.
+	\item \texttt{BaseDescomponer.js}: en \texttt{generarGWIyGWC}, tras
+	crear el GWC, el mismo aviso si excede (junto a los avisos del par de
+	F5-I17 M2).
+	\item Cabeceras de módulos al día; A5-anexo, una línea de \texttt{
+	\textbackslash input} nueva.
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F5I20Pruebas}
+
+\begin{itemize}
+	\item Caja nueva del grupo \texttt{director} (caja D10, destructiva, al
+	final de la suite S2) que se registra y se REFERENCIA EN F5-I18 (la
+	norma vigente): carga un GWS cuyo campo declarado es \texttt{memoria: 1}
+	y tras él el \texttt{cartucho.GWC} de \texttt{pruebas/cartuchos} (su
+	tamaño real supera 1 KB): la carga sale ADELANTE (no bloquea) y
+	\texttt{\#estado} canta el aviso «supera la memoria»; después, un GWS
+	SIN el campo y el mismo GWC cargan SIN aviso (el defecto 110 basta).
+	\item Caja del grupo \texttt{gwi\_gwc} (solo consola, C8, al estilo de
+	C7): generar con un setup \texttt{memoria: 1} avisa del exceso; con el
+	defecto, no.
+	\item S2 y S5 completas en verde; los avisos nuevos no tocan el formato
+	GWC ni el orden del tick.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F5I20Criterios}
+
+\begin{enumerate}
+	\item Un GWS sin \texttt{memoria} usa 110 KB sin error ni aviso.
+	\item Generar (o cargar) un GWC que quepa: sin aviso; uno que exceda:
+	aviso claro con los dos tamaños, NO bloqueante.
+	\item La ficha de Setup muestra y guarda el campo \texttt{memoria}
+	cuando se declara, con el placeholder 110.
+	\item S2 y S5 en verde al cerrar la iteración.
+\end{enumerate}

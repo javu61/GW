@@ -47,7 +47,7 @@ Cada prueba lleva un código (M, D, E, G, C, T) que aparece en el botón y en el
 		\textbf{Fichero} & \textbf{Códigos} & \textbf{Qué prueba} & \textbf{Botón} \\
 		\midrule
 		\texttt{pruebasMotor.js} & M0--M5 & Motor de estados: orden del tick, secundarios, iconos, barrido, colisión, secuencia y congelación, jugador. Montan su cartucho en memoria y dejan las listas del motor como estaban & Sí \\
-		\texttt{pruebasDirector.js} & D1--D7 & Carga de cartuchos: GWC sin máquina (F5-I19, página recién cargada), carga sin setup y cambio de máquina en caliente (F5-I19), GWC tras GWI, cartucho incompatible, GWB que no descompone y aviso del historial descartado al cargar un GWB sobre una autoría & D5 no; el resto (destructivas) \\
+		\texttt{pruebasDirector.js} & D1--D8 & Carga de cartuchos: GWC sin máquina (F5-I19, página recién cargada), carga sin setup, cambio de máquina en caliente y botón «Limpiar» de la Carga (F5-I19), GWC tras GWI, cartucho incompatible, GWB que no descompone y aviso del historial descartado al cargar un GWB sobre una autoría & D5 no; el resto (destructivas) \\
 		\texttt{pruebasEditor.js} & E1--E9 & Editor: historial, ids de las piezas de unión, deshacer y rehacer, cambio de tipo, numeración, uniones, PNG con alfa y verificación & No \\
 		\texttt{pruebasGenerales.js} & G1--G3 & Formato GWC (CRC y lector) y \texttt{ColorFondo}, en el GWC y en la ficha y el GWB & Sí (G3 destructiva) \\
 		\texttt{pruebasGWI\_GWC.js} & C1--C7 & Equivalencia entre el GWI y el GWC que sale de él (datos y partidas tick a tick), y el par GWI/GWC: \texttt{codigoGWC} de la ficha, guardar que lo desparea y generar desfasado & Sí (C3 y C4 destructivas) \\
@@ -79,7 +79,7 @@ Cada prueba lleva un código (M, D, E, G, C, T) que aparece en el botón y en el
 \textbf{Botones y scripts.} Los scripts cubren todas las pruebas, también las que no tienen botón:
 
 \begin{itemize}
-	\item \textbf{Con botón en la pestaña} (y también por script): motor (M0--M5, S1), director (D1--D7, S2; D5 exige página recién cargada y es la primera de la suite), generales (G1--G3, S4; G3 destructiva), gwi\_gwc C1--C5 (S5; C3 y C4 destructivas, C1, C2 y C5 necesitan un GWI cargado) y teclas (T1--T3, S6; destructivas).
+	\item \textbf{Con botón en la pestaña} (y también por script): motor (M0--M5, S1), director (D1--D8, S2; D5 exige página recién cargada y es la primera de la suite), generales (G1--G3, S4; G3 destructiva), gwi\_gwc C1--C5 (S5; C3 y C4 destructivas, C1, C2 y C5 necesitan un GWI cargado) y teclas (T1--T3, S6; destructivas).
 	\item \textbf{Solo por script} (\texttt{soloConsola}, sin botón; necesitan un GWI cargado): editor (E1--E9, S3) y gwi\_gwc C6 y C7 (S5).
 \end{itemize}
 

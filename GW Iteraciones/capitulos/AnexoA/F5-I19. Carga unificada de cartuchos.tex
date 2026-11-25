@@ -82,6 +82,17 @@ La excepción es que para los cartuchos GWC es necesario cargar antes uno que in
 	\texttt{'GWC'} de \texttt{TIPOS\_CARTUCHO}; cabeceras al día.
 \end{itemize}
 
+Ajustes tras la primera prueba (F5-I19): la vista \texttt{vistaSetup}
+arranca OCULTA (antes dejaba ver debajo sus botones de Aplicar/Guardar
+al abrir la página); el panel de arrastre sale a la IZQUIERDA de la
+página, no centrado; y la pestaña de carga gana un botón
+\texttt{Limpiar} (\texttt{\_limpiarTodo} en \texttt{BaseDirector.js})
+que reinicia TODO el diseño: sin setup ni cartucho en memoria, object
+URLs revocadas, máquina oculta, fichas en blanco, pestaña de Carga
+delante y pestañas de datos deshabilitadas, como al abrir la página.
+Lo cubre la caja D8 (destructiva) del grupo \texttt{director}
+(ver F5-I18).
+
 \subsection{Pruebas}
 \label{sec:F5I19Pruebas}
 

@@ -47,6 +47,7 @@
     <div class="barraBotones">
       <button id="btnCargarFicheros" title="Abre el selector: .json (GWS), .zip (GWB/GWI) o .gwc">Cargar ficheros</button>
       <button id="btnCargarCarpeta" title="Carga la carpeta de un cartucho de autoría (GWB)">Cargar carpeta</button>
+      <button id="btnLimpiarCarga" title="Vacía la memoria: sin setup, sin cartucho, máquina oculta (para cargar otro cartucho limpio)">Limpiar</button>
     </div>
     <div id="panelCarga">
       <p>Arrastra aquí ficheros o una carpeta, o pega con Ctrl+V. El tipo lo decide el contenido (F5-I9): un GWS pobla Setup; un GWB o un GWI
@@ -54,8 +55,9 @@
     </div>
   </div>
 
-  <!-- Vista SETUP (F5-I12): la ficha del GWS y sus botones. -->
-  <div id="vistaSetup">
+  <!-- Vista SETUP (F5-I12): la ficha del GWS y sus botones. F5-I19:
+       OCULTA al arranque (solo la pestaña Carga se ve el principio). -->
+  <div id="vistaSetup" class="oculto">
     <div class="barraBotones">
       <button id="btnAplicarSetup" title="Aplica el setup de la ficha (limpia el cartucho)">Aplicar</button>
       <button id="btnGuardarSetup" title="Guarda el setup de la ficha como .json y lo aplica">Guardar GWS</button>

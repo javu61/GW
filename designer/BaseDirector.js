@@ -49,6 +49,7 @@
 //
 //  Limpieza y dibujo
 //   _limpiarCartucho          Vacía el cartucho en memoria (y la autoría).
+//   _limpiarTodo              Botón «Limpiar» de la Carga (F5-I19): REINICIO total.
 //   _pintarFondoNeutro        Color de "sin cartucho".
 //   _pintarFondoCartucho      img_f escalada para LLENAR el canvas (ColorFondo/blanco sin fondo).
 //
@@ -153,7 +154,7 @@ var BaseDirector = (function () {
   const BOTONES_CARTUCHO = ['btnAplicarCartucho', 'btnGuardarGWB'];
   // Botones de la pestaña Carga (F5-I19): activa en cualquier estado,
   // salvo durante la partida.
-  const BOTONES_CARGA = ['btnCargarFicheros', 'btnCargarCarpeta'];
+  const BOTONES_CARGA = ['btnCargarFicheros', 'btnCargarCarpeta', 'btnLimpiarCarga'];
   // Botones de autoría: deshabilitados mientras no hay cartucho editable
   const BOTONES_AUTORIA = ['btnGuardar', 'btnGenerar', 'btnDeshacer', 'btnRehacer'];
 
@@ -422,6 +423,32 @@ var BaseDirector = (function () {
     // lectura): el director NO las revoca aquí — el que limpia con
     // criterio (antes de leer el nuevo, o al recargar el setup) las
     // revoca explícitamente con BaseCartucho.revocarURLs().
+  }
+
+  /**
+   * Botón «Limpiar» de la pestaña Carga (F5-I19, ajuste tras la
+   * primera prueba): REINICIO TOTAL del diseño — sin setup, sin
+   * cartucho, máquina oculta y fichas en blanco, como al abrir la
+   * página — para cargar otro cartucho limpio. No entra con una
+   * partida en marcha: el botón se deshabilita en el juego.
+   * @returns {void}
+   */
+  function _limpiarTodo() {
+    _limpiarCartucho();
+    BaseCartucho.revocarURLs();
+    setupGWS = null;
+    setupDerivado = false;
+    BaseFicha.reiniciar();
+    BaseSetup.reiniciar();
+    // Fuera la máquina visible: esqueletos ocultos, carcasa y panel
+    // de información fuera. _construirBotonera limpia los restos del
+    // DOM del siguiente setup que se aplique.
+    for (const e of Object.values(ESTILOS)) _$(e.esqueleto).classList.add('oculto');
+    _$('maquina').classList.add('oculto');
+    _$('panelEstado').classList.add('oculto');
+    _actualizarPestanas();
+    mostrarPestanna('vistaCarga');
+    avisar('Sin setup cargado.');
   }
 
   // ---------------- Dibujo ----------------
@@ -1866,6 +1893,7 @@ var BaseDirector = (function () {
       try { await BaseFicha.guardar(); } finally { _actualizarPestanas(); }
     });
     document.body.dataset.vista = 'vistaCarga';   // F5-I19: se arranca EN la pestaña Carga
+    _$('btnLimpiarCarga').addEventListener('click', _limpiarTodo);
     _$('pesCarga').addEventListener('click', () => mostrarPestanna('vistaCarga'));
     _$('pesSetup').addEventListener('click', () => mostrarPestanna('vistaSetup'));
     _$('pesSimulador').addEventListener('click', () => mostrarPestanna('vistaSimulador'));

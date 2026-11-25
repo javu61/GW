@@ -4813,15 +4813,16 @@ const BaseDescomponer = (() => {
   /**
    * Descarga el GWS del setup vigente (F5-I17, M9/M11): con el GWC
    * sale también su setup (real o derivado del cartucho), para que la
-   * carpeta de destino tenga todo lo necesario, con SU extensión .gws
-   * (la carga la acepta: F5-I17 M11, por contenido da igual).
+   * carpeta de destino tenga todo lo necesario, con SU extensión
+   * .GWS (los cartuchos la llevan en mayúsculas; la carga la acepta:
+   * F5-I17 M11, por contenido da igual).
    * @param {Object} setup - El setupGWS en memoria.
    * @returns {void}
    */
   function _descargarGWS(setup) {
     if (!setup) return;
     const blob = new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' });
-    BasePACK.descargarBlob(blob, _nombreFichero(setup.nombre, '.gws'));
+    BasePACK.descargarBlob(blob, _nombreFichero(setup.nombre, '.GWS'));
   }
 
   /**

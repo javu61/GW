@@ -18,8 +18,6 @@
 			
 		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
 		
-		\item PC5. Anexo de formatos como anexo general en los dos documentos, con el Bloque 1 de 8 valores y el Bloque 0 de 36 bytes (ColorFondo y reglas).
-		
 		\item PC6. Integración de textos
 	\end{itemize}
 	
@@ -127,16 +125,17 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 
 \begin{itemize}
 	\item Bloque A: Mejoras a incluir en el desarrollo cuando sea posible
+		\begin{itemize}
+		\item MA01 \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría. El anexo de formatos ya está cerrado (PC5): queda decidir cómo viajan nombre y portada al hardware (¿bloque extra del GWC, fichero aparte…?)
+		\end{itemize}
 	
-		\item MA01 \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría. Es necesario «decidir el transporte de nombre+portada antes de cerrar el anexo de formatos (PC5)»
-		
 	\item Bloque B: Mejoras interesantes que se pueden incluir
 		\begin{itemize}
 		\item MB02 Al cargar imágenes \textbf{img\_s}, poder cargar cualquier imagen y convertirla a blanco y negro.
 		
 		\item MB03 En la pestaña del cartucho, poder cambiar el estilo de la máquina, con las limitaciones necesarias.
 		
-		\item MB04 Que al guardar el GWC se generen el propio fichero y, además, un GWS con los datos del setup, y se empaqueten ambos en un ZIP, disponiendo de ambos cartuchos: el binario para usar en el ESP y el empaquetado usable en el emulador, si se carga el empaquetado se carga primero el setup, si se carga el binario se verifica que exista un setup.
+		\item MB04 Que al guardar el GWC se genere también un GWS con los datos del setup (YA HECHO en F5-I17: los botones generan ambos junto al GWI/GWC) y, lo que falta, empaquetar ambos en un ZIP: el binario para usar en el ESP y el empaquetado usable en el emulador; si se carga el empaquetado se carga primero el setup, si se carga el binario se verifica que exista un setup.
 
 		\end{itemize}
 

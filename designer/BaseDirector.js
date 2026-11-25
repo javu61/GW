@@ -1942,6 +1942,7 @@ var BaseDirector = (function () {
     teclaValida: teclaValida,             // F5-I17 (M8): la usan la ficha del cartucho y la validación de carga
     normalizarTecla: normalizarTecla,     // F5-I17 (M8): idem, para comparar y guardar
     datosCartucho: () => cartucho,        // el JSON del cartucho en memoria (lo lee la pestaña Pruebas)
+    datosSetup: () => setupGWS,           // el GWS en memoria (real o derivado); _descargarGWS lo usa (F5-I17 M9)
     codigoGWCCargado: () => (cartucho && cartucho.tipo === 'GWI' && cartucho.codigoGWC) ? cartucho.codigoGWC : null,   // F5-I17 (M2)
     jugar: jugar,
     finDePartida: finDePartida,

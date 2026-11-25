@@ -121,10 +121,11 @@
        Los botones están en la barra contextual superior. -->
   <div id="vistaEditor" class="oculto">
     <div class="barraBotones">
-      <button id="btnGuardar" disabled>Verificar y Guardar</button>
+      <button id="btnGuardar" disabled title="Verifica el GWI en memoria y lo guarda como ZIP">Verificar y
+        Generar GWI</button>
       <button id="btnGenerar" disabled
-        title="Genera cartucho_GWB.zip, cartucho_gwi.zip y cartucho_gwc.gwc, con el Código GWC del par">Generar
-        GWB+GWI+GWC</button>
+        title="Genera, con el nombre del cartucho: el GWS del setup vigente, el GWB (ZIP), el GWI (ZIP) y el GWC, con el Código GWC del par (F5-I17 M9/M10)">Generar
+        GWS+GWB+GWI+GWC</button>
       <button id="btnDeshacer" disabled title="Ctrl+Z">Deshacer</button>
       <button id="btnRehacer" disabled title="Ctrl+Y">Rehacer</button>
     </div>
@@ -152,7 +153,7 @@
     <div class="barraBotones">
       <button id="btnAplicarCartucho" disabled
         title="Aplica la ficha: descarta los datos del Editor y de Sprites y los extrae de nuevo">Aplicar</button>
-      <button id="btnGuardarGWB" disabled title="Verifica la ficha y guarda cartucho_GWB.zip">Guardar GWB</button>
+      <button id="btnGuardarGWB" disabled title="Verifica la ficha y guarda el ZIP con el nombre del cartucho (F5-I17 M10)">Guardar GWB</button>
     </div>
     <div id="fichaCartucho"></div>
   </div>

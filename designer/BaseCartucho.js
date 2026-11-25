@@ -35,6 +35,7 @@
 //   abrirPACK               Abre un paquete de cartucho (delega en BasePACK.leerPACK).
 //
 //  Grabación del GWI
+//   _nombreBase             Base de los nombres guardados: el nombre del cartucho saneado (F5-I17 M10).
 //   _formatearGWI           Serializa el GWI en JSON compacto.
 //   guardarGWI              Guarda el GWI en paquete (avisos y bloqueo del botón).
 //   _guardarGWIEnDisco      Monta las entradas del GWI y las guarda (BasePACK.guardarPACK).
@@ -703,9 +704,23 @@ var BaseCartucho = (function () {
   }
 
   /**
-   * Guarda el GWI en un paquete descargable (cartucho_GWI). Avisa al
-   * empezar y bloquea el botón «Guardar» mientras dura: el guardado es
-   * asíncrono y sin esto podría lanzarse un segundo guardado solapado.
+   * Base del nombre de los ficheros guardados (F5-I17, M10): el nombre
+   * del cartucho en el JSON, saneado para el disco (caracteres
+   * inválidos en Windows a "_"), en lugar del genérico "cartucho".
+   * Obliga a tener el nombre antes de guardar.
+   * @param {Object} json - El JSON del cartucho.
+   * @returns {string} Base SIN extensión (p. ej. "Parachute").
+   */
+  function _nombreBase(json) {
+    return String((json && json.nombre) || '')
+      .replace(/[\\/:*?"<>|]/g, '_').trim() || 'cartucho';
+  }
+
+  /**
+   * Guarda el GWI en un paquete descargable (el nombre del cartucho +
+   * _GWI, F5-I17 M10). Avisa al empezar y bloquea el botón «Guardar»
+   * mientras dura: el guardado es asíncrono y sin esto podría lanzarse
+   * un segundo guardado solapado.
    * @param {Object} json - GWI completo (montado por BaseDescomponer).
    * @param {Array<{id:string, imagen:HTMLImageElement}>} sprites - Sprites
    *        con su imagen (su PNG va a segmentos/id.png).
@@ -802,12 +817,13 @@ var BaseCartucho = (function () {
       // consola.
       console.info('[guardar] cartucho sin portada: el paquete no incluye img_m.');
     }
-    entradas.push({ nombre: 'cartucho_GWI.json', contenido: _formatearGWI(json) });
+    const base = _nombreBase(json);            // F5-I17 (M10): el nombre manda
+    entradas.push({ nombre: base + '_GWI.json', contenido: _formatearGWI(json) });
 
-    const tamano = await BasePACK.guardarPACK(entradas, 'cartucho_GWI');
+    const tamano = await BasePACK.guardarPACK(entradas, base + '_GWI');
 
-    BaseDirector.avisar('GWI guardado en ' + BasePACK.nombreFichero('cartucho_GWI') + ': ' + sprites.length +
-      ' imagen(es) en segmentos/ + cartucho_GWI.json en la raíz' +
+    BaseDirector.avisar('GWI guardado en ' + BasePACK.nombreFichero(base + '_GWI') + ': ' + sprites.length +
+      ' imagen(es) en segmentos/ + ' + base + '_GWI.json en la raíz' +
       (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.' +
       (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
     return tamano;
@@ -815,9 +831,9 @@ var BaseCartucho = (function () {
 
   /**
    * Guarda el cartucho de autoría GWB como paquete descargable
-   * (cartucho_GWB), F5-I10: la misma vía del GWI, porque un
+   * (el nombre del cartucho + _GWB, F5-I17 M10), F5-I10: la misma vía del GWI, porque un
    * navegador no puede escribir una carpeta de disco. El paquete lleva el
-   * JSON en la raíz (cartucho_GWB.json) y las imágenes de pantalla
+   * JSON en la raíz (nombre_GWB.json) y las imágenes de pantalla
    * declaradas con el nombre que el JSON referencia: img_s
    * OBLIGATORIA (sin ella el GWB no es un cartucho), img_f e img_m si
    * están declaradas (cierre de la F5-I9: el cartucho lleva SIEMPRE
@@ -864,10 +880,11 @@ var BaseCartucho = (function () {
             referenciaImgM + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
-      entradas.push({ nombre: 'cartucho_GWB.json', contenido: _formatearGWB(json) });
-      const tamano = await BasePACK.guardarPACK(entradas, 'cartucho_GWB');
-      BaseDirector.avisar('GWB guardado en ' + BasePACK.nombreFichero('cartucho_GWB') + ' (JSON + ' +
-        'imágenes de pantalla). Cárgalo con «Cargar GWB (ZIP)».');
+      const base = _nombreBase(json);          // F5-I17 (M10): el nombre manda
+      entradas.push({ nombre: base + '_GWB.json', contenido: _formatearGWB(json) });
+      const tamano = await BasePACK.guardarPACK(entradas, base + '_GWB');
+      BaseDirector.avisar('GWB guardado en ' + BasePACK.nombreFichero(base + '_GWB') + ' (JSON + ' +
+        'imágenes de pantalla). Cárgalo por la pestaña Carga (F5-I19).');
       return tamano;
     } catch (e) {
       BaseDirector.avisarError('Guardado del GWB fallido: ' + e.message);

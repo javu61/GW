@@ -1,19 +1,17 @@
-**********************************************************************************\\
-**********************************************************************************\\
-**********************************************************************************\\
+*********************************************************************\\
+*********************************************************************\\
+*********************************************************************\\
 
 \section*{Temas pendientes}
 \begin{itemize}
 	
 	\item Bloque A: motor y editor 
 	\begin{itemize}			
-		\item PA6. Unificar mejor la lista de campos y valores máximos de los mismos, ponerlas en una función con parámetro Campo que retorne nombre en el json, valor min y valor max, y que la lectura del json la haga con json[nombre] en lugar de como json.nombre, recorriendo la lista de valores. Cuidado que esto es bueno para lectura y grabación, pero no para los ajustes al vuelo de los valores máximos de los campos en el interface. Hay que pensarlo bien.
+		\item Nada pendiente
 	\end{itemize}
 	
 	\item Bloque C: documentación (cuando el código y el formato ya no cambien)
 	\begin{itemize}
-		\item PC1. Cerrar F5-I11 y F5-I12 con las dos decisiones pendientes: Generar pide Aplicar, y el campo \texttt{descripcion}.
-	
 		\item PC2. F5-I10: correcciones de A/B/R, resolución opcional u obligatoria, y pruebas.
 			
 		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
@@ -45,7 +43,7 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 	R02 & \textbf{Patrones repetidos:}\newline \texttt{filaEnlace(...)} (6$\times$); \texttt{confirmar(g, entradas)} (19$\times$); \texttt{encender(seg, v)} en el motor ($\sim$6$\times$); \texttt{escribirInverso}/\texttt{retirarInverso} (4 sitios); \texttt{publicarEnPuente(cfg)} (7 llamadas \texttt{ComunListas.fijar*} en \texttt{procesarCartucho} y \texttt{procesarGWC}); \texttt{accionarBoton(numero)} (Start/pulsar duplicado); \texttt{tomarFichero(id)} (4 \texttt{alSeleccionar*}); \texttt{envolvente(cajas)} (6$\times$); \texttt{aplicarAlta}/\texttt{aplicarBaja} (3 sitios); \texttt{\_descargarGWC} copia una descarga genérica y \texttt{\_validarCabeceraGWC} repite la suma de verificación. \\
 	\midrule
 	
-	R03 & \textbf{GWC: una sola tabla de layout por registro}\newline \texttt{[\{campo, bytes, escala, nulo\}]} con escritor y lector con cursor (\texttt{DataView}) y aserción $\Sigma\texttt{bytes} === 32$; sirve de especificación para el \texttt{.tex} y el C del ESP32. \\
+	R03 & \textbf{Una sola tabla de campos (JSON y GWC):}\newline extendir el patrón de \texttt{TABLA\_LIMITES} (\texttt{BaseCartucho.js}, F5-I16) a los campos que faltan (\texttt{memoria \{RAM, FLASH\}}, \texttt{resolucion \{ancho, alto\}}); y una sola tabla de layout por registro del GWC, \texttt{[\{campo, bytes, escala, nulo\}]}, con escritor y lector con cursor (\texttt{DataView}) y aserción $\Sigma\texttt{bytes} === 32$. Objetivo: una única fuente de verdad por campo (nombre en el json, min, max, nulo) usada por la validación, la grabación y la lectura; sirve de especificación para el anexo de formatos (A02) y para el C del ESP32 (Fase 6). La lectura del json SÍ con la tabla (\texttt{json[ruta]} y recursiva); el interface NO: los topes al vuelo de la UI quedan con accesos directos, la indirección solo estorba en el dibujo. Se aborda al entrar en la Fase 6. \\
 	\midrule
 	
 	R04 & \textbf{Guardas defensivas innecesarias:}\newline \texttt{typeof ComunListas/JuegoDirector/BaseDirector !== 'undefined'} por todas partes (el orden de carga lo fija \texttt{index.html}) y enums de respaldo que copian \texttt{ComunListas.tipos}. \\
@@ -114,9 +112,10 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 \clearpage
 
 
-**********************************************************************************\\
-**********************************************************************************\\
-**********************************************************************************\\
+*********************************************************************\\
+*********************************************************************\\
+*********************************************************************\\
+
 
 \section*{Ampliaciones futuras}
 \label{sec:Ampliaciones}

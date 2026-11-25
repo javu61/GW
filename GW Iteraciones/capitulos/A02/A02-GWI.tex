@@ -39,10 +39,11 @@ Los campos incluidos en el json son:
 		\texttt{tipo} & cadena & \texttt{"GWI"} \\
 		\texttt{version} & número & Versión del formato (1) \\
 		\texttt{nombre} & cadena & Nombre del cartucho \\
-		\texttt{estilo} & cadena & Estilo de la máquina \\
-		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
-		\texttt{resolucion}\footnotemark\setcounter{fnA02GWIuno}{\value{footnote}} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD. Este dato es necesario para escalar, por lo que es obligatorio incluirlo siempre.\\
-		\texttt{botones} & array & \texttt{[\{numero, id\}]} por botón \\
+		\texttt{estilo} & cadena & Estilo de la máquina: OBLIGATORIO en el GWI (es autosuficiente y debe poder cargar sin setup previo, F5-I19) \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupación al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\texttt{resolucion}\footnotemark\setcounter{fnA02GWIuno}{\value{footnote}} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD, dentro del rango de pantallas (F5-I16). Este dato es necesario para escalar, por lo que es obligatorio incluirlo siempre.\\
+		\texttt{ColorFondo} & cadena & OPCIONAL (\texttt{"#RRGGBB"}, F5-I14): el color del fondo de la pantalla cuando el cartucho no lleva img\_f (blanco si falta); solo viaja si no es el blanco por defecto \\
+		\texttt{botones} & array & \texttt{[\{numero, id, tecla?\}]} por botón (la \texttt{tecla}, F5-I17, sigue la misma regla que en el setup) \\
 		\texttt{codigoGWC}\footnotemark\setcounter{fnA02GWIdos}{\value{footnote}} & cadena & OPCIONAL: El Código GWC del par, un texto con formato \texttt{"\#HHHH\#"}. Se guarda al generar el GWC y GWI a la vez; si solo se guarda el GWI, se genera sin este campo \\
 		\texttt{imagenes} & objeto & \texttt{\{img\_m, img\_f, img\_s\}} (igual que el GWB) \\
 		\texttt{fin} & objeto & OPCIONAL: \texttt{\{mecanismo, contador\}} con \texttt{mecanismo} en \texttt{vida}, \texttt{muerte} o \texttt{contador} (contador solo con el tercero, 1--4). Propiedad del cartucho, no un segmento \\
@@ -62,7 +63,42 @@ Los campos incluidos en el json son:
 \footnotetext[\value{fnA02GWIuno}]{Este campo se incluyó en la Fase 5 para tener emparejados GWI y GWC.}
 \footnotetext[\value{fnA02GWIdos}]{Este campo se incluyó en la Fase 5 para tener todos los datos necesarios para poder generar el GWC completo tras cargar el GWI sin necesidad de informar nada manualmente.}
 
+Al serializar, los campos se escriben SIEMPRE en este orden (los
+opcionales solo si viajan): \texttt{tipo}, \texttt{version},
+\texttt{codigoGWC}?, \texttt{nombre}, \texttt{estilo},
+\texttt{resolucion}, \texttt{ColorFondo}?, \texttt{memoria}?,
+\texttt{imagenes}, \texttt{fin}?, \texttt{secuencia}?,
+\texttt{pausas}?, \texttt{aceleracion}?, \texttt{rutas}?,
+\texttt{botones}, \texttt{sprites}, \texttt{segmentos},
+\texttt{autoria}.
 
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Ejemplo de json para un cartucho GWI (compacto y abreviado)},
+	label={lst:A02GWIejemplo}
+	]
+	{
+	"tipo": "GWI", "version": 1, "codigoGWC": "#3F7E#",
+	"nombre": "Parachute", "estilo": "2",
+	"resolucion": { "ancho": 156, "alto": 156 },
+	"memoria": { "RAM": 216, "FLASH": 128 },
+	"imagenes": { "img_m": "parachute_m.png", "img_f": "parachute_f.png", "img_s": "parachute_s.png" },
+	"fin": { "mecanismo": "vida", "contador": null },
+	"pausas": { "simulador": 500, "externo": 500 },
+	"aceleracion": { "cada": 10, "resta": 10, "minimo": 100 },
+	"rutas": { "aumentarCada": 3 },
+	"botones": [
+	{"numero": 0, "id": "IZQ", "tecla": "Q"},
+	{"numero": 6, "alias": "A", "id": "Start", "tecla": "1"}
+	],
+	"sprites": [ { "id": "img_001", "ancho": 16, "alto": 10, "fichero": "segmentos/img_001.png" } ],
+	"segmentos": [ { "id": "seg_001", "x": 12, "y": 34, "sprite": "img_001", "tipo": 1, "estado": "1", "cambiado": true, ... } ],
+	"autoria": { "cambios": [ ... ], "ultimoOp": 145 }
+	}
+\end{lstlisting}
 
 Viajan en este json \underline{todos los datos necesarios para diseñar y montar el
 cartucho}, incluyendo el setup de la máquina para el que se ha diseñado. Los campos opcionales usan los valores

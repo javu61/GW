@@ -1,7 +1,7 @@
 \section{Decimonovena iteración de la Fase 5: Carga unificada de cartuchos}
 \label{sec:F5I19}
 
-En esta iteración abordamos unificar las carga de ficheros para el manejod e los cartuchos: Una nueva pestaña para la carga de cartucho sustituye a los botones de carga repartidos por el resto de  pestañas; Al cargar un cartucho, como se ha incluido la información de los anteriores en el sistema ya no es necesario cargar en el orden predefinido: GWS $\to$ GWB $\to$ GWI, cualquier cartucho nos dará los datos de la pestaña Setup. No cambia el núcleo de carga (F5-I9): cambia la puerta.
+En esta iteración abordamos unificar las cargas de ficheros para el manejo de los cartuchos: una nueva pestaña para la carga de cartucho sustituye a los botones de carga repartidos por el resto de pestañas. Al cargar un cartucho, como se ha incluido la información de los anteriores en el sistema ya no es necesario cargar en el orden predefinido: GWS $\to$ GWB $\to$ GWI, cualquier cartucho nos dará los datos de la pestaña Setup. No cambia el núcleo de carga (F5-I9): cambia la puerta.
 
 La excepción es que para los cartuchos GWC es necesario cargar antes uno que incluya los datos del setup, pues los datos básicos de pantalla y botones no viajan en el cartucho GWC.
 
@@ -50,17 +50,18 @@ La excepción es que para los cartuchos GWC es necesario cargar antes uno que in
 	del cartucho y no un GWS cargado.
 	\item \textbf{GWC con condición.} Como el binario no viaja ni estilo ni
 	botonera, exige máquina previa: de un setup o derivada de un GWB/GWI ya
-	cargado; sin ella, error claro: falta la configuración de la
-	máquina, defínala o cargue un cartucho que la incluya».
+	cargado; sin ella, error claro: «falta la configuración de la
+	máquina, defínala o cargue un cartucho que la incluya (F5-I19)».
 	\item \textbf{GWB autosuficiente al generarse}. El GWB que guarda el
 	programa declara siempre \texttt{estilo}, \texttt{botones} (con sus
 	\texttt{tecla}) y resolución, de modo que un GWB guardado carga sin
 	setup. Un GWB viejo que declare menos requiere setup previo y da un error
 	claro que lo diga.
 	\item \textbf{Adiós a las copias.} Desaparecen los ocho botones de carga
-	y los inputs \texttt{ficheroGWBZip}, \texttt{ficheroGWIZip},
-	\texttt{ficheroGWC}, \texttt{carpetaCartucho} y \texttt{ficheroSetup}
-	duplicados, sustituidos por los dos\texttt{input} del panel; las
+	y los inputs \texttt{ficheroSetup}, \texttt{ficheroGWBZip},
+	\texttt{ficheroGWIZip} y \texttt{ficheroGWC}, sustituidos por los dos
+	\texttt{input} del panel (\texttt{ficheroCartucho} y
+	\texttt{carpetaCartucho}); las
 	listas \texttt{BOTONES\_ACCION}/\texttt{BOTONES\_CARTUCHO} se recortan a
 	lo que quede vivo. Las acciones Aplicar y Guardar conservan sus botones.
 \end{itemize}
@@ -85,17 +86,24 @@ La excepción es que para los cartuchos GWC es necesario cargar antes uno que in
 \label{sec:F5I19Pruebas}
 
 \begin{itemize}
-	\item Las suites de pruebas S2, S3 y S5se deben ejecutar sin problemas y deben seguir en verde; sus cajas usan
-	\texttt{U.cargarEn('ficheroGWBZip'|'ficheroGWIZipe'|...)}, así que los
+	\item Las suites de pruebas S2, S3 y S5 se deben ejecutar sin problemas y deben seguir en verde; sus cajas usan
+	\texttt{U.cargarEn('ficheroCartucho',\ldots)} (los ids antiguos
+	\texttt{ficheroGWBZip}, \texttt{ficheroGWIZip} y \texttt{ficheroGWC}
+	desaparecen), así que los
 	arrancadores se re-apuntan a los inputs nuevos del panel (cambio
 	mecánico, misma prueba). Las referencias de F5-I18 se actualizan si
 	cambia el id.
-	\item Cajas nuevas (grupo \texttt{director}, no destructivas, que se
-	registran y se REFERENCIAN EN F5-I18, la norma vigente):
-	(1) \textbf{carga sin setup}: GWB con \texttt{estilo} declarado y GWI
+	\item Cajas nuevas (grupo \texttt{director}; D5 no es destructiva y
+	DEBE SER LA PRIMERA de la suite S2, pues necesita la página recién
+	cargada; D6 y D7 sustituyen el cartucho) que se
+	registran y se REFERENCIAN EN F5-I18, la norma vigente:
+	(1) \textbf{carga sin setup} (caja D6, tras la D5): GWB con
+	\texttt{estilo} declarado y GWI
 	cargan y poblan Setup + Cartucho; \texttt{\#estado} avisa «derivado»;
-	(2) \textbf{GWC sin máquina}: error claro; (3) \textbf{cambio de
-		máquina al recargar}: tras un setup2, cargar un GWB de estilo 4 y
+	(2) \textbf{GWC sin máquina} (caja D5, la PRIMERA de la suite S2):
+	error claro; (3) \textbf{cambio de
+		máquina al recargar} (caja D7): tras un setup2, cargar un GWB de
+	estilo 4 y
 	comprobar que se ajusta todo (estilo, botonera, lienzo, sprites y
 	título) — es el punto pendiente de comprobar al re-ajustar la máquina
 	en caliente.

@@ -129,9 +129,9 @@ async function _lanzar(grupo) {
     sinPulsar: !!process.env.SIN_PULSAR
   };
   if (lista.some(t => t.necesita === 'gwi')) {
-    await pg.setInputFiles('#ficheroSetup', setup);
+    await pg.setInputFiles('#ficheroCartucho', setup);
     await pg.waitForTimeout(500);
-    await pg.setInputFiles('#ficheroGWIZip', gwi);
+    await pg.setInputFiles('#ficheroCartucho', gwi);
     await pg.waitForTimeout(3500);
   }
 

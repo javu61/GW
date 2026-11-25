@@ -41,7 +41,7 @@
 
   /** Carga un setup de pruebas/cartuchos por URL y espera a que se aplique. */
   async function _cargarSetup(fich, ms) {
-    await U.cargarEn('ficheroSetup', [U.fichero(fich, await U.traerBytes('pruebas/cartuchos/' + fich))], ms || 600);
+    await U.cargarEn('ficheroCartucho', [U.fichero(fich, await U.traerBytes('pruebas/cartuchos/' + fich))], ms || 600);
   }
 
   /** Setup de pruebas/cartuchos con la tecla del botón 0 cambiada (en memoria). */
@@ -78,7 +78,7 @@
   async function _pruebaT1() {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    await U.cargarEn('ficheroSetup', [await _setupConTecla('cursor-izquierda')], 600);
+    await U.cargarEn('ficheroCartucho', [await _setupConTecla('cursor-izquierda')], 600);
     ok('T1: un GWS con tecla «cursor-izquierda» se carga', /Setup cargado/.test(estado()), estado());
     BaseDirector.pestanna('vistaSimulador');    // las teclas de botón solo juegan aquí (M4)
     const boton = _botonPorNumero('0');
@@ -89,9 +89,9 @@
     const soltado = !!boton && !boton.classList.contains('pulsado');
     ok('T1: el botón con cursor-izquierda lleva la pista «←» y la flecha del PC lo pulsa y suelta',
       pulsado && soltado && pista === '←', JSON.stringify({ hay: !!boton, pista, pulsado, soltado }));
-    await U.cargarEn('ficheroSetup', [await _setupConTecla('cursorziq')], 600);
+    await U.cargarEn('ficheroCartucho', [await _setupConTecla('cursorziq')], 600);
     ok('T1: tecla mal escrita «cursorziq» NO carga', /Setup NO cargado/.test(estado()), estado());
-    await U.cargarEn('ficheroSetup', [await _setupConTecla('1')], 600);
+    await U.cargarEn('ficheroCartucho', [await _setupConTecla('1')], 600);
     ok('T1: tecla dígito «1» NO carga (retirada en F5-I17)',
       /Setup NO cargado/.test(estado()) && /cursor/.test(estado()), estado());
     await _cargarSetup('setup2.json', 600);      // dejamos la máquina como estaba
@@ -102,7 +102,7 @@
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
     // Estilo 2 sin teclas: 0/4 con cursores y el trío A/B/R con 1/2/3 (M6)
-    await U.cargarEn('ficheroSetup', [await _setupSinTeclas('setup2.json')], 600);
+    await U.cargarEn('ficheroCartucho', [await _setupSinTeclas('setup2.json')], 600);
     const pista = (n) => {
       const b = _botonPorNumero(n);
       const s = b ? b.querySelector('small') : null;
@@ -120,7 +120,7 @@
       r2.b0 === 'cursor-izquierda' && r2.p0 === '←' && r2.b4 === 'cursor-derecha' &&
       r2.b6 === '1' && r2.b7 === '2' && r2.b8 === '3', JSON.stringify(r2));
     // Estilo 5 sin teclas: la cruceta (0-3) con los cuatro cursores y el 4 con la letra Z
-    await U.cargarEn('ficheroSetup', [await _setupSinTeclas('setup5.json')], 600);
+    await U.cargarEn('ficheroCartucho', [await _setupSinTeclas('setup5.json')], 600);
     const r5 = {
       b0: _botonPorNumero('0') ? _botonPorNumero('0').dataset.tecla : null,
       b1: _botonPorNumero('1') ? _botonPorNumero('1').dataset.tecla : null,
@@ -151,7 +151,7 @@
     // setup (O y P); el botón sin tecla en el cartucho cae al nivel
     // inferior (el setup: 6 → Z).
     await _cargarSetup('setup2.json', 600);
-    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: 'M', 4: 'cursor-arriba' })], 1500);
+    await U.cargarEn('ficheroCartucho', [await _gwbConTeclas({ 0: 'M', 4: 'cursor-arriba' })], 1500);
     ok('T3: el GWB con teclas propias carga', /Cartucho cargado/.test(estado()), estado());
     const r1 = { b0: teclaDe(0), p0: pistaDe(0), b4: teclaDe(4), p4: pistaDe(4), b6: teclaDe(6) };
     ok('T3: mandan las teclas del cartucho (0 → M, 4 → cursor-arriba) y el 6 sin tecla cae al setup (Z)',
@@ -159,7 +159,7 @@
       r1.b6 === 'z', JSON.stringify(r1));
     // El dígito 1/2/3 SOLO vale en el trío de sistema A/B/R (F5-I17, M6):
     // el 6 lo admite; fuera del trío, no carga.
-    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 6: '2' })], 1500);
+    await U.cargarEn('ficheroCartucho', [await _gwbConTeclas({ 6: '2' })], 1500);
     ok('T3: el dígito «2» como tecla del botón 6 (trío A/B/R) carga',
       /Cartucho cargado/.test(estado()), estado());
     const r2 = { b6: teclaDe(6), p6: pistaDe(6) };
@@ -167,13 +167,13 @@
       r2.b6 === '2' && r2.p6 === '2', JSON.stringify(r2));
     // Rechazos: tecla dígito fuera del trío, dígito «5» (no vale en
     // ningún caso) y tecla repetida en el cartucho (M8).
-    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: '1' })], 1500);
+    await U.cargarEn('ficheroCartucho', [await _gwbConTeclas({ 0: '1' })], 1500);
     ok('T3: el dígito «1» en un botón fuera del trío NO carga',
       /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());
-    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: '5' })], 1500);
+    await U.cargarEn('ficheroCartucho', [await _gwbConTeclas({ 0: '5' })], 1500);
     ok('T3: tecla dígito «5» en el cartucho NO carga',
       /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());
-    await U.cargarEn('ficheroGWBZip', [await _gwbConTeclas({ 0: 'M', 4: 'm' })], 1500);
+    await U.cargarEn('ficheroCartucho', [await _gwbConTeclas({ 0: 'M', 4: 'm' })], 1500);
     ok('T3: tecla repetida en el cartucho NO carga',
       /Cartucho NO cargado/.test(estado()) && /tecla/.test(estado()), estado());
     await _cargarSetup('setup2.json', 600);      // dejamos la máquina como estaba

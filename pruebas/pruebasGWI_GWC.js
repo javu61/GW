@@ -154,8 +154,8 @@
   }
 
   async function _cargarGWI(setup, bytes) {
-    await U.cargarEn('ficheroSetup', [U.fichero('setup.json', setup)], 400);
-    await U.cargarEn('ficheroGWIZip', [U.fichero('cartucho.zip', bytes)], 3500);
+    await U.cargarEn('ficheroCartucho', [U.fichero('setup.json', setup)], 400);
+    await U.cargarEn('ficheroCartucho', [U.fichero('cartucho.zip', bytes)], 3500);
   }
 
   /* ---------------- F5-I17 (M1/M2): el par GWI/GWC y su codigoGWC ---------------- */
@@ -238,7 +238,7 @@
     json.autoria.cambios.push({ n: json.autoria.ultimoOp, relacionados: 0,
       segmento: segCartucho, pausaSim: nuevoValor, antes: { pausaSim: pausaSim } });
     zip.file(nombreJson, JSON.stringify(json, null, 2));
-    await U.cargarEn('ficheroGWIZip',
+    await U.cargarEn('ficheroCartucho',
       [U.fichero('cartucho.zip', await zip.generateAsync({ type: 'uint8array' }))], 3500);
     document.getElementById('btnGenerar').click();
     await U.esperar(6000);
@@ -304,7 +304,7 @@
       ok('datos iguales', difs.length === 0, difs.slice(0, 40).join(' || '));
       for (const semilla of semillas) {
         const hGWI = await _jugarPartida(() => _cargarGWI(setup, bytes), semilla, ticks, opc.sinPulsar);
-        const hGWC = await _jugarPartida(() => U.cargarEn('ficheroGWC', [U.fichero('equiv.gwc', gwc.bytes)], 1500),
+        const hGWC = await _jugarPartida(() => U.cargarEn('ficheroCartucho', [U.fichero('equiv.gwc', gwc.bytes)], 1500),
           semilla, ticks, opc.sinPulsar);
         let primera = -1;
         const n = Math.min(hGWI.length, hGWC.length);

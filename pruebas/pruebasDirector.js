@@ -21,12 +21,16 @@
 //   D8  (F5-I19) El botón «Limpiar» de la Carga REINICIA: sin setup ni cartucho, máquina
 //       oculta, pestaña Carga delante y las pestañas de datos deshabilitadas; repetido
 //       sin nada cargado es idempotente y no rompe.
+//   D9  (F5-I20) Aplicar/cargar un setup PROPAGA a la ficha de Cartucho todos los datos
+//       comunes (nombre, memoria, ColorFondo + estilo/resolución); con cartucho en
+//       memoria pide SIEMPRE confirmación (cancelar conserva, confirmar aplica) y con
+//       GW_DEBUG no se pide (criterio D8).
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 ... _pruebaD8
-//                        Una función por prueba (D5/D6/D7/D8: F5-I19).
+//   _pruebaD1 ... _pruebaD9
+//                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -228,6 +232,74 @@
     return out;
   }
 
+  // F5-I20 (ajuste): aplicar/cargar un setup propaga a la ficha de Cartucho TODOS los
+  // datos comunes (nombre, memoria, ColorFondo + estilo/resolución) y, con cartucho en
+  // memoria, pide SIEMPRE confirmación (cancelar conserva; confirmar aplica).
+  async function _pruebaD9() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const estado = () => document.getElementById('estado').textContent;
+    const gwb = () => BaseFicha.estado();
+    // 1) Un GWS con memoria/nombre/ColorFondo: la ficha de Cartucho los recibe.
+    const setup = JSON.parse(new TextDecoder().decode(await U.traerBytes('pruebas/cartuchos/setup2.json')));
+    setup.nombre = 'Memoria';
+    setup.ColorFondo = '#AABBCC';
+    setup.memoria = { RAM: 216, FLASH: 128 };
+    await U.cargarEn('ficheroCartucho', [U.fichero('setup2.json', JSON.stringify(setup))], 500);
+    ok('D9 (previo): el GWS cargó y no hay cartucho',
+      _estado().tipo === null && BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
+    const e1 = gwb();
+    ok('D9: el nombre del setup llega a la ficha de Cartucho', e1.nombre === 'Memoria', e1.nombre);
+    ok('D9: la memoria del setup (RAM/FLASH) llega a la ficha de Cartucho',
+      JSON.stringify(e1.memoria) === JSON.stringify({ RAM: 216, FLASH: 128 }), JSON.stringify(e1.memoria));
+    ok('D9: el ColorFondo del setup llega a la ficha de Cartucho',
+      e1.colorFondo === '#AABBCC', String(e1.colorFondo));
+    ok('D9: estilo y resolución siguen llegando (como antes)',
+      e1.estilo === '2' && e1.resolucion && e1.resolucion.ancho === 320, JSON.stringify(e1));
+    // 2) Con un cartucho en memoria, aplicar el setup PIDE confirmación: cancelar conserva.
+    await U.cargarEn('ficheroCartucho', [await _gwbModificado(() => { })], 2500);
+    ok('D9 (previo): hay cartucho (Parachute) antes de aplicar',
+      (_estado().tipo === 'GWB' && _estado().nombre === 'Parachute'), JSON.stringify(_estado()));
+    const confirmadas = [];
+    const confirmOriginal = window.confirm;
+    const gwdOriginal = window.GW_DEBUG;
+    window.GW_DEBUG = false;                        // para que la confirmación salga
+    window.confirm = (m) => { confirmadas.push(String(m)); return false; };
+    document.getElementById('btnAplicarSetup').click();
+    await new Promise(r => setTimeout(r, 300));
+    window.confirm = confirmOriginal;
+    window.GW_DEBUG = gwdOriginal;
+    ok('D9: aplicar setup con cartucho pide confirmación',
+      confirmadas.length === 1 && /descarta el cartucho en memoria/.test(confirmadas[0]),
+      confirmadas.join(' | '));
+    ok('D9: cancelar conserva el cartucho (y avisa de NO aplicado)',
+      _estado().nombre === 'Parachute' && /NO aplicado/.test(estado()), estado());
+    // 3) Confirmar aplica: el cartucho se descarta y la ficha vuelve a recibir del GWS.
+    window.confirm = (m) => { confirmadas.push(String(m)); return true; };
+    const gwd2 = window.GW_DEBUG; window.GW_DEBUG = false;
+    document.getElementById('btnAplicarSetup').click();
+    await new Promise(r => setTimeout(r, 500));
+    window.GW_DEBUG = gwd2;
+    window.confirm = confirmOriginal;
+    ok('D9: confirmar aplica el setup (cartucho fuera)',
+      BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
+    const e2 = gwb();
+    ok('D9: tras aplicar de nuevo la ficha recibe los datos comunes',
+      e2.nombre === 'Memoria' && e2.memoria && e2.memoria.RAM === 216, JSON.stringify(e2));
+    // Todo lo contrario en GW_DEBUG: sin confirmación (criterio Limpiar/D8).
+    await U.cargarEn('ficheroCartucho', [await _gwbModificado(() => { })], 2500);
+    const conf2 = [];
+    window.confirm = (m) => { conf2.push(String(m)); return true; };
+    window.GW_DEBUG = true;
+    document.getElementById('btnAplicarSetup').click();
+    await new Promise(r => setTimeout(r, 500));
+    window.GW_DEBUG = gwdOriginal;
+    window.confirm = confirmOriginal;
+    ok('D9: con GW_DEBUG no se pide confirmación (las suites corren solas)',
+      conf2.length === 0 && BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
+    return out;
+  }
+
   async function _pruebaD8() {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
@@ -268,7 +340,8 @@
     { id: 'd2', grupo: 'director', nombre: 'D2 GWB que no descompone', destructiva: true, ejecutar: () => _pruebaD2() },
     { id: 'd4', grupo: 'director', nombre: 'D4 GWB sobre autoría', destructiva: true, ejecutar: () => _pruebaD4() },
     { id: 'd7', grupo: 'director', nombre: 'D7 cambio de máquina en caliente (F5-I19)', destructiva: true, ejecutar: () => _pruebaD7() },
-    { id: 'd8', grupo: 'director', nombre: 'D8 botón Limpiar de la Carga (F5-I19)', destructiva: true, ejecutar: () => _pruebaD8() }
+    { id: 'd8', grupo: 'director', nombre: 'D8 botón Limpiar de la Carga (F5-I19)', destructiva: true, ejecutar: () => _pruebaD8() },
+    { id: 'd9', grupo: 'director', nombre: 'D9 aplicar propaga datos comunes y confirma (F5-I20)', destructiva: true, ejecutar: () => _pruebaD9() }
   ]);
 })();
 

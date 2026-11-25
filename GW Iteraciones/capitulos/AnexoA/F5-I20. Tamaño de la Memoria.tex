@@ -46,6 +46,22 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	es un entero $\ge 0$, aviso y se trata como 0 (es decir, sin
 	porcentaje); no bloquea nada, coherente con el carácter informativo de
 	toda la iteración.
+	\item \textbf{Los datos comunes pasan al aplicar (ajuste tras la
+	primera prueba):} al aplicar o cargar un GWS, la ficha de Cartucho
+	recibe TODOS los datos comunes del setup, no solo el estilo y la
+	resolución que ya iban: nombre, \texttt{memoria} y ColorFondo. Un GWB
+	montado desde la ficha sale así completo y sus ficheros llevan el
+	nombre del setup (F5-I17, M10); los ids, las teclas propias y las
+	imágenes siguen siendo del cartucho.
+	\item \textbf{La pérdida de datos SIEMPRE pide confirmación (ajuste):}
+	aplicar el setup, guardar el GWS o cargar un GWS descarta el cartucho
+	en memoria, con los datos de juego que llevaría (la autoría del GWI):
+	se pide confirmación cuando hay algo que perder (cancelar conserva
+	todo), con el mismo criterio del botón «Limpiar» (F5-I19): con
+	\texttt{GW\_DEBUG} no se pide, porque las suites corren solas y el
+	navegador de Playwright descarta los diálogos. Lo mismo al aplicar la
+	ficha de Cartucho con un cartucho en memoria (que ya avisaba
+	DESPUÉS de perderlo, caja D4, F5-I17 M3).
 \end{itemize}
 
 \subsection{Plan de cambios}
@@ -68,8 +84,16 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	serializan \texttt{memoria} según lo dicho.
 	\item \texttt{BaseDescomponer.js}: en \texttt{generarGWIyGWC}, junto a
 	\texttt{informarTamanos}, el cálculo del porcentaje (precedencia
-	cartucho $>$ setup) y la línea/aviso de ocupación. Cabeceras de módulos
-	al día; A5-anexo, una línea de \texttt{\textbackslash input} nueva.
+	cartucho $>$ setup) y la línea/aviso de ocupación.
+	\item \texttt{BaseDirector.js} (ajuste tras la primera prueba):
+	\texttt{\_aplicarJSONSetup} repuebla la ficha de Cartucho con TODOS los
+	datos comunes del setup (nombre, memoria y ColorFondo, además del
+	estilo y la resolución); función \texttt{\_confirmarDescarteCartucho}
+	(igual que el Limpiar: se omite con \texttt{GW\_DEBUG}) llamada desde
+	los DOS botones Aplicar, desde «Guardar GWS» y desde la carga de un
+	GWS: ninguna vía descarta datos sin preguntar antes.
+	Cabeceras de módulos al día; A5-anexo, una línea de
+	\texttt{\textbackslash input} nueva.
 \end{itemize}
 
 \subsection{Pruebas}
@@ -82,6 +106,14 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	$\to$ sale el porcentaje (línea del panel y aviso final); con la
 	memoria a cero o sin ella $\to$ sin porcentaje y sin avisos; FLASH
 	siempre 0 KB y 0\,\%.
+	\item Caja nueva D9 (grupo \texttt{director}, destructiva, al final de
+	la suite S2), registrada y REFERENCIADA EN F5-I18 (la norma vigente):
+	cargar un GWS con nombre, \texttt{memoria} y ColorFondo $\to$ la ficha
+	de Cartucho recibe los cuatro datos comunes; con un cartucho en
+	memoria, aplicar el setup PIDE confirmación (capturada en la prueba):
+	cancelar conserva el cartucho y avisa de «NO aplicado»; confirmar
+	aplica y vuelve a propagar; con \texttt{GW\_DEBUG} no se pide
+	(criterio D8).
 	\item S2 y S5 completas en verde; el cambio no toca el formato GWC ni el
 	orden del tick.
 \end{itemize}
@@ -99,5 +131,12 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	0\,\%: cuando exista el fondo, contará allí sin cambiar el diseño.
 	\item RAM y FLASH visibles y editables en las pestañas Setup y Cartucho;
 	a cero no se serializan en el JSON.
+	\item Al aplicar (o cargar) un GWS, la ficha de Cartucho recibe todos
+	los datos comunes (nombre, memoria, ColorFondo, estilo y resolución);
+	el GWB montado desde la ficha sale completo.
+	\item Ninguna vía descarta datos sin confirmación: aplicar el setup,
+	guardar el GWS, cargar un GWS o aplicar la ficha de Cartucho con
+	cartucho en memoria piden confirmación (cancelar conserva todo);
+	con \texttt{GW\_DEBUG} no se pide.
 	\item S2 y S5 en verde al cerrar la iteración.
 \end{enumerate}

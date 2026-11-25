@@ -100,6 +100,8 @@
 //
 //  Otras funciones internas (lista completada en F5-I14)
 //   _aplicarJSONSetup             Valida y APLICA un setup ya leído (de fichero o de la ficha de la p…
+//   _confirmarDescarteCartucho    F5-I20: confirmación SIEMPRE antes de descartar el cartucho en
+//                                memoria (con su juego); se omite con GW_DEBUG (como en Limpiar).
 //   _aplicarDesdeFichaSetup       Botón «Aplicar» de la pestaña Setup (F5-I12):
 //   _aplicarDesdeFichaCartucho    Botón «Aplicar» de la pestaña Cartucho (F5-I12):
 //   _textoBytes                   Bytes en texto legible, o «—» si no hay dato.
@@ -399,6 +401,25 @@ var BaseDirector = (function () {
   }
 
   // ---------------- Limpieza ----------------
+
+  /**
+   * F5-I20 (ajuste): confirmación SIEMPRE que la acción vaya a descartar
+   * el cartucho en memoria, con los datos de juego que llevaría (la
+   * autoría del GWI). Mismo criterio que el botón Limpiar (F5-I19): se
+   * omite con GW_DEBUG (las suites corren solas y el navegador de
+   * Playwright descarta los diálogos). Sin cartucho, no pide nada.
+   * @param {string} accion - Lo que la va a descartar, p. ej.
+   *        «Aplicar el setup» o «Cargar un GWS».
+   * @returns {boolean} true si se puede continuar.
+   */
+  function _confirmarDescarteCartucho(accion) {
+    if (!cartucho) return true;
+    if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) return true;
+    const n = BaseDescomponer.numeroDeCambios();
+    return window.confirm(accion + ' descarta el cartucho en memoria' +
+      (n > 0 ? ' y su juego (' + n + ' acción(es) de autoría)' : '') +
+      '. ¿Continuar?');
+  }
 
   /**
    * Revoca las object URLs del cartucho y vacía su estado en memoria.
@@ -828,11 +849,15 @@ var BaseDirector = (function () {
     BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
     setupDerivado = false;                   // F5-I19: un GWS aplicado es REAL, no derivado
-    // La ficha del cartucho recibe del GWS el estilo y la resolución
-    // (los ids de botón son del cartucho: quedan vacíos); la del setup,
-    // todos sus datos.
+    // La ficha del cartucho recibe del GWS TODOS los datos comunes
+    // (F5-I20, ajuste): estilo y resolución (que ya iban), más nombre,
+    // memoria y ColorFondo — un GWB montado desde la ficha sale completo
+    // y sus ficheros llevan el nombre del setup (F5-I17, M10). Los ids,
+    // las teclas propias y las imágenes siguen siendo del cartucho.
     BaseFicha.reiniciar();
-    BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion });
+    BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion,
+      nombre: json.nombre, memoria: json.memoria || null,
+      colorFondo: json.ColorFondo || null });
     BaseSetup.poblar(json);
     _aplicarSetup(avisosLimites);
   }
@@ -861,6 +886,13 @@ var BaseDirector = (function () {
         }
         json = r.json;
       }
+      // F5-I20 (ajuste): aplicar un setup descarta el cartucho en memoria
+      // (con su juego): confirmación SIEMPRE que haya algo que perder.
+      if (!_confirmarDescarteCartucho(guardar ? 'Guardar el GWS' : 'Aplicar el setup')) {
+        avisar((guardar ? 'GWS NO guardado: ' : 'Setup NO aplicado: ') +
+          'cancelado por el usuario.');
+        return;
+      }
       _aplicarJSONSetup(json);
       avisar((guardar ? 'Setup guardado y aplicado: ' : 'Setup aplicado: ') + json.nombre);
     } catch (e) {
@@ -882,6 +914,13 @@ var BaseDirector = (function () {
     if (r.errores.length > 0) {
       avisarError('Cartucho NO aplicado: hay ' + r.errores.length +
         (r.errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
+      return;
+    }
+    // F5-I20 (ajuste): aplicar la ficha reconstruye el cartucho (GWB) y
+    // descarta el cartucho en memoria, con su juego si era un GWI:
+    // confirmación SIEMPRE (la comprobación exacta ya avisa D4/M3).
+    if (!_confirmarDescarteCartucho('Aplicar la ficha del cartucho')) {
+      avisar('Cartucho NO aplicado: cancelado por el usuario.');
       return;
     }
     const ficheros = await BaseFicha.ficherosGWB();
@@ -1109,6 +1148,13 @@ var BaseDirector = (function () {
           const json = await _leerJSON(ficheros[0]);
           if (json.tipo === GWS_TIPO) {
             rotulo = 'Setup';                // el error, con su propio rótulo
+            // F5-I20 (ajuste): cargar un GWS descarta el cartucho en
+            // memoria (con su juego): confirmación SIEMPRE (se omite con
+            // GW_DEBUG, como en el botón Limpiar).
+            if (!_confirmarDescarteCartucho('Cargar un GWS')) {
+              avisar('Carga cancelada: el cartucho en memoria se conserva.');
+              return null;
+            }
             _aplicarJSONSetup(json);         // los objetos o validación, al try/catch
             return 'GWS';
           }

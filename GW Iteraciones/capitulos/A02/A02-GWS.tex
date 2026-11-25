@@ -1,0 +1,74 @@
+\section{El formato GWS: el setup de la máquina}
+\label{sec:A02GWS}
+
+
+El GWS \footnote{En la Fase 1 se usó como nombre general setup, pero en la fase 5 se decidió unificar y denominarlo GWS} (Game \& Watch Setup) es el JSON que define el HARDWARE destino final: describe la
+máquina fija sobre la que se cargan y ejecutan finalmente los cartucho. 
+
+No es un cartucho: no lleva imágenes ni juego, y se carga con su propio botón (Cargar
+Setup) como un único fichero \texttt{.json}. Recargar el setup
+reinicia pantalla y botones y limpia el cartucho en memoria.
+
+Los campos del JSON del setup:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{10cm}}
+		\toprule
+		Campo & Tipo & Contenido \\
+		\midrule
+		\texttt{tipo} & cadena & \texttt{"GWS"}\footnotemark \\
+		\texttt{version} & cadena & Versión del formato (actualmente \texttt{"1.1"}) \\
+		\texttt{nombre} & cadena & Nombre de la máquina \\
+		\texttt{estilo} & cadena & Estilo de la máquina (\texttt{"2"}, \texttt{"4"} o \texttt{"5"}): elige el esqueleto físico del simulador \\
+		\texttt{resolucion} & objeto & \texttt{\{ancho, alto\}} en píxeles de la pantalla LCD \\
+		\texttt{botones} & array & Un \texttt{\{numero, puerto, alias?, tecla?\}} por botón físico \\
+		\texttt{memoria} & objeto & OPCIONAL: \texttt{\{RAM, FLASH\}} en KB, para el porcentaje de ocupaci\u00f3n al generar el GWC (conceptos comunes y \ref{sec:F5I20}) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Campos del json del setup GWS}
+	\label{tab:A02GWS}
+\end{table}
+\footnotetext{Inicialmente se definió como GW, en fase 5 se unificó a GWS.}
+
+
+Los campos de cada botón:
+
+\begin{itemize}
+	\item \texttt{numero}: el número físico del botón, cadena
+	\texttt{"0"}--\texttt{"8"} (se aceptan números sin comillas y se
+	convierten con aviso). Los números 6, 7 y 8 son el trío de sistema
+	(A / B / TIME).
+	\item \texttt{puerto}: el GPIO del ESP32 al que va conectado. El
+	simulador no lo usa: es el dato que leerá el firmware de la Fase 6.
+	\item \texttt{alias}: OPCIONAL. Nombre corto de sistema para los
+	botones 6, 7 y 8 (\texttt{A}, \texttt{B}, \texttt{R}).
+	\item \texttt{tecla}: OPCIONAL. La letra del teclado del PC que
+	acciona el botón; si falta, se aplica la tabla por defecto del
+	motor.
+\end{itemize}
+
+\begin{lstlisting}[
+	language=json, 
+	frame=single, 
+	breaklines=true, 
+	basicstyle=\ttfamily\small,
+	caption={Ejemplo de json para un setup GWS},
+	label={lst:A02GWS}
+	]
+	{
+		"tipo": "GWS",
+		"version": "1.1",
+		"nombre": "Parachute",
+		"estilo": "2",
+		"resolucion": { "ancho": 156, "alto": 156 },
+		"memoria": { "RAM": 216, "FLASH": 128 },
+		"botones": [
+		{"numero": "0", "puerto": 4, "tecla": "A"},
+		{"numero": "4", "puerto": 5, "tecla": "L"},
+		{"numero": "6", "puerto": 18, "alias": "A", "tecla": "1"},
+		{"numero": "7", "puerto": 19, "alias": "B", "tecla": "2"},
+		{"numero": "8", "puerto": 21, "alias": "R", "tecla": "3"}
+		]
+	}
+\end{lstlisting}

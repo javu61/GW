@@ -4,7 +4,41 @@
 \chapter{Formatos de los cartuchos}
 \label{sec:Formatos}
 	
-En este apéndice se incluye la definición formal de todos los formatos de cartuchos utilizados por el sistema.
+En este apéndice se incluye la definición formal de todos los formatos de cartuchos utilizados por el sistema: los tres formatos JSON (GWS, GWB y GWI) y el GWC binario.
+
+\section{Conceptos comunes a los tres formatos JSON}
+\label{sec:A02Comun}
+
+Todo documento JSON del proyecto comparte dos datos comunes, la pareja de
+identificación: \texttt{tipo} (GWS para el setup, GWB para el cartucho base, GWI para el 
+cartucho de autoría) y \texttt{version} con un numero que la identifica. 
+
+El campo \texttt{tipo} del JSON distingue el
+formato. Cuando la carga de un cartucho recibe una carpeta o un ZIP con varios
+\texttt{.json}, se elige uno por prioridad de tipo: GWC, luego GWI, luego
+GWB, avisando por consola de la elección.
+
+La validación de entrada (el contrato de lo que puede ENTRAR) exige incluir en todos los 
+formatos de cartucho estos datos básicos:
+
+\begin{itemize}
+	\item \texttt{Tipo} presente y válido (GWB, GWI o GWC): sin tipo no se
+	asume nada.
+
+	\item \texttt{Version} para poder cargar datos correctamente según la versión del fichero (actualmente todos tienen versión 1).
+
+	\item \texttt{imagenes} con las tres posibles imágenes relacionadas con el juego: \texttt{img\_s} OBLIGATORIA (de ella se extrae la geometría) e \texttt{img\_f} e \texttt{img\_m} OPCIONALES. Si una imagen se declara, su fichero DEBE estar presente; sin fondo, el simulador pinta la pantalla en blanco. (El GWC es binario y se valida por su propio camino, en la lectura del fichero.)
+	
+	\item \texttt{memoria}: OPCIONAL en los tres formatos JSON, incluido
+	desde F5-I20 (ver \ref{sec:F5I20}): \texttt{\{RAM, FLASH\}} en
+	KB, enteros $\ge 0$, que pueden quedar a cero (o no venir, vale lo
+	mismo): la memoria que el hardware pone a disposición del cartucho.
+	Es SOLO informativo: al generar el GWC se muestra el porcentaje de
+	ocupación (RAM con los bytes del GWC; FLASH con el bloque del fondo,
+	hoy 0 KB). La memoria vigente es la del cartucho, subcampo a subcampo
+	(la RAM que él declara manda; lo que no declara, de la máquina); si
+	todo está a cero o ausente, no se muestra porcentaje ni aviso.
+\end{itemize}
 
 	\input{capitulos/A02/A02-GWS}
 	\input{capitulos/A02/A02-GWB}

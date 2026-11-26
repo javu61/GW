@@ -256,8 +256,11 @@
       _estado().tipo === null && BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
     const e1 = gwb();
     ok('D9: el nombre del setup llega a la ficha de Cartucho', e1.nombre === 'Memoria', e1.nombre);
-    ok('D9: la memoria del setup (RAM/FLASH) llega a la ficha de Cartucho',
-      JSON.stringify(e1.memoria) === JSON.stringify({ RAM: 216, FLASH: 128 }), JSON.stringify(e1.memoria));
+    // F5-I21: la memoria ya no está en la ficha de Cartucho: vive en el Setup.
+    ok('D9: la memoria del setup (RAM/FLASH) vive en el Setup (no en la ficha)',
+      JSON.stringify(BaseDirector.datosSetup().memoria) === JSON.stringify({ RAM: 216, FLASH: 128 })
+      && e1.memoria === undefined,
+      JSON.stringify(BaseDirector.datosSetup().memoria));
     ok('D9: el ColorFondo del setup llega a la ficha de Cartucho',
       e1.colorFondo === '#AABBCC', String(e1.colorFondo));
     ok('D9: estilo y resolución siguen llegando (como antes)',
@@ -298,8 +301,10 @@
     ok('D9: confirmar aplica el setup (cartucho fuera)',
       BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
     const e2 = gwb();
-    ok('D9: tras aplicar de nuevo la ficha recibe los datos comunes',
-      e2.nombre === 'Memoria' && e2.memoria && e2.memoria.RAM === 216, JSON.stringify(e2));
+    ok('D9: tras aplicar de nuevo la ficha recibe los datos comunes (la memoria sigue en el Setup)',
+      e2.nombre === 'Memoria' && e2.memoria === undefined
+      && BaseDirector.datosSetup().memoria && BaseDirector.datosSetup().memoria.RAM === 216,
+      JSON.stringify(e2));
     // Todo lo contrario en GW_DEBUG: sin confirmación (criterio Limpiar/D8).
     await U.cargarEn('ficheroCartucho', [await _gwbModificado(() => { })], 2500);
     const conf2 = [];

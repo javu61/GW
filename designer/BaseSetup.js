@@ -23,10 +23,14 @@
 //   cargar siempre. Es el director quien llama a poblar y quien
 //   aplica el JSON que devuelve leer.
 //
-// MEMORIA (F5-I20, MA02)
+// MEMORIA (F5-I20, MA02; F5-I21)
 //   «RAM (KB)» y «FLASH (KB)» son opcionales (vacío = 0 = no declarada) y
 //   viajan como «memoria» {RAM, FLASH} en la raíz del GWS, subcampo a
 //   subcampo y solo si no son 0. Son informativos: se usan al generar el GWC.
+//   Solo se editan AQUÍ (F5-I21): la pestaña Cartucho ya no los tiene, y los
+//   cartuchos generados (GWB/GWI) llevan los del Setup. Junto a cada uno hay
+//   un informativo de solo lectura, «Último GWC calculado» y «Último fondo»,
+//   que se rellena SOLO al generar (informarUltimos) y vacío no dice nada.
 //
 // FUNCIONES
 //   Pantalla
@@ -40,12 +44,14 @@
 //   Aplicar
 //     hayCambios         ¿Hay cambios sin aplicar (borrador)?
 //     marcarAplicado     Da la ficha por aplicada (apaga el aviso).
+//     fijarResolucion    Pone ancho y alto (solo lectura) tras el ajuste de resolución (F5-I21).
+//     informarUltimos    Rellena los informativos «Último GWC calculado» y «Último fondo» (F5-I21).
 //     botonesDelEstilo   Números de botón posibles de un estilo.
 //   Internas
 //     _asegurar              _crearElemento      _campo
 //     _descargar             _marcarCambios      _nombreFichero    
 //     _pintarTablaBotones    _pintarMensajes     _entrada
-//     _teclaDeFila           _construir
+//     _teclaDeFila           _construir          _limpiarUltimos
 // ====================================================================================================
 
 const BaseSetup = (function () {
@@ -196,8 +202,10 @@ const BaseSetup = (function () {
       const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
       const tdN = _crearElemento('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
-      const puerto = _entrada('number', { className: 'colPuerto', min: 0, step: 1,
-        max: BaseCartucho.MAX_PUERTO_GWS, value: d.puerto });
+      const puerto = _entrada('number', {
+        className: 'colPuerto', min: 0, step: 1,
+        max: BaseCartucho.MAX_PUERTO_GWS, value: d.puerto
+      });
       puerto.addEventListener('change', () => {
         if (puerto.value === '') return;
         const ajustado = BaseCartucho.limitarValor(Number(puerto.value),
@@ -214,7 +222,7 @@ const BaseSetup = (function () {
       // nombre a mano.
       const lista = _crearElemento('select', 'colTeclaLista');
       for (const [valor, texto] of [['', '(sin tecla)'], ...CURSORES_GWS.map(c => [c, c]),
-        ['tecla', 'Propia (letra)']]) {
+      ['tecla', 'Propia (letra)']]) {
         const o = document.createElement('option');
         o.value = valor; o.textContent = texto;
         lista.appendChild(o);
@@ -224,8 +232,10 @@ const BaseSetup = (function () {
       else if (/^[a-zA-Z]$/.test(nombre) ||
         (/^[1-3]$/.test(nombre) && NOMBRE_SISTEMA[n])) lista.value = 'tecla';
       else lista.value = '';
-      const tecla = _entrada('text', { className: 'colTeclaLetra', maxLength: 1,
-        value: lista.value === 'tecla' ? String(d.tecla || '').toUpperCase() : '' });
+      const tecla = _entrada('text', {
+        className: 'colTeclaLetra', maxLength: 1,
+        value: lista.value === 'tecla' ? String(d.tecla || '').toUpperCase() : ''
+      });
       tecla.classList.toggle('oculto', lista.value !== 'tecla');
       tecla.placeholder = NOMBRE_SISTEMA[n] ? 'A..Z o 1-3' : 'A..Z';
       lista.addEventListener('change', () => {
@@ -259,8 +269,15 @@ const BaseSetup = (function () {
     const datos = _crearElemento('section', 'fichaSeccion');
     datos.appendChild(_crearElemento('h3', null, 'Datos del GWS'));
     const rejilla = _crearElemento('div', 'fichaRejilla');
-    campos.nombre = _campo(rejilla, 'Nombre', _entrada('text', { placeholder: 'Nombre de la máquina' }), 'También da nombre al fichero .json.');
-    campos.descripcion = _campo(rejilla, 'Descripción', _entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }), 'Informativa', true);
+    campos.nombre = _campo(rejilla,
+      'Nombre del Setup',
+      _entrada('text', { placeholder: 'Nombre de la máquina' }),
+      'También da nombre al fichero .json.');
+    campos.descripcion = _campo(rejilla,
+      'Descripción del Setup',
+      _entrada('text', { placeholder: 'Opcional: la máquina y su manejo' }),
+      'Informativa',
+      true);
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(elige estilo)'], ['2', '2 botones'], ['4', '4 botones'], ['5', '5 botones']]) {
       const o = document.createElement('option');
@@ -284,8 +301,15 @@ const BaseSetup = (function () {
     // F5-I20 (MA02): memoria del hardware, opcional (vacío = 0).
     campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
     campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
-    _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: la RAM del ESP; sirve para mostrar la ocupación al generar el GWC.');
-    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: la FLASH del ESP (hoy el fondo, que aún no se cuenta).');
+    _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: la RAM del ESP; sirve para mostrar la ocupación al generar el GWC. Solo se edita aquí.');
+    // F5-I21: informativos de solo lectura, junto al dato con el que se comparan.
+    campos.ultimoGWC = _entrada('text', { readOnly: true, placeholder: '—' });
+    _campo(rejilla, 'Último GWC calculado', campos.ultimoGWC,
+      'Solo informativo: se rellena al generar un GWC (puede quedar desfasado si después se toca el juego).');
+    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: la FLASH del ESP (hoy el fondo, que aún no se cuenta). Solo se edita aquí.');
+    campos.ultimoFondo = _entrada('text', { readOnly: true, placeholder: '—' });
+    _campo(rejilla, 'Último fondo', campos.ultimoFondo,
+      'Solo informativo: tamaño del bloque del fondo; a cero hasta que el fondo se guarde en el cartucho.');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
@@ -361,6 +385,7 @@ const BaseSetup = (function () {
     campos.alto.value = '';
     campos.ram.value = '';
     campos.flash.value = '';
+    _limpiarUltimos();
     _pintarTablaBotones();
     mensajes.textContent = '';
     _marcarCambios(false);
@@ -384,6 +409,7 @@ const BaseSetup = (function () {
     const mem = (json.memoria && typeof json.memoria === 'object') ? json.memoria : {};
     campos.ram.value = mem.RAM ? mem.RAM : '';       // F5-I20: el GWS cargado
     campos.flash.value = mem.FLASH ? mem.FLASH : '';
+    _limpiarUltimos();                  // F5-I21: un setup o cartucho nuevo, sin «último» calculado
     for (const b of json.botones || []) {
       datosBoton[String(b.numero)] = {
         puerto: b.puerto === undefined ? '' : String(b.puerto),
@@ -547,8 +573,48 @@ const BaseSetup = (function () {
     return r.json;
   }
 
+  /**
+   * Vacía los informativos «Último GWC calculado» y «Último fondo»
+   * (F5-I21): hasta que se genera un GWC no dicen nada.
+   * @returns {void}
+   */
+  function _limpiarUltimos() {
+    if (campos.ultimoGWC) campos.ultimoGWC.value = '';
+    if (campos.ultimoFondo) campos.ultimoFondo.value = '';
+  }
+
+  /**
+   * Rellena los informativos al generar un GWC (F5-I21): lo usado de RAM
+   * (los bytes del GWC) y de FLASH (el bloque del fondo, hoy 0), con su %
+   * de la memoria declarada del setup aplicado. Es la misma función que
+   * escribe el porcentaje de la generación (F5-I20): BaseCartucho.textoUsoMemoria.
+   * @param {{gwc:number, fondo:number, memoria:?{RAM:number, FLASH:number}}} d -
+   *        Bytes del GWC y del fondo, y la memoria declarada (o null).
+   * @returns {void}
+   */
+  function informarUltimos(d) {
+    if (!campos.ultimoGWC) return;               // la ficha aún no se ha pintado
+    const mem = (d && d.memoria) || {};
+    campos.ultimoGWC.value = BaseCartucho.textoUsoMemoria(d.gwc, mem.RAM);
+    campos.ultimoFondo.value = BaseCartucho.textoUsoMemoria(d.fondo, mem.FLASH);
+  }
+
+  /**
+   * Pone el ancho y el alto de la ficha (solo lectura) tras un ajuste de
+   * resolución (F5-I21), sin tocar el resto de campos ni el borrador.
+   * @param {{ancho:number, alto:number}} r - La resolución vigente.
+   * @returns {void}
+   */
+  function fijarResolucion(r) {
+    if (!campos.ancho) return;
+    campos.ancho.value = r.ancho;
+    campos.alto.value = r.alto;
+  }
+
   return {
     pintar: pintar,
+    fijarResolucion: fijarResolucion,
+    informarUltimos: informarUltimos,
     reiniciar: reiniciar,
     poblar: poblar,
     leer: leer,

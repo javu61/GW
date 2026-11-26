@@ -12,9 +12,9 @@ Hay datos que aparecen en varias pestañas y son editables en todas ellas (nombr
 		Setup $\to$ Cartucho $\to$ Editor $\to$ Sprites $\to$ Simulador
 	\end{center}
 	de modo que un cambio en una afecta a las posteriores. Los cambios de la ficha son un BORRADOR hasta pulsar \emph{Aplicar} (F5-I12), y desde F5-I20 ninguna vía descarta el cartucho sin confirmación (\texttt{\_confirmarDescarteCartucho}).
-	
+
 	\item Pero los datos comunes se editan en más de un sitio: el nombre, la memoria, el estilo y la resolución están en  Setup y en Cartucho, y F5-I20 los propaga de una a otra al aplicar; el color de fondo solo existe en la ficha del Cartucho (no viaja en el GWS). Es fácil cambiar el dato en la pestaña equivocada, y el efecto sobre lo posterior (imágenes, sprites, posiciones) hoy es TODO o NADA: aplicar descarta, no ajusta.
-	
+
 	\item Las imágenes ya tienen reglas propias: con segmentos en memoria \texttt{img\_s} se bloquea en la ficha; el GWC escala al generarse y \texttt{img\_f} se ajusta al tamaño de la pantalla del setup; \texttt{img\_m} (la portada) no interviene en el juego.
 \end{itemize}
 
@@ -22,49 +22,35 @@ Hay datos que aparecen en varias pestañas y son editables en todas ellas (nombr
 \label{sec:F5I21Diseno}
 
 \begin{itemize}
-	\item \textbf{Un dato es editable solo en su pestaña natural:} Cada campo tiene su pestaña natural y se presenta y edita solo allí. En las demás, si se presenta por comodidad para el usuario será como de solo lectura, con un aviso «se cambia en  Setup» o «en Cartucho». Al cargar un cartucho, sus datos aterrizan en su pestaña natural (F5-I19: un GWB con resolución distinta actualiza la del Setup); este modelo no cambia la carga, solo dónde se edita después.
+	\item \textbf{Un dato es editable solo en su pestaña natural; en el resto, es de solo lectura.} Cada campo tiene su pestaña natural y se edita solo allí. En las demás se presenta como de solo lectura, con un aviso «se cambia en  Setup» (o «en Cartucho»). Al cargar un cartucho, sus datos aterrizan en su pestaña natural (F5-I19: un GWB con resolución distinta actualiza la del Setup); este modelo no cambia la carga, solo dónde se edita después.
 	\item \textbf{Todo cambio que afecta a otras pestañas pide confirmación} (con el mismo criterio de F5-I20: se omite con \texttt{GW\_DEBUG} para evitarlo en las pruebas automáticas, cancelar conserva todo) y, confirmado, \textbf{se propaga} lanzando el proceso correspondiente. Un cambio que no afecta a nada no pregunta.
-	\item \textbf{Siguen en BORRADOR hasta pulsar \emph{Aplicar}:}, por tanto F5-I12 se mantiene, pero solo en la pestaña natural del dato. El bloqueo de F5-I17 (M12: «Generar pide Aplicar») conserva su sentido, y el hueco reportado al revisar M12 (generar el GWB desde la pestaña Cartucho con el Setup en borrador) desaparece con este modelo, porque los datos comunes ya no se editan a la vez en dos sitios.
+	\item F5-I12 se mantiene: sigue habiendo BORRADOR hasta pulsar \emph{Aplicar}, pero solo en la pestaña natural del dato. El bloqueo de F5-I17 (M12: «Generar pide Aplicar») conserva su sentido, y el hueco reportado al revisar M12 (generar el GWB desde la pestaña Cartucho con el Setup en borrador) desaparece con este modelo, porque los datos comunes ya no se editan a la vez en dos sitios.
 	\item \textbf{Dos tipos de proceso:} \emph{ajustar} (conserva el trabajo y lo adapta al nuevo dato) y \emph{rehacer} (descarta lo derivado y vuelve a obtenerlo desde cero). Se prefiere ajustar siempre que el dato sea una magnitud que se pueda convertir; se rehace cuando el dato es la FUENTE de lo derivado.
 	\item \textbf{Datos informativos presentados junto a los que comparan.} Sin edición, sin confirmación y sin efecto: junto a RAM del Setup, el \emph{Último GWC calculado} (KB y \% de la RAM declarada; se rellena solo al generar un GWC, de modo que puede quedar desfasado si después se toca el juego, y lo dice el propio nombre); junto a FLASH, el tamaño del fondo (a cero hasta que exista); y en Cartucho, junto a la resolución de la máquina, la de \texttt{img\_f} y el \% de escalado entre ambas. La misma función que calcula los porcentajes de la generación (F5-I20) alimenta estos presentados.
-	\item \textbf{Pendiente de decidir: estilo y coherencia con los segmentos.} Al cambiar de estilo con juego en memoria conviene verificar que los segmentos de jugador no usan enlaces de direcciones para las que el nuevo estilo no tiene botón (por ejemplo, enlaces a arriba con un estilo de dos botones). Queda por decidir si el cambio incompatible se bloquea con explicación o se aplica con un aviso rojo.
+	\item \textbf{Estilo: se puede cambiar mientras el juego quepa.} El estilo se cambia en el Setup y, con juego en memoria, se aplica EN CALIENTE: el cartucho y su autoría no se descartan, solo se vuelve a fijar la botonera. Lo único que lo impide son los enlaces de los segmentos de jugador: con un enlace a \texttt{arriba} o \texttt{abajo} no sirve el estilo de 2 botones (que solo tiene izquierda y derecha; los de 4 y 5 botones tienen las cuatro, F1-I07), y el cambio se RECHAZA con un mensaje que dice qué enlaces lo impiden (quitarlos en el Editor o elegir otro estilo); con solo izquierda y derecha vale cualquier estilo. Sin juego en memoria no hay nada que comprobar.
+	\item \textbf{La memoria solo vive en el Setup.} Los cartuchos generados (GWB y GWI) llevan la memoria del Setup en su raíz, que así queda guardada en el cartucho como fuente de verdad; al CARGAR un cartucho con \texttt{memoria}, esta pasa al Setup (el cartucho cargado manda, F5-I19), subcampo a subcampo. Desaparece la regla de F5-I20 de que la memoria del cartucho manda sobre la del Setup al calcular: hay una sola memoria.
 	\item \textbf{Pendiente de valorar: el botón \emph{Aplicar}.} Con este modelo, en la pestaña natural sigue teniendo sentido (BORRADOR hasta aplicar); se revisará durante la fase 2 si conserva sentido en las pestañas donde ya no se edita nada propio.
 \end{itemize}
 
-{\small
-	\begin{longtable}{|p{3.1cm}|p{2.2cm}|p{2.6cm}|p{6.4cm}|}
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{|p{3.1cm}|p{2.2cm}|p{2.6cm}|p{6.4cm}|}
 		\hline
 		\textbf{Dato} & \textbf{Se edita en} & \textbf{Efecto} & \textbf{Qué ocurre al cambiarlo (tras confirmar)} \\ \hline
-		\endfirsthead
-		
-		\multicolumn{4}{c}{\textit{(Continuación de la Tabla~\ref{tab:F5I21Datos})}} \\
-		\hline
-		\textbf{Dato} & \textbf{Se edita en} & \textbf{Efecto} & \textbf{Qué ocurre al cambiarlo (tras confirmar)} \\ \hline
-		\endhead
-		
-		\hline
-		\multicolumn{4}{r}{\textit{(Continúa en la página siguiente)}} \\
-		\endfoot
-		
-		\hline
-		\caption{Cada dato: su pestaña, su efecto y el proceso que se lanza.}
-		\label{tab:F5I21Datos} \\
-		\endlastfoot
-		
 		Nombre y descripción del GWS & Setup & Ninguno & Etiquetas «Nombre/Descripción del GWS». Se guardan con el GWS y dan nombre a los ficheros; no se pregunta. \\ \hline
 		Nombre y descripción del cartucho & Cartucho & Ninguno & Etiquetas «Nombre/Descripción del Cartucho», para el resto de los cartuchos (GWB, GWI, GWC). La descripción se presenta multilínea, como en el Setup. Se guardan con el GWB/GWI; no se pregunta. Nacen una sola vez de los del setup y desde entonces son independientes. \\ \hline
-		Memoria (RAM, FLASH) & Setup & Ninguno (informativa) & Campos propios del Setup: se retiran de la pestaña Cartucho, pero siguen viajando en los cartuchos (el GWI como fuente de verdad) porque de ahí salen los porcentajes al generar (F5-I20). Junto a cada campo del Setup se muestra, informativo y de solo lectura, el tamaño real: junto a RAM, el «Último GWC calculado» (KB y \%), que se rellena SOLO al generar un GWC y puede estar desfasado; junto a FLASH, el del fondo (KB y \%; a cero hasta que exista fondo). Al generar, el porcentaje se sigue indicando en el panel y en el aviso (F5-I20). No se pregunta nunca. \\ \hline
+		Memoria (RAM, FLASH) & Setup & Ninguno (informativa) & Campos propios del Setup: se retiran de la pestaña Cartucho, pero siguen viajando en los cartuchos (el GWI como fuente de verdad) porque de ahí salen los porcentajes al generar (F5-I20). Junto a cada campo del Setup se muestra, informativo y de solo lectura, el tamaño real: junto a RAM, el «Último GWC calculado» (KB y %), que se rellena SOLO al generar un GWC y puede estar desfasado; junto a FLASH, el del fondo (KB y %; a cero hasta que exista fondo). Al generar, el porcentaje se sigue indicando en el panel y en el aviso (F5-I20). No se pregunta nunca. \\ \hline
 		Color de fondo & Cartucho & Presentación & Se repinta; no se pregunta. \\ \hline
 		Estilo y botones & Setup; la tecla propia del cartucho, en Cartucho (F5-I17, M7) & Acciones de los botones & Cada pestaña genera su propio cartucho: la botonera y las teclas del GWS se editan en el Setup y viajan en él; la tecla propia del GWB/GWI se edita en Cartucho. Se descartan las acciones que ya no existen en el nuevo estilo (confirmando). Si cambia el estilo hay que revisar las acciones en el Editor. \\ \hline
 		Resolución & Setup (ventana de ajuste); en Cartucho, solo lectura informativa & \textbf{Ajustar} & En Cartucho se muestra de solo lectura la resolución de la máquina (la del Setup) y la de \texttt{img\_f}, junto con el porcentaje de escalado entre ambas («\% de escalado»; 100~\% cuando coinciden), que sirve también para ver a simple vista el ajuste de \texttt{img\_f}. El cambio (tras confirmar en la ventana de ajuste) se reescalan las imágenes (\texttt{img\_s}, \texttt{img\_f}, \texttt{img\_m}), los sprites y las posiciones de los segmentos al nuevo tamaño, sin perder las acciones ni los roles. \\ \hline
 		\texttt{img\_f} (fondo) & Cartucho & \textbf{Ajustar} & Se ajusta al tamaño de la pantalla; no toca los segmentos. \\ \hline
 		\texttt{img\_m} (portada) & Cartucho & Ninguno & Se sustituye; no se pregunta, pues no afecta a nada, ya que cuando se cree el selector de cartuchos se escalará a un tamaño adecuado independiente del tamaño de la pantalla. \\ \hline
-		\texttt{img\_s} (segmentos) & Cartucho & \textbf{Rehacer} & Es la FUENTE de la geometría: al establecer una imagen se vuelve a segmentar desde cero; se descartan Editor y Sprites (mapa, tipos, uniones, secuencias, acciones). \\
-	\end{longtable}
-}
-
-
-
+		\texttt{img\_s} (segmentos) & Cartucho & \textbf{Rehacer} & Es la FUENTE de la geometría: al establecer una imagen se vuelve a segmentar desde cero; se descartan Editor y Sprites (mapa, tipos, uniones, secuencias, acciones). \\ \hline
+	\end{tabular}
+	\caption{Cada dato: su pestaña, su efecto y el proceso que se lanza.}
+	\label{tab:F5I21Datos}
+\end{table}
 
 No todos los campos necesitan validación de su cambio, solo de los que al cambiarlos afectan a otros, algunos con cambios delicados. Para realizar esto:
 
@@ -100,8 +86,10 @@ No todos los campos necesitan validación de su cambio, solo de los que al cambi
 	\item Caja nueva D10 (grupo \texttt{director}, destructiva, al final de S2), referenciada en F5-I18: cambiar un dato SIN efecto (nombre del cartucho, memoria) no pregunta ni toca nada; cambiar la resolución con un cartucho en memoria abre la ventana de ajuste (valores actuales, nuevos y factor de escala): cancelar conserva todo y avisa; confirmar ajusta y deja el cartucho con las acciones intactas.
 	\item Caja nueva E10 (grupo \texttt{editor}, solo consola), referenciada en F5-I18: tras ajustar a otra resolución, las posiciones y los tamaños de los segmentos son los de \texttt{escalar} y la imagen \texttt{img\_s} sigue siendo blanco y negro puro; ajustar a un tamaño y volver al original mantiene los segmentos dentro de la tolerancia del redondeo.
 	\item Caja nueva C9 (grupo \texttt{gwi\_gwc}, solo consola), referenciada en F5-I18: el GWC generado tras el ajuste en pantalla es igual al generado desde el cartucho original con la nueva resolución (mismo \texttt{escalar}).
+	\item Caja nueva E11 (grupo \texttt{editor}, solo consola), referenciada en F5-I18: con el juego en memoria, aplicar un estilo nuevo desde el Setup NO descarta el cartucho ni su autoría; con un enlace de jugador a \texttt{arriba} el estilo de 2 botones se rechaza con su motivo (y no cambia nada), los de 4 y 5 botones valen, y sin ese enlace el de 2 vuelve a valer.
 	\item Cambiar \texttt{img\_s} descarta Editor y Sprites tras confirmar; cambiar \texttt{img\_f} no toca los segmentos (caja en D10).
 	\item Los informativos se presentan sin estorbar: sin GWC generado, «Último GWC calculado» y «Fondo» salen a cero o vacíos; al generar, se rellenan (y el \% sigue saliendo en el panel, F5-I20); en Cartucho, el \% de escalado vale 100~\% tras el ajuste (cajas D10/C9/E10 ya lo verifican de paso).
+	\item D9 (F5-I20) se adapta: la memoria ya no está en la ficha de Cartucho y, con un cartucho en memoria, lo que pide confirmación para descartarlo es CARGAR un GWS (aplicar el setup de la ficha ya no lo descarta). C8 comprueba además que los informativos del Setup están vacíos antes de generar y, tras generar, traen KB y \% de la RAM, y 0~KB y 0~\% el fondo.
 	\item S2 y S5 completas en verde; el cambio no toca el formato GWC ni el orden del tick.
 \end{itemize}
 
@@ -116,5 +104,6 @@ No todos los campos necesitan validación de su cambio, solo de los que al cambi
 	\item El ajuste a una resolución nueva y el GWC generado a partir de él coinciden con los del generador (misma función \texttt{escalar}).
 	\item RAM y FLASH solo se editan en el Setup (siguen viajando en los cartuchos); sus informativos «Último GWC calculado» y «Fondo» no se editan, no preguntan y se rellenan solo al generar. En Cartucho se ven, de solo lectura, la resolución de la máquina, la de \texttt{img\_f} y su \% de escalado.
 	\item La descripción del cartucho es multilínea y las etiquetas distinguen GWS de Cartucho.
+	\item Con juego en memoria, el estilo se cambia en caliente sin descartar nada mientras los enlaces de los segmentos de jugador quepan en el estilo nuevo; si no caben, se rechaza con el motivo.
 	\item S2 y S5 en verde al cerrar la iteración.
 \end{enumerate}

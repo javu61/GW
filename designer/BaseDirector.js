@@ -102,6 +102,12 @@
 //   _aplicarJSONSetup             Valida y APLICA un setup ya leído (de fichero o de la ficha de la p…
 //   _confirmarDescarteCartucho    F5-I20: confirmación SIEMPRE antes de descartar el cartucho en
 //                                memoria (con su juego); se omite con GW_DEBUG (como en Limpiar).
+//   _confirmarCambioComun         F5-I21: confirmación de un cambio que afecta a otras pestañas
+//                                (ajustar o rehacer); la resolución usa la ventana propia.
+//   _abrirVentanaResolucion       F5-I21: LA ventana de ajuste de resolución (valores actuales,
+//                                nuevos, factor de escala, si afecta; Cancelar / Ajustar resolución).
+//   _aplicarAjusteResolucion      F5-I21: aplica el ajuste de resolución sin ventana (la usa la
+//                                ventana y la caja D10); atómico (valida el rango antes de tocar nada).
 //   _aplicarDesdeFichaSetup       Botón «Aplicar» de la pestaña Setup (F5-I12):
 //   _aplicarDesdeFichaCartucho    Botón «Aplicar» de la pestaña Cartucho (F5-I12):
 //   _textoBytes                   Bytes en texto legible, o «—» si no hay dato.
@@ -419,6 +425,229 @@ var BaseDirector = (function () {
     return window.confirm(accion + ' descarta el cartucho en memoria' +
       (n > 0 ? ' y su juego (' + n + ' acción(es) de autoría)' : '') +
       '. ¿Continuar?');
+  }
+
+  // ---------------- Datos comunes y ajuste de resolución (F5-I21) ----------------
+
+  /**
+   * F5-I21: confirmación GENÉRICA de un cambio que afecta a otras
+   * pestañas. Decide SI se pregunta y CON QUÉ TEXTO según el efecto:
+   *   - «rehacer»: se descarta lo derivado y se vuelve a obtenerlo
+   *     desde cero — reutiliza _confirmarDescarteCartucho (mismo
+   *     criterio de las pruebas: se omite con GW_DEBUG).
+   *   - «ajustar» (o cualquier otro): conserva el trabajo y lo adapta —
+   *     el aviso lo dice expresamente.
+   * Sin cartucho en memoria nunca pide nada (no hay nada que perder).
+   * @param {string} dato - El dato que cambia, p. ej. «la resolución».
+   * @param {string} [efecto] - «ajustar» (por defecto) o «rehacer».
+   * @returns {boolean} true si se puede continuar.
+   */
+  function _confirmarCambioComun(dato, efecto) {
+    if (!cartucho) return true;
+    if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) return true;
+    if (efecto === 'rehacer') {
+      return _confirmarDescarteCartucho('Cambiar "' + dato + '"');
+    }
+    return window.confirm('Cambiar "' + dato +
+      '" AJUSTA lo que depende de él: se reescalan las imágenes, los ' +
+      'sprites y las posiciones, sin perder las acciones ni los roles ' +
+      '(F5-I21). ¿Continuar?');
+  }
+
+  /** Ventana de ajuste de resolución abierta (una sola a la vez). */
+  let ventanaResolucion = null;
+
+  /**
+   * F5-I21: cierra la ventana de ajuste de resolución si está abierta.
+   * @returns {void}
+   */
+  function _cerrarVentanaResolucion() {
+    if (ventanaResolucion) { ventanaResolucion.remove(); ventanaResolucion = null; }
+  }
+
+  /**
+   * F5-I21: reescala una imagen (img_f, img_m) a las dimensiones dadas
+   * con suavizado (canvas intermedio). Si ya tiene ese tamaño, devuelve
+   * la misma imagen.
+   * @param {Image|HTMLCanvasElement} img - Imagen origen.
+   * @param {number} ancho - Ancho destino (px).
+   * @param {number} alto - Alto destino (px).
+   * @returns {Image|HTMLCanvasElement} La imagen reescalada.
+   */
+  function _reescalarSuave(img, ancho, alto) {
+    const ow = img.naturalWidth || img.width, oh = img.naturalHeight || img.height;
+    if (ow === ancho && oh === alto) return img;
+    const c = document.createElement('canvas');
+    c.width = ancho; c.height = alto;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(img, 0, 0, ancho, alto);
+    return c;
+  }
+
+  /**
+   * F5-I21: LA ventana de ajuste de resolución (botón de la pestaña
+   * Setup). Muestra los valores actuales, los nuevos (editables), el
+   * factor de escala resultante, SI afectará a los segmentos y los
+   * avisos: fuera del rango (F5-I16, el botón se deshabilita) o con
+   * una escala no entera (el resultado puede degradarse). La ventana
+   * ES la confirmación: no se abre ningún window.confirm adicional.
+   * La vía programática para las pruebas es aplicarAjusteResolucion.
+   * @returns {void}
+   */
+  function _abrirVentanaResolucion() {
+    if (!setupGWS) { avisarError('Aplica antes un setup.'); return; }
+    if (enJuego) { avisarError('No se ajusta la resolución con una partida en marcha.'); return; }
+    _cerrarVentanaResolucion();
+    const baseDims = BaseDescomponer.dimensionesBase ? BaseDescomponer.dimensionesBase() : null;
+    const resumen = (baseDims && BaseDescomponer.resumen) ? BaseDescomponer.resumen() : null;
+    const haySegmentos = !!(baseDims && resumen && resumen.segmentos > 0);
+    const fuenteX = baseDims ? baseDims.ancho : setupGWS.resolucion.ancho;
+    const fuenteY = baseDims ? baseDims.alto : setupGWS.resolucion.alto;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ventanaResolucion';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);' +
+      'display:flex;align-items:center;justify-content:center;z-index:9999;';
+    const caja = document.createElement('div');
+    caja.style.cssText = 'background:#fff;color:#000;padding:16px 20px;' +
+      'border-radius:8px;font-family:sans-serif;min-width:340px;' +
+      'box-shadow:0 8px 30px rgba(0,0,0,.4);';
+    const titulo = document.createElement('h3');
+    titulo.textContent = 'Ajustar resolución';
+    titulo.style.marginTop = '0';
+    caja.appendChild(titulo);
+
+    const actual = document.createElement('p');
+    actual.textContent = 'Valores actuales: ' + setupGWS.resolucion.ancho + '\u00d7' +
+      setupGWS.resolucion.alto + ' px' +
+      (baseDims ? ' (segmentos: ' + baseDims.ancho + '\u00d7' + baseDims.alto + ' px)' : '');
+    caja.appendChild(actual);
+
+    const filaNueva = document.createElement('p');
+    filaNueva.append(document.createTextNode('Nueva: '));
+    const inAncho = document.createElement('input');
+    inAncho.type = 'number';
+    inAncho.min = String(BaseCartucho.PANTALLA_MIN.ancho);
+    inAncho.max = String(BaseCartucho.PANTALLA_MAX.ancho);
+    inAncho.step = '1';
+    inAncho.value = String(setupGWS.resolucion.ancho);
+    inAncho.style.width = '5em';
+    const inAlto = inAncho.cloneNode(true);
+    inAlto.value = String(setupGWS.resolucion.alto);
+    filaNueva.append(inAncho, document.createTextNode(' \u00d7 '), inAlto);
+    caja.appendChild(filaNueva);
+
+    const factor = document.createElement('p');
+    factor.style.fontWeight = 'bold';
+    const afecta = document.createElement('p');
+    const avisoEscala = document.createElement('p');
+    avisoEscala.style.color = '#8a6d00';
+    const errorRango = document.createElement('p');
+    errorRango.style.color = '#a00000';
+
+    function _recalcular() {
+      const a = parseInt(inAncho.value, 10), l = parseInt(inAlto.value, 10);
+      if (!(a > 0) || !(l > 0)) {
+        factor.textContent = 'Factor de escala: \u2014';
+        afecta.textContent = '';
+        avisoEscala.textContent = '';
+        errorRango.textContent = 'Resolución no válida.';
+        btnAjustar.disabled = true;
+        return;
+      }
+      const fx = a / fuenteX, fy = l / fuenteY;
+      factor.textContent = 'Factor de escala: ' + (Math.round(fx * 100) / 100) +
+        ' \u00d7 ' + (Math.round(fy * 100) / 100) +
+        (baseDims ? ' (sobre img_s: ' + fuenteX + '\u00d7' + fuenteY + ' px)' : '');
+      afecta.textContent = haySegmentos
+        ? 'Afectará a los segmentos: ' + resumen.segmentos + ' segmento(s) y ' +
+          resumen.imagenes + ' sprite(s) se reescalarán (las acciones y los roles se conservan).'
+        : 'No afecta a segmentos (no hay juego en memoria).';
+      avisoEscala.textContent = (!baseDims || (Number.isInteger(fx) && Number.isInteger(fy)))
+        ? '' : 'La escala no es entera: el reescalado de img_s puede degradar las formas.';
+      const fuera = BaseCartucho.avisosDeResolucion({ ancho: a, alto: l });
+      errorRango.textContent = fuera ? fuera : '';
+      btnAjustar.disabled = !!fuera;
+    }
+
+    const filaBotones = document.createElement('p');
+    const btnCancelar = document.createElement('button');
+    btnCancelar.type = 'button';
+    btnCancelar.textContent = 'Cancelar';
+    const btnAjustar = document.createElement('button');
+    btnAjustar.type = 'button';
+    btnAjustar.textContent = 'Ajustar resolución';
+    btnAjustar.style.fontWeight = 'bold';
+    filaBotones.append(btnCancelar, document.createTextNode(' '), btnAjustar);
+
+    btnCancelar.addEventListener('click', _cerrarVentanaResolucion);
+    btnAjustar.addEventListener('click', () => {
+      const a = parseInt(inAncho.value, 10), l = parseInt(inAlto.value, 10);
+      if (_aplicarAjusteResolucion(a, l)) _cerrarVentanaResolucion();
+    });
+    inAncho.addEventListener('input', _recalcular);
+    inAlto.addEventListener('input', _recalcular);
+
+    caja.append(factor, afecta, avisoEscala, errorRango, filaBotones);
+    overlay.appendChild(caja);
+    document.body.appendChild(overlay);
+    ventanaResolucion = overlay;
+    _recalcular();
+  }
+
+  /**
+   * F5-I21: aplica el ajuste de resolución YA, sin ventana (es la
+   * vía programática que usa la propia ventana y la caja D10): valida el
+   * rango (F5-I16) ANTES de tocar nada (atómico: o todo o nada), reescala
+   * el juego en memoria con ajustarAResolucion (si lo hay), actualiza la
+   * resolución declarada del setup, reescala img_f/img_m suavemente y
+   * repinta todo.
+   * @param {number} anchoNuevo - Nuevo ancho (px).
+   * @param {number} altoNuevo - Nuevo alto (px).
+   * @returns {boolean} true si se aplicó.
+   */
+  function _aplicarAjusteResolucion(anchoNuevo, altoNuevo) {
+    const fueraDeRango = BaseCartucho.avisosDeResolucion({ ancho: anchoNuevo, alto: altoNuevo });
+    if (fueraDeRango) {
+      avisarError('Resolución NO ajustada: ' + fueraDeRango);
+      return false;
+    }
+    const ajusta = !!(cartucho && editable);
+    try {
+      // 1. El lienzo del aparato al nuevo tamaño ANTES del ajuste: así
+      //    la escala que fija el repintado del editor ya es la buena.
+      const canvas = _$('pantalla');
+      canvas.width = anchoNuevo;
+      canvas.height = altoNuevo;
+      // 2. El juego en memoria: geometría, sprites y posiciones (las
+      //    acciones y los roles quedan intactos; el repintado lo hace
+      //    el propio ajustarAResolucion).
+      if (ajusta) {
+        BaseDescomponer.ajustarAResolucion(anchoNuevo, altoNuevo);
+        BaseDescomponer.pintarFondoAparato();      // fondo con la img_f ya reescalada
+        BaseDescomponer.repintarAparato();
+      }
+      // 3. Resolución declarada e imágenes de presentación (suave).
+      if (setupGWS) setupGWS.resolucion = { ancho: anchoNuevo, alto: altoNuevo };
+      if (imgF) imgF = _reescalarSuave(imgF, anchoNuevo, altoNuevo);
+      if (imgM) imgM = _reescalarSuave(imgM, anchoNuevo, altoNuevo);
+      // 4. Repintado del resto de estados.
+      if (cartucho) {
+        BaseGraficos.fijarFondo(imgF);
+        if (!ajusta) _pintarFondoCartucho(imgF);
+      } else {
+        BaseGraficos.fijarFondo(null);
+        _pintarFondoNeutro();
+      }
+      pintarInfo();
+      avisar('Resolución ajustada: ' + anchoNuevo + '\u00d7' + altoNuevo +
+        (ajusta ? ' (imágenes, sprites y posiciones reescaladas; autoría intacta).' : '.'));
+      return true;
+    } catch (e) {
+      avisarError('Resolución NO ajustada: ' + e.message);
+      return false;
+    }
   }
 
   /**
@@ -2021,6 +2250,9 @@ var BaseDirector = (function () {
     pantallaDeSetup: () => (setupGWS && setupGWS.resolucion) ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto } : null,
     imagenFondo: () => imgF,
     colorFondo: () => colorFondo,
+    confirmarCambioComun: _confirmarCambioComun,       // F5-I21: decisiones de datos comunes (ajustar/rehacer)
+    ajustarResolucion: _abrirVentanaResolucion,        // F5-I21: botón «Ajustar resolución» de Setup
+    aplicarAjusteResolucion: _aplicarAjusteResolucion, // F5-I21: ajuste sin ventana (pruebas D10/C9/E10)
     imagenSegmentos: () => imgS,
     imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
     imagenBlob: (img) => BaseCartucho.imagenBlob(img)

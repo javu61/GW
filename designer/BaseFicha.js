@@ -404,6 +404,31 @@ const BaseFicha = (function () {
 
   // ---------------- Construcción ----------------
 
+  /**
+   * F5-I21: enlace a la pestaña natural del dato (la pestaña Setup, hoy
+   * el único caso): lo muestra el campo de solo lectura. Lo pinta el
+   * director vía su export pestanna.
+   * @param {HTMLElement} control - El control o fila del campo de solo
+   *        lectura (su celda recibe el enlace).
+   * @returns {void}
+   */
+  function _enlacePestanaNatural(control) {
+    const celda = control.parentElement;
+    if (!celda) return;
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.textContent = 'Se cambia en Setup';
+    boton.className = 'fichaNota';
+    boton.style.display = 'inline-block';
+    boton.style.marginTop = '4px';
+    boton.addEventListener('click', () => {
+      if (typeof BaseDirector !== 'undefined' && BaseDirector.pestanna) {
+        BaseDirector.pestanna('vistaSetup');
+      }
+    });
+    celda.appendChild(boton);
+  }
+
   /** Construye toda la ficha dentro de `contenedor`. */
   function _construir(contenedor) {
     contenedor.textContent = '';
@@ -425,14 +450,20 @@ const BaseFicha = (function () {
       o.value = valor; o.textContent = texto;
       estilo.appendChild(o);
     }
+    // F5-I21: estilo y resolución SOLO se editan en su pestaña natural
+    // (Setup); aquí se muestran de solo lectura, con el aviso y el
+    // acceso a la pestaña donde se editan.
+    estilo.disabled = true;
     campos.estilo = _campo(rejilla, 'Estilo', estilo,
-      'Opcional: si falta, se usa el del setup cargado.');
+      'Solo lectura: se cambia en Setup.');
+    _enlacePestanaNatural(estilo);
     const par = _crearElemento('div', 'fichaPar');
-    campos.ancho = _entrada('number', { min: 1, step: 1, placeholder: 'ancho' });
-    campos.alto = _entrada('number', { min: 1, step: 1, placeholder: 'alto' });
+    campos.ancho = _entrada('number', { min: 1, step: 1, placeholder: 'ancho', readOnly: true });
+    campos.alto = _entrada('number', { min: 1, step: 1, placeholder: 'alto', readOnly: true });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     _campo(rejilla, 'Resolución', par,
-      'Opcional: si falta, se usa la pantalla del setup cargado.');
+      'Solo lectura: se cambia en Setup.');
+    _enlacePestanaNatural(par);
     // F5-I20 (MA02): memoria propia del cartucho, opcional (vacío = 0).
     campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
     campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });

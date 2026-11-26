@@ -2313,11 +2313,18 @@ const BaseDescomponer = (() => {
    * que ajustar en pantalla y generar dan el mismo resultado.
    * @param {number} anchoNuevo - Nuevo ancho de pantalla (px).
    * @param {number} altoNuevo - Nuevo alto de pantalla (px).
+   * @param {?Object} declaradaVieja - Resolución declarada VIGENTE
+   *        ({ancho, alto}, la del setup antes de tocar nada): el factor
+   *        del reescalado es el de la máquina, NO el del tamaño de img_s
+   *        (un GWI puede traer la fuente a otra escala, p. ej. una
+   *        captura de 1255×848 para una máquina de 320×240). Si no
+   *        llega, se asume que la fuente y la declarada coinciden.
    * @returns {{ancho:number, alto:number, fx:number, fy:number}} Lo
-   *        aplicado (por si el director informa); lanza Error si no hay
-   *        juego en memoria o los valores no son válidos.
+   *        aplicado: el espacio fuente nuevo (el antiguo por el factor)
+   *        y el factor de la máquina; lanza Error si no hay juego en
+   *        memoria o los valores no son válidos.
    */
-  function ajustarAResolucion(anchoNuevo, altoNuevo) {
+  function ajustarAResolucion(anchoNuevo, altoNuevo, declaradaVieja) {
     if (!base) throw new Error('no hay juego en memoria que ajustar.');
     anchoNuevo = Math.round(Number(anchoNuevo));
     altoNuevo = Math.round(Number(altoNuevo));
@@ -2325,25 +2332,42 @@ const BaseDescomponer = (() => {
       !isFinite(anchoNuevo) || !isFinite(altoNuevo)) {
       throw new Error('la nueva resolución no es válida.');
     }
-    const anchoViejo = base.ancho, altoViejo = base.alto;
+    const declarada = (declaradaVieja &&
+      Number(declaradaVieja.ancho) >= 1 && Number(declaradaVieja.alto) >= 1)
+      ? { ancho: Math.round(Number(declaradaVieja.ancho)),
+        alto: Math.round(Number(declaradaVieja.alto)) }
+      : { ancho: base.ancho, alto: base.alto };
+    const anchoViejo = declarada.ancho, altoViejo = declarada.alto;
     if (anchoNuevo === anchoViejo && altoNuevo === altoViejo) {
       return { ancho: anchoNuevo, alto: altoNuevo, fx: 1, fy: 1 };
     }
-    // Escala por eje: el mismo concepto que _escalasDePantalla del GWC
-    // (pantalla declarada respecto de la imagen fuente).
+    // Escala por eje: el FACTOR DE LA MÁQUINA (declarada vieja → nueva);
+    // el juego vive en coordenadas de img_s y el generador del GWC
+    // reescala declarada/fuente por su cuenta (ver _escalasDePantalla).
     const fx = anchoNuevo / anchoViejo;
     const fy = altoNuevo / altoViejo;
-    for (const c of base.comps) _escalarComp(c, fx, fy, anchoNuevo);
-    base.ancho = anchoNuevo;
-    base.alto = altoNuevo;
+    // El juego vive en coordenadas de img_s: su espacio nuevo es el
+    // antiguo POR EL FACTOR (la fuente conserva su proporción con la
+    // máquina declarada; el generador del GWC reescala por su cuenta,
+    // de modo que el juego se ve IGUAL en la pantalla nueva).
+    const nuevoAnchoBase = Math.max(1, Math.round(base.ancho * fx));
+    const nuevoAltoBase = Math.max(1, Math.round(base.alto * fy));
+    for (const c of base.comps) _escalarComp(c, fx, fy, nuevoAnchoBase);
+    base.ancho = nuevoAnchoBase;
+    base.alto = nuevoAltoBase;
     _reindexarPixeles();
     // Los ficticios llevan su caja a mano: se reescala aparte (surviven
-    // con los mismos ids negativos y sus enlaces intactos).
+    // con los mismos ids negativos y sus enlaces intactos). Su imagen
+    // fusionada (piezas de unión, dígitos, contadores y el propio
+    // cartucho) va CACHEADA con la geometría del momento: hay que
+    // invalidarla, o el sprite nuevo declararía la caja nueva con el
+    // canvas viejo (píxeles fuera → transparentes, dims falsas).
     for (const f of ficticios) {
       const nx = Math.round(f.x * fx), ny = Math.round(f.y * fy);
       f.ancho = Math.max(1, Math.round(f.ancho * fx));
       f.alto = Math.max(1, Math.round(f.alto * fy));
       f.x = nx; f.y = ny;
+      f.imagen = null; f.firma = null;
     }
     // Grupos, sprites (imágenes fusionadas) y cajas, de la geometría nueva.
     _reconstruir();

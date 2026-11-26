@@ -171,9 +171,12 @@
 
   /* ---------------- F5-I17 (M1/M2): el par GWI/GWC y su codigoGWC ---------------- */
 
-  /** El campo solo lectura «Código GWC» de la ficha de Cartucho (o null). */
+  /** El campo solo lectura «Código GWC» de la ficha de Cartucho (o null).
+   * F5-I21: la ficha tiene TAMBIÉN los inputs readOnly ancho/alto de la
+   * Resolución (number): el código es el único readOnly de TEXTO. */
   function _codigoEnFicha() {
-    const inp = [...document.querySelectorAll('#fichaCartucho input')].find(i => i.readOnly);
+    const inp = [...document.querySelectorAll('#fichaCartucho input')]
+      .find(i => i.readOnly && i.type === 'text');
     return inp ? inp.value : null;
   }
 

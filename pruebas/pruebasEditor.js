@@ -302,7 +302,14 @@ if (typeof module !== 'undefined') {
     ok('E10: ajustar a 640×480 se aplica',
       BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
     let puros = true, toques = 0;
+    // El ficticio «cartucho» lleva por diseño un lienzo en blanco
+    // (F3-I11: solo es una marca en el mapa, nunca se presenta): no
+    // es un sprite B/N y no entra en esta comprobación.
+    const sinSprite = new Set(BaseDescomponer._t.grupos()
+      .filter(g => g.raiz < 0 && g.prop.tipo === 'cartucho' && g.spriteId)
+      .map(g => g.spriteId));
     for (const s of BaseDescomponer.sprites()) {
+      if (sinSprite.has(s.id)) continue;
       toques++;
       const idd = s.imagen.getContext('2d').getImageData(0, 0, s.ancho, s.alto).data;
       for (let i = 0; i < idd.length; i += 4) {

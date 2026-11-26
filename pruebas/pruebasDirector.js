@@ -202,11 +202,13 @@
       [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
     ok('D7 (previo): la máquina es la del setup2 (maquina-2)',
       !document.getElementById('maquina-2').classList.contains('oculto'), estado());
-    // Un GWB valedero de estilo 4 (img_s blanca: no descompone nada, da igual aquí).
+    // Un GWB valedero de estilo 4 (con contenido negro: debe descomponer
+    // para que Guardar/Generar y el Editor queden disponibles, como en D2).
     const lienzo = document.createElement('canvas');
     lienzo.width = 320; lienzo.height = 240;
     const g = lienzo.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, 320, 240);
+    g.fillStyle = '#000'; g.fillRect(10, 10, 40, 20);
     const png = await new Promise(r => lienzo.toBlob(r, 'image/png'));
     const gw4 = {
       tipo: 'GWB', version: 1, nombre: 'Estilo4', estilo: '4',
@@ -238,9 +240,10 @@
     return out;
   }
 
-  // F5-I20 (ajuste): aplicar/cargar un setup propaga a la ficha de Cartucho TODOS los
-  // datos comunes (nombre, memoria, ColorFondo + estilo/resolución) y, con cartucho en
-  // memoria, pide SIEMPRE confirmación (cancelar conserva; confirmar aplica).
+  // F5-I20 (ajuste)/F5-I21: cargar un setup propaga a la ficha de Cartucho los datos
+  // comunes (nombre, ColorFondo + estilo/resolución); la memoria vive en el Setup. Y con
+  // un cartucho en memoria, «Aplicar» va EN CALIENTE: SIN confirmación y SIN descartar
+  // nada (los datos comunes de la ficha se aplican al juego vivo).
   async function _pruebaD9() {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
@@ -265,7 +268,6 @@
       e1.colorFondo === '#AABBCC', String(e1.colorFondo));
     ok('D9: estilo y resolución siguen llegando (como antes)',
       e1.estilo === '2' && e1.resolucion && e1.resolucion.ancho === 320, JSON.stringify(e1));
-    // 2) Con un cartucho en memoria, aplicar el setup PIDE confirmación: cancelar conserva.
     // 2) A la inversa: la memoria del GWB pasa al setup derivado (subcampo a
     //    subcampo: su RAM 128 manda; la FLASH no la declara y sigue 128, del GWS).
     await U.cargarEn('ficheroCartucho',
@@ -274,48 +276,35 @@
     ok('D9: la memoria del GWB pasa al setup derivado (subcampo a subcampo)',
       JSON.stringify(memDerivada) === JSON.stringify({ RAM: 128, FLASH: 128 }),
       JSON.stringify(memDerivada));
-    // 2b) Con ese cartucho en memoria, aplicar el setup PIDE confirmación: cancelar conserva.
     ok('D9 (previo): hay cartucho (Parachute) antes de aplicar',
       (_estado().tipo === 'GWB' && _estado().nombre === 'Parachute'), JSON.stringify(_estado()));
+    // 2b) Con ese cartucho en memoria, «Aplicar» va EN CALIENTE (F5-I21):
+    //     SIN confirmación (ni siquiera sin GW_DEBUG) y SIN descartar nada;
+    //     los datos comunes de la ficha de Setup se aplican al juego vivo.
     const confirmadas = [];
     const confirmOriginal = window.confirm;
     const gwdOriginal = window.GW_DEBUG;
-    window.GW_DEBUG = false;                        // para que la confirmación salga
+    window.GW_DEBUG = false;                        // aún así no debe pedir nada
     window.confirm = (m) => { confirmadas.push(String(m)); return false; };
+    const inNombreSetup = [...document.querySelectorAll('#fichaSetup input[type=text]')][0];
+    inNombreSetup.value = 'Memoria2';
     document.getElementById('btnAplicarSetup').click();
-    await new Promise(r => setTimeout(r, 300));
-    window.confirm = confirmOriginal;
-    window.GW_DEBUG = gwdOriginal;
-    ok('D9: aplicar setup con cartucho pide confirmación',
-      confirmadas.length === 1 && /descarta el cartucho en memoria/.test(confirmadas[0]),
-      confirmadas.join(' | '));
-    ok('D9: cancelar conserva el cartucho (y avisa de NO aplicado)',
-      _estado().nombre === 'Parachute' && /NO aplicado/.test(estado()), estado());
-    // 3) Confirmar aplica: el cartucho se descarta y la ficha vuelve a recibir del GWS.
-    window.confirm = (m) => { confirmadas.push(String(m)); return true; };
-    const gwd2 = window.GW_DEBUG; window.GW_DEBUG = false;
-    document.getElementById('btnAplicarSetup').click();
-    await new Promise(r => setTimeout(r, 500));
-    window.GW_DEBUG = gwd2;
-    window.confirm = confirmOriginal;
-    ok('D9: confirmar aplica el setup (cartucho fuera)',
-      BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
-    const e2 = gwb();
-    ok('D9: tras aplicar de nuevo la ficha recibe los datos comunes (la memoria sigue en el Setup)',
-      e2.nombre === 'Memoria' && e2.memoria === undefined
-      && BaseDirector.datosSetup().memoria && BaseDirector.datosSetup().memoria.RAM === 216,
-      JSON.stringify(e2));
-    // Todo lo contrario en GW_DEBUG: sin confirmación (criterio Limpiar/D8).
-    await U.cargarEn('ficheroCartucho', [await _gwbModificado(() => { })], 2500);
-    const conf2 = [];
-    window.confirm = (m) => { conf2.push(String(m)); return true; };
-    window.GW_DEBUG = true;
-    document.getElementById('btnAplicarSetup').click();
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 400));
     window.GW_DEBUG = gwdOriginal;
     window.confirm = confirmOriginal;
-    ok('D9: con GW_DEBUG no se pide confirmación (las suites corren solas)',
-      conf2.length === 0 && BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
+    ok('D9: con cartucho en memoria, aplicar NO pide confirmación',
+      confirmadas.length === 0, confirmadas.join(' | '));
+    ok('D9: aplicar en caliente conserva el cartucho y su autoría',
+      _estado().tipo === 'GWB' && _estado().nombre === 'Parachute' && _estado().pesEditor,
+      JSON.stringify(_estado()));
+    ok('D9: #estado avisa de que el cartucho sigue en memoria',
+      /el cartucho y su autoría siguen en memoria/.test(estado()), estado());
+    ok('D9: el nombre tocado en la ficha llega al setup vigente',
+      BaseDirector.datosSetup().nombre === 'Memoria2',
+      String(BaseDirector.datosSetup().nombre));
+    ok('D9: la memoria sigue en el Setup tras aplicar en caliente',
+      JSON.stringify(BaseDirector.datosSetup().memoria) === JSON.stringify({ RAM: 128, FLASH: 128 }),
+      JSON.stringify(BaseDirector.datosSetup().memoria));
     return out;
   }
 

@@ -475,25 +475,6 @@ var BaseDirector = (function () {
     if (ventanaResolucion) { ventanaResolucion.remove(); ventanaResolucion = null; }
   }
 
-  /**
-   * F5-I21: reescala una imagen (img_f, img_m) a las dimensiones dadas
-   * con suavizado (canvas intermedio). Si ya tiene ese tamaño, devuelve
-   * la misma imagen.
-   * @param {Image|HTMLCanvasElement} img - Imagen origen.
-   * @param {number} ancho - Ancho destino (px).
-   * @param {number} alto - Alto destino (px).
-   * @returns {Image|HTMLCanvasElement} La imagen reescalada.
-   */
-  function _reescalarSuave(img, ancho, alto) {
-    const ow = img.naturalWidth || img.width, oh = img.naturalHeight || img.height;
-    if (ow === ancho && oh === alto) return img;
-    const c = document.createElement('canvas');
-    c.width = ancho; c.height = alto;
-    const ctx = c.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(img, 0, 0, ancho, alto);
-    return c;
-  }
 
   /**
    * F5-I21: LA ventana de ajuste de resolución (botón de la pestaña
@@ -571,11 +552,11 @@ var BaseDirector = (function () {
         ' \u00d7 ' + (Math.round(fy * 100) / 100) +
         (baseDims ? ' (sobre img_s: ' + fuenteX + '\u00d7' + fuenteY + ' px)' : '');
       afecta.textContent = haySegmentos
-        ? 'Afectará a los segmentos: ' + resumen.segmentos + ' segmento(s) y ' +
-          resumen.imagenes + ' sprite(s) se reescalarán (las acciones y los roles se conservan).'
+        ? 'El juego NO se reescala: ' + resumen.segmentos + ' segmento(s) y ' +
+          resumen.imagenes + ' sprite(s) quedan igual (el emulador reescala al vuelo y el GWC escala al generar).'
         : 'No afecta a segmentos (no hay juego en memoria).';
       avisoEscala.textContent = (!baseDims || (Number.isInteger(fx) && Number.isInteger(fy)))
-        ? '' : 'La escala no es entera: el reescalado de img_s puede degradar las formas.';
+        ? '' : 'La escala declarada/img_s no es entera: el GWC reescala al generar y puede degradar las formas.';
       const fuera = BaseCartucho.avisosDeResolucion({ ancho: a, alto: l });
       errorRango.textContent = fuera ? fuera : '';
       btnAjustar.disabled = !!fuera;
@@ -607,12 +588,15 @@ var BaseDirector = (function () {
   }
 
   /**
-   * F5-I21: aplica el ajuste de resolución YA, sin ventana (es la
-   * vía programática que usa la propia ventana y la caja D10): valida el
-   * rango (F5-I16) ANTES de tocar nada (atómico: o todo o nada), reescala
-   * el juego en memoria con ajustarAResolucion (si lo hay), actualiza la
-   * resolución declarada del setup, reescala img_f/img_m suavemente y
-   * repinta todo.
+   * F5-I21 (modelo simple): aplica el ajuste de resolución YA, sin
+   * ventana (es la vía programática que usa la propia ventana y la caja
+   * D10): valida el rango (F5-I16) ANTES de tocar nada (atómico: o todo
+   * o nada) y SOLO cambia la resolución DECLARADA. El juego NO se toca:
+   * el GWI conserva siempre el origen (img_s, sprites y segmentos sin
+   * escalar); el emulador reescala al vuelo (escala = declarado/img_s,
+   * fijarEscalaAparato) y el generador del GWC escala declarada/fuente
+   * al generar (_escalasDePantalla), que es donde el escalado es
+   * definitivo (el ESP32 recibe el trabajo hecho).
    * @param {number} anchoNuevo - Nuevo ancho (px).
    * @param {number} altoNuevo - Nuevo alto (px).
    * @returns {boolean} true si se aplicó.
@@ -623,43 +607,30 @@ var BaseDirector = (function () {
       avisarError('Resolución NO ajustada: ' + fueraDeRango);
       return false;
     }
-    const ajusta = !!(cartucho && editable);
     try {
-      // 1. El lienzo del aparato al nuevo tamaño ANTES del ajuste: así
-      //    la escala que fija el repintado del editor ya es la buena.
+      // 1. El lienzo del aparato al nuevo tamaño declarado: el repintado
+      //    fija la escala (declarado/img_s) y reescala al vuelo.
       const canvas = _$('pantalla');
-      // La referencia del factor es la resolución DECLARADA vigente
-      // (la del setup, que puede no coincidir con el tamaño de img_s).
-      const declaradaVieja = (setupGWS && setupGWS.resolucion)
-        ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto }
-        : { ancho: canvas.width, alto: canvas.height };
       canvas.width = anchoNuevo;
       canvas.height = altoNuevo;
-      // 2. El juego en memoria: geometría, sprites y posiciones (las
-      //    acciones y los roles quedan intactos; el repintado lo hace
-      //    el propio ajustarAResolucion).
-      if (ajusta) {
-        BaseDescomponer.ajustarAResolucion(anchoNuevo, altoNuevo, declaradaVieja);
-        BaseDescomponer.pintarFondoAparato();      // fondo con la img_f ya reescalada
-        BaseDescomponer.repintarAparato();
-      }
-      // 3. Resolución declarada e imágenes de presentación (suave).
+      // 2. La resolución DECLARADA del setup y de las fichas. Nada más:
+      //    ni img_s, ni img_f, ni sprites, ni segmentos.
       if (setupGWS) setupGWS.resolucion = { ancho: anchoNuevo, alto: altoNuevo };
       BaseSetup.fijarResolucion({ ancho: anchoNuevo, alto: altoNuevo });   // las fichas muestran la vigente
       BaseFicha.poblar({ resolucion: { ancho: anchoNuevo, alto: altoNuevo } });
-      if (imgF) imgF = _reescalarSuave(imgF, anchoNuevo, altoNuevo);
-      if (imgM) imgM = _reescalarSuave(imgM, anchoNuevo, altoNuevo);
-      // 4. Repintado del resto de estados.
+      // 3. Repintado: el fondo se estira al pintar; repintarAparato
+      //    re-fija la escala del canvas nuevo y repinta fondo + segmentos.
       if (cartucho) {
         BaseGraficos.fijarFondo(imgF);
-        if (!ajusta) _pintarFondoCartucho(imgF);
+        if (editable) BaseDescomponer.repintarAparato();
+        else _pintarFondoCartucho(imgF);
       } else {
         BaseGraficos.fijarFondo(null);
         _pintarFondoNeutro();
       }
       pintarInfo();
       avisar('Resolución ajustada: ' + anchoNuevo + '\u00d7' + altoNuevo +
-        (ajusta ? ' (imágenes, sprites y posiciones reescaladas; autoría intacta).' : '.'));
+        ' (el juego no se toca: img_s, sprites y segmentos quedan sin escalar).');
       return true;
     } catch (e) {
       avisarError('Resolución NO ajustada: ' + e.message);

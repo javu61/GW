@@ -14,9 +14,9 @@ Hay datos que aparecen en varias pestañas y son editables en todas ellas (nombr
 	de modo que un cambio en una afecta a las posteriores. Los cambios de la ficha son un BORRADOR hasta pulsar \emph{Aplicar} (F5-I12), y desde F5-I20 ninguna vía descarta el cartucho sin confirmación (\texttt{\_confirmarDescarteCartucho}).
 	
 	\item Pero los datos comunes se editan en más de un sitio: el nombre, la memoria, el estilo y la resolución están en  Setup y en Cartucho, y F5-I20 los propaga de una a otra al aplicar; el color de fondo solo existe en la ficha del Cartucho (no viaja en el GWS). Es fácil cambiar el dato en la pestaña equivocada, y el efecto sobre lo posterior (imágenes, sprites, posiciones) hoy es TODO o NADA: aplicar descarta, no ajusta.
-	
+
 	\item Los botones son el caso más claro: el texto que se pinta en ellos se declara como \texttt{alias} en el GWS y se repite como \texttt{id} en los cartuchos GWB/GWI (con la tabla Usado/Id/Tecla de la pestaña Cartucho), y el botón \emph{Aplicar} del Setup lo sincroniza hacia la ficha. Dos nombres para el mismo dato y dos sitios editables.
-	
+
 	\item Las imágenes ya tienen reglas propias: con segmentos en memoria \texttt{img\_s} se bloquea en la ficha; el GWC escala al generarse y \texttt{img\_f} se ajusta al tamaño de la pantalla del setup; \texttt{img\_m} (la portada) no interviene en el juego.
 \end{itemize}
 

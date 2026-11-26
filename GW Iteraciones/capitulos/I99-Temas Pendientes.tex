@@ -17,7 +17,7 @@
 		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
 		
 		\item PC6. Integración de textos
-		
+
 		\item PC7. F5-I21/I22: convertir los ficheros de datos al campo nuevo «Texto Pantalla» (\texttt{setup*.json}, los cartuchos de ejemplo y \texttt{pruebas/cartuchos/*}); hoy siguen con \texttt{alias}/\texttt{id} y se leen por compatibilidad (se convierten al guardarlos de nuevo).
 	\end{itemize}
 	
@@ -58,10 +58,10 @@ Playwright en verde (S1--S7, red de seguridad; F5-I18).
 	\midrule
 	
 	R07 & \textbf{Código muerto o sobrante (revisado 26-11):}\newline Limpieza de elementos sin uso en los módulos principales. F5-I19 retiró ya los del bloque B que se señalaban; queda lo siguiente: \\
+
+		& A. \textbf{BaseDirector:}\newline \texttt{ESTILOS.*.descripcion}, exports \texttt{pestanna} e \texttt{imagenBlob} (el dibujo sobrante de \texttt{mostrarSprites} y las variables \texttt{sprites}/\texttt{segmentos} ya se retiraron). \\
 	
-	& A. \textbf{BaseDirector:}\newline \texttt{ESTILOS.*.descripcion}, exports \texttt{pestanna} e \texttt{imagenBlob} (el dibujo sobrante de \texttt{mostrarSprites} y las variables \texttt{sprites}/\texttt{segmentos} ya se retiraron). \\
-	
-	& B. \textbf{BaseCartucho:}\newline exports que ya solo usan las pruebas o el propio módulo (\texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}, \texttt{leerJSON}); la lectura de \texttt{json.img\_s} de la raíz por compatibilidad al cargar un GWI (\texttt{validarComunes} ya solo admite \texttt{imagenes.img\_s}). \\
+		& B. \textbf{BaseCartucho:}\newline exports que ya solo usan las pruebas o el propio módulo (\texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}, \texttt{leerJSON}); la lectura de \texttt{json.img\_s} de la raíz por compatibilidad al cargar un GWI (\texttt{validarComunes} ya solo admite \texttt{imagenes.img\_s}). \\
 	
 	& C. \textbf{BaseDescomponer:}\newline parámetro \texttt{codigo} de \texttt{montarGWI}; \texttt{dx}/\texttt{dy} (restos de «Posicionar»); compatibilidad con GWI antiguos (\texttt{uniones}, \texttt{\{unir\}}, tipo 99, «Deshacer unión»): aislar o retirar. \\
 	

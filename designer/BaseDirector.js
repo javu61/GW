@@ -30,12 +30,12 @@
 //                            y panel (la parte de _aplicarSetup sin pestañas;
 //                            F5-I19: también la llama la derivación en caliente).
 //   _setupDerivadoDe          F5-I19: deriva el GWS (la máquina) del cartucho
-//                            cargado, heredando puertos/alias/teclas del previo.
+//                            cargado, heredando puertos/texto de pantalla/teclas del previo.
 //
 //  Botonera
 //   _crearBotonFisico         Un botón físico: hueco, tecla, etiqueta.
 //   _construirBotonera        La botonera del estilo del setup.
-//   _normalizarNumeroBoton    Número o alias → botón físico canónico.
+//   _normalizarNumeroBoton    Número o texto de pantalla → botón físico canónico.
 //   _botonesInexistentes      ¿Usa el cartucho botones que la máquina no tiene? (pura)
 //   _aplicarBotonesCartucho   Botones del cartucho sobre la botonera.
 //   _montarBotonesSistema     Activa el trío A/B/R en modo sistema (GWI/GWC).
@@ -763,10 +763,12 @@ var BaseDirector = (function () {
   // ---------------- Botonera ----------------
 
   /**
-   * Crea un botón físico del DOM: hueco, forma, tecla asociada, alias y
+   * Crea un botón físico del DOM: hueco, forma, tecla asociada, texto de
+   * pantalla y pista. F5-I21: el texto de pantalla viaja como
+   * "textoPantalla" (los GWS antiguos traían "alias").
    * resaltado al pulsar (de momento solo deja constancia en consola;
    * aquí se conectarán las pulsaciones al futuro BaseGraficos de Juego).
-   * @param {Object} boton - Declaración del setup (numero/alias/tecla/puerto).
+   * @param {Object} boton - Declaración del setup (numero/textoPantalla/tecla/puerto).
    * @param {Object} pos - Hueco, forma y contenedor que dicta el estilo.
    * @returns {HTMLButtonElement} Botón físico listo para colgar.
    */
@@ -796,7 +798,7 @@ var BaseDirector = (function () {
     // Etiqueta visible + pista pequeña con la tecla asociada
     const etiqueta = document.createElement('span');
     etiqueta.className = 'etiqueta';
-    etiqueta.textContent = boton.alias || boton.numero;
+    etiqueta.textContent = boton.textoPantalla || boton.alias || boton.numero;
     el.appendChild(etiqueta);
     if (tecla) {
       el.appendChild(document.createElement('br'));
@@ -808,7 +810,8 @@ var BaseDirector = (function () {
     el.addEventListener('pointerdown', () => {
       el.classList.add('pulsado');
       if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) {
-        console.log('[botón] numero=' + boton.numero + (boton.alias ? ' (' + boton.alias + ')' : ''));
+        console.log('[botón] numero=' + boton.numero +
+          ((boton.textoPantalla || boton.alias) ? ' (' + (boton.textoPantalla || boton.alias) + ')' : ''));
       }
       _pulsarBoton(String(boton.numero));   // el despacho es único (ratón y teclado)
     });
@@ -842,7 +845,8 @@ var BaseDirector = (function () {
 
   /**
    * Crea la botonera que define el ESTILO de máquina del setup. Las
-   * declaraciones de "botones" del setup aportan puerto y alias; si un
+   * declaraciones de "botones" del setup aportan puerto y texto de
+   * pantalla (textoPantalla, antes alias); si un
    * botón del estilo no está declarado, se crea igual (con aviso, sin
    * puerto), y si un botón declarado no pertenece al estilo, se ignora.
    * @returns {void}
@@ -876,11 +880,13 @@ var BaseDirector = (function () {
 
   /**
    * Convierte el "numero" del botón del cartucho a la clave canónica del
-   * layout: acepta 0-8 (con o sin comillas) y los alias A/B/R declarados
-   * en el setup (se resuelven a su botón físico). F5-I19: la máquina de
+   * layout: acepta 0-8 (con o sin comillas) y los textos de pantalla A/B/R
+   * declarados en el setup (se resuelven a su botón físico; F5-I21:
+   * campo "textoPantalla", aceptado también el "alias" de los GWS
+   * antiguos). F5-I19: la máquina de
    * referencia puede pasarse por parámetro (la derivada del cartucho,
    * cuando aún no hay setup en memoria).
-   * @param {string|number} numero - Número o alias del botón del cartucho.
+   * @param {string|number} numero - Número o texto de pantalla del botón del cartucho.
    * @param {?Object} [maquina] - El setup (GWS) que declara los alias;
    *        por defecto el setup en memoria.
    * @returns {string} Clave canónica del botón físico.
@@ -889,7 +895,7 @@ var BaseDirector = (function () {
     const m = maquina || setupGWS;
     const n = String(numero);
     for (const b of m.botones) {
-      if (b.alias === n) return b.numero;
+      if (b.textoPantalla === n || b.alias === n) return b.numero;
     }
     return n;
   }
@@ -926,8 +932,8 @@ var BaseDirector = (function () {
    * Aplica los botones del cartucho sobre la botonera física:
    * - restaura primero TODOS los botones del setup (por si el cartucho
    *   anterior había eliminado o renombrado),
-   * - renombra cada botón con su texto de pantalla (el "alias" del
-   *   setup, F5-I21; en cartuchos antiguos, su "id" lógico),
+   * - renombra cada botón con su texto de pantalla ("textoPantalla" del
+   *   setup, F5-I21; en cartuchos antiguos, su "alias" o "id" lógico),
    * - los botones del cartucho son HOY los del setup (F5-I21), de modo
    *   que la botonera queda como la de la máquina.
    * Setup >= cartucho (F3-I1): un botón del cartucho que la máquina
@@ -953,10 +959,11 @@ var BaseDirector = (function () {
       const el = document.querySelector('.botonFisico[data-numero="' + numero + '"]');
       if (!el) continue;
       const et = el.querySelector('.etiqueta');   // renombra sin perder la pista de tecla
-      // F5-I21: el texto de pantalla del setup (alias); los cartuchos
-      // antiguos traían un "id" lógico, que se sigue aceptando.
-      const texto = String(b.alias !== undefined && b.alias !== null ? b.alias :
-        (b.id !== undefined && b.id !== null ? b.id : '')).trim();
+      // F5-I21: el texto de pantalla ("textoPantalla"); los cartuchos
+      // antiguos traían "alias" o un "id" lógico, que se siguen aceptando.
+      const texto = String(b.textoPantalla !== undefined && b.textoPantalla !== null ? b.textoPantalla :
+        (b.alias !== undefined && b.alias !== null ? b.alias :
+        (b.id !== undefined && b.id !== null ? b.id : ''))).trim();
       if (et) et.textContent = texto || numero;   // sin texto se queda el número
       // El botón que se llama "Start" es el que enciende el juego, sea
       // cual sea su número físico (6, 7, 8…).
@@ -1030,7 +1037,8 @@ var BaseDirector = (function () {
    * SUBCAMPO a subcampo: la del cartucho manda, y lo que él no declara
    * viene de la máquina previa. F5-I21: los cartuchos llevan los
    * botones con los nombres de campo del setup, así que el puerto y el
-   * alias TAMBIÉN viajan en ellos: manda el cartucho (F5-I19) y, lo
+   * texto de pantalla ("textoPantalla") TAMBIÉN viajan en ellos: manda
+   * el cartucho (F5-I19) y, lo
    * que él no declara, se hereda del setup previo (vacíos si no hay
    * setup). FUNCION PURA: no toca el estado ni el DOM (el llamador
    * decide cuándo se aplica).
@@ -1059,12 +1067,17 @@ var BaseDirector = (function () {
         (p.tecla ? normalizarTecla(p.tecla) : defecto[numero]);
       const boton = { numero: numero };
       if (tecla) boton.tecla = tecla;
-      // F5-I21: puerto y alias viajan en el cartucho (nombres de campo
-      // del setup): manda el cartucho; lo que no declara, el setup previo.
+      // F5-I21: puerto y texto de pantalla viajan en el cartucho con el
+      // nombre de campo del setup ("textoPantalla"): manda el cartucho
+      // (que puede traer el "alias"/"id" antiguos); lo que no declara,
+      // el setup previo.
       const puerto = (delCr && delCr.puerto !== undefined) ? delCr.puerto : p.puerto;
       if (puerto !== undefined && puerto !== null) boton.puerto = puerto;
-      const alias = (delCr && delCr.alias !== undefined) ? delCr.alias : p.alias;
-      if (alias !== undefined && alias !== null) boton.alias = alias;
+      const texto = delCr
+        ? (delCr.textoPantalla !== undefined ? delCr.textoPantalla :
+          (delCr.alias !== undefined ? delCr.alias : delCr.id))
+        : (p.textoPantalla !== undefined ? p.textoPantalla : p.alias);
+      if (texto !== undefined && texto !== null) boton.textoPantalla = texto;
       return boton;
     });
     const resolucion = json.resolucion || (previo && previo.resolucion);

@@ -21,8 +21,9 @@
 //     «Cargar…» y «Borrar».
 //   - Botones (F5-I21): ya no se muestran ni se editan en la ficha.
 //     Los cartuchos (GWB, GWI) siguen llevándolos, pero con los nombres
-//     de campo y los datos del Setup (numero, puerto, tecla, alias):
-//     se cambian en la pestaña Setup (columna «Texto Pantalla»).
+//     de campo y los datos del Setup (numero, puerto, tecla,
+//     textoPantalla): se cambian en la pestaña Setup (columna «Texto
+//     Pantalla»).
 //   - Memoria (F5-I20, MA02): «RAM (KB)» y «FLASH (KB)», opcionales (vacío = 0):
 //     si el cartucho las declara mandan sobre las del setup al informar de
 //     la ocupación; se escriben en el GWB/GWI solo si no son 0.
@@ -291,7 +292,7 @@ const BaseFicha = (function () {
   /**
    * F5-I21: los botones que viajan en los cartuchos (GWB y GWI) son los
    * del SETUP, con sus nombres de campo y sus datos (numero, puerto,
-   * tecla y alias — el «Texto Pantalla»). En la ficha NO se editan: se
+   * tecla y textoPantalla — el «Texto Pantalla»). En la ficha NO se editan: se
    * cambian en la pestaña Setup y el Aplicar de ésta los pone en
    * marcha. Copia profunda para que nadie toque el setup en memoria.
    * @returns {Array} Los botones del setup cargado ([] si no hay setup).

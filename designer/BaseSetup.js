@@ -6,7 +6,7 @@
 //   La pestaña «Setup» (F5-I12): la ficha del setup (GWS), con los
 //   datos de la máquina: nombre, descripción, estilo, resolución y la
 //   tabla de botones (número, puerto, tecla y texto de pantalla;
-//   F5-I21: el «Texto Pantalla» es el alias que viaja a los cartuchos).
+//   F5-I21: el campo «textoPantalla» es el que viaja a los cartuchos).
 //   Sirve para crear un GWS desde cero o para ver y retocar el que se
 //   ha cargado.
 //
@@ -72,7 +72,7 @@ const BaseSetup = (function () {
 
   let raiz = null;                // contenedor ya construido
   let campos = {};                // nombre, descripcion, estilo, ancho, alto (F5-I21: solo lectura), ram, flash
-  let datosBoton = {};            // número → {puerto, tecla, alias} (sobrevive al cambio de estilo)
+  let datosBoton = {};            // número → {puerto, tecla, textoPantalla} (sobrevive al cambio de estilo)
   let cuerpoBotones = null;
   let mensajes = null;
   let avisoCambios = null;
@@ -184,8 +184,8 @@ const BaseSetup = (function () {
   function _pintarTablaBotones() {
     for (const tr of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
       const q = (c) => tr.querySelector('.' + c).value;
-      // F5-I21: el alias de la ficha es el «Texto Pantalla» del botón.
-      datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: _teclaDeFila(tr), alias: q('colTextoPantalla') };
+      // F5-I21: el «Texto Pantalla» del botón viaja como "textoPantalla".
+      datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: _teclaDeFila(tr), textoPantalla: q('colTextoPantalla') };
     }
     cuerpoBotones.textContent = '';
     const numeros = botonesDelEstilo(campos.estilo.value);
@@ -198,7 +198,7 @@ const BaseSetup = (function () {
       return;
     }
     for (const n of numeros) {
-      const d = datosBoton[String(n)] || { puerto: '', tecla: '', alias: '' };
+      const d = datosBoton[String(n)] || { puerto: '', tecla: '', textoPantalla: '' };
       const tr = _crearElemento('tr');
       tr.dataset.numero = String(n);
       const tdN = _crearElemento('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
@@ -242,15 +242,15 @@ const BaseSetup = (function () {
         tecla.classList.toggle('oculto', lista.value !== 'tecla');
         if (lista.value !== 'tecla') tecla.value = '';
       });
-      const alias = _entrada('text', { className: 'colTextoPantalla', value: d.alias });
-      alias.style.minWidth = '8em';
+      const textoPantalla = _entrada('text', { className: 'colTextoPantalla', value: d.textoPantalla });
+      textoPantalla.style.minWidth = '8em';
       const tdPuerto = _crearElemento('td');
       tdPuerto.appendChild(puerto);
       const tdTecla = _crearElemento('td');
       tdTecla.append(lista, tecla);
-      const tdAlias = _crearElemento('td');
-      tdAlias.appendChild(alias);
-      tr.append(tdPuerto, tdTecla, tdAlias);
+      const tdTexto = _crearElemento('td');
+      tdTexto.appendChild(textoPantalla);
+      tr.append(tdPuerto, tdTecla, tdTexto);
       tr.insertBefore(tdN, tr.firstChild);
       cuerpoBotones.appendChild(tr);
     }
@@ -414,7 +414,8 @@ const BaseSetup = (function () {
       datosBoton[String(b.numero)] = {
         puerto: b.puerto === undefined ? '' : String(b.puerto),
         tecla: b.tecla || '',
-        alias: b.alias || ''
+        // F5-I21: campo "textoPantalla"; los GWS antiguos traían "alias".
+        textoPantalla: b.textoPantalla || b.alias || ''
       };
     }
     _pintarTablaBotones();
@@ -423,7 +424,7 @@ const BaseSetup = (function () {
 
   /**
    * Construye el GWS con lo que hay en la ficha (sin validar). Un botón
-   * entra si tiene puerto, tecla o alias; el puerto es un número.
+   * entra si tiene puerto, tecla o textoPantalla; el puerto es un número.
    * @returns {Object} El JSON del GWS.
    */
   function leer() {
@@ -459,7 +460,7 @@ const BaseSetup = (function () {
         b.tecla = CURSORES_GWS.includes(teclaFila.toLowerCase())
           ? teclaFila.toLowerCase() : teclaFila.toUpperCase();
       }
-      if (d.alias.trim() !== '') b.alias = d.alias.trim();
+      if (d.textoPantalla.trim() !== '') b.textoPantalla = d.textoPantalla.trim();
       json.botones.push(b);
     }
     return json;

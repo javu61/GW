@@ -41,15 +41,23 @@ Hay datos que aparecen en varias pestañas y son editables en todas ellas (nombr
 		Estilo y botones & Setup & Acciones de los botones & Se descartan las acciones que ya no existen en el nuevo estilo (confirmando). Si cambia el estilo hay que revisar las acciones en el Editor. \\ \hline
 		Resolución & Setup (ventana de ajuste) & \textbf{Ajustar} & Se reescalan las imágenes (\texttt{img\_s}, \texttt{img\_f}, \texttt{img\_m}), los sprites y las posiciones de los segmentos al nuevo tamaño, sin perder las acciones ni los roles. \\ \hline
 		\texttt{img\_f} (fondo) & Cartucho & \textbf{Ajustar} & Se ajusta al tamaño de la pantalla; no toca los segmentos. \\ \hline
-		\texttt{img\_m} (portada) & Cartucho & Ninguno & Se sustituye; no se pregunta. \\ \hline
-		\texttt{img\_s} (segmentos) & Cartucho & \textbf{Rehacer} & Es la FUENTE de la geometría: se vuelve a segmentar desde cero; se descartan Editor y Sprites (mapa, tipos, uniones, secuencias, acciones). \\ \hline
+		\texttt{img\_m} (portada) & Cartucho & Ninguno & Se sustituye; no se pregunta, pues no afecta a nada, ya que cuando se cree el selector de cartuchos se escalará a un tamaño adecuado independiente del tamaño de la pantalla. \\ \hline
+		\texttt{img\_s} (segmentos) & Cartucho & \textbf{Rehacer} & Es la FUENTE de la geometría: al establecer una imagen se vuelve a segmentar desde cero; se descartan Editor y Sprites (mapa, tipos, uniones, secuencias, acciones). \\ \hline
 	\end{tabular}
 	\caption{Cada dato: su pestaña, su efecto y el proceso que se lanza.}
 	\label{tab:F5I21Datos}
 \end{table}
 
+No todos los campos necesitan validación de su cambio, solo de los que al cambiarlos afectan a otros, algunos con cambios delicados. Para realizar esto:
+
 \begin{itemize}
-	\item \textbf{Resolución: ajustar, no borrar.} El ancho y el alto no se editan a mano: en el Setup se muestran de solo lectura y un botón \emph{Ajustar resolución} abre una ventana propia con los valores actuales, los nuevos y el factor de escala resultante, y dos botones, \emph{Cancelar} y \emph{Ajustar resolución}. Confirmado el cambio, un proceso de ajuste convierte lo que depende de ella: la posición y el tamaño de cada segmento y sprite se escalan por eje (con el mismo redondeo que ya usa el generador del GWC, \texttt{escalar}), \texttt{img\_s} se reescala SIN antialiasing (vecino más cercano: sigue siendo blanco y negro puro y verificable), \texttt{img\_f} e \texttt{img\_m} se reescalan suavemente. Las acciones, los roles y las secuencias no dependen del tamaño y se conservan. Si el resultado no es válido (fuera de 320$\times$240..1024$\times$600, F5-I16) la ventana lo rechaza antes de tocar nada.
+	\item \textbf{Resolución: ajustar, no borrar.} Al ser dos valores para cambiar que siempre van de la mano, no podemos hacerlo de manera individual. Para hacerlo:
+	\begin{itemize}
+		\item En el Setup se muestran de solo lectura junto a un botón \emph{Ajustar resolución}
+		\item Al pulsarlo se abre una ventana propia con los valores actuales, los nuevos, el factor de escala resultante y si afecta a los segmentos, con dos botones, \emph{Cancelar} y \emph{Ajustar resolución}.
+		\item 	Confirmado el cambio, un proceso de ajuste convierte lo que depende de ella: la posición y el tamaño de cada segmento y sprite se escalan por eje (con el mismo redondeo que ya usa el generador del GWC, \texttt{escalar}), \texttt{img\_s} se reescala SIN antialiasing (vecino más cercano: sigue siendo blanco y negro puro y verificable), \texttt{img\_f} e \texttt{img\_m} se reescalan suavemente. Las acciones, los roles y las secuencias no dependen del tamaño y se conservan.
+		\item 	Si el resultado no es válido (fuera de 320$\times$240..1024$\times$600, F5-I16) la ventana lo rechaza antes de tocar nada.
+	\end{itemize}
 	\item \textbf{Aviso cuando el cambio puede ser problemático.} Si hay segmentos creados, la ventana de resolución avisa SIEMPRE de que se reescalarán, y de que el resultado puede degradarse si el factor de escala no es entero; es el usuario quien decide (cancelar conserva todo). El mismo criterio vale para los demás cambios con proceso: el aviso describe qué se va a ajustar o rehacer antes de lanzarlo.
 	\item \textbf{\texttt{img\_f}: ajustar.} Cambiar el fondo solo obliga a adaptarlo a la pantalla; los segmentos no se ven afectados.
 	\item \textbf{\texttt{img\_s}: rehacer.} Cambiar la imagen de segmentos invalida todo lo derivado de ella (los sprites se extraen de esa imagen): se segmenta de cero y se vacían Editor y Sprites. Es el comportamiento actual de Aplicar con un cambio de \texttt{img\_s}, ahora explícito en la confirmación («perderás el mapa y las acciones»).

@@ -409,34 +409,37 @@
       [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
     await U.cargarEn('ficheroCartucho',
       [U.fichero('gwi.zip', await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip'))], 3500);
-    const spritesOrig = BaseDescomponer.sprites().map(s => ({ id: s.id, ancho: s.ancho,
-      alto: s.alto, imagen: s.imagen }));
-    const segsOrig = BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => ({ id: s.id, x: s.x, y: s.y }));
+    // F5-I21 modelo simple: el ajuste SOLO cambia la resolución declarada.
+    // El juego (sprites y segmentos, en coordenadas de img_s) queda EXACTO:
+    // el GWI conserva el origen; el GWC escala declarada/fuente AL GENERAR
+    // (lo que aquí ya se verifica con un cartucho fuente≠declarada en C1-C4)
+    // y el emulador reescala al vuelo.
+    const spritesAntes = JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]));
+    const segsAntes = JSON.stringify(BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y]));
+    const fuenteAntes = JSON.stringify(BaseDescomponer.dimensionesBase());
     ok('C9: ajustar a 640×480 se aplica',
       BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
-    const pantalla = { ancho: 640, alto: 480, fuente: { ancho: 320, alto: 240 } };
-    // Los sprites reescalados miden lo que escalar da al original (factor ×2 entero).
-    const spritesNuevos = new Map(BaseDescomponer.sprites().map(s => [s.id, s]));
-    const dimsDe = (id) => BaseCartucho.escalar(spritesOrig.find(s => s.id === id), pantalla);
-    let spritesOK = true, improbable = 0;
-    for (const o of spritesOrig) {
-      const esperado = dimsDe(o.id), nuevo = spritesNuevos.get(o.id);
-      if (!nuevo) { spritesOK = false; break; }
-      if (nuevo.ancho !== esperado.ancho || nuevo.alto !== esperado.alto) improbable++;
-    }
-    ok('C9: los sprites miden lo mismo que da el escalar del GWC',
-      spritesOK && improbable === 0, String(improbable) + ' divergencias');
-    // Y las posiciones de los segmentos, el redondeo del generador.
-    let segsOK = true;
-    const posiciones = BaseDescomponer.segmentos().filter(s => s.tipo < 5);
-    for (let i = 0; i < posiciones.length; i++) {
-      const e = segsOrig[i];
-      if (!e || posiciones[i].id !== e.id) { segsOK = false; break; }
-      if (posiciones[i].x !== Math.round(e.x * 2) || posiciones[i].y !== Math.round(e.y * 2)) { segsOK = false; break; }
-    }
-    ok('C9: las posiciones de los segmentos son el redondeo del generador',
-      segsOK, '');
+    ok('C9: los sprites quedan EXACTOS (el juego no se reescala)',
+      JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto])) === spritesAntes, '');
+    ok('C9: las posiciones de los segmentos quedan exactas',
+      JSON.stringify(BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y])) === segsAntes, '');
+    ok('C9: img_s no se reescala (el GWI conserva el origen)',
+      JSON.stringify(BaseDescomponer.dimensionesBase()) === fuenteAntes, '');
+    ok('C9: el setup declara la nueva resolución',
+      BaseDirector.datosSetup().resolucion.ancho === 640 &&
+      BaseDirector.datosSetup().resolucion.alto === 480,
+      JSON.stringify(BaseDirector.datosSetup().resolucion));
+    // El escalar del GWC sobre el juego SIN TOCAR, con la nueva declarada:
+    // eso es lo que llevará el cartucho (más detalle que a 320×240).
+    const pantalla640 = { ancho: 640, alto: 480, fuente: BaseDescomponer.dimensionesBase() };
+    const primero = BaseDescomponer.sprites()[0];
+    const escalado = BaseCartucho.escalar(primero, pantalla640);
+    ok('C9: el escalar del GWC produce sprites para la pantalla nueva',
+      escalado && escalado.ancho > 0 && escalado.alto > 0,
+      escalado ? (escalado.ancho + '×' + escalado.alto) : 'null');
     BaseDirector.aplicarAjusteResolucion(320, 240);   // restaurar
+    ok('C9: vuelta a 320×240 con el juego exacto',
+      JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto])) === spritesAntes, '');
     return out;
   }
 

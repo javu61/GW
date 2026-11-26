@@ -285,9 +285,9 @@ if (typeof module !== 'undefined') {
     return res;
   }
 
-  // F5-I21 (E10): el AJUSTE de resolución visto desde el editor: los sprites
-  // reescalados siguen siendo blanco y negro PURO (vecino más cercano) y el
-  // round-trip a factor entero (320→640→320) es exacto.
+  // F5-I21 (E10): el AJUSTE de resolución visto desde el editor, modelo
+  // simple: SOLO cambia la resolución declarada; el juego (sprites en B/N
+  // puro y posiciones) queda EXACTO antes, durante y tras el round-trip.
   async function _pruebaE10() {
     const U = Pruebas.util;
     const res = [];
@@ -298,7 +298,7 @@ if (typeof module !== 'undefined') {
     const crudos = () => BaseDescomponer.segmentos().map(s => [s.id, s.x, s.y]);
     const en320dims = JSON.stringify(dims());
     const en320segs = JSON.stringify(crudos());
-    // ×2 entero: todo se reescala y sigue B/N puro.
+    // ×2 declarado: el juego no se toca (los sprites siguen siendo los mismos).
     ok('E10: ajustar a 640×480 se aplica',
       BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
     let puros = true, toques = 0;
@@ -319,8 +319,10 @@ if (typeof module !== 'undefined') {
       }
       if (!puros) break;
     }
-    ok('E10: los sprites reescalados siguen en blanco y negro puro', puros, String(toques) + ' sprites');
-    // Vuelta al origen (factor entero también): exacta.
+    ok('E10: los sprites siguen en blanco y negro puro (no se han tocado)', puros, String(toques) + ' sprites');
+    ok('E10: tras el ajuste el juego es byte a byte el mismo (dimensiones y posiciones)',
+      JSON.stringify(dims()) === en320dims && JSON.stringify(crudos()) === en320segs, '');
+    // Vuelta a 320×240: exacta (nada se reescala nunca).
     BaseDirector.aplicarAjusteResolucion(320, 240);
     ok('E10: round-trip 320→640→320 exacto (dimensiones y posiciones)',
       JSON.stringify(dims()) === en320dims && JSON.stringify(crudos()) === en320segs, '');

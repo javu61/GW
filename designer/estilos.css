@@ -267,6 +267,8 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 .fichaCaption { font-weight: 600; font-size: 0.9rem; }
 .fichaCampo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .fichaNota { font-size: 0.8rem; color: #a8a8a8; margin: 0; }
+/* Informativo en TEXTO (no input): no debe parecer editable (F5-I21). */
+.fichaInformativo { font-size: 0.95rem; color: #e8e8e8; }
 .fichaPar { display: flex; align-items: center; gap: 6px; }
 #fichaCartucho input[type=text], #fichaCartucho input[type=number], #fichaCartucho select,
 #fichaSetup input[type=text], #fichaSetup input[type=number], #fichaSetup select {

@@ -14,11 +14,15 @@
 //
 // PRUEBAS (grupo «editor»)
 //   Editor (E1-E9)       Un solo bloque de comprobaciones, cada una con su rótulo E1…E9.
+//   E10 (F5-I21)         Ajuste de resolución: al reescalar los sprites siguen en blanco y
+//                        negro puro, el round-trip 320→640→320 es exacto y la autoría
+//                        (historial de cambios) sobrevive.
 //
 // FUNCIONES
 //   interiores           (solo Node) Qué variables y funciones de BaseDescomponer hay que exportar.
 //   _pruebaEditor        La prueba. Recarga el GWI de ejemplo entre bloques, porque E5 deshace
 //                        todo el historial y contaminaría a los siguientes.
+//   _pruebaE10           (F5-I21) Prueba «E10 ajuste de resolución» (solo consola).
 //
 // USO
 //   Solo consola:  pruebas\Lanzar.bat editor
@@ -281,9 +285,49 @@ if (typeof module !== 'undefined') {
     return res;
   }
 
+  // F5-I21 (E10): el AJUSTE de resolución visto desde el editor: los sprites
+  // reescalados siguen siendo blanco y negro PURO (vecino más cercano) y el
+  // round-trip a factor entero (320→640→320) es exacto.
+  async function _pruebaE10() {
+    const U = Pruebas.util;
+    const res = [];
+    const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
+    const gwiBytes = await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip');
+    await U.cargarEn('ficheroCartucho', [U.fichero('cartucho.zip', gwiBytes)], 3000);
+    const dims = () => BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]);
+    const crudos = () => BaseDescomponer.segmentos().map(s => [s.id, s.x, s.y]);
+    const en320dims = JSON.stringify(dims());
+    const en320segs = JSON.stringify(crudos());
+    // ×2 entero: todo se reescala y sigue B/N puro.
+    ok('E10: ajustar a 640×480 se aplica',
+      BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
+    let puros = true, toques = 0;
+    for (const s of BaseDescomponer.sprites()) {
+      toques++;
+      const idd = s.imagen.getContext('2d').getImageData(0, 0, s.ancho, s.alto).data;
+      for (let i = 0; i < idd.length; i += 4) {
+        const r = idd[i], g = idd[i + 1], b = idd[i + 2];
+        if (idd[i + 3] !== 255 || r !== g || g !== b ||
+          (r !== 0 && r !== 255)) { puros = false; break; }
+      }
+      if (!puros) break;
+    }
+    ok('E10: los sprites reescalados siguen en blanco y negro puro', puros, String(toques) + ' sprites');
+    // Vuelta al origen (factor entero también): exacta.
+    BaseDirector.aplicarAjusteResolucion(320, 240);
+    ok('E10: round-trip 320→640→320 exacto (dimensiones y posiciones)',
+      JSON.stringify(dims()) === en320dims && JSON.stringify(crudos()) === en320segs, '');
+    // Y las acciones de autoría siguen vivas.
+    ok('E10: la autoría sobrevive al ajuste', BaseDescomponer.numeroDeCambios() > 0,
+      String(BaseDescomponer.numeroDeCambios()));
+    return res;
+  }
+
   Pruebas.registrar([
     { id: 'editor', grupo: 'editor', nombre: 'Editor (E1-E9)', necesita: 'gwi', soloConsola: true,
-      ejecutar: (o) => _pruebaEditor(o) }
+      ejecutar: (o) => _pruebaEditor(o) },
+    { id: 'ajusteResolucion', grupo: 'editor', nombre: 'E10 ajuste de resolución (F5-I21)', necesita: 'gwi', soloConsola: true,
+      ejecutar: () => _pruebaE10() }
   ]);
 })();
 

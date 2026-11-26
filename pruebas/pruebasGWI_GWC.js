@@ -26,6 +26,10 @@
 //                               por subcampo, en el cartucho) sale el porcentaje en la línea del
 //                               panel y en el aviso final; sin memoria, o a 0, no sale nada; FLASH
 //                               siempre 0 KB y 0 %. Solo en consola: el paso descarga los ficheros.
+//   C9 ajuste (F5-I21)          Tras ajustar la resolución, cada sprite mide lo mismo que da el
+//                               «escalar» del generador de GWC con la nueva pantalla, y las
+//                               posiciones de los segmentos son su redondeo canónico. Solo
+//                               consola.
 //
 // FUNCIONES
 //   _codigoEnFicha              (F5-I17) El campo solo lectura «Código GWC» de la ficha de Cartucho.
@@ -35,6 +39,7 @@
 //   _pruebaParGenerar          (F5-I17) Prueba «C7 par: generar desfasado» (solo consola).
 //   _generarConMemoria         (F5-I20) Carga setup (+ memoria) y GWI (+ memoria), genera y devuelve aviso final y panel.
 //   _pruebaMemoria             (F5-I20) Prueba «C8 memoria: porcentaje al generar» (solo consola).
+//   _pruebaAjuste              (F5-I21) Prueba «C9 ajuste de resolución» (solo consola).
 //   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
 //   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
 //   _pruebaEquivalencia         Pruebas de datos (normal y variante).
@@ -389,6 +394,49 @@
     return out;
   }
 
+  // F5-I21 (C9): el GWC que saldría tras el ajuste de resolución coincide con el
+  // que sale del cartucho original con la nueva pantalla: MISMA función escalar.
+  // Se comprueba con las APIs públicas: dimensiones reescaladas de los sprites
+  // == las que escalar da para el original a la nueva pantalla, y posiciones
+  // de los segmentos == redondeo del generador (el mismo que usa _montarSegmentos).
+  async function _pruebaAjuste() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    await U.cargarEn('ficheroCartucho',
+      [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    await U.cargarEn('ficheroCartucho',
+      [U.fichero('gwi.zip', await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip'))], 3500);
+    const spritesOrig = BaseDescomponer.sprites().map(s => ({ id: s.id, ancho: s.ancho,
+      alto: s.alto, imagen: s.imagen }));
+    const segsOrig = BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => ({ id: s.id, x: s.x, y: s.y }));
+    ok('C9: ajustar a 640×480 se aplica',
+      BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
+    const pantalla = { ancho: 640, alto: 480, fuente: { ancho: 320, alto: 240 } };
+    // Los sprites reescalados miden lo que escalar da al original (factor ×2 entero).
+    const spritesNuevos = new Map(BaseDescomponer.sprites().map(s => [s.id, s]));
+    const dimsDe = (id) => BaseCartucho.escalar(spritesOrig.find(s => s.id === id), pantalla);
+    let spritesOK = true, improbable = 0;
+    for (const o of spritesOrig) {
+      const esperado = dimsDe(o.id), nuevo = spritesNuevos.get(o.id);
+      if (!nuevo) { spritesOK = false; break; }
+      if (nuevo.ancho !== esperado.ancho || nuevo.alto !== esperado.alto) improbable++;
+    }
+    ok('C9: los sprites miden lo mismo que da el escalar del GWC',
+      spritesOK && improbable === 0, String(improbable) + ' divergencias');
+    // Y las posiciones de los segmentos, el redondeo del generador.
+    let segsOK = true;
+    const posiciones = BaseDescomponer.segmentos().filter(s => s.tipo < 5);
+    for (let i = 0; i < posiciones.length; i++) {
+      const e = segsOrig[i];
+      if (!e || posiciones[i].id !== e.id) { segsOK = false; break; }
+      if (posiciones[i].x !== Math.round(e.x * 2) || posiciones[i].y !== Math.round(e.y * 2)) { segsOK = false; break; }
+    }
+    ok('C9: las posiciones de los segmentos son el redondeo del generador',
+      segsOK, '');
+    BaseDirector.aplicarAjusteResolucion(320, 240);   // restaurar
+    return out;
+  }
+
   Pruebas.registrar([
     { id: 'equivalencia', grupo: 'gwi_gwc', nombre: 'C1 equivalencia (datos)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(false) },
     { id: 'equivalenciaVariante', grupo: 'gwi_gwc', nombre: 'C2 equivalencia (variante)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(true) },
@@ -397,7 +445,8 @@
     { id: 'parFicha', grupo: 'gwi_gwc', nombre: 'C5 par: ficha codigoGWC', necesita: 'gwi', ejecutar: (o) => _pruebaParFicha(o) },
     { id: 'parGuardar', grupo: 'gwi_gwc', nombre: 'C6 par: guardar despareja', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaParGuardar() },
     { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'C7 par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) },
-    { id: 'memoria', grupo: 'gwi_gwc', nombre: 'C8 memoria: porcentaje al generar', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaMemoria(o) }
+    { id: 'memoria', grupo: 'gwi_gwc', nombre: 'C8 memoria: porcentaje al generar', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaMemoria(o) },
+    { id: 'ajuste', grupo: 'gwi_gwc', nombre: 'C9 ajuste de resolución (F5-I21)', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaAjuste() }
   ]);
 })();
 

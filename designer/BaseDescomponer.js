@@ -2277,6 +2277,108 @@ const BaseDescomponer = (() => {
     _pintarMapa();
   }
 
+  // ---- Ajuste de resolución (F5-I21) ----
+
+  /**
+   * F5-I21 (ajustar, no borrar): reescala la geometría en memoria a una
+   * nueva resolución, SIN perder la autoría. La fuente de verdad son las
+   * COMPONENTES de base (props, uniones, cambios y ficticios viven por
+   * ÍNDICE, nunca por geometría), así que el ajuste reescala las cajas y
+   * los píxeles de cada componente y vuelve a reconstruir: reagrupar
+   * recalcula grupos, sprites (imágenes fusionadas) y cajas con la
+   * nueva geometría y las propiedades quedan intactas.
+   * Redondeo: el MISMO que el generador del GWC (BaseCartucho.escalar —
+   * cajas con Math.round, muestreo del origen con Math.floor), de modo
+   * que ajustar en pantalla y generar dan el mismo resultado.
+   * @param {number} anchoNuevo - Nuevo ancho de pantalla (px).
+   * @param {number} altoNuevo - Nuevo alto de pantalla (px).
+   * @returns {{ancho:number, alto:number, fx:number, fy:number}} Lo
+   *        aplicado (por si el director informa); lanza Error si no hay
+   *        juego en memoria o los valores no son válidos.
+   */
+  function ajustarAResolucion(anchoNuevo, altoNuevo) {
+    if (!base) throw new Error('no hay juego en memoria que ajustar.');
+    anchoNuevo = Math.round(Number(anchoNuevo));
+    altoNuevo = Math.round(Number(altoNuevo));
+    if (!(anchoNuevo >= 1) || !(altoNuevo >= 1) ||
+      !isFinite(anchoNuevo) || !isFinite(altoNuevo)) {
+      throw new Error('la nueva resolución no es válida.');
+    }
+    const anchoViejo = base.ancho, altoViejo = base.alto;
+    if (anchoNuevo === anchoViejo && altoNuevo === altoViejo) {
+      return { ancho: anchoNuevo, alto: altoNuevo, fx: 1, fy: 1 };
+    }
+    // Escala por eje: el mismo concepto que _escalasDePantalla del GWC
+    // (pantalla declarada respecto de la imagen fuente).
+    const fx = anchoNuevo / anchoViejo;
+    const fy = altoNuevo / altoViejo;
+    for (const c of base.comps) _escalarComp(c, fx, fy, anchoNuevo);
+    base.ancho = anchoNuevo;
+    base.alto = altoNuevo;
+    _reindexarPixeles();
+    // Los ficticios llevan su caja a mano: se reescala aparte (surviven
+    // con los mismos ids negativos y sus enlaces intactos).
+    for (const f of ficticios) {
+      const nx = Math.round(f.x * fx), ny = Math.round(f.y * fy);
+      f.ancho = Math.max(1, Math.round(f.ancho * fx));
+      f.alto = Math.max(1, Math.round(f.alto * fy));
+      f.x = nx; f.y = ny;
+    }
+    // Grupos, sprites (imágenes fusionadas) y cajas, de la geometría nueva.
+    _reconstruir();
+    // Mapa de trabajo, listas y pantalla del aparato, con la nueva escala.
+    _refrescar();
+    return { ancho: anchoNuevo, alto: altoNuevo, fx: fx, fy: fy };
+  }
+
+  /**
+   * Reescala UNA componente (F5-I21): su caja por eje (Math.round, como
+   * el GWC) y su mapa de píxeles por vecino más cercano DENTRO de su
+   * propia caja (como escalar muestrea dentro del sprite). El destino
+   * nunca queda vacío si la origen lo tenía: la caja mínima es 1×1.
+   * @param {Object} c - Componente del extractor (x, y, ancho, alto, pixeles…).
+   * @param {number} fx - Escala por eje x.
+   * @param {number} fy - Escala por eje y.
+   * @param {number} anchoNuevo - Ancho de la imagen nueva (índices absolutos).
+   * @returns {void}
+   */
+  function _escalarComp(c, fx, fy, anchoNuevo) {
+    const nx = Math.round(c.x * fx), ny = Math.round(c.y * fy);
+    const dw = Math.max(1, Math.round(c.ancho * fx));
+    const dh = Math.max(1, Math.round(c.alto * fy));
+    // Bitmap de su caja actual (solo los píxeles NEGRO de la componente).
+    const manga = new Uint8Array(c.ancho * c.alto);
+    for (const p of c.pixeles) {
+      manga[(((p / base.ancho) | 0) - c.y) * c.ancho + ((p % base.ancho) - c.x)] = 1;
+    }
+    const pixeles = [];
+    for (let y = 0; y < dh; y++) {
+      const sy = Math.min(c.alto - 1, Math.floor(y / fy));
+      const fila = (ny + y) * anchoNuevo + nx;
+      for (let x = 0; x < dw; x++) {
+        const sx = Math.min(c.ancho - 1, Math.floor(x / fx));
+        if (manga[sy * c.ancho + sx]) pixeles.push(fila + x);
+      }
+    }
+    c.x = nx; c.y = ny;
+    c.ancho = dw; c.alto = dh;
+    c.x2 = nx + dw - 1; c.y2 = ny + dh - 1;
+    c.superficie = pixeles.length;
+    c.pixeles = pixeles;
+  }
+
+  /**
+   * Reconstruye el mapa pixel→componente del extractor tras el ajuste
+   * (lo llenaba extraerBN al nacer; aquí las componentes ya escaladas).
+   * @returns {void}
+   */
+  function _reindexarPixeles() {
+    base.indicePixel = new Int32Array(base.ancho * base.alto).fill(-1);
+    for (let i = 0; i < base.comps.length; i++) {
+      for (const p of base.comps[i].pixeles) base.indicePixel[p] = i;
+    }
+  }
+
   // ---- Interacción ----
 
   /**
@@ -5401,6 +5503,8 @@ const BaseDescomponer = (() => {
     sprites: () => sprites,
     listar: listar,
     numeroDeCambios: numeroDeCambios,            // F5-I17 (M3): acciones de la autoría en curso
+    ajustarAResolucion: ajustarAResolucion,      // F5-I21: ajustar (no rehacer) al cambiar resolución
+    dimensionesBase: () => base ? { ancho: base.ancho, alto: base.alto } : null,   // F5-I21: ventana de ajuste
     reset: reset,
     inicializar: inicializar
   };

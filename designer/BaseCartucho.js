@@ -57,6 +57,8 @@
 //   validarTopes            Comprueba el tope de 255 elementos por índice.
 //   _viajanEnGWC            Qué segmentos y sprites viajan al GWC.
 //   escalar                 Sprite → máscara de 1 bit escalada a la pantalla.
+//                             (F5-I21: exportada; el ajuste de resolución
+//                             del editor usa el MISMO redondeo que el GWC.)
 //   indiceDe                Id legible → índice de 1 byte (0xFF = nulo).
 //   bloque                  Estructura común de un bloque.
 //   _crc16                  CRC-16/CCITT-FALSE del cuerpo del GWC (F5-I14).
@@ -2695,6 +2697,7 @@ var BaseCartucho = (function () {
     verificarCartucho: verificarCartucho,
     // Límites de campos por fichero (F5-I16)
     revisarValores: revisarValores,
+    avisosDeResolucion: _avisosDeResolucion,   // F5-I21: la ventana de resolución la usa para el rango
     limitarValor: limitarValor,
     // Memoria del hardware (F5-I20)
     memoriaNoCero: memoriaNoCero,
@@ -2709,6 +2712,7 @@ var BaseCartucho = (function () {
     validarTopes: validarTopes,
     estadistica: estadistica,
     // Utilidades compartidas
+    escalar: escalar,               // F5-I21: la misma conversión que el GWC (ajuste de resolución)
     cargarImagen: cargarImagen,
     imagenBlob: imagenBlob,
     revocarURLs: revocarURLs

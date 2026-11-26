@@ -63,7 +63,7 @@ const BaseSetup = (function () {
   };
 
   let raiz = null;                // contenedor ya construido
-  let campos = {};                // nombre, descripcion, estilo, ancho, alto, ram, flash
+  let campos = {};                // nombre, descripcion, estilo, ancho, alto (F5-I21: solo lectura), ram, flash
   let datosBoton = {};            // número → {puerto, tecla, alias} (sobrevive al cambio de estilo)
   let cuerpoBotones = null;
   let mensajes = null;
@@ -266,10 +266,18 @@ const BaseSetup = (function () {
     }
     campos.estilo = _campo(rejilla, 'Estilo', estilo);
     const par = _crearElemento('div', 'fichaPar');
-    campos.ancho = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.ancho, step: 1, placeholder: 'ancho' });
-    campos.alto = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.alto, step: 1, placeholder: 'alto' });
+    // F5-I21: el ancho y el alto NO se editan a mano; se cambian con el
+    // botón «Ajustar resolución» (su ventana muestra los valores actuales,
+    // los nuevos, el factor de escala y si afecta a los segmentos).
+    campos.ancho = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.ancho, step: 1, placeholder: 'ancho', readOnly: true });
+    campos.alto = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.alto, step: 1, placeholder: 'alto', readOnly: true });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
-    _campo(rejilla, 'Resolución', par, 'Píxeles de la pantalla.');
+    const btnAjustar = document.createElement('button');
+    btnAjustar.type = 'button';
+    btnAjustar.textContent = 'Ajustar resolución';
+    btnAjustar.title = 'Ventana de ajuste (F5-I21): valores actuales, nuevos, factor de escala y si afecta a los segmentos.';
+    par.appendChild(btnAjustar);
+    _campo(rejilla, 'Resolución', par, 'Se cambia con el botón, no a mano.');
     // F5-I20 (MA02): memoria del hardware, opcional (vacío = 0).
     campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
     campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
@@ -298,10 +306,15 @@ const BaseSetup = (function () {
     contenedor.appendChild(mensajes);
 
     campos.estilo.addEventListener('change', _pintarTablaBotones);
-    // F5-I16 (M5): la resolución se verifica AL TECLEAR (y al aplicar y
-    // al guardar, que pasan por verificar): fuera de rango, error visible.
-    campos.ancho.addEventListener('change', () => verificar({ mostrar: true }));
-    campos.alto.addEventListener('change', () => verificar({ mostrar: true }));
+    // F5-I21: el botón de ajuste abre la ventana del director. Los campos
+    // ancho/alto son de SOLO LECTURA y ya no disparan eventos de teclado;
+    // la verificación de la resolución sigue corriendo al aplicar y al
+    // guardar (todo pasa por verificar) y la ventana valida ANTES.
+    btnAjustar.addEventListener('click', () => {
+      if (typeof BaseDirector !== 'undefined' && BaseDirector.ajustarResolucion) {
+        BaseDirector.ajustarResolucion();
+      }
+    });
     contenedor.addEventListener('input', () => _marcarCambios(true));
     contenedor.addEventListener('change', () => _marcarCambios(true));
     _pintarTablaBotones();

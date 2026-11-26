@@ -26,12 +26,17 @@
 //       memoria del setup derivado sale del cartucho, subcampo a subcampo. Con
 //       cartucho en memoria pide SIEMPRE confirmación (cancelar conserva, confirmar
 //       aplica) y con GW_DEBUG no se pide (criterio D8).
+//   D10 (F5-I21) Ajuste de resolución: a la misma resolución no toca nada; con juego
+//       en memoria REESCALA imágenes, sprites y posiciones con el redondeo del GWC
+//       (más escalar, F5-I21), la autoría queda intacta, Fuera de rango (F5-I16) se
+//       rechaza sin tocar nada; la ventana muestra actuales, nuevos, factor de escala
+//       y si afecta a los segmentos; cancelar conserva todo.
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 ... _pruebaD9
-//                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20).
+//   _pruebaD1 ... _pruebaD10
+//                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20; D10: F5-I21).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -340,6 +345,82 @@
     return out;
   }
 
+  // F5-I21 (D10): el AJUSTE de resolución (la ventana es la confirmación; la
+  // vía programática aplicarAjusteResolucion es lo que usan también C9 y E10).
+  async function _pruebaD10() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const estado = () => document.getElementById('estado').textContent;
+    const crudos = (segs) => JSON.stringify(segs.filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y]));
+    // Previo: setup2 + GWI con autoría.
+    await U.cargarEn('ficheroCartucho',
+      [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    await U.cargarEn('ficheroCartucho',
+      [U.fichero('gwi.zip', await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip'))], 3500);
+    ok('D10 (previo): el GWI cargó con juego en memoria',
+      BaseDescomponer.segmentos().length > 0 && BaseDirector.datosCartucho() !== null,
+      JSON.stringify(_estado()));
+    const acciones = BaseDescomponer.numeroDeCambios();
+    const en320 = crudos(BaseDescomponer.segmentos());
+    // 1. A la MISMA resolución no toca nada (y no pide nada).
+    ok('D10: ajustar a la misma resolución no toca nada',
+      BaseDirector.aplicarAjusteResolucion(320, 240) === true &&
+      crudos(BaseDescomponer.segmentos()) === en320, '');
+    // 2. Ajuste a 640×480: posiciones ×2 (redondeo del GWC) y autoría intacta.
+    const previos = JSON.parse(en320);   // [id, x, y] en 320×240
+    ok('D10: ajustar a 640×480 se aplica',
+      BaseDirector.aplicarAjusteResolucion(640, 480) === true, estado());
+    const actuales = BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y]);
+    ok('D10: las posiciones se reescalan con el redondeo del GWC (×2 entero)',
+      actuales.length === previos.length && actuales.every((a, i) =>
+        a[0] === previos[i][0] && a[1] === Math.round(previos[i][1] * 2) &&
+        a[2] === Math.round(previos[i][2] * 2)),
+      JSON.stringify(actuales[0]));
+    ok('D10: la autoría queda intacta (mismas acciones)',
+      BaseDescomponer.numeroDeCambios() === acciones, String(acciones));
+    ok('D10: el setup declara la nueva resolución',
+      BaseDirector.datosSetup().resolucion.ancho === 640 &&
+      BaseDirector.datosSetup().resolucion.alto === 480,
+      JSON.stringify(BaseDirector.datosSetup().resolucion));
+    ok('D10: la pantalla del aparato mide lo nuevo',
+      document.getElementById('pantalla').width === 640 &&
+      document.getElementById('pantalla').height === 480, 'canvas');
+    // 3. Fuera de rango (F5-I16): se rechaza ANTES de tocar nada (atómico).
+    ok('D10: fuera de rango (200×200) se rechaza sin tocar nada',
+      BaseDirector.aplicarAjusteResolucion(200, 200) === false &&
+      BaseDirector.datosSetup().resolucion.ancho === 640, estado());
+    // 4. La ventana: contenido, fuera de rango deshabilita y cancelar conserva.
+    BaseDirector.ajustarResolucion();
+    const vent = document.querySelector('.ventanaResolucion');
+    ok('D10: la ventana abre con factor de escala y efecto sobre los segmentos',
+      vent && /Factor de escala/.test(vent.textContent) &&
+        /se reescalar/.test(vent.textContent) && /Afectará\ a\ los\ segmentos|Afectará\ /.test(vent.textContent),
+      vent ? vent.textContent.slice(0, 100) : '(sin ventana)');
+    const botonesVent = () => Array.from(vent.querySelectorAll('button'));
+    let btnCancelar = botonesVent().find(b => b.textContent === 'Cancelar');
+    ok('D10: la ventana tiene Cancelar y Ajustar resolución',
+      btnCancelar && botonesVent().some(b => b.textContent === 'Ajustar resolución'), '');
+    btnCancelar.click();
+    ok('D10: cancelar cierra y conserva', !document.querySelector('.ventanaResolucion') &&
+      BaseDirector.datosSetup().resolucion.ancho === 640, '');
+    BaseDirector.ajustarResolucion();
+    const vent2 = document.querySelector('.ventanaResolucion');
+    const inputs = Array.from(vent2.querySelectorAll('input[type=number]'));
+    inputs[0].value = '200'; inputs[1].value = '200';
+    inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+    inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+    const btnFuera = Array.from(vent2.querySelectorAll('button'))
+      .find(b => b.textContent === 'Ajustar resolución');
+    ok('D10: fuera de rango la ventana deshabilita «Ajustar resolución»',
+      btnFuera && btnFuera.disabled && /fuera del rango/.test(vent2.textContent), '');
+    Array.from(vent2.querySelectorAll('button')).find(b => b.textContent === 'Cancelar').click();
+    // 5. Ida y vuelta con factor entero: exacta (.segments como al principio).
+    BaseDirector.aplicarAjusteResolucion(320, 240);
+    ok('D10: vuelta a 320×240 exacta (factor entero en ambas direcciones)',
+      crudos(BaseDescomponer.segmentos()) === en320, '');
+    return out;
+  }
+
   Pruebas.registrar([
     // F5-I19: d5 y d6 necesitan la página RECIÉN cargada: d5 PRIMERO.
     { id: 'd5', grupo: 'director', nombre: 'D5 GWC sin máquina (requiere página recién cargada)', destructiva: false, ejecutar: () => _pruebaD5() },
@@ -350,7 +431,8 @@
     { id: 'd4', grupo: 'director', nombre: 'D4 GWB sobre autoría', destructiva: true, ejecutar: () => _pruebaD4() },
     { id: 'd7', grupo: 'director', nombre: 'D7 cambio de máquina en caliente (F5-I19)', destructiva: true, ejecutar: () => _pruebaD7() },
     { id: 'd8', grupo: 'director', nombre: 'D8 botón Limpiar de la Carga (F5-I19)', destructiva: true, ejecutar: () => _pruebaD8() },
-    { id: 'd9', grupo: 'director', nombre: 'D9 aplicar propaga datos comunes y confirma (F5-I20)', destructiva: true, ejecutar: () => _pruebaD9() }
+    { id: 'd9', grupo: 'director', nombre: 'D9 aplicar propaga datos comunes y confirma (F5-I20)', destructiva: true, ejecutar: () => _pruebaD9() },
+    { id: 'd10', grupo: 'director', nombre: 'D10 ajuste de resolución (F5-I21)', destructiva: true, ejecutar: () => _pruebaD10() }
   ]);
 })();
 

@@ -5,8 +5,10 @@
 // PROPÓSITO
 //   La pestaña «Setup» (F5-I12): la ficha del setup (GWS), con los
 //   datos de la máquina: nombre, descripción, estilo, resolución y la
-//   tabla de botones (número, puerto, tecla y alias). Sirve para crear
-//   un GWS desde cero o para ver y retocar el que se ha cargado.
+//   tabla de botones (número, puerto, tecla y texto de pantalla;
+//   F5-I21: el «Texto Pantalla» es el alias que viaja a los cartuchos).
+//   Sirve para crear un GWS desde cero o para ver y retocar el que se
+//   ha cargado.
 //
 // BORRADOR
 //   Lo que se escribe en la ficha NO afecta al resto del programa hasta
@@ -176,7 +178,8 @@ const BaseSetup = (function () {
   function _pintarTablaBotones() {
     for (const tr of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
       const q = (c) => tr.querySelector('.' + c).value;
-      datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: _teclaDeFila(tr), alias: q('colAlias') };
+      // F5-I21: el alias de la ficha es el «Texto Pantalla» del botón.
+      datosBoton[tr.dataset.numero] = { puerto: q('colPuerto'), tecla: _teclaDeFila(tr), alias: q('colTextoPantalla') };
     }
     cuerpoBotones.textContent = '';
     const numeros = botonesDelEstilo(campos.estilo.value);
@@ -229,7 +232,7 @@ const BaseSetup = (function () {
         tecla.classList.toggle('oculto', lista.value !== 'tecla');
         if (lista.value !== 'tecla') tecla.value = '';
       });
-      const alias = _entrada('text', { className: 'colAlias', value: d.alias });
+      const alias = _entrada('text', { className: 'colTextoPantalla', value: d.alias });
       alias.style.minWidth = '8em';
       const tdPuerto = _crearElemento('td');
       tdPuerto.appendChild(puerto);
@@ -291,7 +294,9 @@ const BaseSetup = (function () {
     const tabla = _crearElemento('table', 'fichaTabla');
     const cab = _crearElemento('thead');
     const trCab = _crearElemento('tr');
-    for (const t of ['Botón', 'Puerto', 'Tecla', 'Alias']) trCab.appendChild(_crearElemento('th', null, t));
+    // F5-I21: la columna «Alias» se llama «Texto Pantalla»: es el texto
+    // que se ve en el botón de la máquina y el que viaja a los cartuchos.
+    for (const t of ['Botón', 'Puerto', 'Tecla', 'Texto Pantalla']) trCab.appendChild(_crearElemento('th', null, t));
     cab.appendChild(trCab);
     cuerpoBotones = _crearElemento('tbody');
     tabla.append(cab, cuerpoBotones);
@@ -299,6 +304,7 @@ const BaseSetup = (function () {
     seccionBot.appendChild(_crearElemento('p', 'fichaNota',
       'Puerto: pin del botón en la máquina real. Tecla: cursor o letra del teclado del PC para probar en el simulador ' +
       '(elige en la lista; «Propia (letra)» abre la casilla A..Z). Sin tecla se usa la de por defecto del estilo. ' +
+      'Texto Pantalla: el texto que se ve en el botón de la máquina y el que viaja en los cartuchos (F5-I21). ' +
       'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
     contenedor.appendChild(seccionBot);
 

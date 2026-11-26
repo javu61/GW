@@ -301,7 +301,7 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
    de letra aparte; el texto de la casilla va en mayúscula como antes. */
 #fichaSetup select.colTeclaLista { min-width: 0; width: 13em; }
 #fichaSetup input.colTeclaLetra { min-width: 0; width: 3em; text-align: center; text-transform: uppercase; }
-#fichaSetup input.colAlias { min-width: 0; width: 8em; }
+#fichaSetup input.colTextoPantalla { min-width: 0; width: 8em; }   /* F5-I21: antes colAlias */
 
 /* Para manejar campo multilínea */
 .fichaCaption.multilinea {

@@ -74,6 +74,7 @@
 //   refrescar / refrescarInfo
 //                          Repinta mapa, aparato y panel de información.
 //   resumen                Nº de segmentos e imágenes (panel del Editor).
+//   direccionesDeJugador   Direcciones que usan los segmentos de jugador (¿cabe el juego en otro estilo?, F5-I21).
 //
 //  Lista de segmentos (pestaña Segmentos y Sprites, F5-I7)
 //   pintarListaSegmentos   Las cinco sublistas con su imagen.
@@ -1467,6 +1468,26 @@ const BaseDescomponer = (() => {
       segmentos: grupos.filter(g => !_esCartucho(g)).length,
       imagenes: sprites.length
     };
+  }
+
+  /**
+   * Las direcciones que usan los segmentos de tipo JUGADOR (F5-I21): las
+   * de sus enlaces izquierda/derecha/arriba/abajo que están definidos.
+   * Sirve para decidir si un estilo de máquina (con menos botones) sigue
+   * siendo compatible con el juego en memoria. Solo lectura.
+   * @returns {string[]} Las direcciones usadas, sin repetir (vacío sin juego).
+   */
+  function direccionesDeJugador() {
+    const usadas = new Set();
+    for (const g of grupos) {
+      if (_esCartucho(g) || g.absorbido) continue;
+      const p = _propsDe(g.raiz);
+      if (p.tipo !== 'jugador') continue;
+      for (const d of ENLACES_JUGADOR) {
+        if (p[d] !== null && p[d] !== undefined) usadas.add(d);
+      }
+    }
+    return Array.from(usadas);
   }
 
   // ---- Lista de segmentos (pestaña Segmentos y Sprites, F5-I7) ----
@@ -5039,14 +5060,16 @@ const BaseDescomponer = (() => {
     const pctGWC = gwc.bytes.length + gwc.ahorroSprites > 0
       ? Math.round((gwc.ahorroSprites / (gwc.bytes.length + gwc.ahorroSprites)) * 100) : 0;
     BaseDirector.avisar(BaseCartucho.estadistica(gwc));
-    // F5-I20 (MA02): ocupación de la memoria, solo informativa. Efectiva =
-    // la del cartucho (ficha) o, por subcampo, la del setup; sin memoria
-    // (o a 0) no hay texto. RAM usada = bytes del GWC; FLASH usada = el
-    // bloque de fondo, que hoy no se cuenta (0).
+    // F5-I20 (MA02) y F5-I21: ocupación de la memoria, solo informativa. La
+    // memoria es la del Setup (solo se edita allí y es la que lleva el GWI);
+    // sin memoria (o a 0) no hay texto. RAM usada = bytes del GWC; FLASH
+    // usada = el bloque de fondo, que hoy no se cuenta (0). Los informativos
+    // «Último GWC calculado» y «Último fondo» del Setup salen de aquí mismo.
     const setupMem = BaseDirector.datosSetup();
-    const textoMemoria = BaseCartucho.ocupacionMemoria(
-      BaseCartucho.memoriaEfectiva(json.memoria, setupMem ? setupMem.memoria : null),
-      gwc.bytes.length, 0);
+    const memoriaSetup = BaseCartucho.memoriaNoCero(setupMem ? setupMem.memoria : null);
+    const bytesFondo = 0;
+    const textoMemoria = BaseCartucho.ocupacionMemoria(memoriaSetup || {}, gwc.bytes.length, bytesFondo);
+    BaseSetup.informarUltimos({ gwc: gwc.bytes.length, fondo: bytesFondo, memoria: memoriaSetup });
     const avisoMemoria = textoMemoria ? ' ' + textoMemoria : '';
     // 4. El GWI después, con el Código GWC del par: el código del
     // GWC recién generado (TEXTO «#HHHH#», visible igual que en la
@@ -5168,7 +5191,7 @@ const BaseDescomponer = (() => {
       resolucion: ficha.resolucion || null,
       // ColorFondo (F5-I14): solo viaja si no es el blanco por defecto.
       ...(ficha.colorFondo ? { ColorFondo: ficha.colorFondo } : {}),
-      // Memoria propia del cartucho (F5-I20): solo los subcampos ≠ 0.
+      // Memoria del setup vigente (F5-I21; solo los subcampos ≠ 0): la ficha la trae de allí.
       ...(ficha.memoria ? { memoria: ficha.memoria } : {}),
       // Regla «combinar» (F3-I1): del GWB/GWI cargado (extras de la
       // ficha). El GWI la lleva SIEMPRE que esté activa: el GWC toma
@@ -5499,6 +5522,7 @@ const BaseDescomponer = (() => {
     repintarAparato: pintarPantallaAutoria,       // F5-I10: tras cambiar img_f en la ficha
     pintarListaSegmentos: pintarListaSegmentos,   // F5-I7
     resumen: resumen,                             // F5-I7: panel del Editor
+    direccionesDeJugador: direccionesDeJugador,   // F5-I21: ¿cabe el juego en otro estilo?
     segmentos: segmentos,
     sprites: () => sprites,
     listar: listar,

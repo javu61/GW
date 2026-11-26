@@ -28,7 +28,7 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 	\item \textbf{Campo opcional \texttt{memoria}, con dos subcampos \texttt{RAM} y \texttt{FLASH},} en KB, enteros $\ge 0$, que PUEDEN QUEDAR A CERO (o simplemente no venir, lo que vale lo mismo). Se incluye en PANTALLAS (GWS) y CARTUCHOS (GWB/GWI), en la raíz del JSON: 
 	\texttt{<<memoria>>: \{<<RAM>>: 216, <<FLASH>>: 0\}}.
 	
-	\item \textbf{¿De dónde sale la memoria vigente al calcular?} De lo que
+	\item \textbf{(Superado en F5-I21: la memoria solo se edita en el Setup, que es la única que se usa al calcular; los cartuchos generados la llevan en su raíz y, al cargarse, pasa al Setup.)} \textbf{¿De dónde sale la memoria vigente al calcular?} De lo que
 	MANDA: la memoria del cartucho (GWB/GWI) si la declara; si no, la del
 	setup (GWS); si ninguna existe o ambas están a cero, NO se muestra
 	ningún porcentaje ni ningún aviso (nada que informar).

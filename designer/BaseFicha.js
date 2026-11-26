@@ -20,9 +20,9 @@
 //   - Botones: la tabla de los botones posibles según el estilo
 //     elegido (incluido el trío de sistema A/B/R, 6-7-8), con «Usado»,
 //     «id» y «Tecla» (F5-I17, M7: el mismo desplegable que el setup).
-//   - Memoria (F5-I20, MA02): «RAM (KB)» y «FLASH (KB)», opcionales (vacío = 0):
-//     si el cartucho las declara mandan sobre las del setup al informar de
-//     la ocupación; se escriben en el GWB/GWI solo si no son 0.
+//   - Memoria (F5-I21): ya NO se edita aquí (RAM y FLASH son del Setup).
+//     El GWB/GWI que sale de la ficha lleva la memoria del setup vigente
+//     (solo los subcampos ≠ 0): el cartucho es la fuente de verdad al guardarse.
 //
 // SEPARACIÓN
 //   No conoce al descomponedor: solo pinta y guarda el estado de la
@@ -56,7 +56,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _pintarTablaBotones     _campo
-//    _teclaDeFicha       _memoriaCruda
+//    _teclaDeFicha       _memoriaDelSetup
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
@@ -140,20 +140,32 @@ const BaseFicha = (function () {
     return e;
   }
 
-  /**
-   * Fila «caption + campo» de la rejilla de datos.
-   * @param {HTMLElement} padre - Rejilla.
-   * @param {string} caption - Texto del caption.
-   * @param {HTMLElement} control - Input o select.
-   * @param {string} [nota] - Aclaración al lado del campo.
-   * @returns {HTMLElement} El control.
-   */
-  function _campo(padre, caption, control, nota) {
-    const etiqueta = _crearElemento('label', 'fichaCaption', caption);
-    padre.appendChild(etiqueta);
+ /** Añade una fila «caption + control (+ nota)» a la rejilla. 
+   * @param {HTMLElement} padre - Elemento donde se añade la fila.
+   * @param {string} caption - Texto de la etiqueta.
+   * @param {HTMLElement} control - Control (input, select, textarea...).
+   * @param {string} [nota] - Nota opcional.
+   * @param {boolean} [multilinea=false] - true si el control es multilinea, por defecto es false.
+   * @returns {HTMLElement} El control añadido.
+  */
+  function _campo(padre, caption, control, nota, multilinea = false) {
+    const lbl = _crearElemento('div', 'fichaCaption', caption);
     const celda = _crearElemento('div', 'fichaCampo');
+
+    if (multilinea) {
+      // Si no pasas un control o pasas un input normal, creamos un textarea
+      if (!control || control.tagName !== 'TEXTAREA') {
+        control = _crearElemento('textarea');
+      }
+      control.rows = 3;
+      lbl.classList.add('multilinea');   // Clase extra por si quieres alinear arriba
+      celda.classList.add('multilinea'); // Clase extra para que ocupe más ancho si quieres
+    }
+
     celda.appendChild(control);
     if (nota) celda.appendChild(_crearElemento('span', 'fichaNota', nota));
+
+    padre.appendChild(lbl);
     padre.appendChild(celda);
     return control;
   }
@@ -361,8 +373,10 @@ const BaseFicha = (function () {
       const tdNumero = _crearElemento('td', null, String(n) +
         (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
       const tdId = _crearElemento('td');
-      const id = _entrada('text', { className: 'colId', value: previo.id,
-        placeholder: 'id lógico (IZQ, DER, Start…)' });
+      const id = _entrada('text', {
+        className: 'colId', value: previo.id,
+        placeholder: 'id lógico (IZQ, DER, Start…)'
+      });
       id.disabled = !usado.checked;
       tdId.appendChild(id);
       // F5-I17 (M7): la tecla se elige en la misma lista cerrada que el
@@ -370,7 +384,7 @@ const BaseFicha = (function () {
       // solo editable si el botón está Usado.
       const lista = _crearElemento('select', 'colTeclaLista');
       for (const [valor, texto] of [['', '(sin tecla)'],
-        ...CURSORES.map(c => [c, c]), ['tecla', 'Propia (letra)']]) {
+      ...CURSORES.map(c => [c, c]), ['tecla', 'Propia (letra)']]) {
         const o = document.createElement('option');
         o.value = valor; o.textContent = texto;
         lista.appendChild(o);
@@ -380,8 +394,10 @@ const BaseFicha = (function () {
       else if (/^[a-zA-Z]$/.test(nombreTecla) ||
         (/^[1-3]$/.test(nombreTecla) && NOMBRE_SISTEMA[n])) lista.value = 'tecla';
       else lista.value = '';
-      const letra = _entrada('text', { className: 'colTeclaLetra', maxLength: 1,
-        value: lista.value === 'tecla' ? String(previo.tecla || '').toUpperCase() : '' });
+      const letra = _entrada('text', {
+        className: 'colTeclaLetra', maxLength: 1,
+        value: lista.value === 'tecla' ? String(previo.tecla || '').toUpperCase() : ''
+      });
       letra.classList.toggle('oculto', lista.value !== 'tecla');
       letra.placeholder = NOMBRE_SISTEMA[n] ? 'A..Z o 1-3' : 'A..Z';
       lista.addEventListener('change', () => {
@@ -437,12 +453,15 @@ const BaseFicha = (function () {
     const datos = _crearElemento('section', 'fichaSeccion');
     datos.appendChild(_crearElemento('h3', null, 'Datos del GWB'));
     const rejilla = _crearElemento('div', 'fichaRejilla');
-    campos.nombre = _campo(rejilla, 'Nombre', _entrada('text', { placeholder: 'Nombre del cartucho' }));
+    campos.nombre = _campo(rejilla, 'Nombre del Cartucho', _entrada('text', { placeholder: 'Nombre del cartucho' }));
     // F5-I17 (M13): descripción del cartucho (opcional), mismo significado
     // que en el GWS; viaja a nivel superior en GWB y GWI (el GWC no lleva
     // textos). Su uso en pantalla llegará con el selector de máquinas.
-    campos.descripcion = _campo(rejilla, 'Descripción',
-      _entrada('text', { placeholder: 'Para qué es esta máquina' }));
+    campos.descripcion = _campo(rejilla,
+      'Descripción del Cartucho',
+      _entrada('text', { placeholder: 'Para qué es esta máquina' }),
+      'informativa',
+      true);
     const estilo = document.createElement('select');
     for (const [valor, texto] of [['', '(sin definir)'], ['2', '2 botones'],
     ['4', '4 botones'], ['5', '5 botones']]) {
@@ -464,11 +483,6 @@ const BaseFicha = (function () {
     _campo(rejilla, 'Resolución', par,
       'Solo lectura: se cambia en Setup.');
     _enlacePestanaNatural(par);
-    // F5-I20 (MA02): memoria propia del cartucho, opcional (vacío = 0).
-    campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
-    campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
-    _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: si falta o es 0, se usa la del setup cargado.');
-    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: si falta o es 0, se usa la del setup cargado.');
     campos.colorFondo = _entrada('color', { value: COLOR_BLANCO });
     _campo(rejilla, 'Color de fondo', campos.colorFondo,
       'Se usa si no hay img_f (blanco por defecto).');
@@ -660,8 +674,6 @@ const BaseFicha = (function () {
       }
       teclasVistas.add(b.tecla.toLowerCase());
     }
-    // F5-I20 (MA02): memoria no válida = aviso (nunca bloquea) y vale 0.
-    avisos.push(...BaseCartucho.revisarValores('GWB', { memoria: _memoriaCruda() }));
     if (e.botones.length === 0) avisos.push('El cartucho no declara botones: se usarán los del setup.');
     // Validación del contrato del GWB (la misma que al cargarlo). El
     // mapa de ficheros se monta aquí con las imágenes en memoria.
@@ -726,7 +738,8 @@ const BaseFicha = (function () {
     if (e.estilo) json.estilo = e.estilo;
     if (e.resolucion) json.resolucion = e.resolucion;
     if (e.colorFondo) json.ColorFondo = e.colorFondo;
-    if (e.memoria) json.memoria = e.memoria;            // F5-I20
+    const memoria = _memoriaDelSetup();                 // F5-I21: la del setup vigente
+    if (memoria) json.memoria = memoria;
     json.imagenes = { img_s: 'img_s.png' };
     if (e.imagenes.img_f) json.imagenes.img_f = 'img_f.png';
     if (e.imagenes.img_m) json.imagenes.img_m = 'img_m.png';
@@ -786,17 +799,14 @@ const BaseFicha = (function () {
   }
 
   /**
-   * Los campos de memoria tal cual (vacío = no declarado; un valor no
-   * válido viaja para que revisarValores lo avise).
-   * @returns {{RAM:number, FLASH:number}} Subcampos escritos (F5-I20).
+   * La memoria del setup vigente (solo los subcampos ≠ 0), que es la que
+   * viaja en el GWB/GWI generado (F5-I21: la memoria solo se edita en Setup).
+   * @returns {?{RAM:number, FLASH:number}} La memoria, o null si no hay.
    */
-  function _memoriaCruda() {
-    const m = {};
-    for (const [k, c] of [['RAM', campos.ram], ['FLASH', campos.flash]]) {
-      const t = c.value.trim();
-      if (t !== '') m[k] = Number(t);
-    }
-    return m;
+  function _memoriaDelSetup() {
+    const setup = (typeof BaseDirector !== 'undefined' && BaseDirector.datosSetup)
+      ? BaseDirector.datosSetup() : null;
+    return setup ? BaseCartucho.memoriaNoCero(setup.memoria) : null;
   }
 
   /**
@@ -836,8 +846,6 @@ const BaseFicha = (function () {
       // Solo viaja si no es el blanco por defecto (los defaults no viajan).
       colorFondo: campos.colorFondo.value.toLowerCase() === COLOR_BLANCO
         ? null : campos.colorFondo.value.toUpperCase(),
-      // F5-I20: solo los subcampos válidos y ≠ 0 (null si no hay ninguno).
-      memoria: BaseCartucho.memoriaNoCero(_memoriaCruda()),
       imagenes: imgs,
       botones: botones
     };
@@ -866,7 +874,7 @@ const BaseFicha = (function () {
       estilo: e.estilo || delSetup,
       resolucion: e.resolucion || pantalla,
       colorFondo: e.colorFondo,
-      memoria: e.memoria,
+      memoria: _memoriaDelSetup(),                    // F5-I21: la del setup (solo se edita allí)
       imagenes: nombres,
       imgs: imagenesEnMemoria(),
       botones: e.botones,
@@ -901,8 +909,6 @@ const BaseFicha = (function () {
     campos.estilo.value = '';
     campos.ancho.value = '';
     campos.alto.value = '';
-    campos.ram.value = '';
-    campos.flash.value = '';
     campos.colorFondo.value = COLOR_BLANCO;
     campos.codigoGWC.value = '---';
     cuerpoBotones.textContent = '';
@@ -934,11 +940,6 @@ const BaseFicha = (function () {
       campos.ancho.value = r && r.ancho ? r.ancho : '';
       campos.alto.value = r && r.alto ? r.alto : '';
     }
-    if (d.memoria !== undefined) {                 // F5-I20
-      const m = d.memoria || {};
-      campos.ram.value = m.RAM ? m.RAM : '';
-      campos.flash.value = m.FLASH ? m.FLASH : '';
-    }
     if (d.colorFondo !== undefined) {
       campos.colorFondo.value = _esColor(d.colorFondo) ? d.colorFondo.toLowerCase() : COLOR_BLANCO;
     }
@@ -946,8 +947,10 @@ const BaseFicha = (function () {
     if (d.botones !== undefined) {
       idsBoton = {};
       for (const b of d.botones || []) {
-        idsBoton[String(b.numero)] = { usado: true, id: b.id ? String(b.id) : '',
-          tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : '' };
+        idsBoton[String(b.numero)] = {
+          usado: true, id: b.id ? String(b.id) : '',
+          tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : ''
+        };
       }
       cuerpoBotones.textContent = '';   // que no pise lo recién cargado
     }

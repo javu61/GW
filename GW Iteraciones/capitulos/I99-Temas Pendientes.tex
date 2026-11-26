@@ -73,6 +73,10 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 	\midrule
 
 	R09 & \textbf{Pestañas / accesibilidad:}\newline faltan \texttt{role="tablist"/"tab"} y \texttt{aria-selected}; no hay \texttt{:focus-visible}; los botones de la máquina solo responden a \texttt{pointerdown} (sin Enter/Espacio); \texttt{mostrarPestanna} sobrescribe \texttt{className} (mejor \texttt{classList.toggle} o \texttt{data-vista}); el nombre se escribe de tres formas: \texttt{pestanna}, \texttt{pestanaVista}, \texttt{\#pestanas}. \\
+		\midrule
+	
+	R10 & \textbf{Unificar:}\newline hay funciones locales que se repiten en varios módulos, como por ejemplo \textbf{_campo} que los añade a la ventana, se define en dos lugares, crear un módulo nuevo de utilidades y unificar allí. \\
+	
 	\bottomrule
 \end{xltabular}
 \clearpage

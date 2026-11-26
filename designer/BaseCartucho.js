@@ -132,7 +132,8 @@
 //
 //  Memoria del hardware (F5-I20, MA02): campo opcional «memoria» {RAM, FLASH} en KB
 //   memoriaNoCero           Solo los subcampos válidos y distintos de 0 de una «memoria» (o null): lo que se serializa.
-//   memoriaEfectiva         La memoria que vale para un cartucho: la suya por subcampo, o la del setup.
+//   memoriaEfectiva         Memoria al CARGAR un cartucho: la suya por subcampo manda sobre la del setup previo (F5-I21: luego solo vive en el Setup).
+//   textoUsoMemoria         Lo usado de un tipo de memoria: «4.2 KB (2 %)» (informativos del Setup, F5-I21).
 //   ocupacionMemoria        Texto «RAM: 4 de 216 KB (2 %) · FLASH: …» de lo usado frente a la memoria efectiva (null si no hay memoria).
 //   _revisarMemoria         Avisa de los subcampos inválidos de «memoria», los trata como 0 y quita los ceros.
 //   _memoriaValida          true si un subcampo es un entero ≥ 0.
@@ -1932,6 +1933,20 @@ var BaseCartucho = (function () {
   }
 
   /**
+   * Lo USADO de un tipo de memoria, para los informativos del Setup
+   * («Último GWC calculado», «Último fondo»): «4.2 KB (2 %)», o solo
+   * «4.2 KB» si no hay memoria declarada con la que comparar. La misma
+   * conversión y el mismo redondeo que el texto de la generación.
+   * @param {number} bytes - Bytes usados.
+   * @param {number} [totalKB] - Memoria declarada (KB); 0 o ausente = sin dato.
+   * @returns {string} El texto.
+   */
+  function textoUsoMemoria(bytes, totalKB) {
+    const kb = _kb(bytes || 0) + ' KB';
+    return totalKB > 0 ? kb + ' (' + _porcentaje((bytes || 0) / 1024, totalKB) + ')' : kb;
+  }
+
+  /**
    * Texto de ocupación: «RAM: 4 de 216 KB (2 %) · FLASH: 0 de 216 KB (0 %)».
    * Solo entran los tipos con memoria > 0; sin ninguna, null (ni porcentaje
    * ni aviso). RAM usada = bytes del GWC; FLASH usada = bloque de fondo.
@@ -2703,6 +2718,7 @@ var BaseCartucho = (function () {
     memoriaNoCero: memoriaNoCero,
     memoriaEfectiva: memoriaEfectiva,
     ocupacionMemoria: ocupacionMemoria,
+    textoUsoMemoria: textoUsoMemoria,
     MAX_PUERTO_GWS: MAX_PUERTO_GWS,
     PANTALLA_MIN: PANTALLA_MIN,
     PANTALLA_MAX: PANTALLA_MAX,

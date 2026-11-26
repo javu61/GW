@@ -48,9 +48,9 @@ Cada prueba lleva un código (M, D, E, G, C, T) que aparece en el botón y en el
 		\midrule
 		\texttt{pruebasMotor.js} & \textbf{M0--M5.} Motor de estados: orden del tick, secundarios, iconos, barrido, colisión, secuencia y congelación, jugador. Montan su cartucho en memoria y dejan las listas del motor como estaban & Sí \\
 		\midrule
-		\texttt{pruebasDirector.js} & \textbf{D1--D10.} Carga de cartuchos: GWC sin máquina (F5-I19, página recién cargada), carga sin setup, cambio de máquina en caliente y botón «Limpiar» de la Carga (F5-I19), GWC tras GWI, cartucho incompatible, GWB que no descompone y aviso del historial descartado al cargar un GWB sobre una autoría; aplicar/cargar un setup propaga los datos comunes a la ficha de Cartucho y pide confirmación antes de descartar (F5-I20); ajuste de resolución: ventana con factor de escala y aviso de reescalado, posiciones con el redondeo del GWC, fuera de rango bloqueado y Cancelar conservándolo todo (F5-I21) & D5 no; el resto (destructivas) \\
+		\texttt{pruebasDirector.js} & \textbf{D1--D10.} Carga de cartuchos: GWC sin máquina (F5-I19, página recién cargada), carga sin setup, cambio de máquina en caliente y botón «Limpiar» de la Carga (F5-I19), GWC tras GWI, cartucho incompatible, GWB que no descompone y aviso del historial descartado al cargar un GWB sobre una autoría; cargar un setup propaga los datos comunes a la ficha de Cartucho y, con cartucho en memoria, pide confirmación antes de descartarlo (F5-I20 y F5-I21); ajuste de resolución: ventana con factor de escala y aviso de reescalado, posiciones con el redondeo del GWC, fuera de rango bloqueado y Cancelar conservándolo todo (F5-I21) & D5 no; el resto (destructivas) \\
 		\midrule
-		\texttt{pruebasEditor.js} & \textbf{E1--E9 y E10.} Editor: historial, ids de las piezas de unión, deshacer y rehacer, cambio de tipo, numeración, uniones, PNG con alfa y verificación; ajuste de resolución con sprites en blanco y negro puro y round-trip exacto (F5-I21) & No \\
+		\texttt{pruebasEditor.js} & \textbf{E1--E9, E10 y E11.} Editor: historial, ids de las piezas de unión, deshacer y rehacer, cambio de tipo, numeración, uniones, PNG con alfa y verificación; ajuste de resolución con sprites en blanco y negro puro y round-trip exacto, y estilo con juego en memoria: se cambia en caliente mientras los enlaces de jugador quepan y se rechaza si no (F5-I21) & No \\
 		\midrule
 		\texttt{pruebasGenerales.js} & \textbf{G1--G3.} Formato GWC (CRC y lector) y \texttt{ColorFondo}, en el GWC y en la ficha y el GWB & Sí (G3 destructiva) \\
 		\midrule
@@ -86,7 +86,7 @@ Cada prueba lleva un código (M, D, E, G, C, T) que aparece en el botón y en el
 
 \begin{itemize}
 	\item \textbf{Con botón en la pestaña} (y también por script): motor (M0--M5, S1), director (D1--D10, S2; D5 exige página recién cargada y es la primera de la suite), generales (G1--G3, S4; G3 destructiva), gwi\_gwc C1--C5 (S5; C3 y C4 destructivas, C1, C2 y C5 necesitan un GWI cargado) y teclas (T1--T3, S6; destructivas).
-	\item \textbf{Solo por script} (\texttt{soloConsola}, sin botón; necesitan un GWI cargado): editor (E1--E9 y E10, S3) y gwi\_gwc C6--C9 (S5).
+	\item \textbf{Solo por script} (\texttt{soloConsola}, sin botón; necesitan un GWI cargado): editor (E1--E9, E10 y E11, S3) y gwi\_gwc C6--C9 (S5).
 \end{itemize}
 
 \texttt{Lanzar.bat} recibe el nombre del grupo (sin parámetro, o con uno desconocido, muestra la ayuda) y llama al script de PowerShell correspondiente (\texttt{pruebasMotor.ps1} y los demás; \texttt{pruebasTodas.ps1} los encadena). Todos cargan primero \texttt{\_preparar.ps1}, que comprueba que Node.js esté instalado, instala Playwright de forma global si falta (\texttt{npm i -g playwright}), define \texttt{NODE\_PATH} con la carpeta global de npm y descarga el navegador. La primera vez tarda. \texttt{Lanzar.bat} arranca PowerShell con \texttt{-ExecutionPolicy Bypass}, de modo que no hace falta cambiar la política de scripts. Los \texttt{.bat} y los \texttt{.ps1} se guardan con fin de línea CRLF (\texttt{.gitattributes}).

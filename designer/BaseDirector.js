@@ -108,6 +108,8 @@
 //                                nuevos, factor de escala, si afecta; Cancelar / Ajustar resolución).
 //   _aplicarAjusteResolucion      F5-I21: aplica el ajuste de resolución sin ventana (la usa la
 //                                ventana y la caja D10); atómico (valida el rango antes de tocar nada).
+//   _estiloIncompatible           F5-I21: ¿cabe el juego en memoria en un estilo? (solo miran las direcciones de jugador).
+//   _aplicarSetupEnCaliente       F5-I21: aplica el setup de la ficha CON el cartucho en memoria, sin descartarlo.
 //   _aplicarDesdeFichaSetup       Botón «Aplicar» de la pestaña Setup (F5-I12):
 //   _aplicarDesdeFichaCartucho    Botón «Aplicar» de la pestaña Cartucho (F5-I12):
 //   _textoBytes                   Bytes en texto legible, o «—» si no hay dato.
@@ -271,6 +273,14 @@ var BaseDirector = (function () {
         '8': { contenedor: 'm5-sistema', forma: 'rect' }
       }
     }
+  };
+
+  // F5-I21: las direcciones de jugador que tiene cada estilo (F1-I07): el
+  // de 2 botones solo izquierda y derecha; los de 4 y 5, las cuatro.
+  const DIRECCIONES_POR_ESTILO = {
+    '2': ['izquierda', 'derecha'],
+    '4': ['izquierda', 'derecha', 'arriba', 'abajo'],
+    '5': ['izquierda', 'derecha', 'arriba', 'abajo']
   };
 
   // ---------------- Utilidades básicas ----------------
@@ -630,6 +640,8 @@ var BaseDirector = (function () {
       }
       // 3. Resolución declarada e imágenes de presentación (suave).
       if (setupGWS) setupGWS.resolucion = { ancho: anchoNuevo, alto: altoNuevo };
+      BaseSetup.fijarResolucion({ ancho: anchoNuevo, alto: altoNuevo });   // las fichas muestran la vigente
+      BaseFicha.poblar({ resolucion: { ancho: anchoNuevo, alto: altoNuevo } });
       if (imgF) imgF = _reescalarSuave(imgF, anchoNuevo, altoNuevo);
       if (imgM) imgM = _reescalarSuave(imgM, anchoNuevo, altoNuevo);
       // 4. Repintado del resto de estados.
@@ -1067,6 +1079,57 @@ var BaseDirector = (function () {
   }
 
   /**
+   * F5-I21: ¿cabe el juego en memoria en un estilo de máquina? Solo
+   * miran los enlaces de los segmentos de jugador: con arriba o abajo
+   * definidos no sirve el estilo de 2 botones; con solo izquierda y
+   * derecha sirve cualquiera. Sin juego en memoria cabe siempre.
+   * @param {string} estilo - Estilo nuevo ('2', '4' o '5').
+   * @returns {?string} El motivo si NO cabe, o null si cabe.
+   */
+  function _estiloIncompatible(estilo) {
+    if (!cartucho || !editable) return null;
+    const permitidas = DIRECCIONES_POR_ESTILO[String(estilo)] || [];
+    const sobran = BaseDescomponer.direccionesDeJugador().filter(d => !permitidas.includes(d));
+    if (sobran.length === 0) return null;
+    return 'el juego tiene enlaces de jugador "' + sobran.join('", "') +
+      '" y el estilo ' + estilo + ' solo tiene ' + permitidas.join(' y ') +
+      ': quita esos enlaces en el Editor o elige otro estilo.';
+  }
+
+  /**
+   * F5-I21: aplica el setup de la ficha CON el cartucho en memoria, sin
+   * descartarlo (lo que cambia aquí no obliga a rehacer el juego): nombre,
+   * descripción, memoria, botones y teclas, y el ESTILO si el juego cabe
+   * (_estiloIncompatible; si no cabe NO se aplica nada). La resolución no
+   * se toca (solo se cambia con la ventana de ajuste). El hardware visible
+   * se re-fija y el juego se repinta; el cartucho y su autoría quedan intactos.
+   * @param {Object} json - El GWS leído de la ficha.
+   * @returns {void}
+   * @throws {Error} Si el GWS no es válido o el estilo no cabe.
+   */
+  function _aplicarSetupEnCaliente(json) {
+    const error = validarSetup(json);
+    if (error) throw new Error(error);
+    const incompatible = _estiloIncompatible(json.estilo);
+    if (incompatible) throw new Error(incompatible);
+    json.resolucion = { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto };
+    const avisosLimites = BaseCartucho.revisarValores('GWS', json);
+    setupGWS = json;
+    setupDerivado = false;
+    if (cartucho) cartucho.estilo = json.estilo;
+    BaseFicha.poblar({ estilo: json.estilo });
+    BaseSetup.poblar(json);
+    _fijarHardware();
+    BaseGraficos.fijarFondo(imgF);
+    BaseDescomponer.pintarFondoAparato();
+    BaseDescomponer.repintarAparato();
+    _actualizarPestanas();
+    avisar('Setup aplicado: ' + (json.nombre || '(sin nombre)') +
+      ' (el cartucho y su autoría siguen en memoria).' +
+      (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
+  }
+
+  /**
    * Valida y APLICA un setup ya leído (de fichero o de la ficha de la
    * pestaña Setup, F5-I12): limpia en cascada el cartucho y todo lo que
    * de él depende, aplica la máquina y rellena las dos fichas. Si no es
@@ -1092,8 +1155,7 @@ var BaseDirector = (function () {
     // las teclas propias y las imágenes siguen siendo del cartucho.
     BaseFicha.reiniciar();
     BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion,
-      nombre: json.nombre, memoria: json.memoria || null,
-      colorFondo: json.ColorFondo || null });
+      nombre: json.nombre, colorFondo: json.ColorFondo || null });
     BaseSetup.poblar(json);
     _aplicarSetup(avisosLimites);
   }
@@ -1121,6 +1183,12 @@ var BaseDirector = (function () {
           return;
         }
         json = r.json;
+      }
+      // F5-I21: con juego en memoria el setup se aplica EN CALIENTE (sin
+      // descartar nada); solo se rechaza un estilo al que el juego no cabe.
+      if (cartucho && editable && setupGWS) {
+        _aplicarSetupEnCaliente(json);
+        return;
       }
       // F5-I20 (ajuste): aplicar un setup descarta el cartucho en memoria
       // (con su juego): confirmación SIEMPRE que haya algo que perder.
@@ -1573,7 +1641,6 @@ var BaseDirector = (function () {
         resolucion: json.resolucion || setupGWS.resolucion,
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
-        memoria: json.memoria || null,        // F5-I20
         botones: (json.botones || []).map(b => ({
           numero: _normalizarNumeroBoton(b.numero), id: b.id,
           tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : undefined

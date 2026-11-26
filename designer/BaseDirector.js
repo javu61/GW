@@ -926,8 +926,10 @@ var BaseDirector = (function () {
    * Aplica los botones del cartucho sobre la botonera física:
    * - restaura primero TODOS los botones del setup (por si el cartucho
    *   anterior había eliminado o renombrado),
-   * - renombra los usados con su "id" lógico (IZQ, DER, Start...),
-   * - ELIMINA del DOM los botones físicos que el cartucho no usa.
+   * - renombra cada botón con su texto de pantalla (el "alias" del
+   *   setup, F5-I21; en cartuchos antiguos, su "id" lógico),
+   * - los botones del cartucho son HOY los del setup (F5-I21), de modo
+   *   que la botonera queda como la de la máquina.
    * Setup >= cartucho (F3-I1): un botón del cartucho que la máquina
    * no tiene ya no es un aviso, es un ERROR: devuelve el mensaje y el
    * flujo de carga aborta (el cartucho no carga).
@@ -947,15 +949,20 @@ var BaseDirector = (function () {
     const usados = new Set();
     for (const b of json.botones) {
       const numero = _normalizarNumeroBoton(b.numero);
+      usados.add(numero);
       const el = document.querySelector('.botonFisico[data-numero="' + numero + '"]');
+      if (!el) continue;
       const et = el.querySelector('.etiqueta');   // renombra sin perder la pista de tecla
-      if (et) et.textContent = b.id || numero;    // sin "id" se queda el número
-      // El botón que el cartucho llama "Start" es el que enciende el
-      // juego, sea cual sea su número físico (6, 7, 8…).
-      if (b.id && String(b.id).trim().toLowerCase() === 'start') {
+      // F5-I21: el texto de pantalla del setup (alias); los cartuchos
+      // antiguos traían un "id" lógico, que se sigue aceptando.
+      const texto = String(b.alias !== undefined && b.alias !== null ? b.alias :
+        (b.id !== undefined && b.id !== null ? b.id : '')).trim();
+      if (et) et.textContent = texto || numero;   // sin texto se queda el número
+      // El botón que se llama "Start" es el que enciende el juego, sea
+      // cual sea su número físico (6, 7, 8…).
+      if (texto.toLowerCase() === 'start') {
         numeroStart = numero;
       }
-      usados.add(numero);
     }
     // En un GWI el trío A/B/R es del SISTEMA (F5-I10): no lo toca el
     // cartucho, se conserva aunque no lo use.
@@ -1021,10 +1028,12 @@ var BaseDirector = (function () {
    * si la declara; si no, la del setup previo y, en su defecto, la de
    * por defecto del estilo (precedencia M8). La memoria (F5-I20) va
    * SUBCAMPO a subcampo: la del cartucho manda, y lo que él no declara
-   * viene de la máquina previa. Los puertos y alias del ESP32 no viajan
-   * en el cartucho: se heredan del setup previo, botón a botón (vacíos
-   * si no hay setup). FUNCION PURA: no toca el estado ni el DOM (el
-   * llamador decide cuándo se aplica).
+   * viene de la máquina previa. F5-I21: los cartuchos llevan los
+   * botones con los nombres de campo del setup, así que el puerto y el
+   * alias TAMBIÉN viajan en ellos: manda el cartucho (F5-I19) y, lo
+   * que él no declara, se hereda del setup previo (vacíos si no hay
+   * setup). FUNCION PURA: no toca el estado ni el DOM (el llamador
+   * decide cuándo se aplica).
    * @param {Object} json - JSON del cartucho cargado (GWB o GWI).
    * @param {?Object} previo - El setup anterior (o null).
    * @returns {Object} El GWS derivado.
@@ -1041,18 +1050,21 @@ var BaseDirector = (function () {
     const previos = new Map((previo && Array.isArray(previo.botones))
       ? previo.botones.map(b => [String(b.numero), b]) : []);
     const delCartucho = (Array.isArray(json.botones))
-      ? json.botones.filter(b => b && b.tecla !== undefined &&
-        b.tecla !== null && b.tecla !== '') : [];
+      ? json.botones.filter(b => b && typeof b === 'object') : [];
     const defecto = TECLAS_POR_DEFECTO[estilo] || {};
     const botones = Object.keys(ESTILOS[estilo].botones).map(numero => {
       const p = previos.get(numero) || {};
       const delCr = delCartucho.find(b => String(b.numero) === numero);
-      const tecla = delCr ? normalizarTecla(delCr.tecla) :
+      const tecla = (delCr && delCr.tecla) ? normalizarTecla(delCr.tecla) :
         (p.tecla ? normalizarTecla(p.tecla) : defecto[numero]);
       const boton = { numero: numero };
       if (tecla) boton.tecla = tecla;
-      if (p.puerto !== undefined && p.puerto !== null) boton.puerto = p.puerto;
-      if (p.alias !== undefined && p.alias !== null) boton.alias = p.alias;
+      // F5-I21: puerto y alias viajan en el cartucho (nombres de campo
+      // del setup): manda el cartucho; lo que no declara, el setup previo.
+      const puerto = (delCr && delCr.puerto !== undefined) ? delCr.puerto : p.puerto;
+      if (puerto !== undefined && puerto !== null) boton.puerto = puerto;
+      const alias = (delCr && delCr.alias !== undefined) ? delCr.alias : p.alias;
+      if (alias !== undefined && alias !== null) boton.alias = alias;
       return boton;
     });
     const resolucion = json.resolucion || (previo && previo.resolucion);
@@ -1151,8 +1163,10 @@ var BaseDirector = (function () {
     // La ficha del cartucho recibe del GWS TODOS los datos comunes
     // (F5-I20, ajuste): estilo y resolución (que ya iban), más nombre,
     // memoria y ColorFondo — un GWB montado desde la ficha sale completo
-    // y sus ficheros llevan el nombre del setup (F5-I17, M10). Los ids,
-    // las teclas propias y las imágenes siguen siendo del cartucho.
+    // y sus ficheros llevan el nombre del setup (F5-I17, M10). F5-I21:
+    // la ficha ya no recibe botones ni los edita: viajan en los
+    // cartuchos con los nombres de campo y los datos de esta pestaña
+    // Setup, y el Aplicar deja de sincronizarlos.
     BaseFicha.reiniciar();
     BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion,
       nombre: json.nombre, colorFondo: json.ColorFondo || null });
@@ -1641,10 +1655,8 @@ var BaseDirector = (function () {
         resolucion: json.resolucion || setupGWS.resolucion,
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
-        botones: (json.botones || []).map(b => ({
-          numero: _normalizarNumeroBoton(b.numero), id: b.id,
-          tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : undefined
-        })),
+        memoria: json.memoria || null,        // F5-I20
+        // F5-I21: sin botones: la ficha ya no los muestra ni los guarda.
         imagenes: { img_s: imgS, img_f: imgF },
         extras: Object.fromEntries(['combinar', 'etiquetas']
           .filter(k => json[k] !== undefined).map(k => [k, json[k]]))
@@ -2315,6 +2327,10 @@ var BaseDirector = (function () {
     informarTamanos: informarTamanos,
     estiloDeSetup: () => (setupGWS ? String(setupGWS.estilo) : null),
     pantallaDeSetup: () => (setupGWS && setupGWS.resolucion) ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto } : null,
+    // F5-I21: los botones del cartucho (GWB/GWI) son los del setup; la
+    // ficha de Cartucho los pide aquí al montarlos. Copia profunda.
+    botonesDeSetup: () => (setupGWS && Array.isArray(setupGWS.botones))
+      ? setupGWS.botones.map(b => Object.assign({}, b)) : [],
     imagenFondo: () => imgF,
     colorFondo: () => colorFondo,
     confirmarCambioComun: _confirmarCambioComun,       // F5-I21: decisiones de datos comunes (ajustar/rehacer)

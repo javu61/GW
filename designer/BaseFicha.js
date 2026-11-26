@@ -4,11 +4,13 @@
 // ====================================================================================================
 // PROPÓSITO
 //   La pestaña «Cartucho» (F5-I10): la ficha del cartucho, FUENTE
-//   ÚNICA de sus datos (nombre, estilo, resolución, imágenes y botones).
-//   Todo lo que se carga la rellena (poblar) y todo lo que se guarda
-//   sale de ella: el GWB directamente y el GWI/GWC a través de
-//   datosCartucho. Con segmentos en memoria la imagen img_s se bloquea
-//   (los segmentos salen de ella).
+//   ÚNICA de sus datos (nombre, estilo, resolución, imágenes; F5-I21:
+//   los botones YA NO se editan aquí — los cartuchos los llevan con
+//   los nombres de campo y los datos de la pestaña Setup). Todo lo que
+//   se carga la rellena (poblar) y todo lo que se guarda sale de ella:
+//   el GWB directamente y el GWI/GWC a través de datosCartucho. Con
+//   segmentos en memoria la imagen img_s se bloquea (los segmentos
+//   salen de ella).
 //
 // QUÉ MUESTRA
 //   - Datos del cartucho: nombre, estilo y resolución (ancho × alto). En
@@ -17,12 +19,13 @@
 //   - Imágenes: una tarjeta por img_s (obligatoria), img_f e img_m
 //     (opcionales) con miniatura, nombre, tamaño y los botones
 //     «Cargar…» y «Borrar».
-//   - Botones: la tabla de los botones posibles según el estilo
-//     elegido (incluido el trío de sistema A/B/R, 6-7-8), con «Usado»,
-//     «id» y «Tecla» (F5-I17, M7: el mismo desplegable que el setup).
-//   - Memoria (F5-I21): ya NO se edita aquí (RAM y FLASH son del Setup).
-//     El GWB/GWI que sale de la ficha lleva la memoria del setup vigente
-//     (solo los subcampos ≠ 0): el cartucho es la fuente de verdad al guardarse.
+//   - Botones (F5-I21): ya no se muestran ni se editan en la ficha.
+//     Los cartuchos (GWB, GWI) siguen llevándolos, pero con los nombres
+//     de campo y los datos del Setup (numero, puerto, tecla, alias):
+//     se cambian en la pestaña Setup (columna «Texto Pantalla»).
+//   - Memoria (F5-I20, MA02): «RAM (KB)» y «FLASH (KB)», opcionales (vacío = 0):
+//     si el cartucho las declara mandan sobre las del setup al informar de
+//     la ocupación; se escriben en el GWB/GWI solo si no son 0.
 //
 // SEPARACIÓN
 //   No conoce al descomponedor: solo pinta y guarda el estado de la
@@ -35,14 +38,13 @@
 //  Pantalla
 //    pintar             Construye la ficha (la primera vez) en el contenedor.
 //    reiniciar          Deja la ficha en blanco.
-//    poblar             Rellena campos, botones e imágenes desde una carga.
+//    poblar             Rellena campos e imágenes desde una carga.
 //    ponerImagen        Pone (o quita) una imagen sin avisar al director.
 //    actualizarCodigoGWC F5-I17 (M1): refresca el «Código GWC» de solo lectura.
 //  Lectura
 //    estado             Lee los datos de la ficha tal cual (sin completar).
 //    datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
 //    imagenesEnMemoria  Las tres imágenes {img_s, img_f, img_m}.
-//    botonesDelEstilo   Números de botón posibles de un estilo.
 //  Aplicar (F5-I12)
 //    hayCambios         ¿Hay cambios sin aplicar (borrador)?
 //    marcarAplicado     Da la ficha por aplicada (apaga el aviso).
@@ -52,27 +54,18 @@
 //    guardar            Verifica y, si todo está bien, genera cartucho_GWB.
 //  Internas
 //    _marcarCambios      _asegurar               _crearElemento
-//    _estiloEfectivo     _montarGWB              _pintarMensajes
+//    _montarGWB              _pintarMensajes
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
-//    _miniaturaDe        _pintarTablaBotones     _campo
-//    _teclaDeFicha       _memoriaDelSetup
+//    _miniaturaDe        _botonesDelSetup        _campo
+//    _memoriaCruda
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
 const BaseFicha = (function () {
 
-  // Botones posibles por estilo: los de juego del estilo más el trío
-  // de sistema A/B/R (6-7-8, GAME A / GAME B / TIME), que existe en
-  // todos los estilos y también se puede definir. Ver ESTILOS en
-  // BaseDirector.
-  const TRIO_SISTEMA = [6, 7, 8];
-  const NOMBRE_SISTEMA = { 6: 'A', 7: 'B', 8: 'R' };
-  const BOTONES_POR_ESTILO = {
-    '2': [0, 4, ...TRIO_SISTEMA],
-    '4': [0, 1, 4, 5, ...TRIO_SISTEMA],
-    '5': [0, 1, 2, 3, 4, ...TRIO_SISTEMA]
-  };
+  // F5-I21: la ficha del Cartucho ya no define botones: los que viajan
+  // en el GWB y el GWI son los del Setup (ver _botonesDelSetup).
 
   const COLOR_BLANCO = '#ffffff';  // ColorFondo por defecto (no viaja en el cartucho)
 
@@ -94,38 +87,10 @@ const BaseFicha = (function () {
   let raiz = null;                // contenedor ya construido
   let campos = {};                // nombre, estilo, ancho, alto
   let imagenes = {};              // clave → {img, nombre, url, ui:{...}}
-  let idsBoton = {};              // número → {usado, id, tecla} (sobrevive al cambio de estilo)
-
-  // F5-I17 (M7): los cuatro nombres de cursor admitidos como tecla (los
-  // mismos valores que el GWS; la validación común vive en BaseDirector).
-  const CURSORES = ['cursor-izquierda', 'cursor-derecha',
-    'cursor-arriba', 'cursor-abajo'];
-  let cuerpoBotones = null;
   let mensajes = null;            // zona de errores/avisos
   let extras = {};                // combinar/etiquetas del GWB cargado (se conservan al guardar)
   let sucio = false;              // F5-I12: hay cambios sin aplicar (la ficha es un borrador)
   let avisoCambios = null;        // línea «cambios sin aplicar»
-
-  /**
-   * Números de botón de juego posibles de un estilo.
-   * @param {string} estilo - '2', '4' o '5'.
-   * @returns {number[]} Los números (vacío si el estilo no es válido).
-   */
-  function botonesDelEstilo(estilo) {
-    return (BOTONES_POR_ESTILO[estilo] || []).slice();
-  }
-
-  /**
-   * Estilo con el que se define la tabla de botones: el de la ficha o,
-   * si está en blanco, el del setup cargado.
-   * @returns {string} '2', '4', '5' o '' si no hay ninguno.
-   */
-  function _estiloEfectivo() {
-    if (campos.estilo && campos.estilo.value) return campos.estilo.value;
-    const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
-      ? BaseDirector.estiloDeSetup() : null;
-    return delSetup || '';
-  }
 
   /** Crea un elemento con clase y texto opcionales.  
    * @param {string} etiqueta - Nombre de la etiqueta.
@@ -321,101 +286,19 @@ const BaseFicha = (function () {
     _refrescarBotonesImagen(clave);
   }
 
-  // ---------------- Botones ----------------
+  // ---------------- Botones (F5-I21) ----------------
 
   /**
-   * F5-I17 (M7): la tecla efectiva de una fila de la tabla: el nombre de
-   * cursor elegido en la lista, o la letra de la casilla cuando la lista
-   * está en «Propia». Sin tecla, ''.
-   * @param {HTMLElement} tr - Fila de la tabla de botones.
-   * @returns {string} La tecla tal como va al JSON del GWB/GWI.
+   * F5-I21: los botones que viajan en los cartuchos (GWB y GWI) son los
+   * del SETUP, con sus nombres de campo y sus datos (numero, puerto,
+   * tecla y alias — el «Texto Pantalla»). En la ficha NO se editan: se
+   * cambian en la pestaña Setup y el Aplicar de ésta los pone en
+   * marcha. Copia profunda para que nadie toque el setup en memoria.
+   * @returns {Array} Los botones del setup cargado ([] si no hay setup).
    */
-  function _teclaDeFicha(tr) {
-    const lista = tr.querySelector('.colTeclaLista');
-    if (!lista) return '';
-    if (lista.value !== 'tecla') return lista.value;
-    const letra = tr.querySelector('.colTeclaLetra');
-    return letra ? letra.value : '';
-  }
-
-  /**
-   * Repinta la tabla de botones según el estilo elegido, conservando lo
-   * ya escrito para cada número.
-   * @returns {void}
-   */
-  function _pintarTablaBotones() {
-    // Guarda lo escrito antes de reconstruir.
-    for (const fila of cuerpoBotones.querySelectorAll('tr[data-numero]')) {
-      idsBoton[fila.dataset.numero] = {
-        usado: fila.querySelector('input[type=checkbox]').checked,
-        id: fila.querySelector('.colId').value,
-        tecla: _teclaDeFicha(fila)
-      };
-    }
-    cuerpoBotones.textContent = '';
-    const numeros = botonesDelEstilo(_estiloEfectivo());
-    if (numeros.length === 0) {
-      const tr = _crearElemento('tr');
-      const td = _crearElemento('td', 'fichaNota', 'Elige un estilo (o carga un setup) para ver los botones posibles.');
-      td.colSpan = 4;
-      tr.appendChild(td);
-      cuerpoBotones.appendChild(tr);
-      return;
-    }
-    for (const n of numeros) {
-      const previo = idsBoton[String(n)] || { usado: false, id: '', tecla: '' };
-      const tr = _crearElemento('tr');
-      tr.dataset.numero = String(n);
-      const tdUsado = _crearElemento('td');
-      const usado = _entrada('checkbox');
-      usado.checked = previo.usado;
-      tdUsado.appendChild(usado);
-      const tdNumero = _crearElemento('td', null, String(n) +
-        (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
-      const tdId = _crearElemento('td');
-      const id = _entrada('text', {
-        className: 'colId', value: previo.id,
-        placeholder: 'id lógico (IZQ, DER, Start…)'
-      });
-      id.disabled = !usado.checked;
-      tdId.appendChild(id);
-      // F5-I17 (M7): la tecla se elige en la misma lista cerrada que el
-      // setup (los cuatro cursores y «Propia»), con casilla de letra aparte;
-      // solo editable si el botón está Usado.
-      const lista = _crearElemento('select', 'colTeclaLista');
-      for (const [valor, texto] of [['', '(sin tecla)'],
-      ...CURSORES.map(c => [c, c]), ['tecla', 'Propia (letra)']]) {
-        const o = document.createElement('option');
-        o.value = valor; o.textContent = texto;
-        lista.appendChild(o);
-      }
-      const nombreTecla = String(previo.tecla || '').trim().toLowerCase();
-      if (CURSORES.includes(nombreTecla)) lista.value = nombreTecla;
-      else if (/^[a-zA-Z]$/.test(nombreTecla) ||
-        (/^[1-3]$/.test(nombreTecla) && NOMBRE_SISTEMA[n])) lista.value = 'tecla';
-      else lista.value = '';
-      const letra = _entrada('text', {
-        className: 'colTeclaLetra', maxLength: 1,
-        value: lista.value === 'tecla' ? String(previo.tecla || '').toUpperCase() : ''
-      });
-      letra.classList.toggle('oculto', lista.value !== 'tecla');
-      letra.placeholder = NOMBRE_SISTEMA[n] ? 'A..Z o 1-3' : 'A..Z';
-      lista.addEventListener('change', () => {
-        letra.classList.toggle('oculto', lista.value !== 'tecla');
-        if (lista.value !== 'tecla') letra.value = '';
-      });
-      const tdTecla = _crearElemento('td');
-      tdTecla.append(lista, letra);
-      usado.addEventListener('change', () => {
-        id.disabled = !usado.checked;
-        lista.disabled = !usado.checked;
-        letra.disabled = !usado.checked;
-      });
-      lista.disabled = !usado.checked;
-      letra.disabled = !usado.checked;
-      tr.append(tdUsado, tdNumero, tdId, tdTecla);
-      cuerpoBotones.appendChild(tr);
-    }
+  function _botonesDelSetup() {
+    return (typeof BaseDirector !== 'undefined' && BaseDirector.botonesDeSetup)
+      ? BaseDirector.botonesDeSetup() : [];
   }
 
   // ---------------- Construcción ----------------
@@ -504,21 +387,8 @@ const BaseFicha = (function () {
     seccionImg.appendChild(_crearElemento('p', 'fichaNota', '* obligatoria para guardar el GWB.'));
     contenedor.appendChild(seccionImg);
 
-    // Botones
-    const seccionBot = _crearElemento('section', 'fichaSeccion');
-    seccionBot.appendChild(_crearElemento('h3', null, 'Botones'));
-    const tabla = _crearElemento('table', 'fichaTabla');
-    const cabecera = _crearElemento('thead');
-    const trCab = _crearElemento('tr');
-    for (const t of ['Usado', 'Botón', 'Id', 'Tecla']) trCab.appendChild(_crearElemento('th', null, t));
-    cabecera.appendChild(trCab);
-    cuerpoBotones = _crearElemento('tbody');
-    tabla.append(cabecera, cuerpoBotones);
-    seccionBot.appendChild(tabla);
-    seccionBot.appendChild(_crearElemento('p', 'fichaNota',
-      'Tecla: letra o cursor del teclado del PC para el simulador (misma lista que el setup; la del cartucho manda sobre la del setup). ' +
-      'Los botones 6, 7 y 8 son el trío de sistema A/B/R (presente en todos los estilos).'));
-    contenedor.appendChild(seccionBot);
+    // F5-I21: sin sección de botones: se editan en la pestaña Setup y
+    // viajan a los cartuchos con los datos de aquélla.
 
     // Mensajes de verificación (los botones Aplicar y Guardar GWB están
     // en la pestaña, F5-I12) y el aviso de cambios sin aplicar.
@@ -533,8 +403,6 @@ const BaseFicha = (function () {
     contenedor.addEventListener('input', marcar);
     contenedor.addEventListener('change', marcar);
 
-    campos.estilo.addEventListener('change', _pintarTablaBotones);
-    _pintarTablaBotones();
   }
 
   // ---------------- Verificación y guardado ----------------
@@ -647,34 +515,10 @@ const BaseFicha = (function () {
       }
     }
 
-    // Botones: ids no vacíos y sin repetir (sin distinguir mayúsculas).
-    const vistos = new Set();
-    for (const b of e.botones) {
-      if (b.id === '') { errores.push('El botón ' + b.numero + ' está marcado como usado y no tiene id.'); continue; }
-      const clave = b.id.toLowerCase();
-      if (vistos.has(clave)) errores.push('El id «' + b.id + '» está repetido.');
-      vistos.add(clave);
-    }
-    // F5-I17 (M8): las teclas del cartucho, la misma regla que el GWS:
-    // letra A..Z o nombre de cursor (el dígito 1/2/3 solo en el trío
-    // A/B/R), sin repetir entre las declaradas.
-    const teclasVistas = new Set();
-    for (const b of e.botones) {
-      if (b.tecla === undefined) continue;
-      const valida = (typeof BaseDirector !== 'undefined' && BaseDirector.teclaValida)
-        ? BaseDirector.teclaValida(b.tecla, b.numero) : true;
-      if (!valida) {
-        errores.push('La tecla «' + b.tecla + '» del botón ' + b.numero +
-          ' no es válida: letra A..Z, un nombre de cursor o el dígito 1/2/3' +
-          ' solo en el trío de sistema A/B/R.');
-        continue;
-      }
-      if (teclasVistas.has(b.tecla.toLowerCase())) {
-        errores.push('La tecla «' + b.tecla + '» está repetida (botón ' + b.numero + ').');
-      }
-      teclasVistas.add(b.tecla.toLowerCase());
-    }
-    if (e.botones.length === 0) avisos.push('El cartucho no declara botones: se usarán los del setup.');
+    // F5-I21: la ficha ya no declara botones (los del cartucho son los
+    // del setup, verificados al aplicar el GWS): nada que validar aquí.
+    // F5-I20 (MA02): memoria no válida = aviso (nunca bloquea) y vale 0.
+    avisos.push(...BaseCartucho.revisarValores('GWB', { memoria: _memoriaCruda() }));
     // Validación del contrato del GWB (la misma que al cargarlo). El
     // mapa de ficheros se monta aquí con las imágenes en memoria.
     if (errores.length === 0) {
@@ -743,7 +587,9 @@ const BaseFicha = (function () {
     json.imagenes = { img_s: 'img_s.png' };
     if (e.imagenes.img_f) json.imagenes.img_f = 'img_f.png';
     if (e.imagenes.img_m) json.imagenes.img_m = 'img_m.png';
-    json.botones = e.botones;
+    // F5-I21: los botones del GWB son los del setup (nombres de campo y
+    // datos de la pestaña Setup); la ficha ya no los declara.
+    json.botones = _botonesDelSetup();
     for (const k of ['combinar', 'etiquetas']) {
       if (extras[k] !== undefined) json[k] = extras[k];
     }
@@ -781,11 +627,9 @@ const BaseFicha = (function () {
   function pintar(contenedor) {
     if (raiz !== contenedor) {
       raiz = contenedor;
-      campos = {}; imagenes = {}; idsBoton = {};
+      campos = {}; imagenes = {};
       _construir(contenedor);
       _refrescarBotonesImagen('img_s');
-    } else {
-      _pintarTablaBotones();           // el setup pudo cambiar desde la última visita
     }
   }
 
@@ -810,13 +654,14 @@ const BaseFicha = (function () {
   }
 
   /**
-   * Lee la ficha tal cual está (sin completar con el setup).
+   * Lee la ficha tal cual está (sin completar con el setup). Los
+   * botones no son de la ficha (F5-I21): los del cartucho los da
+   * _botonesDelSetup.
    * @returns {{nombre:string, estilo:?string, resolucion:?Object,
-   *   colorFondo:?string, imagenes:Object, botones:Array}} Datos de la ficha.
+   *   colorFondo:?string, imagenes:Object}} Datos de la ficha.
    */
   function estado() {
     _asegurar();
-    _pintarTablaBotones();             // vuelca lo escrito en idsBoton
     const ancho = parseInt(campos.ancho.value, 10);
     const alto = parseInt(campos.alto.value, 10);
     const imgs = {};
@@ -824,20 +669,6 @@ const BaseFicha = (function () {
       imgs[d.clave] = imagenes[d.clave].img
         ? { imagen: imagenes[d.clave].img, nombre: imagenes[d.clave].nombre } : null;
     }
-    const botones = botonesDelEstilo(_estiloEfectivo())
-      .filter(n => idsBoton[String(n)] && idsBoton[String(n)].usado)
-      .map(n => {
-        const d = idsBoton[String(n)];
-        const b = { numero: n, id: d.id.trim() };
-        const t = String(d.tecla || '').trim();
-        // F5-I17 (M7): la tecla viaja normalizada (cursor en minúsculas,
-        // letra en mayúsculas); un botón sin tecla no escribe el campo.
-        if (t) {
-          b.tecla = (typeof BaseDirector !== 'undefined' && BaseDirector.normalizarTecla)
-            ? BaseDirector.normalizarTecla(t) : t;
-        }
-        return b;
-      });
     return {
       nombre: campos.nombre.value.trim(),
       descripcion: campos.descripcion.value.trim(),   // F5-I17 (M13)
@@ -846,8 +677,9 @@ const BaseFicha = (function () {
       // Solo viaja si no es el blanco por defecto (los defaults no viajan).
       colorFondo: campos.colorFondo.value.toLowerCase() === COLOR_BLANCO
         ? null : campos.colorFondo.value.toUpperCase(),
-      imagenes: imgs,
-      botones: botones
+      // F5-I20: solo los subcampos válidos y ≠ 0 (null si no hay ninguno).
+      memoria: BaseCartucho.memoriaNoCero(_memoriaCruda()),
+      imagenes: imgs
     };
   }
 
@@ -858,7 +690,7 @@ const BaseFicha = (function () {
    * que se escribe (img_s.png, img_f.png, img_m.png).
    * @returns {{nombre:string, descripcion:?string, estilo:string,
    *   resolucion:?Object, imagenes:Object, imgs:Object, botones:Array,
-   *   extras:Object}}
+   *   extras:Object}} botones: los del setup (F5-I21).
    */
   function datosCartucho() {
     const e = estado();
@@ -877,7 +709,7 @@ const BaseFicha = (function () {
       memoria: _memoriaDelSetup(),                    // F5-I21: la del setup (solo se edita allí)
       imagenes: nombres,
       imgs: imagenesEnMemoria(),
-      botones: e.botones,
+      botones: _botonesDelSetup(),          // F5-I21: los del setup
       extras: Object.assign({}, extras)
     };
   }
@@ -902,7 +734,6 @@ const BaseFicha = (function () {
   function reiniciar() {
     _asegurar();
     for (const d of IMAGENES) _vaciarImagen(d.clave);
-    idsBoton = {};
     extras = {};
     campos.nombre.value = '';
     campos.descripcion.value = '';                     // F5-I17 (M13)
@@ -911,8 +742,6 @@ const BaseFicha = (function () {
     campos.alto.value = '';
     campos.colorFondo.value = COLOR_BLANCO;
     campos.codigoGWC.value = '---';
-    cuerpoBotones.textContent = '';
-    _pintarTablaBotones();
     if (mensajes) mensajes.textContent = '';
     _marcarCambios(false);
   }
@@ -922,8 +751,8 @@ const BaseFicha = (function () {
    * viene definido; el director llama antes a reiniciar().
    * @param {{nombre:?string, descripcion:?string, estilo:?(string|number),
    *   resolucion:?Object, colorFondo:?string,
-   *   botones:?Array<{numero:(string|number), id:?string}>,
-   *   imagenes:?Object, extras:?Object}} d - Datos a mostrar.
+   *   imagenes:?Object, extras:?Object}} d - Datos a mostrar
+   *   (F5-I21: sin botones, que ya no son de la ficha).
    * @returns {void}
    */
   function poblar(d) {
@@ -944,17 +773,6 @@ const BaseFicha = (function () {
       campos.colorFondo.value = _esColor(d.colorFondo) ? d.colorFondo.toLowerCase() : COLOR_BLANCO;
     }
     if (d.codigoGWC !== undefined) campos.codigoGWC.value = d.codigoGWC || '---';
-    if (d.botones !== undefined) {
-      idsBoton = {};
-      for (const b of d.botones || []) {
-        idsBoton[String(b.numero)] = {
-          usado: true, id: b.id ? String(b.id) : '',
-          tecla: (b.tecla !== undefined && b.tecla !== null) ? String(b.tecla) : ''
-        };
-      }
-      cuerpoBotones.textContent = '';   // que no pise lo recién cargado
-    }
-    _pintarTablaBotones();
     if (d.imagenes) {
       for (const [clave, img] of Object.entries(d.imagenes)) {
         if (img && imagenes[clave]) ponerImagen(clave, img, clave + '.png');
@@ -1007,8 +825,7 @@ const BaseFicha = (function () {
     guardar: guardar,
     hayCambios: hayCambios,
     marcarAplicado: () => _marcarCambios(false),
-    ficherosGWB: ficherosGWB,
-    botonesDelEstilo: botonesDelEstilo
+    ficherosGWB: ficherosGWB
   };
 
 })();

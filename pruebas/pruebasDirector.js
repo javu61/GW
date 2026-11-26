@@ -339,8 +339,11 @@
     return out;
   }
 
-  // F5-I21 (D10): el AJUSTE de resolución (la ventana es la confirmación; la
-  // vía programática aplicarAjusteResolucion es lo que usan también C9 y E10).
+  // F5-I21 (D10): el AJUSTE de resolución, modelo simple: SOLO cambia la
+  // resolución declarada; el juego (img_s, sprites, posiciones) NO se toca
+  // (el GWI conserva el origen; el emulador reescala al vuelo y el GWC
+  // escala declarada/fuente al generar). La ventana es la confirmación; la
+  // vía programática aplicarAjusteResolucion es lo que usan también C9 y E10.
   async function _pruebaD10() {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
@@ -356,20 +359,24 @@
       JSON.stringify(_estado()));
     const acciones = BaseDescomponer.numeroDeCambios();
     const en320 = crudos(BaseDescomponer.segmentos());
+    const dimsBase = () => JSON.stringify(BaseDescomponer.dimensionesBase());
+    const dimsSprites = () => JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]));
+    const base320 = dimsBase(), sprites320 = dimsSprites();
     // 1. A la MISMA resolución no toca nada (y no pide nada).
     ok('D10: ajustar a la misma resolución no toca nada',
       BaseDirector.aplicarAjusteResolucion(320, 240) === true &&
       crudos(BaseDescomponer.segmentos()) === en320, '');
-    // 2. Ajuste a 640×480: posiciones ×2 (redondeo del GWC) y autoría intacta.
-    const previos = JSON.parse(en320);   // [id, x, y] en 320×240
+    // 2. Ajuste a 640×480: SOLO la resolución declarada cambia; el juego
+    //    queda EXACTO (posiciones, sprites e img_s) — el GWI conserva el
+    //    origen; el escalado lo hacen el emulador (al vuelo) y el GWC (al generar).
     ok('D10: ajustar a 640×480 se aplica',
       BaseDirector.aplicarAjusteResolucion(640, 480) === true, estado());
-    const actuales = BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y]);
-    ok('D10: las posiciones se reescalan con el redondeo del GWC (×2 entero)',
-      actuales.length === previos.length && actuales.every((a, i) =>
-        a[0] === previos[i][0] && a[1] === Math.round(previos[i][1] * 2) &&
-        a[2] === Math.round(previos[i][2] * 2)),
-      JSON.stringify(actuales[0]));
+    ok('D10: el juego no se reescala (posiciones exactas)',
+      crudos(BaseDescomponer.segmentos()) === en320, '');
+    ok('D10: el juego no se reescala (sprites exactos)',
+      dimsSprites() === sprites320, '');
+    ok('D10: img_s no se reescala (espacio fuente intacto)',
+      dimsBase() === base320, '');
     ok('D10: la autoría queda intacta (mismas acciones)',
       BaseDescomponer.numeroDeCambios() === acciones, String(acciones));
     ok('D10: el setup declara la nueva resolución',
@@ -379,6 +386,13 @@
     ok('D10: la pantalla del aparato mide lo nuevo',
       document.getElementById('pantalla').width === 640 &&
       document.getElementById('pantalla').height === 480, 'canvas');
+    const resolucionFicha = () => {
+      const nums = [...document.querySelectorAll('#fichaCartucho input[type=number]')];
+      return nums.length === 2 ? { ancho: Number(nums[0].value), alto: Number(nums[1].value) } : null;
+    };
+    ok('D10: la ficha de Cartucho muestra la nueva resolución',
+      JSON.stringify(resolucionFicha()) === '{"ancho":640,"alto":480}',
+      JSON.stringify(resolucionFicha()));
     // 3. Fuera de rango (F5-I16): se rechaza ANTES de tocar nada (atómico).
     ok('D10: fuera de rango (200×200) se rechaza sin tocar nada',
       BaseDirector.aplicarAjusteResolucion(200, 200) === false &&
@@ -386,9 +400,9 @@
     // 4. La ventana: contenido, fuera de rango deshabilita y cancelar conserva.
     BaseDirector.ajustarResolucion();
     const vent = document.querySelector('.ventanaResolucion');
-    ok('D10: la ventana abre con factor de escala y efecto sobre los segmentos',
+    ok('D10: la ventana abre con factor de escala y aviso de que el juego queda igual',
       vent && /Factor de escala/.test(vent.textContent) &&
-        /se reescalar/.test(vent.textContent) && /Afectará\ a\ los\ segmentos|Afectará\ /.test(vent.textContent),
+        /NO se reescala/.test(vent.textContent) && /el GWC escala al generar/.test(vent.textContent),
       vent ? vent.textContent.slice(0, 100) : '(sin ventana)');
     const botonesVent = () => Array.from(vent.querySelectorAll('button'));
     let btnCancelar = botonesVent().find(b => b.textContent === 'Cancelar');
@@ -408,10 +422,11 @@
     ok('D10: fuera de rango la ventana deshabilita «Ajustar resolución»',
       btnFuera && btnFuera.disabled && /fuera del rango/.test(vent2.textContent), '');
     Array.from(vent2.querySelectorAll('button')).find(b => b.textContent === 'Cancelar').click();
-    // 5. Ida y vuelta con factor entero: exacta (.segments como al principio).
+    // 5. Vuelta a 320×240: el juego sigue exacto (nada se reescala nunca).
     BaseDirector.aplicarAjusteResolucion(320, 240);
-    ok('D10: vuelta a 320×240 exacta (factor entero en ambas direcciones)',
-      crudos(BaseDescomponer.segmentos()) === en320, '');
+    ok('D10: vuelta a 320×240 con el juego exacto',
+      crudos(BaseDescomponer.segmentos()) === en320 && dimsBase() === base320 &&
+      BaseDirector.datosSetup().resolucion.ancho === 320, '');
     return out;
   }
 

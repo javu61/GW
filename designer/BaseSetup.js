@@ -303,11 +303,12 @@ const BaseSetup = (function () {
     campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
     _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: la RAM del ESP; sirve para mostrar la ocupación al generar el GWC. Solo se edita aquí.');
     // F5-I21: informativos de solo lectura, junto al dato con el que se comparan.
-    campos.ultimoGWC = _entrada('text', { readOnly: true, placeholder: '—' });
+    // Como TEXTO (no input): no debe parecer editable.
+    campos.ultimoGWC = _crearElemento('span', 'fichaInformativo', '—');
     _campo(rejilla, 'Último GWC calculado', campos.ultimoGWC,
       'Solo informativo: se rellena al generar un GWC (puede quedar desfasado si después se toca el juego).');
     _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: la FLASH del ESP (hoy el fondo, que aún no se cuenta). Solo se edita aquí.');
-    campos.ultimoFondo = _entrada('text', { readOnly: true, placeholder: '—' });
+    campos.ultimoFondo = _crearElemento('span', 'fichaInformativo', '—');
     _campo(rejilla, 'Último fondo', campos.ultimoFondo,
       'Solo informativo: tamaño del bloque del fondo; a cero hasta que el fondo se guarde en el cartucho.');
     datos.appendChild(rejilla);
@@ -580,8 +581,8 @@ const BaseSetup = (function () {
    * @returns {void}
    */
   function _limpiarUltimos() {
-    if (campos.ultimoGWC) campos.ultimoGWC.value = '';
-    if (campos.ultimoFondo) campos.ultimoFondo.value = '';
+    if (campos.ultimoGWC) campos.ultimoGWC.textContent = '—';
+    if (campos.ultimoFondo) campos.ultimoFondo.textContent = '—';
   }
 
   /**
@@ -596,8 +597,8 @@ const BaseSetup = (function () {
   function informarUltimos(d) {
     if (!campos.ultimoGWC) return;               // la ficha aún no se ha pintado
     const mem = (d && d.memoria) || {};
-    campos.ultimoGWC.value = BaseCartucho.textoUsoMemoria(d.gwc, mem.RAM);
-    campos.ultimoFondo.value = BaseCartucho.textoUsoMemoria(d.fondo, mem.FLASH);
+    campos.ultimoGWC.textContent = BaseCartucho.textoUsoMemoria(d.gwc, mem.RAM) || '—';
+    campos.ultimoFondo.textContent = BaseCartucho.textoUsoMemoria(d.fondo, mem.FLASH) || '—';
   }
 
   /**

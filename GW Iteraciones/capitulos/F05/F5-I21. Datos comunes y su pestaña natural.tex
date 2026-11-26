@@ -60,17 +60,23 @@ Hay datos que aparecen en varias pestañas y son editables en todas ellas (nombr
 No todos los campos necesitan validación de su cambio, solo de los que al cambiarlos afectan a otros, algunos con cambios delicados. Para realizar esto:
 
 \begin{itemize}
-	\item \textbf{Resolución: ajustar, no borrar.} Al ser dos valores para cambiar que siempre van de la mano, no podemos hacerlo de manera individual. Para hacerlo:
+	\item \textbf{Resolución: ajustar, no borrar.} Al ser dos valores para cambiar que siempre van de la mano, no podemos hacerlo de manera individual. Para poder cambiarlo:
 	\begin{itemize}
 		\item En el Setup se muestran de solo lectura junto a un botón \emph{Ajustar resolución}
 		\item Al pulsarlo se abre una ventana propia con los valores actuales, los nuevos, el factor de escala resultante y si afecta a los segmentos, con dos botones, \emph{Cancelar} y \emph{Ajustar resolución}.
-		\item 	Confirmado el cambio, un proceso de ajuste convierte lo que depende de ella: la posición y el tamaño de cada segmento y sprite se escalan por eje (con el mismo redondeo que ya usa el generador del GWC, \texttt{escalar}), \texttt{img\_s} se reescala SIN antialiasing (vecino más cercano: sigue siendo blanco y negro puro y verificable), \texttt{img\_f} e \texttt{img\_m} se reescalan suavemente. Las acciones, los roles y las secuencias no dependen del tamaño y se conservan.
-		\item 	Si el resultado no es válido (fuera de 320$\times$240..1024$\times$600, F5-I16) la ventana lo rechaza antes de tocar nada.
+		\item 	Confirmado el cambio:
+		\begin{itemize}
+			\item Si el resultado no es válido (fuera de 320$\times$240..1024$\times$600, F5-I16) la ventana lo rechaza antes de tocar nada.
+			\item En los cartuchos GWB y GWI no cambia nada, las imágenes se guarda con su tamaño original, los segmentos y sprites permanecen de su tamaño original y en su posición original.
+			\item En el cartucho GWC los datos se deben guardar ya escalados, para evitar sobrecargar al sistema externo, por loq ue se reescala en ese momento.
+			\item Para el emulador los datos se recalculan al vuelo, tamaños de imagen de fondo, de los sprintes y sus posiciones, ya que en el PC hay potencia de sobra para hacerlo.
+		\end{itemize}
+		\item \textbf{Aviso cuando el cambio puede ser problemático.} Si hay segmentos creados, la ventana de resolución avisa SIEMPRE de que se reescalarán, y de que el resultado puede degradarse si el factor de escala no es entero; es el usuario quien decide (cancelar conserva todo). El mismo criterio vale para los demás cambios con proceso: el aviso describe qué se va a ajustar o rehacer antes de lanzarlo.
+		\item \textbf{Propagación atómica.} Si el usuario cancela, no cambia nada; si confirma, o se hace todo el ajuste o se deja todo como estaba (el proceso valida antes de aplicar, como \texttt{\_aplicarDesdeFichaSetup}).
 	\end{itemize}
-	\item \textbf{Aviso cuando el cambio puede ser problemático.} Si hay segmentos creados, la ventana de resolución avisa SIEMPRE de que se reescalarán, y de que el resultado puede degradarse si el factor de escala no es entero; es el usuario quien decide (cancelar conserva todo). El mismo criterio vale para los demás cambios con proceso: el aviso describe qué se va a ajustar o rehacer antes de lanzarlo.
-	\item \textbf{\texttt{img\_f}: ajustar.} Cambiar el fondo solo obliga a adaptarlo a la pantalla; los segmentos no se ven afectados.
-	\item \textbf{\texttt{img\_s}: rehacer.} Cambiar la imagen de segmentos invalida todo lo derivado de ella (los sprites se extraen de esa imagen): se segmenta de cero y se vacían Editor y Sprites. Es el comportamiento actual de Aplicar con un cambio de \texttt{img\_s}, ahora explícito en la confirmación («perderás el mapa y las acciones»).
-	\item \textbf{Propagación atómica.} Si el usuario cancela, no cambia nada; si confirma, o se hace todo el ajuste o se deja todo como estaba (el proceso valida antes de aplicar, como \texttt{\_aplicarDesdeFichaSetup}).
+	\item \textbf{\texttt{img\_f}: ajustar.} Cambiar el fondo solo obliga a adaptarlo a la pantalla del emulador y la que se guarda en el GWC; los segmentos no se ven afectados.
+	\item \textbf{\texttt{img\_s}: rehacer.} Cambiar la imagen de donde se extraen los segmentos invalida todo lo derivado de ella: se segmenta de cero y se vacían Editor y Sprites. Es el comportamiento actual de Aplicar con un cambio de \texttt{img\_s}, ahora explícito en la confirmación («perderás el mapa y las acciones»).
+
 \end{itemize}
 
 \subsection{Plan de cambios}

@@ -1668,8 +1668,7 @@ var BaseDirector = (function () {
         resolucion: json.resolucion || setupGWS.resolucion,
         codigoGWC: json.codigoGWC || null,   // F5-I17 (M1): «---» si no trae
         colorFondo: json.ColorFondo || null,
-        memoria: json.memoria || null,        // F5-I20
-        // F5-I21: sin botones: la ficha ya no los muestra ni los guarda.
+        // F5-I21: sin botones ni memoria: la ficha ya no los muestra ni los guarda.
         imagenes: { img_s: imgS, img_f: imgF },
         extras: Object.fromEntries(['combinar', 'etiquetas']
           .filter(k => json[k] !== undefined).map(k => [k, json[k]]))

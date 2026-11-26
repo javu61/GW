@@ -59,7 +59,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _botonesDelSetup        _campo
-//    _memoriaCruda
+//    _memoriaDelSetup
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
@@ -516,10 +516,9 @@ const BaseFicha = (function () {
       }
     }
 
-    // F5-I21: la ficha ya no declara botones (los del cartucho son los
-    // del setup, verificados al aplicar el GWS): nada que validar aquí.
-    // F5-I20 (MA02): memoria no válida = aviso (nunca bloquea) y vale 0.
-    avisos.push(...BaseCartucho.revisarValores('GWB', { memoria: _memoriaCruda() }));
+    // F5-I21: la ficha ya no declara botones ni memoria (los botones son
+    // los del setup, verificados al aplicar el GWS, y la memoria también
+    // es la del setup): nada más que validar aquí.
     // Validación del contrato del GWB (la misma que al cargarlo). El
     // mapa de ficheros se monta aquí con las imágenes en memoria.
     if (errores.length === 0) {
@@ -678,8 +677,6 @@ const BaseFicha = (function () {
       // Solo viaja si no es el blanco por defecto (los defaults no viajan).
       colorFondo: campos.colorFondo.value.toLowerCase() === COLOR_BLANCO
         ? null : campos.colorFondo.value.toUpperCase(),
-      // F5-I20: solo los subcampos válidos y ≠ 0 (null si no hay ninguno).
-      memoria: BaseCartucho.memoriaNoCero(_memoriaCruda()),
       imagenes: imgs
     };
   }

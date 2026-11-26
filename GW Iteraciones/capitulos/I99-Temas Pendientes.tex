@@ -17,6 +17,8 @@
 		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
 		
 		\item PC6. Integración de textos
+
+		\item PC7. F5-I21/I22: convertir los ficheros de datos al campo nuevo «Texto Pantalla» (\texttt{setup*.json}, los cartuchos de ejemplo y \texttt{pruebas/cartuchos/*}); hoy siguen con \texttt{alias}/\texttt{id} y se leen por compatibilidad (se convierten al guardarlos de nuevo).
 	\end{itemize}
 	
 	\item Bloque D: Fase 6
@@ -37,10 +39,10 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 	\textbf{Nro} & \textbf{Descripción} \\
 	\midrule
 	\endhead
-	R01 & \textbf{Funciones gigantes:}\newline \texttt{BaseDescomponer.mostrarPanel} ($\sim$1300 líneas $\to$ \texttt{panelMarcados}, \texttt{panelCartucho}, \texttt{panelOrden}, \texttt{panelTipo}, \texttt{panelEnlaces}, \texttt{panelColision}, \texttt{panelDigito}, \texttt{panelContador}, \texttt{panelUnion}); \texttt{aplicarEleccion} (279); manejador del selector de tipo ($\sim$175); \texttt{JuegoMotorEstados.tick} (que sea una lista de llamadas), \texttt{iniciar} (110), \texttt{decidirColision} (100), \texttt{prepararContadores} (80); \texttt{BaseDirector.procesarCartucho} (110), \texttt{generarGWIyGWC} (75), \texttt{montarGWI} (80). \\
+	R01 & \textbf{Funciones gigantes:}\newline \texttt{BaseDescomponer.mostrarPanel} ($\sim$1300 líneas $\to$ \texttt{panelMarcados}, \texttt{panelCartucho}, \texttt{panelOrden}, \texttt{panelTipo}, \texttt{panelEnlaces}, \texttt{panelColision}, \texttt{panelDigito}, \texttt{panelContador}, \texttt{panelUnion}); \texttt{aplicarEleccion} (279); manejador del selector de tipo ($\sim$175); \texttt{JuegoMotorEstados.tick} (que sea una lista de llamadas), \texttt{iniciar} (110), \texttt{decidirColision} (100), \texttt{prepararContadores} (80); \texttt{BaseDirector.\_procesarCartucho} ($\sim$160; \texttt{generarGWIyGWC} y \texttt{montarGWI} ya no existen, F5-I19). \\
 	\midrule
 	
-	R02 & \textbf{Patrones repetidos:}\newline \texttt{filaEnlace(...)} (6$\times$); \texttt{confirmar(g, entradas)} (19$\times$); \texttt{encender(seg, v)} en el motor ($\sim$6$\times$); \texttt{escribirInverso}/\texttt{retirarInverso} (4 sitios); \texttt{publicarEnPuente(cfg)} (7 llamadas \texttt{ComunListas.fijar*} en \texttt{procesarCartucho} y \texttt{procesarGWC}); \texttt{accionarBoton(numero)} (Start/pulsar duplicado); \texttt{tomarFichero(id)} (4 \texttt{alSeleccionar*}); \texttt{envolvente(cajas)} (6$\times$); \texttt{aplicarAlta}/\texttt{aplicarBaja} (3 sitios); \texttt{\_descargarGWC} copia una descarga genérica y \texttt{\_validarCabeceraGWC} repite la suma de verificación. \\
+	R02 & \textbf{Patrones repetidos:}\newline \texttt{filaEnlace(...)} (6$\times$); \texttt{confirmar(g, entradas)} (19$\times$); \texttt{encender(seg, v)} en el motor ($\sim$6$\times$); \texttt{escribirInverso}/\texttt{retirarInverso} (4 sitios); las 7 llamadas seguidas \texttt{ComunListas.fijar*} (en \texttt{\_procesarCartucho}); \texttt{accionarBoton(numero)} (Start/pulsar duplicado); \texttt{tomarFichero(id)} (4 \texttt{alSeleccionar*}); \texttt{envolvente(cajas)} (6$\times$); \texttt{aplicarAlta}/\texttt{aplicarBaja} (3 sitios); \texttt{\_descargarGWC} copia una descarga genérica y \texttt{\_validarCabeceraGWC} repite la suma de verificación. \\
 	\midrule
 	
 	R03 & \textbf{Una sola tabla de campos (JSON y GWC):}\newline extendir el patrón de \texttt{TABLA\_LIMITES} (\texttt{BaseCartucho.js}, F5-I16) a los campos que faltan (\texttt{memoria \{RAM, FLASH\}}, \texttt{resolucion \{ancho, alto\}}); y una sola tabla de layout por registro del GWC, \texttt{[\{campo, bytes, escala, nulo\}]}, con escritor y lector con cursor (\texttt{DataView}) y aserción $\Sigma\texttt{bytes} === 32$. Objetivo: una única fuente de verdad por campo (nombre en el json, min, max, nulo) usada por la validación, la grabación y la lectura; sirve de especificación para el anexo de formatos (A02) y para el C del ESP32 (Fase 6). La lectura del json SÍ con la tabla (\texttt{json[ruta]} y recursiva); el interface NO: los topes al vuelo de la UI quedan con accesos directos, la indirección solo estorba en el dibujo. Se aborda al entrar en la Fase 6. \\
@@ -55,11 +57,11 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 	R06 & \textbf{Pintado duplicado:}\newline el aparato tiene su copia de \texttt{DibujarFondo}/\texttt{DibujarSegmento}; unificar en \texttt{BaseGraficos.pintarSprite(...)} o recortar \texttt{BaseGraficos}. \\
 	\midrule
 	
-	R07 & \textbf{Código muerto o sobrante (comprobado 22-11):}\newline Limpieza de elementos sin uso verificados en los módulos principales: \\
+	R07 & \textbf{Código muerto o sobrante (revisado 26-11):}\newline Limpieza de elementos sin uso en los módulos principales. F5-I19 retiró ya los del bloque B que se señalaban; queda lo siguiente: \\
 
-		& A. \textbf{BaseDirector:}\newline parte de dibujo de \texttt{mostrarSprites} (siempre con \texttt{[]}), variables privadas \texttt{sprites}/\texttt{segmentos}, \texttt{ESTILOS.*.descripcion}, exports \texttt{pestanna} e \texttt{imagenBlob}. \\
+		& A. \textbf{BaseDirector:}\newline \texttt{ESTILOS.*.descripcion}, exports \texttt{pestanna} e \texttt{imagenBlob} (el dibujo sobrante de \texttt{mostrarSprites} y las variables \texttt{sprites}/\texttt{segmentos} ya se retiraron). \\
 	
-		& B. \textbf{BaseCartucho:}\newline exports \texttt{leerGWB}, \texttt{leerGWI}, \texttt{leerJSON}, \texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}; \texttt{cargarDelMapa} (lógica copiada en \texttt{BaseDirector}); \texttt{'GWC'} en \texttt{TIPOS\_CARTUCHO} (acepta un \texttt{.json} de tipo GWC); \texttt{json.img\_s} en la raíz. \\
+		& B. \textbf{BaseCartucho:}\newline exports que ya solo usan las pruebas o el propio módulo (\texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}, \texttt{leerJSON}); la lectura de \texttt{json.img\_s} de la raíz por compatibilidad al cargar un GWI (\texttt{validarComunes} ya solo admite \texttt{imagenes.img\_s}). \\
 	
 		& C. \textbf{BaseDescomponer:}\newline parámetro \texttt{codigo} de \texttt{montarGWI}; \texttt{dx}/\texttt{dy} (restos de «Posicionar»); compatibilidad con GWI antiguos (\texttt{uniones}, \texttt{\{unir\}}, tipo 99, «Deshacer unión»): aislar o retirar. \\
 	
@@ -75,7 +77,7 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 	R09 & \textbf{Pestañas / accesibilidad:}\newline faltan \texttt{role="tablist"/"tab"} y \texttt{aria-selected}; no hay \texttt{:focus-visible}; los botones de la máquina solo responden a \texttt{pointerdown} (sin Enter/Espacio); \texttt{mostrarPestanna} sobrescribe \texttt{className} (mejor \texttt{classList.toggle} o \texttt{data-vista}); el nombre se escribe de tres formas: \texttt{pestanna}, \texttt{pestanaVista}, \texttt{\#pestanas}. \\
 		\midrule
 	
-	R10 & \textbf{Unificar:}\newline hay funciones locales que se repiten en varios módulos, como por ejemplo \textbf{_campo} que los añade a la ventana, se define en dos lugares, crear un módulo nuevo de utilidades y unificar allí. \\
+	R10 & \textbf{Unificar:}\newline hay funciones locales que se repiten en varios módulos, como por ejemplo \texttt{\_campo} que los añade a la ventana, se define en dos lugares, crear un módulo nuevo de utilidades y unificar allí. \\
 	
 	\bottomrule
 \end{xltabular}
@@ -136,7 +138,7 @@ Nota: durante la refactorización (R01--R09), mantener las suites
 		\begin{itemize}
 		\item MB02 Al cargar imágenes \textbf{img\_s}, poder cargar cualquier imagen y convertirla a blanco y negro.
 		
-		\item MB03 En la pestaña del cartucho, poder cambiar el estilo de la máquina, con las limitaciones necesarias.
+		\item MB03 YA HECHO en F5-I21, de otra manera: el estilo se edita SOLO en el Setup y, con juego en memoria, se aplica EN CALIENTE sin descartar el cartucho (se rechaza el estilo de 2 botones si hay enlaces de jugador a \texttt{arriba}/\texttt{abajo}).
 		
 		\item MB04 Que al guardar el GWC se genere también un GWS con los datos del setup (YA HECHO en F5-I17: los botones generan ambos junto al GWI/GWC) y, lo que falta, empaquetar ambos en un ZIP: el binario para usar en el ESP y el empaquetado usable en el emulador; si se carga el empaquetado se carga primero el setup, si se carga el binario se verifica que exista un setup.
 

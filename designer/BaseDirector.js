@@ -628,13 +628,18 @@ var BaseDirector = (function () {
       // 1. El lienzo del aparato al nuevo tamaño ANTES del ajuste: así
       //    la escala que fija el repintado del editor ya es la buena.
       const canvas = _$('pantalla');
+      // La referencia del factor es la resolución DECLARADA vigente
+      // (la del setup, que puede no coincidir con el tamaño de img_s).
+      const declaradaVieja = (setupGWS && setupGWS.resolucion)
+        ? { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto }
+        : { ancho: canvas.width, alto: canvas.height };
       canvas.width = anchoNuevo;
       canvas.height = altoNuevo;
       // 2. El juego en memoria: geometría, sprites y posiciones (las
       //    acciones y los roles quedan intactos; el repintado lo hace
       //    el propio ajustarAResolucion).
       if (ajusta) {
-        BaseDescomponer.ajustarAResolucion(anchoNuevo, altoNuevo);
+        BaseDescomponer.ajustarAResolucion(anchoNuevo, altoNuevo, declaradaVieja);
         BaseDescomponer.pintarFondoAparato();      // fondo con la img_f ya reescalada
         BaseDescomponer.repintarAparato();
       }

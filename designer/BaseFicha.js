@@ -21,8 +21,9 @@
 //     «Cargar…» y «Borrar».
 //   - Botones (F5-I21): ya no se muestran ni se editan en la ficha.
 //     Los cartuchos (GWB, GWI) siguen llevándolos, pero con los nombres
-//     de campo y los datos del Setup (numero, puerto, tecla, alias):
-//     se cambian en la pestaña Setup (columna «Texto Pantalla»).
+//     de campo y los datos del Setup (numero, puerto, tecla,
+//     textoPantalla): se cambian en la pestaña Setup (columna «Texto
+//     Pantalla»).
 //   - Memoria (F5-I20, MA02): «RAM (KB)» y «FLASH (KB)», opcionales (vacío = 0):
 //     si el cartucho las declara mandan sobre las del setup al informar de
 //     la ocupación; se escriben en el GWB/GWI solo si no son 0.
@@ -58,7 +59,7 @@
 //    _pixelesNoBN        _crearTarjetaImagen     _cargarImagen           
 //    _colocarImagen      _vaciarImagen           _refrescarBotonesImagen
 //    _miniaturaDe        _botonesDelSetup        _campo
-//    _memoriaCruda
+//    _memoriaDelSetup
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
@@ -291,7 +292,7 @@ const BaseFicha = (function () {
   /**
    * F5-I21: los botones que viajan en los cartuchos (GWB y GWI) son los
    * del SETUP, con sus nombres de campo y sus datos (numero, puerto,
-   * tecla y alias — el «Texto Pantalla»). En la ficha NO se editan: se
+   * tecla y textoPantalla — el «Texto Pantalla»). En la ficha NO se editan: se
    * cambian en la pestaña Setup y el Aplicar de ésta los pone en
    * marcha. Copia profunda para que nadie toque el setup en memoria.
    * @returns {Array} Los botones del setup cargado ([] si no hay setup).
@@ -515,10 +516,9 @@ const BaseFicha = (function () {
       }
     }
 
-    // F5-I21: la ficha ya no declara botones (los del cartucho son los
-    // del setup, verificados al aplicar el GWS): nada que validar aquí.
-    // F5-I20 (MA02): memoria no válida = aviso (nunca bloquea) y vale 0.
-    avisos.push(...BaseCartucho.revisarValores('GWB', { memoria: _memoriaCruda() }));
+    // F5-I21: la ficha ya no declara botones ni memoria (los botones son
+    // los del setup, verificados al aplicar el GWS, y la memoria también
+    // es la del setup): nada más que validar aquí.
     // Validación del contrato del GWB (la misma que al cargarlo). El
     // mapa de ficheros se monta aquí con las imágenes en memoria.
     if (errores.length === 0) {
@@ -677,8 +677,6 @@ const BaseFicha = (function () {
       // Solo viaja si no es el blanco por defecto (los defaults no viajan).
       colorFondo: campos.colorFondo.value.toLowerCase() === COLOR_BLANCO
         ? null : campos.colorFondo.value.toUpperCase(),
-      // F5-I20: solo los subcampos válidos y ≠ 0 (null si no hay ninguno).
-      memoria: BaseCartucho.memoriaNoCero(_memoriaCruda()),
       imagenes: imgs
     };
   }

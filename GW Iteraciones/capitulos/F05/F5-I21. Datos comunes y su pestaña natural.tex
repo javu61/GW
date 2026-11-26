@@ -1,0 +1,89 @@
+\section{Vigésimo primera iteración de la Fase 5: Cada dato en su pestaña natural}
+\label{sec:F5I21}
+
+Hay datos que aparecen en varias pestañas y son  editables en todas ellas (nombre, resolución, memoria, estilo\ldots). Cambiarlos en un sitio puede obligar a ajustar o a descartar lo que depende de ellos en otro: reescalar las imágenes, los sprites y las posiciones, o volver a segmentar. Esta iteración fija una regla única: \textbf{cada dato se edita solo en su pestaña natural; en las demás se muestra de solo lectura, y todo cambio que afecta a otras pestañas pide confirmación y, una vez confirmado, se propaga lanzando el proceso que corresponda} (ajustar o rehacer).
+
+\subsection{Análisis del estado actual}
+\label{sec:F5I21Analisis}
+
+\begin{itemize}
+	\item Desde F5-I12 las pestañas siguen el orden natural:
+	\begin{center}
+		Setup $\to$ Cartucho $\to$ Editor $\to$ Sprites $\to$ Simulador
+	\end{center}
+	de modo que un cambio en una afecta a las posteriores. Los cambios de la ficha son un BORRADOR hasta pulsar \emph{Aplicar} (F5-I12), y desde F5-I20 ninguna vía descarta el cartucho sin confirmación (\texttt{\_confirmarDescarteCartucho}).
+
+	\item Pero los datos comunes se editan en más de un sitio: el nombre, la memoria, el color de fondo, el estilo y la resolución están en  Setup y en Cartucho, y F5-I20 los propaga de una a otra al aplicar. Es fácil cambiar el dato en la pestaña equivocada, y el efecto sobre lo posterior (imágenes, sprites, posiciones) hoy es TODO o NADA: aplicar descarta, no ajusta.
+
+	\item Las imágenes ya tienen reglas propias: con segmentos en memoria \texttt{img\_s} se bloquea en la ficha; el GWC escala al generarse y \texttt{img\_f} se ajusta al tamaño de la pantalla del setup; \texttt{img\_m} (la portada) no interviene en el juego.
+\end{itemize}
+
+\subsection{Diseño}
+\label{sec:F5I21Diseno}
+
+\begin{itemize}
+	\item \textbf{Un dato es editable en una pestaña ; en el resto, son de solo lectura.} Cada campo tiene su pestaña natural y se edita solo allí. En las demás se presenta como de solo lectura, con un aviso «se cambia en  Setup» (o «en Cartucho»).
+	\item \textbf{Todo cambio que afecta a otras pestañas pide confirmación} (con el mismo criterio de F5-I20: se omite con \texttt{GW\_DEBUG} para evitarlo en las pruebas automáticas, cancelar conserva todo) y, confirmado, \textbf{se propaga} lanzando el proceso correspondiente. Un cambio que no afecta a nada no pregunta.
+	\item \textbf{Dos tipos de proceso:} \emph{ajustar} (conserva el trabajo y lo adapta al nuevo dato) y \emph{rehacer} (descarta lo derivado y vuelve a obtenerlo desde cero). Se prefiere ajustar siempre que el dato sea una magnitud que se pueda convertir; se rehace cuando el dato es la FUENTE de lo derivado.
+\end{itemize}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{|p{3.1cm}|p{2.2cm}|p{2.6cm}|p{6.4cm}|}
+		\hline
+		\textbf{Dato} & \textbf{Se edita en} & \textbf{Efecto} & \textbf{Qué ocurre al cambiarlo (tras confirmar)} \\ \hline
+		Nombre y descripción del setup & Setup & Ninguno & Se guardan con el GWS; no se pregunta. \\ \hline
+		Nombre y descripción del cartucho & Cartucho & Ninguno & Se guardan con el GWB/GWI; no se pregunta. Nacen una sola vez de los del setup y desde entonces son independientes. \\ \hline
+		Memoria (RAM, FLASH) & Setup (la del hardware) y Cartucho (la propia) & Ninguno (informativa) & Solo cambia el cálculo del porcentaje al generar (F5-I20); no se pregunta. \\ \hline
+		Color de fondo & Cartucho & Presentación & Se repinta; no se pregunta. \\ \hline
+		Estilo y botones & Setup & Acciones de los botones & Se descartan las acciones que ya no existen en el nuevo estilo (confirmando). Si cambia el estilo hay que revisar las acciones en el Editor. \\ \hline
+		Resolución & Setup & \textbf{Ajustar} & Se reescalan las imágenes (\texttt{img\_s}, \texttt{img\_f}, \texttt{img\_m}), los sprites y las posiciones de los segmentos al nuevo tamaño, sin perder las acciones ni los roles. \\ \hline
+		\texttt{img\_f} (fondo) & Cartucho & \textbf{Ajustar} & Se ajusta al tamaño de la pantalla; no toca los segmentos. \\ \hline
+		\texttt{img\_m} (portada) & Cartucho & Ninguno & Se sustituye; no se pregunta. \\ \hline
+		\texttt{img\_s} (segmentos) & Cartucho & \textbf{Rehacer} & Es la FUENTE de la geometría: se vuelve a segmentar desde cero; se descartan Editor y Sprites (mapa, tipos, uniones, secuencias, acciones). \\ \hline
+	\end{tabular}
+	\caption{Cada dato: su pestaña, su efecto y el proceso que se lanza.}
+	\label{tab:F5I21Datos}
+\end{table}
+
+\begin{itemize}
+	\item \textbf{Resolución: ajustar, no borrar.} El cambio de resolución se hace en el Setup y, tras confirmar, un proceso de ajuste convierte lo que depende de ella: la posición y el tamaño de cada segmento y sprite se escalan por eje (con el mismo redondeo que ya usa el generador del GWC, \texttt{escalar}), \texttt{img\_s} se reescala SIN antialiasing (vecino más cercano: sigue siendo blanco y negro puro y verificable), \texttt{img\_f} e \texttt{img\_m} se reescalan suavemente. Las acciones, los roles y las secuencias no dependen del tamaño y se conservan. Si el resultado no es válido (fuera de 320$\times$240..1024$\times$600, F5-I17) el cambio se rechaza antes de tocar nada.
+	\item \textbf{\texttt{img\_f}: ajustar.} Cambiar el fondo solo obliga a adaptarlo a la pantalla; los segmentos no se ven afectados.
+	\item \textbf{\texttt{img\_s}: rehacer.} Cambiar la imagen de segmentos invalida todo lo derivado de ella (los sprites se extraen de esa imagen): se segmenta de cero y se vacían Editor y Sprites. Es el comportamiento actual de Aplicar con un cambio de \texttt{img\_s}, ahora explícito en la confirmación («perderás el mapa y las acciones»).
+	\item \textbf{Propagación atómica.} Si el usuario cancela, no cambia nada; si confirma, o se hace todo el ajuste o se deja todo como estaba (el proceso valida antes de aplicar, como \texttt{\_aplicarDesdeFichaSetup}).
+\end{itemize}
+
+\subsection{Plan de cambios}
+\label{sec:F5I21Plan}
+
+\begin{itemize}
+	\item \texttt{baseFicha.js} y \texttt{baseSetup.js}: los campos que no son de su pestaña pasan a solo lectura, con el aviso y el acceso a la pestaña natural; el nombre y la descripción del cartucho se desligan del setup tras la copia inicial (F5-I20).
+	\item \texttt{baseDirector.js}: función única \texttt{\_confirmarCambioComun(dato, efecto)} que decide si hay que preguntar y con qué texto (ajustar o rehacer), reutilizando \texttt{\_confirmarDescarteCartucho}; el cambio de resolución desde el Setup llama al nuevo ajuste en lugar de descartar el cartucho.
+	\item \texttt{baseDescomponer.js}: proceso \texttt{ajustarAResolucion(anchoNuevo, altoNuevo)}, que reescala imágenes, sprites y posiciones del cartucho en memoria; proceso de «rehacer desde \texttt{img\_s}» (el actual descarte de Aplicar con segmentos, ahora explícito y con su confirmación).
+	\item \texttt{baseCartucho.js}: se reutiliza \texttt{escalar} (la misma conversión que el GWC), de modo que el ajuste en pantalla y el del generador dan el mismo resultado; si hace falta, \texttt{escalar} se exporta.
+	\item Cabeceras de módulos al día; A5-anexo, una línea de \texttt{\textbackslash input} nueva (ya incluida en \texttt{F05.tex}).
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F5I21Pruebas}
+
+\begin{itemize}
+	\item Caja nueva D10 (grupo \texttt{director}, destructiva, al final de S2), referenciada en F5-I18: cambiar un dato SIN efecto (nombre del cartucho, memoria) no pregunta ni toca nada; cambiar la resolución con un cartucho en memoria PIDE confirmación (capturada): cancelar conserva todo y avisa; confirmar ajusta y deja el cartucho con las acciones intactas.
+	\item Caja nueva E10 (grupo \texttt{editor}, solo consola), referenciada en F5-I18: tras ajustar a otra resolución, las posiciones y los tamaños de los segmentos son los de \texttt{escalar} y la imagen \texttt{img\_s} sigue siendo blanco y negro puro; ajustar a un tamaño y volver al original mantiene los segmentos dentro de la tolerancia del redondeo.
+	\item Caja nueva C9 (grupo \texttt{gwi\_gwc}, solo consola), referenciada en F5-I18: el GWC generado tras el ajuste en pantalla es igual al generado desde el cartucho original con la nueva resolución (mismo \texttt{escalar}).
+	\item Cambiar \texttt{img\_s} descarta Editor y Sprites tras confirmar; cambiar \texttt{img\_f} no toca los segmentos (caja en D10).
+	\item S2 y S5 completas en verde; el cambio no toca el formato GWC ni el orden del tick.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F5I21Criterios}
+
+\begin{enumerate}
+	\item Cada dato de la tabla~\ref{tab:F5I21Datos} se edita solo en su pestaña natural; en las demás es de solo lectura, con acceso a la pestaña donde se edita.
+	\item Cambiar nombre, descripción, memoria, color de fondo o \texttt{img\_m} no pregunta ni afecta a nada más.
+	\item Cambiar la resolución, el estilo, \texttt{img\_f} o \texttt{img\_s} pide confirmación (cancelar conserva todo; con \texttt{GW\_DEBUG} no se pide).
+	\item Cambiar la resolución AJUSTA imágenes, sprites y posiciones (conservando acciones y roles); cambiar \texttt{img\_f} la ajusta sin tocar los segmentos; cambiar \texttt{img\_s} SEGMENTA DE NUEVO y vacía Editor y Sprites.
+	\item El ajuste a una resolución nueva y el GWC generado a partir de él coinciden con los del generador (misma función \texttt{escalar}).
+	\item S2 y S5 en verde al cerrar la iteración.
+\end{enumerate}

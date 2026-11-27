@@ -1859,8 +1859,12 @@ var baseCartucho = (function () {
   // ---------------- Memoria del hardware (F5-I20, MA02) ----------------
   // «memoria» {RAM, FLASH} en KB (enteros ≥ 0, ambos opcionales) va en la
   // raíz del GWS y de los cartuchos. Es INFORMATIVA: solo sirve para mostrar
-  // el porcentaje de ocupación al generar el GWC; nunca bloquea.
+  // el porcentaje de ocupación al generar el GWC; nunca bloquea. Dentro
+  // viajan también los informativos «ultimoGWC» y «ultimoGWCimg» (F5-I21):
+  // los BYTES del último GWC calculado (datos y bloque del fondo), que así
+  // sobreviven a Aplicar y viajan en el GWS y en los cartuchos.
   const CLAVES_MEMORIA = ['RAM', 'FLASH'];
+  const CLAVES_ULTIMOS = ['ultimoGWC', 'ultimoGWCimg'];
 
   /** true si el valor es un entero ≥ 0 (los KB de un subcampo de memoria). */
   function _memoriaValida(v) {
@@ -1870,7 +1874,9 @@ var baseCartucho = (function () {
   /**
    * Revisa «memoria» de un fichero: lo que no es un entero ≥ 0 se AVISA y
    * se trata como 0 (F5-I16); los ceros y el objeto vacío se quitan, de modo
-   * que 0 equivale a no declarar y no se serializa. Muta el JSON en memoria.
+   * que 0 equivale a no declarar y no se serializa. Vale para los KB de
+   * RAM/FLASH y para los bytes de los informativos ultimoGWC/ultimoGWCimg
+   * (F5-I21). Muta el JSON en memoria.
    * @param {Object} json - GWS, GWB o GWI.
    * @param {string[]} avisos - Se le añaden los avisos.
    * @returns {void}
@@ -1894,18 +1900,31 @@ var baseCartucho = (function () {
       }
       if (m[k] === 0) delete m[k];
     }
-    if (CLAVES_MEMORIA.every(k => m[k] === undefined)) delete json.memoria;
+    for (const k of CLAVES_ULTIMOS) {
+      if (m[k] === undefined) continue;
+      if (!_memoriaValida(m[k])) {
+        avisos.push('memoria.' + k + ' (' + String(m[k]) + ') debe ser un entero ≥ 0 de bytes: se trata como 0.');
+        m[k] = 0;
+      }
+      if (m[k] === 0) delete m[k];
+    }
+    if (CLAVES_MEMORIA.every(k => m[k] === undefined) &&
+        CLAVES_ULTIMOS.every(k => m[k] === undefined)) delete json.memoria;
   }
 
   /**
-   * Solo los subcampos válidos y distintos de 0 de una «memoria».
-   * @param {*} memoria - Objeto {RAM, FLASH} (puede ser cualquier cosa).
-   * @returns {?{RAM:number, FLASH:number}} Objeto con lo que se escribe, o null si no hay nada.
+   * Solo los subcampos válidos y distintos de 0 de una «memoria»: los KB
+   * de RAM/FLASH y, si hay, los bytes de ultimoGWC/ultimoGWCimg (F5-I21),
+   * que así viajan en el GWS y en los cartuchos (GWB/GWI).
+   * @param {*} memoria - Objeto {RAM, FLASH, ultimoGWC?, ultimoGWCimg?} (puede ser cualquier cosa).
+   * @returns {?{RAM:number, FLASH:number, ultimoGWC?:number, ultimoGWCimg?:number}}
+   *          Objeto con lo que se escribe, o null si no hay nada.
    */
   function memoriaNoCero(memoria) {
     if (!memoria || typeof memoria !== 'object' || Array.isArray(memoria)) return null;
     const o = {};
-    for (const k of CLAVES_MEMORIA) if (_memoriaValida(memoria[k]) && memoria[k] > 0) o[k] = memoria[k];
+    for (const k of CLAVES_MEMORIA.concat(CLAVES_ULTIMOS))
+      if (_memoriaValida(memoria[k]) && memoria[k] > 0) o[k] = memoria[k];
     return Object.keys(o).length > 0 ? o : null;
   }
 

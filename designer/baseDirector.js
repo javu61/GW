@@ -1068,14 +1068,22 @@ var baseDirector = (function () {
     // que MANDA (F5-I19: el cartucho cargado manda, también aquí).
     const mem = baseCartucho.memoriaEfectiva(json.memoria,
       previo ? previo.memoria : null);
-    const memoriaDerivada = (mem.RAM > 0 || mem.FLASH > 0) ? mem : null;
+    // F5-I21: los informativos del último GWC viajan también (BYTES): manda
+    // el cartucho; lo que él no traiga, el setup previo.
+    const memoriaDerivada = (mem.RAM > 0 || mem.FLASH > 0) ? mem : {};
+    for (const k of ['ultimoGWC', 'ultimoGWCimg']) {
+      const v = (json.memoria && json.memoria[k]) ||
+        (previo && previo.memoria && previo.memoria[k]) || 0;
+      if (v > 0) memoriaDerivada[k] = v;
+    }
+    const hayMemoria = Object.keys(memoriaDerivada).length > 0;
     return {
       tipo: GWS_TIPO, version: GWS_VERSION,
       nombre: json.nombre || 'Derivado del cartucho',
       estilo: estilo,
       resolucion: { ancho: resolucion.ancho, alto: resolucion.alto },
       botones: botones,
-      ...(memoriaDerivada ? { memoria: memoriaDerivada } : {})
+      ...(hayMemoria ? { memoria: memoriaDerivada } : {})
     };
   }
 
@@ -1816,6 +1824,11 @@ var baseDirector = (function () {
       id => imagenes.get(id));
     tamGWC = fichero.size;        // el GWC cargado: su tamaño exacto
     pintarInfo();
+    // F5-I21: el GWC cargado manda su propio «último GWC calculado»: los
+    // DATOS (el total MENOS el bloque del fondo) en RAM y el fondo en FLASH.
+    const fondoBytes = leido.fondoImagen ? leido.fondoImagen.bytes.length + 5 : 0;
+    baseSetup.informarUltimos({ gwc: fichero.size - fondoBytes, fondo: fondoBytes,
+      memoria: setupGWS ? setupGWS.memoria : null });
     console.info('[cartucho] GWC cargado: ' + leido.sprites.length +
       ' sprite(s), ' + leido.segmentos.length +
       ' segmento(s) en memoria, listos para el motor.');

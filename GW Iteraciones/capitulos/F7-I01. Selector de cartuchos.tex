@@ -1,0 +1,171 @@
+\section{Primera iteración de la Fase 7: Selector de cartuchos desde la SD}
+\label{sec:F7I01}
+
+Esta iteración es de DISEÑO y abre la Fase~7, que recoge ampliaciones sobre el proyecto original. El planteamiento original es un único cartucho cargado en el aparato; aquí se añade la posibilidad de \textbf{tener varios GWC en una tarjeta SD, ver la lista, elegir uno y cargarlo} en la memoria del aparato para jugar, sin depender de la velocidad de lectura de la SD durante la partida. Se deja escrito ahora, con el hardware elegido, para tenerlo previsto cuando llegue el momento; la implementación es posterior a las Fases~5 y~6, y solo afecta al ESP32.
+
+\subsection{Datos de partida}
+\label{sec:F7I01Datos}
+
+\begin{itemize}
+	\item \textbf{Hardware:} la pantalla de pruebas (2,8\,pulgadas, ILI9341 por SPI, 320$\times$240) incorpora una \textbf{ranura para tarjeta SD}. El ESP32 de pruebas (WROOM-32, sin PSRAM) tiene 4\,MB de flash y unos 300\,KB de RAM interna.
+	\item \textbf{Diseño del fondo (F6-I01 y F6-I02):} el motor gráfico lee el fondo y las máscaras de la flash mapeada en memoria. El fondo no cabe en la RAM (150\,KB en 320$\times$240) y no puede leerse de la SD durante la partida (ver el análisis).
+	\item \textbf{Cartuchos:} ficheros GWC generados por el Designer (cabecera \texttt{GWC1\#0BAD\#}, bloques 0 a 5 y CRC-16/CCITT, F5-I06 y F5-I13). Cada GWC es autocontenido: el selector no necesita ningún otro fichero.
+	\item \textbf{Botones del aparato:} los de F5 (estilo de 2, 4 o 5 botones, más el trío A/B/R). Con A como Start y B como Stop (F5-I10), el selector se maneja con esos mismos botones.
+\end{itemize}
+
+\subsection{Análisis}
+\label{sec:F7I01Analisis}
+
+\subsubsection{Por qué no se juega leyendo de la SD}
+
+\begin{itemize}
+	\item El compositor necesita leer filas sueltas del fondo, que no son contiguas en memoria: un sprite de 20$\times$30 son 30 lecturas pequeñas.
+	\item La SD por SPI lee por sectores de 512 bytes y cada acceso con su posicionamiento cuesta del orden de un milisegundo. Serían decenas de milisegundos por sprite, frente a los 0'3\,ms de la flash mapeada (F6-I01).
+	\item Hay además un riesgo de funcionamiento: una tarjeta lenta o una lectura que falla a mitad de la partida estropearía la imagen. Cargar el cartucho \emph{antes} de jugar elimina el problema.
+\end{itemize}
+
+\subsubsection{Dónde se carga el cartucho elegido}
+
+El cartucho no cabe entero en la RAM cuando lleva fondo (el GWC del Parachute sin fondo son solo 7\,KB, pero un fondo de 320$\times$240 son otros 150\,KB). Se estudian dos sitios:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{3.2cm}p{4.5cm}p{4.5cm}}
+		\toprule
+		Destino & Ventajas & Inconvenientes \\
+		\midrule
+		RAM & Acceso inmediato; no desgasta nada. & Solo vale para cartuchos pequeños (sin fondo); gasta la RAM que escasea. \\
+		Partición de datos de la flash (\textbf{elegida}) & Cabe el cartucho completo; se accede por memoria mapeada como en F6-I01 y F6-I02; sobrevive a un reinicio. & La escritura tarda unos segundos y desgasta la flash (irrelevante con este uso). \\
+		\bottomrule
+	\end{tabular}
+	\caption{Destinos posibles de la carga del cartucho}
+	\label{tab:F7I01Destinos}
+\end{table}
+
+\textbf{Decisión:} el selector copia siempre el GWC elegido a la \textbf{partición de datos <<cartucho activo>>} de la flash. Así el camino de ejecución es el mismo para todos los cartuchos (con o sin fondo) y el motor gráfico, el lector del cartucho y los motores no cambian: siguen leyendo de la partición como en F6-I02. En esta idea, <<cargar en memoria>> significa copiar a la memoria del aparato, que es la flash; la SD queda como almacén y la partición como la memoria desde la que se ejecuta.
+
+\subsubsection{Tiempos y desgaste}
+
+\begin{itemize}
+	\item La lectura de la SD por SPI ronda de 0'5 a 2\,MB/s (según la tarjeta y el reloj) y la escritura de la flash, con su borrado previo por sectores de 4\,KB, unos cientos de KB/s. Un GWC de 150\,KB se copia en 1 o 2 segundos; uno de 1\,MB, en unos 5 a 10. Se muestra una barra de progreso.
+	\item La flash admite decenas de miles de borrados por sector. Con un cambio de cartucho de vez en cuando el desgaste es irrelevante. Aun así, \textbf{si el cartucho elegido ya está en la partición (mismo CRC y tamaño) no se copia} y se arranca directamente: ahorra tiempo y desgaste.
+	\item El tamaño de la partición es el límite de los cartuchos admitidos; un GWC mayor se rechaza con un mensaje claro antes de empezar la copia. Con 4\,MB de flash, un reparto indicativo es 1'5\,MB para el programa y 2\,MB para el cartucho, dejando el resto para los datos del sistema.
+\end{itemize}
+
+\subsection{Diseño}
+\label{sec:F7I01Diseno}
+
+\subsubsection{Organización en la SD}
+
+\begin{itemize}
+	\item Tarjeta con sistema de ficheros \textbf{FAT32} (hasta 32\,GB). Los cartuchos están en el directorio \texttt{/cartuchos} (o en la raíz si no existe) con la extensión \texttt{.gwc}.
+	\item El selector ignora lo que no sea un fichero \texttt{.gwc}, los ficheros ocultos y los de tamaño cero. Los nombres largos de FAT se admiten, pero la lista muestra los primeros caracteres que quepan en pantalla.
+	\item \textbf{Título que se muestra:} en una primera versión, el nombre del fichero sin la extensión. Si el GWC llevara el nombre del cartucho en su Bloque~0 se usaría ese (punto abierto, \ref{sec:F7I01Abiertos}).
+	\item La lista se ordena alfabéticamente y se pagina; con un tope razonable de cartuchos (p.~ej. 64).
+\end{itemize}
+
+\subsubsection{Validación de cada cartucho}
+
+Al listar se lee solo el comienzo de cada fichero (la cabecera y el Bloque~0), no el cartucho entero, y se marca como \emph{no válido} el que no pase estas comprobaciones, que se repiten con todo el fichero antes de copiarlo:
+
+\begin{itemize}
+	\item cabecera \texttt{GWC1\#0BAD\#} correcta y tamaño declarado igual al del fichero;
+	\item CRC-16/CCITT del contenido correcto (el mismo que valida el lector del cartucho, F5-I13);
+	\item \textbf{resolución} igual a la de la pantalla del aparato (la del Setup manda, F5-I13): si no coincide, se avisa y no se carga;
+	\item \textbf{botones} del cartucho compatibles con los del aparato (un cartucho con más botones que el aparato es error, F5-I12);
+	\item tamaño menor o igual al de la partición del cartucho activo.
+\end{itemize}
+
+Los cartuchos no válidos aparecen en la lista en gris con el motivo (<<CRC>>, <<resolución>>, \ldots) o se ocultan, según se decida en la implementación, pero nunca se pueden elegir.
+
+\subsubsection{Flujo del selector}
+
+\begin{verbatim}
+	Arranque
+	-> montar la SD
+	sin tarjeta: aviso; si la partición tiene un cartucho válido, se ofrece jugarlo
+	-> explorar /cartuchos y validar las cabeceras
+	-> mostrar la lista (paginada)
+	-> el usuario navega y elige con los botones
+	-> validar el fichero completo (cabecera, CRC, resolución, botones, tamaño)
+	-> ¿mismo CRC y tamaño que el de la partición?  sí: ir a jugar
+	-> invalidar la marca de la partición
+	-> borrar y copiar por bloques de 4 KB, con barra de progreso
+	-> leer la partición y recalcular el CRC (verificación)
+	-> marcar la partición como válida (CRC y tamaño) 
+	-> mapear la partición y arrancar el director con ese cartucho
+	Fin de partida (botón Stop)
+	-> volver al selector
+\end{verbatim}
+
+\begin{itemize}
+	\item \textbf{Marca de validez:} guardada en la memoria no volátil del ESP32 (NVS), con el CRC y el tamaño del cartucho de la partición. Se borra \emph{antes} de empezar a copiar y se escribe \emph{después} de verificar. Si se va la corriente a mitad de la copia, al arrancar la marca no existe y se entra directamente en el selector en lugar de intentar ejecutar un cartucho a medias.
+	\item \textbf{Memoria usada por la copia:} un solo búfer de 4\,KB (el tamaño de un sector de flash), así que la RAM es fija e independiente del tamaño del cartucho.
+	\item \textbf{Remapeo:} tras copiar hay que volver a mapear la partición y rehacer el lector del cartucho; el motor gráfico y los motores se reinician con el nuevo cartucho, como ya hace la carga de un cartucho en el simulador.
+	\item \textbf{Director:} gana un estado previo, el del selector, antes de <<jugando>>. Al terminar la partida con Stop (B), vuelve a él. Sus controles son los botones físicos del aparato (A para elegir, los de dirección para moverse), sin teclado ni touch.
+\end{itemize}
+
+\subsubsection{La pantalla del selector}
+
+\begin{itemize}
+	\item Se dibuja con la misma capa de pantalla (\texttt{basePantalla}); no usa el motor gráfico de segmentos. Fondo liso, y la lista como texto con una fuente de mapa de bits pequeña (p.~ej. 8$\times$8) guardada en la flash, con el elemento seleccionado resaltado.
+	\item Cada pantalla se pinta por rectángulos, no hace falta un framebuffer.
+	\item Una mejora posterior sería mostrar la portada (\texttt{img\_m}) como miniatura del cartucho seleccionado; hoy la portada no viaja en el GWC (punto abierto).
+\end{itemize}
+
+\subsubsection{Conexión de la SD}
+
+\begin{itemize}
+	\item Cada dispositivo con su bus SPI: \textbf{la pantalla en VSPI y la SD en HSPI}, cada una con su CS. La pantalla va así al reloj máximo y la SD no la perturba.
+	\item Compartir el bus es posible, pero en varios módulos ILI9341 el pin SDO no queda en alta impedancia con CS inactivo y daña las lecturas de la SD. Se evita.
+	\item El módulo trae pines propios de la SD (SD\_CS, SD\_MOSI, SD\_MISO, SD\_SCK). Con los de la pantalla son unos diez GPIO; se definen en \texttt{configHardware} evitando los de arranque (0, 2, 12, 15), los de la flash (6 a 11) y los solo entrada (34 a 39).
+\end{itemize}
+
+\subsection{Impacto en el resto del sistema}
+\label{sec:F7I01Impacto}
+
+\begin{itemize}
+	\item \textbf{Firmware:} módulo nuevo del selector y de la copia a la flash, estado nuevo en el director, lectura de la tarjeta y partición del cartucho con marca de validez. El motor gráfico, los motores y el lector del cartucho no cambian.
+	\item \textbf{GWC y Designer:} no cambian los bloques. Opcionalmente, un nombre del cartucho en el Bloque~0 (\ref{sec:F7I01Abiertos}). El Designer solo tiene que seguir generando GWC válidos.
+	\item \textbf{Memoria (F5-I20):} la FLASH declarada en el Setup es el tamaño de la partición del cartucho; el porcentaje que se informa al generar el GWC corresponde a ese espacio.
+	\item \textbf{Solo ESP32:} en el Mega no se puede escribir la memoria de programa en ejecución con facilidad, por lo que allí el cartucho sigue compilado en \texttt{PROGMEM}.
+\end{itemize}
+
+\subsection{Pruebas previstas}
+\label{sec:F7I01Pruebas}
+
+\begin{itemize}
+	\item \textbf{En el PC:} la exploración del directorio, la lectura de cabeceras, el CRC y la copia se escriben sobre dos capas simuladas, una <<SD>> que es una carpeta del PC y una <<partición>> que es un búfer en memoria. Así se prueban sin hardware, con ficheros de prueba generados por el Designer.
+	\item \textbf{Casos de la lista:} directorio vacío, un solo cartucho, muchos cartuchos (más de una página), nombres largos o con caracteres raros, ficheros que no son GWC, ficheros ocultos, y ordenación.
+	\item \textbf{Casos de cartuchos no válidos:} fichero truncado, CRC incorrecto, resolución distinta, más botones que el aparato, mayor que la partición, cabecera de otra versión.
+	\item \textbf{Interrupción de la copia:} se simula el corte a mitad (con la <<partición>> del PC) y se comprueba que al <<reiniciar>> no se ejecuta un cartucho a medias y se vuelve al selector.
+	\item \textbf{Mismo cartucho:} elegir el que ya está en la partición no copia nada.
+	\item \textbf{En el equipo:} tiempo de copia por tamaño (con una barra de progreso razonable), cien cambios de cartucho seguidos sin corrupción, SD ausente y SD extraída durante la lista, y RAM libre antes y después de cada carga (sin fugas).
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F7I01Criterios}
+
+\begin{itemize}
+	\item El selector lista los GWC de la SD y marca con su motivo los que no se pueden cargar.
+	\item Elegir un cartucho válido lo copia a la flash, lo verifica y arranca la partida; después de jugar y pulsar Stop, se vuelve a la lista.
+	\item Durante la partida no se lee nada de la SD.
+	\item Un corte de corriente durante la copia nunca deja ejecutar un cartucho incompleto.
+	\item Si el cartucho elegido ya está cargado no se copia.
+	\item La RAM del selector y de la copia es fija e independiente del tamaño del cartucho.
+\end{itemize}
+
+\subsection{Puntos abiertos}
+\label{sec:F7I01Abiertos}
+
+\begin{itemize}
+	\item \textbf{Nombre del cartucho:} usar el nombre del fichero (más simple) o añadir un campo de nombre al Bloque~0 del GWC (más coherente con el GWI, pero obliga a tocar el formato y el Designer).
+	\item \textbf{Portada:} llevar una miniatura de \texttt{img\_m} en el GWC (o en un fichero junto a él) para mostrarla en el selector.
+	\item \textbf{Qué ocurre al arrancar:} entrar siempre en el selector, o arrancar directamente el último cartucho y entrar al selector manteniendo un botón pulsado.
+	\item \textbf{Cartuchos no válidos:} mostrarlos en gris con su motivo u ocultarlos.
+	\item \textbf{Dos particiones alternas} (una de reserva, para conservar el cartucho anterior si falla la copia): más seguro, pero gasta el doble de flash. Se descarta salvo que el tamaño de la partición lo permita.
+	\item \textbf{Extracción de la SD en caliente:} mientras se juega no se usa la SD, de modo que solo importa en el selector.
+	\item \textbf{Fuente de la lista:} bitmap propio (8$\times$8) o la de la biblioteca de la pantalla; la propia evita depender de ella.
+\end{itemize}
+
+\clearpage

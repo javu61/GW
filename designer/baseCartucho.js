@@ -137,6 +137,7 @@
 //   memoriaEfectiva         Memoria al CARGAR un cartucho: la suya por subcampo manda sobre la del setup previo (F5-I21: luego solo vive en el Setup).
 //   memoriaSinUltimos       Copia de la memoria SIN los informativos del último GWC (F5-I21): la que se guarda en un GWS.
 //   textoUsoMemoria         Lo usado de un tipo de memoria: «4.2 KB (2 %)» (informativos del Setup, F5-I21).
+//   textoKB                 Solo el tamaño, sin porcentaje: «4.2 KB» (ficha de Cartucho, F5-I21).
 //   ocupacionMemoria        Texto «RAM: 4 de 216 KB (2 %) · FLASH: …» de lo usado frente a la memoria efectiva (null si no hay memoria).
 //   _revisarMemoria         Avisa de los subcampos inválidos de «memoria», los trata como 0 y quita los ceros.
 //   _memoriaValida          true si un subcampo es un entero ≥ 0.
@@ -1997,6 +1998,17 @@ var baseCartucho = (function () {
   }
 
   /**
+   * Solo el tamaño, SIN porcentaje (F5-I21): «4.2 KB». Para los
+   * informativos que no dependen de la máquina (el «Último GWC» de la
+   * ficha de Cartucho); la ocupación se ve en el Setup.
+   * @param {number} bytes - Bytes usados.
+   * @returns {string} El texto.
+   */
+  function textoKB(bytes) {
+    return _kb(bytes || 0) + ' KB';
+  }
+
+  /**
    * Texto de ocupación: «RAM: 4 de 216 KB (2 %) · FLASH: 0 de 216 KB (0 %)».
    * Solo entran los tipos con memoria > 0; sin ninguna, null (ni porcentaje
    * ni aviso). RAM usada = los DATOS del GWC (el total MENOS el bloque del
@@ -2843,6 +2855,7 @@ var baseCartucho = (function () {
     memoriaEfectiva: memoriaEfectiva,
     ocupacionMemoria: ocupacionMemoria,
     textoUsoMemoria: textoUsoMemoria,
+    textoKB: textoKB,
     MAX_PUERTO_GWS: MAX_PUERTO_GWS,
     PANTALLA_MIN: PANTALLA_MIN,
     PANTALLA_MAX: PANTALLA_MAX,

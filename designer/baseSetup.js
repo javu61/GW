@@ -661,6 +661,8 @@ const baseSetup = (function () {
     pintar: pintar,
     fijarResolucion: fijarResolucion,
     informarUltimos: informarUltimos,
+    datosUltimos: () => ({ gwc: ultimoGWC, fondo: ultimoGWCimg }),
+                                     // F5-I21: los BYTES del último GWC, para la ficha de Cartucho
     reiniciar: reiniciar,
     poblar: poblar,
     leer: leer,

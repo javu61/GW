@@ -19,7 +19,7 @@
 //                               de donde los reconstruye la carga del GWI).
 //   Las dos de juego dejan sus partidas en Pruebas.datos: en Node, GRABAR=fichero las guarda y
 //   COMPARAR=fichero las compara con las guardadas (red de seguridad del motor).
-//   C5/C6/C7 el par (F5-I17)    El codigoGWC del GWI en la ficha de Cartucho (C5), el aviso al
+//   C5/C6/C7 el par (F5-I17)    El «Último GWC» (CRC + tamaños) del GWI en la ficha (C5), el aviso al
 //                               guardar el GWI a secas (C6) y al generar el par (C7). Las dos
 //                               últimas solo en consola: el paso descarga los ficheros.
 //   C8 memoria (F5-I20, MA02)   Al generar el par con memoria declarada (RAM/FLASH, en el setup o,
@@ -177,7 +177,7 @@
 
   /* ---------------- F5-I17 (M1/M2): el par GWI/GWC y su codigoGWC ---------------- */
 
-  /** El campo solo lectura «Código GWC» de la ficha de Cartucho (o null).
+  /** El campo solo lectura «Último GWC» de la ficha de Cartucho (o null).
    * F5-I21: la ficha tiene TAMBIÉN los inputs readOnly ancho/alto de la
    * Resolución (number): el código es el único readOnly de TEXTO. */
   function _codigoEnFicha() {
@@ -200,10 +200,10 @@
     const j0 = baseDirector.datosCartucho();
     if (!j0 || j0.tipo !== 'GWI') return null;
     const esperado = (await _codigoDeGWI(await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip')))
-      || '---';
+      || '—';
     const enFicha = _codigoEnFicha();
-    ok('C5: el GWI cargado muestra su codigoGWC en la ficha de Cartucho',
-      enFicha === esperado, enFicha + ' (esperado ' + esperado + ')');
+    ok('C5: el GWI cargado muestra su codigoGWC en la ficha de Cartucho (crc + tamaños)',
+      enFicha !== null && enFicha.startsWith(esperado), enFicha + ' (esperado ' + esperado + ')');
     return out;
   }
 
@@ -216,7 +216,7 @@
     const j0 = baseDirector.datosCartucho();
     if (!j0 || j0.tipo !== 'GWI') return null;
     const antes = _codigoEnFicha();
-    if (!antes || antes === '---') {
+    if (!antes || antes === '—') {
       out.push(['C6: (omitida: el GWI cargado no trae codigoGWC)', true, '']);
       return out;
     }
@@ -225,8 +225,8 @@
     const estado = document.getElementById('estado').textContent;
     ok('C6: guardar el GWI a secas avisa de que el GWC del destino queda desparejado',
       /queda desparejado/.test(estado) && estado.includes(antes), estado);
-    ok('C6: la ficha de Cartucho vuelve a «---» al soltar el código',
-      _codigoEnFicha() === '---', _codigoEnFicha());
+    ok('C6: la ficha de Cartucho vuelve a «—» al soltar el código',
+      _codigoEnFicha() === '—', _codigoEnFicha());
     return out;
   }
 
@@ -247,7 +247,7 @@
     await _cargarGWI(setup, bytes);
     const enFichaInicio = _codigoEnFicha();
     ok('C7 (previo): el GWI cargado mantiene su codigoGWC declarado en la ficha',
-      enFichaInicio === codigoCargado, enFichaInicio);
+      enFichaInicio !== null && enFichaInicio.startsWith(codigoCargado), enFichaInicio);
     const zip = await JSZip.loadAsync(bytes);
     const nombreJson = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
     const json = JSON.parse(await zip.file(nombreJson).async('string'));
@@ -267,7 +267,7 @@
       /queda desfasado/.test(estado) && estado.includes(codigoCargado), estado);
     const codigoNuevo = _codigoEnFicha();
     ok('C7: la ficha muestra el codigoGWC NUEVO del par',
-      !!codigoNuevo && codigoNuevo !== '---' && codigoNuevo !== codigoCargado, codigoNuevo);
+      !!codigoNuevo && codigoNuevo !== '—' && codigoNuevo !== codigoCargado, codigoNuevo);
     return out;
   }
 

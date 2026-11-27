@@ -41,7 +41,7 @@
 //    reiniciar          Deja la ficha en blanco.
 //    poblar             Rellena campos e imágenes desde una carga.
 //    ponerImagen        Pone (o quita) una imagen sin avisar al director.
-//    actualizarCodigoGWC F5-I17 (M1): refresca el «Código GWC» de solo lectura.
+//    actualizarCodigoGWC F5-I17 (M1): refresca el «Último GWC» de solo lectura (CRC + tamaños, F5-I21).
 //  Lectura
 //    estado             Lee los datos de la ficha tal cual (sin completar).
 //    datosCartucho      Datos para guardar GWI/GWC (completados con el setup).
@@ -372,10 +372,11 @@ const baseFicha = (function () {
       'Se usa si no hay img_f (blanco por defecto).');
     // F5-I17 (M1): el Código GWC del par, visible (solo lectura):
     // «---» si el GWI cargado no lo trae; se refresca al generar.
-    campos.codigoGWC = _entrada('text', { value: '---', readOnly: true });
-    campos.codigoGWC.style.width = '6em';
-    _campo(rejilla, 'Código GWC', campos.codigoGWC,
-      'Solo lectura: el código #HHHH# del par (lo estampa Generar GWI+GWC).');
+    campos.codigoGWC = _entrada('text', { value: '—', readOnly: true });
+    campos.codigoGWC.style.width = '22em';
+    _campo(rejilla, 'Último GWC', campos.codigoGWC,
+      'Solo lectura: el CRC (#HHHH#) del último GWC y sus tamaños (datos y fondo); '
+      + 'la ocupación sobre la máquina se ve en Setup.');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
@@ -738,7 +739,7 @@ const baseFicha = (function () {
     campos.ancho.value = '';
     campos.alto.value = '';
     campos.colorFondo.value = COLOR_BLANCO;
-    campos.codigoGWC.value = '---';
+    campos.codigoGWC.value = '—';
     if (mensajes) mensajes.textContent = '';
     _marcarCambios(false);
   }
@@ -769,7 +770,7 @@ const baseFicha = (function () {
     if (d.colorFondo !== undefined) {
       campos.colorFondo.value = _esColor(d.colorFondo) ? d.colorFondo.toLowerCase() : COLOR_BLANCO;
     }
-    if (d.codigoGWC !== undefined) campos.codigoGWC.value = d.codigoGWC || '---';
+    if (d.codigoGWC !== undefined) _pintarUltimoGWC(d.codigoGWC || null);
     if (d.imagenes) {
       for (const [clave, img] of Object.entries(d.imagenes)) {
         if (img && imagenes[clave]) ponerImagen(clave, img, clave + '.png');
@@ -806,7 +807,27 @@ const baseFicha = (function () {
    */
   function actualizarCodigoGWC(codigo) {
     _asegurar();
-    campos.codigoGWC.value = codigo || '---';
+    _pintarUltimoGWC(codigo);
+  }
+
+  /**
+   * Pinta el campo de solo lectura «Último GWC» (F5-I21): el CRC
+   * (#HHHH#) y los TAMAÑOS del último GWC (datos y fondo), SIN
+   * porcentaje (la ocupación sobre la máquina se ve en Setup). Los
+   * bytes vienen de baseSetup.datosUltimos() (la misma fuente que
+   * pinta el Setup); sin nada que enseñar, «—».
+   * @param {?string} codigo - El CRC #HHHH#, o null si no lo hay.
+   * @returns {void}
+   */
+  function _pintarUltimoGWC(codigo) {
+    if (!campos.codigoGWC) return;
+    const d = (typeof baseSetup !== 'undefined' && baseSetup.datosUltimos)
+      ? baseSetup.datosUltimos() : { gwc: 0, fondo: 0 };
+    const partes = [];
+    if (codigo) partes.push(codigo);
+    if (d.gwc > 0) partes.push(baseCartucho.textoKB(d.gwc));
+    if (d.fondo > 0) partes.push('Fondo ' + baseCartucho.textoKB(d.fondo));
+    campos.codigoGWC.value = partes.length > 0 ? partes.join(' · ') : '—';
   }
 
   return {

@@ -45,7 +45,7 @@
 //     hayCambios         ¿Hay cambios sin aplicar (borrador)?
 //     marcarAplicado     Da la ficha por aplicada (apaga el aviso).
 //     fijarResolucion    Pone ancho y alto (solo lectura) tras el ajuste de resolución (F5-I21).
-//     informarUltimos    Rellena los informativos «Último GWC calculado» y «Último fondo» (F5-I21).
+//     informarUltimos    Rellena el informativo «Último GWC calculado»: datos en RAM y fondo en FLASH (F5-I21, A02).
 //     botonesDelEstilo   Números de botón posibles de un estilo.
 //   Internas
 //     _asegurar              _crearElemento      _campo
@@ -302,15 +302,13 @@ const baseSetup = (function () {
     campos.ram = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
     campos.flash = _entrada('number', { min: 0, step: 1, placeholder: 'KB' });
     _campo(rejilla, 'RAM (KB)', campos.ram, 'Opcional: la RAM del ESP; sirve para mostrar la ocupación al generar el GWC. Solo se edita aquí.');
-    // F5-I21: informativos de solo lectura, junto al dato con el que se comparan.
-    // Como TEXTO (no input): no debe parecer editable.
+    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: la FLASH del ESP (el fondo viaja en el GWC, A02). Solo se edita aquí.');
+    // F5-I21: informativo de solo lectura, junto a las memorias con las que
+    // se compara. Como TEXTO (no input): no debe parecer editable. Los datos
+    // van a RAM y el fondo (Bloque 5, A02) a FLASH: los trae en un solo texto.
     campos.ultimoGWC = _crearElemento('span', 'fichaInformativo', '—');
     _campo(rejilla, 'Último GWC calculado', campos.ultimoGWC,
-      'Solo informativo: se rellena al generar un GWC (puede quedar desfasado si después se toca el juego).');
-    _campo(rejilla, 'FLASH (KB)', campos.flash, 'Opcional: la FLASH del ESP (hoy el fondo, que aún no se cuenta). Solo se edita aquí.');
-    campos.ultimoFondo = _crearElemento('span', 'fichaInformativo', '—');
-    _campo(rejilla, 'Último fondo', campos.ultimoFondo,
-      'Solo informativo: tamaño del bloque del fondo; a cero hasta que el fondo se guarde en el cartucho.');
+      'Solo informativo: se rellena al generar un GWC (puede quedar desfasado si después se toca el juego). Datos en RAM y, si hay, Fondo en FLASH.');
     datos.appendChild(rejilla);
     contenedor.appendChild(datos);
 
@@ -576,21 +574,21 @@ const baseSetup = (function () {
   }
 
   /**
-   * Vacía los informativos «Último GWC calculado» y «Último fondo»
-   * (F5-I21): hasta que se genera un GWC no dicen nada.
+   * Vacía el informativo «Último GWC calculado» (F5-I21): hasta que se
+   * genera un GWC no dice nada.
    * @returns {void}
    */
   function _limpiarUltimos() {
     if (campos.ultimoGWC) campos.ultimoGWC.textContent = '—';
-    if (campos.ultimoFondo) campos.ultimoFondo.textContent = '—';
   }
 
   /**
-   * Rellena los informativos al generar un GWC (F5-I21): lo usado de RAM
-   * (los DATOS del GWC, SIN el bloque del fondo: la imagen no se carga en
-   * RAM, irá a FLASH) y de FLASH (el bloque del fondo), con su %
-   * de la memoria declarada del setup aplicado. Es la misma función que
-   * escribe el porcentaje de la generación (F5-I20): baseCartucho.textoUsoMemoria.
+   * Rellena el informativo al generar un GWC (F5-I21) con UN solo texto:
+   * los DATOS usados de RAM (los bytes del GWC SIN el bloque del fondo: la
+   * imagen no se carga en RAM) con su % de la RAM declarada y, si hay
+   * fondo, «· Fondo f (g%)» con el % de la FLASH declarada (A02). Es la
+   * misma función que escribe el porcentaje de la generación (F5-I20):
+   * baseCartucho.textoUsoMemoria.
    * @param {{gwc:number, fondo:number, memoria:?{RAM:number, FLASH:number}}} d -
    *        Bytes de datos del GWC (sin el fondo) y del fondo, y la memoria
    *        declarada (o null).
@@ -599,8 +597,10 @@ const baseSetup = (function () {
   function informarUltimos(d) {
     if (!campos.ultimoGWC) return;               // la ficha aún no se ha pintado
     const mem = (d && d.memoria) || {};
-    campos.ultimoGWC.textContent = baseCartucho.textoUsoMemoria(d.gwc, mem.RAM) || '—';
-    campos.ultimoFondo.textContent = baseCartucho.textoUsoMemoria(d.fondo, mem.FLASH) || '—';
+    let texto = baseCartucho.textoUsoMemoria(d.gwc, mem.RAM);
+    if (d && d.fondo > 0)
+      texto += ' · Fondo ' + baseCartucho.textoUsoMemoria(d.fondo, mem.FLASH);
+    campos.ultimoGWC.textContent = texto || '—';
   }
 
   /**

@@ -17,7 +17,7 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 		RAM & 8\,KB & unos 520\,KB, de los que quedan unos 300\,KB utilizables \\
 		PSRAM & No & No \\
 		Lógica & 5\,V & 3,3\,V \\
-		Pantalla & Shield TFT de 2,4\,pulgadas de MCUFRIEND con lector de SD, bus paralelo de 8 bits, 240$\times$320 GVGA, color de 16 bits & ARCELI ILI9341 de 2,8\,pulgadas, SPI, con lector de SD \\
+		Pantalla & Shield TFT de 2,4\,pulgadas de MCUFRIEND con lector de SD, bus paralelo de 8 bits, 240$\times$320 QVGA, color de 16 bits & ARCELI ILI9341 de 2,8\,pulgadas, SPI, con lector de SD \\
 		Datos & En \texttt{PROGMEM}, se leen con \texttt{pgm\_read\_*}; por encima de 64\,KB hacen falta punteros <<far>> & Flash mapeada en memoria; se leen como memoria normal \\
 		Pantalla: envío & Escritura directa a puertos o biblioteca; sin DMA & SPI con DMA y búferes \\
 		Tiempo y sistema & \texttt{millis()}, \texttt{micros()}, \texttt{loop()} & \texttt{esp\_timer}, FreeRTOS, \texttt{loop()} de Arduino \\
@@ -35,7 +35,7 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 		\midrule
 		Cartucho & Compilado dentro del programa (array en \texttt{PROGMEM}), más adelante cargado desde la SD & Partición de datos de la flash, y más adelante cargado desde la SD \\
 		Fondo & No es posible (no cabe en la RAM ni se puede mapear cómodamente) & Sí, desde la flash \\
-		Carga de cartuchos & Posibilidad de usar la SD & Posibilidad de usar la SD, Wifi o Bluethoot \\
+		Carga de cartuchos & Posibilidad de usar la SD & Posibilidad de usar la SD, Wifi o Bluetooth \\
 	\end{tabular}
 \caption{Donde irán los datos en cada sistema}
 \label{tab:F6I01PlataformasDatos}
@@ -112,7 +112,7 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 		\item Prueba gráfica mínima: el paracaidista cae sobre un fondo, con el cartucho real del Parachute, el director y un motor de estados mínimo.
 		\item Desarrollo completo: pantalla y reloj SPI, el lector del cartucho sobre la flash mapeada, el fondo y el compositor, con la prueba del segmento móvil. El motor de estados no se toca: es el mismo de la etapa 1.
 	\end{enumerate}
-	\item \textbf{Tercera Etapa: Ampliación de la Fase 7).}	 Selector de cartuchos desde la SD.
+	\item \textbf{Tercera Etapa (se desarrolla en la Fase 7):} selector de cartuchos desde la SD.
 \end{enumerate}
 
 \subsection{Equipo necesario para la etapa 1}

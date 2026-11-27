@@ -1,0 +1,175 @@
+\section{Vigésima Primera iteración de la Fase 6: Prueba de fondo y segmento móvil}
+\label{sec:F6I02}
+
+Esta iteración es de DISEÑO (solo documentación, sin código). Define el primer programa del ESP32: un cartucho de prueba con un fondo y un único segmento, y dos procesos, un director básico y el motor gráfico, que hacen que ese segmento \textbf{se mueva por la pantalla} hasta llegar al final y entonces vuelva a empezar. Es el mismo esquema que la Fase~2 (sección~\ref{sec:AnalisisMotorMinimo}) llevado al hardware, y utiliza la técnica de la iteración F6-I01 (fondo en la flash y compositor de rectángulos sucios). Cuando funcione, queda operativo el paso básico sobre el que se construye el resto del firmware.
+
+\subsection{Objetivo a alcanzar}
+\label{sec:F6I02Objetivo}
+
+\begin{itemize}
+	\item Cargar desde la flash un cartucho mínimo con \textbf{un fondo} (que no sea de un solo color, para que se vea que se restaura bien) y \textbf{un segmento} negro.
+	\item Pintar el fondo y ver cómo el segmento \textbf{baja por la pantalla} de forma fluida, sin parpadeo y sin dejar rastro ni estropear el fondo por donde pasa.
+	\item Al llegar abajo, el segmento \textbf{vuelve a empezar por arriba,} en bucle indefinido.
+	\item Medir (por el puerto serie) cuánto tarda cada iteración y cuánta RAM libre queda, para confirmar las estimaciones de F6-I01.
+\end{itemize}
+
+Quedan fuera de esta iteración: el teclado y los botones, las reglas del juego, el azar, las colisiones, la lectura de la autoría y de las secuencias del cartucho, y cualquier segmento más allá del único de la prueba. Si al final alguien que no conoce el proyecto ve un objeto moviéndose con suavidad sobre un fondo sin que éste se dañe, la iteración ha cumplido.
+
+\subsection{Los componentes del mínimo}
+\label{sec:F6I02Componentes}
+
+Igual que en la Fase~2, hay que montar un sistema completo reducido, con tres piezas (más el acceso a la pantalla y al cartucho):
+
+\begin{itemize}
+	\item \textbf{Director básico.} Solo es el reloj: en cada iteración llama al motor de juego mínimo, después al motor gráfico para que presente, mide cuánto ha tardado y hace una \textbf{pausa fija}; y repite. No lee botones, no conoce el cartucho y no valida nada. Es el equivalente de \texttt{JuegoDirector} del simulador.
+	\item \textbf{Motor de juego mínimo (andamiaje).} Es lo único que se sustituirá después. En cada iteración avanza el segmento \texttt{paso} píxeles hacia abajo; si el segmento acabaría saliéndose por el borde inferior, lo coloca de nuevo arriba. Habla al motor gráfico solo en términos de estado (<<el segmento $i$ está en $(x, y)$ y visible>>), nunca de órdenes de dibujo, y no toca la pantalla. Es el equivalente mínimo de \texttt{JuegoMotorEstados}.
+	\item \textbf{Motor gráfico (la pieza real).} Es lo que sobrevive a la iteración. Recibe el cartucho, pinta el fondo al principio y, en cada iteración, \emph{compone y envía} solo los rectángulos que han cambiado (F6-I01). Es el equivalente de \texttt{JuegoMotorGrafico}.
+	\item \textbf{Pantalla (controlador).} Capa mínima con dos funciones, fijar la ventana y enviar píxeles, de modo que el resto del firmware no dependa del controlador concreto ni de la biblioteca de la pantalla. Es la única parte que hay que cambiar para otra pantalla.
+	\item \textbf{Cartucho (lector).} Lee el cartucho de la flash, valida la cabecera y el CRC y deja al alcance del motor gráfico el fondo y la tabla de sprites. En esta iteración solo se leen los bloques necesarios (datos, sprites, segmentos y fondo).
+\end{itemize}
+
+\subsection{El cartucho de prueba}
+\label{sec:F6I02Cartucho}
+
+\begin{itemize}
+	\item \textbf{Fondo:} una imagen reconocible a simple vista y con zonas distintas por donde pasa el segmento, p.~ej. un degradado o un patrón de rayas y bloques de colores. Si el fondo fuera liso no se vería si la restauración falla. Tiene el tamaño de la pantalla (320$\times$240 en el equipo de pruebas).
+	\item \textbf{Segmento:} un único sprite negro, de forma asimétrica (p.~ej. una <<F>> o una flecha) para ver que no se refleja ni se corta, de un tamaño moderado (p.~ej. 20$\times$30). Más adelante se repite con un sprite grande (p.~ej. 100$\times$100) para probar el recorrido por bandas.
+	\item \textbf{Cómo se crea:} con el propio Designer, como cualquier otro cartucho (una \texttt{img\_f}, y una \texttt{img\_s} con una sola forma), generando el GWC. Esto exige que el Designer escriba ya el \textbf{Bloque 5 (fondo)} con el formato de F6-I01. Es la primera tarea que habrá que hacer en el Designer y se anota como requisito previo (\ref{sec:F6I02Pasos}).
+	\item \textbf{Cómo llega al ESP32:} el GWC se graba en una partición de datos de la flash, sin sistema de ficheros, con las herramientas habituales (\texttt{esptool} o \texttt{parttool}). El firmware lo mapea en memoria (F6-I01). El programa y el cartucho se actualizan por separado, de modo que cambiar de cartucho no obliga a recompilar.
+	\item \textbf{Alternativa temporal:} si se quisiera probar el motor gráfico antes de que el Designer genere el Bloque 5, se puede incluir un fondo y un sprite como tablas constantes en el firmware (un fichero de cabecera generado por un guion). Se descarta como camino principal, porque lo que interesa validar es justamente el camino real GWC $\rightarrow$ flash $\rightarrow$ pantalla.
+\end{itemize}
+
+\subsection{Diseño de los procesos}
+\label{sec:F6I02Diseno}
+
+\subsubsection{Reparto de ficheros}
+
+Los nombres siguen el criterio de minúscula inicial y la misma correspondencia con el simulador, para que sea fácil localizar cada pieza. Son una propuesta:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{8.5cm}}
+		\toprule
+		Fichero & Contenido \\
+		\midrule
+		\texttt{basePantalla} & Inicialización del controlador, \texttt{pantallaVentana}, \texttt{pantallaEnviar}; la única parte que depende del hardware (pines, reloj del SPI, orden de bytes). \\
+		\texttt{baseCartucho} & Lectura y validación del GWC mapeado en la flash; estructura \texttt{Cartucho} con el fondo y la tabla de sprites. \\
+		\texttt{juegoMotorGrafico} & Pintar el fondo, componer y enviar los rectángulos sucios, marcas de cambio. \\
+		\texttt{juegoMotorEstados} & Andamiaje de esta iteración: mueve el segmento. \\
+		\texttt{juegoDirector} & Bucle principal: llama a los motores, mide y pausa. \\
+		\texttt{configHardware} & Pines, reloj del SPI, resolución y orden de bytes de la pantalla; constantes de la prueba (\texttt{PASO}, \texttt{PAUSA\_MS}). \\
+		\bottomrule
+	\end{tabular}
+	\caption{Piezas del firmware en esta iteración}
+	\label{tab:F6I02Ficheros}
+\end{table}
+
+\subsubsection{Interfaces}
+
+\begin{verbatim}
+// basePantalla
+pantallaIniciar(ancho, alto)
+pantallaVentana(x, y, w, h)
+pantallaEnviar(const uint16_t* buf, size_t pixeles)   // espera a que acabe el DMA anterior
+pantallaEsperar()                                     // sincroniza con el DMA
+
+// baseCartucho
+cartuchoCargar(const uint8_t* datos, size_t bytes) -> error | OK
+Cartucho { ancho, alto, colorFondo, fondo{formato, paleta, datos},
+           nSprites, Sprite[] { ancho, alto, x, y, mascara } }
+
+// juegoMotorGrafico
+mgIniciar(const Cartucho*)         // reserva los búferes (tamaño fijo) y pinta el fondo
+mgFijarSprite(i, x, y, visible)    // actualiza el estado; apunta el rectángulo anterior y el nuevo como sucios
+mgPresentar()                      // compone y envía los rectángulos sucios; limpia las marcas
+mgComponerRect(x, y, w, h)         // primitiva: fondo + sprites visibles que cortan el rectángulo
+
+// juegoMotorEstados (andamiaje)
+meIniciar(const Cartucho*)         // coloca el segmento arriba, visible
+meTick()                           // avanza PASO píxeles; al llegar al fondo, vuelve a empezar
+
+// juegoDirector
+direcIniciar()                     // pantalla, cartucho, motores
+direcBucle()                       // meTick -> mgPresentar -> medir -> pausa
+\end{verbatim}
+
+La función \texttt{mgComponerRect} es la \emph{primitiva única} del motor gráfico: toma cualquier rectángulo de la pantalla, lo recorta a la pantalla, lee las filas del fondo de la flash y pone en negro los píxeles de todos los sprites visibles que lo cortan. El algoritmo de F6-I01 (componer la caja de un sprite) es simplemente \texttt{mgComponerRect} aplicado a la caja del sprite. Con esto, el movimiento por píxeles que necesita esta prueba no obliga a un camino de código aparte.
+
+\subsubsection{Cómo se mueve y cómo se repinta}
+
+En el firmware definitivo los sprites tienen posición fija (F6-I01). Esta prueba los mueve para ejercitar el motor gráfico; es andamiaje, y por eso la posición del segmento vive en una copia en RAM que solo toca el motor de juego mínimo.
+
+\begin{itemize}
+	\item \textbf{Movimiento:} en cada iteración, $y \leftarrow y + \texttt{PASO}$. Si $y + alto > altoPantalla$ el segmento vuelve a $y = 0$. La $x$ no cambia.
+	\item \textbf{Rectángulos sucios:} al cambiar un sprite de $(x, y_0)$ a $(x, y_1)$ hay que repintar la zona que dejó (para borrar) y la que ocupa ahora (para dibujar). Mientras las dos cajas se solapen ($|y_1 - y_0| < alto$) se repinta UN solo rectángulo, la unión, de $ancho \times (alto + |\Delta y|)$ píxeles, que es más barato que dos y se compone una sola vez con el estado final. Cuando no se solapan (el salto de abajo a arriba) se repintan DOS rectángulos separados, cada uno de la altura del segmento, y no la columna entera.
+	\item \textbf{No hay borrado explícito:} se compone cada rectángulo con el sprite en su posición final, y la zona que el sprite ha abandonado queda como fondo sin más. Por eso no puede dejar rastro ni parpadear.
+	\item \textbf{Recorte a la pantalla:} la primitiva recorta siempre, de modo que un sprite parcialmente fuera de la pantalla, o un rectángulo que se sale, no escribe fuera ni rompe nada. En la prueba no debería ocurrir; está para el firmware definitivo y se comprueba aparte.
+\end{itemize}
+
+\subsubsection{El director y el reloj}
+
+\begin{itemize}
+	\item Bucle secuencial: \texttt{meTick()}, \texttt{mgPresentar()}, medir, pausa. Es el mismo orden que en el simulador. La pausa se hace con la espera del sistema (\texttt{vTaskDelay} o la equivalente), nunca con una espera activa que bloquee el procesador.
+	\item \textbf{Pausa fija} (\texttt{PAUSA\_MS}, p.~ej. 20\,ms) y \textbf{paso} (\texttt{PASO}, p.~ej. 2 píxeles): son constantes del andamiaje que se ajustan para que el movimiento se vea cómodo. La velocidad real resulta de lo que tarde cada iteración más la pausa.
+	\item Al terminar cada iteración se mide con un temporizador de microsegundos (\texttt{esp\_timer\_get\_time}) el tiempo de cada fase: \emph{estados}, \emph{composición} y \emph{envío}. Cada cierto número de iteraciones (p.~ej. cada 100) se escribe un resumen por el puerto serie: mínimo, medio y máximo de cada fase, y la RAM libre (\texttt{esp\_get\_free\_heap\_size} y el mínimo histórico).
+	\item El director no gestiona parada, pausa ni botones en esta iteración.
+\end{itemize}
+
+\subsubsection{Reserva de memoria}
+
+\begin{itemize}
+	\item \textbf{Búferes de composición:} dos búferes de $N$ filas por la anchura máxima de la caja (F6-I01), reservados una vez al arrancar, en RAM interna y capaces de DMA (\texttt{MALLOC\_CAP\_DMA}). Nada se reserva ni se libera durante el bucle.
+	\item \textbf{Estado del sprite:} los pocos bytes de la posición y la visibilidad.
+	\item \textbf{Fondo y máscaras:} no se copian; se leen de la flash mapeada.
+\end{itemize}
+
+\subsection{Pasos de desarrollo}
+\label{sec:F6I02Pasos}
+
+Cada paso es pequeño y se puede comprobar solo, de modo que si algo falla se sabe en cuál.
+
+\begin{enumerate}
+	\item \textbf{Requisito en el Designer:} generar el Bloque 5 del GWC (conversión a RGB565 en el orden de bytes elegido, paleta si procede, CRC) y su lectura en el simulador, con la prueba de equivalencia ampliada con el fondo. Crear el cartucho de prueba.
+	\item \textbf{Proyecto base del ESP32:} que compile y grabe, y que escriba por el puerto serie. Tabla de particiones con la partición del cartucho.
+	\item \textbf{Pantalla:} \texttt{basePantalla} con una prueba sencilla: rellenar la pantalla de un color y comprobar el orden de bytes de los colores (rojo, verde y azul se ven como tales) y los 320$\times$240 completos, sin franjas ni desplazamientos.
+	\item \textbf{Cartucho:} grabar el GWC en la partición, leerlo y validar la cabecera y el CRC; escribir por serie los datos que lee (resolución, número de sprites, formato y tamaño del fondo).
+	\item \textbf{Fondo:} pintarlo completo por bandas y comprobarlo a ojo y con la medida del tiempo (unos 30\,ms a 40\,MHz, según F6-I01).
+	\item \textbf{Un sprite fijo:} presentarlo en su posición con \texttt{mgComponerRect} y comprobar su forma (sin reflejo ni cortes). Borrarlo y comprobar que el fondo queda intacto.
+	\item \textbf{Movimiento:} activar el motor de juego mínimo y el director. Ver el segmento bajar, el salto arriba, y comprobar que no queda rastro. Ajustar \texttt{PASO} y \texttt{PAUSA\_MS}.
+	\item \textbf{Medidas:} tiempos por fase y RAM libre; compararlos con las estimaciones. Repetir con el sprite grande.
+\end{enumerate}
+
+\subsection{Pruebas y comprobaciones}
+\label{sec:F6I02Pruebas}
+
+\begin{itemize}
+	\item \textbf{Visuales en el equipo:} el segmento se ve completo y con su forma; baja sin saltos ni parpadeo; pasa sobre todas las zonas del fondo sin dejar rastro ni marcas; al llegar abajo reaparece arriba; el fondo no se altera tras muchos ciclos (p.~ej. diez minutos).
+	\item \textbf{Automáticas en el PC:} como \texttt{basePantalla} es la única parte que toca el hardware, el motor gráfico y el de estados se compilan en el PC con una pantalla falsa que escribe en un búfer en memoria. Después de cada iteración se compara ese búfer con el que resulta de pintar desde cero el fondo y el segmento en su posición actual: deben ser idénticos en TODAS las iteraciones de un recorrido completo, incluido el salto de abajo a arriba. Es la prueba por propiedad de F6-I01 aplicada a este movimiento.
+	\item \textbf{Casos límite:} segmento en el borde superior e inferior, segmento de 1 píxel de alto o de ancho, \texttt{PASO} mayor que el alto del segmento (cajas sin solape), \texttt{PASO} de 1, y fondo en cada uno de los formatos (RGB565, paleta de 8 bits y de 4 bits) con el mismo resultado.
+	\item \textbf{Medidas:} tiempo por iteración y por fase, y RAM libre mínima durante el recorrido, comparados con lo previsto (F6-I01) y anotados en la memoria con el equipo y la configuración usados.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F6I02Criterios}
+
+\begin{itemize}
+	\item El cartucho se carga desde la flash, con su cabecera y su CRC validados; un cartucho dañado se rechaza con un mensaje por el puerto serie.
+	\item El fondo se pinta completo y correcto (colores y orientación).
+	\item El segmento se mueve de forma fluida, sin rastro ni parpadeo, y vuelve a empezar al llegar abajo, de forma indefinida.
+	\item En la prueba del PC, el búfer de la pantalla coincide con el de referencia en todas las iteraciones.
+	\item La RAM del motor gráfico es fija (no crece al correr) y no hay reservas durante el bucle.
+	\item Se tienen anotados los tiempos medidos por fase y la RAM libre.
+\end{itemize}
+
+\subsection{Puntos abiertos}
+\label{sec:F6I02Abiertos}
+
+\begin{itemize}
+	\item \textbf{Entorno de desarrollo del firmware:} ESP-IDF (mejor control de DMA, particiones y \texttt{esp\_lcd}) o Arduino. Mi inclinación es ESP-IDF; el diseño por capas permite cambiarlo tocando solo \texttt{basePantalla} y el acceso a la partición.
+	\item \textbf{Controlador y conexión de la pantalla:} modelo (ILI9341, ST7789, \ldots), bus y pines del equipo de pruebas; el orden de bytes se comprueba en el paso 3.
+	\item \textbf{Nombres y lenguaje:} C o C++ (con funciones como en el simulador, no hace falta orientación a objetos), y la correspondencia exacta de nombres de ficheros.
+	\item \textbf{Paso del andamiaje:} valores iniciales de \texttt{PASO} y \texttt{PAUSA\_MS}; se ajustan viendo el movimiento.
+	\item \textbf{Dónde guardar el cartucho:} una partición propia (propuesto) o dentro de la imagen del programa. La partición permite cambiar el cartucho sin recompilar.
+\end{itemize}
+
+\clearpage

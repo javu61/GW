@@ -1,0 +1,44 @@
+{
+  "tipo": "GWS",
+  "version": "1",
+  "nombre": "Setup2",
+  "estilo": "2",
+  "resolucion": {
+    "ancho": 320,
+    "alto": 240
+  },
+  "memoria": {
+    "RAM": 32,
+    "FLASH": 128
+  },
+  "botones": [
+    {
+      "numero": "0",
+      "puerto": 10,
+      "tecla": "cursor-izquierda",
+      "textoPantalla": "IZQ"
+    },
+    {
+      "numero": "4",
+      "puerto": 11,
+      "tecla": "cursor-derecha",
+      "textoPantalla": "DER"
+    },
+    {
+      "numero": "6",
+      "puerto": 12,
+      "tecla": "1",
+      "textoPantalla": "Start"
+    },
+    {
+      "numero": "7",
+      "puerto": 13,
+      "tecla": "2"
+    },
+    {
+      "numero": "8",
+      "puerto": 14,
+      "tecla": "3"
+    }
+  ]
+}

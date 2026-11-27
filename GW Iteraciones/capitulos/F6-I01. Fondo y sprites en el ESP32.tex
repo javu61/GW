@@ -1,0 +1,234 @@
+\section{Primera iteración de la Fase 6: El fondo y los sprites en el ESP32}
+\label{sec:F6I01}
+
+Esta iteración es de DISEÑO: no toca código. Deja decidido y documentado cómo se guarda la imagen del fondo (img\_f) en el ESP32 y cómo se presentan y borran los sprites encima de ella, de la forma más compacta posible y sin que el aparato tenga que procesar mucho. Se escribe antes de empezar el firmware para tener previsto todo (formato en el GWC, algoritmo del compositor, memoria, tiempos, pruebas y cambios en el Designer) y que el desarrollo posterior sea una aplicación directa de lo aquí recogido.
+
+\subsection{Datos de partida}
+\label{sec:F6I01Datos}
+
+\begin{itemize}
+	\item \textbf{Pantalla:} 320$\times$240 píxeles en el equipo de pruebas, pero el diseño debe valer para pantallas algo mayores (p.~ej. 480$\times$320) y, como máximo, para el rango que admite el GWC (320$\times$240 a 1024$\times$600). El controlador habitual (ILI9341, ST7789 u otro similar) se maneja por SPI y la memoria de vídeo está \textbf{en la pantalla, no en el ESP32}.
+	\item \textbf{ESP32 sin PSRAM} en el equipo de pruebas. La RAM interna útil ronda los 320\,KB y, descontando pila, sistema y lo que ocupe el programa, la libre es bastante menor y fragmentada. Aunque el hardware final previsto (Waveshare ESP32-S3-LCD-2.8) pueda traer PSRAM, \textbf{el diseño no debe depender de ella}.
+	\item \textbf{Escritura sola:} en la práctica la pantalla SPI se trata como de solo escritura; no se puede leer de ella lo que hay dibujado (o no compensa por lentitud).
+	\item \textbf{Sprites monocromos en negro,} como en las Game \& Watch originales: no hay otros colores posibles. Cada sprite es una cadena de bits en la que 0 es <<fondo (transparente)>> y 1 es <<negro>>.
+	\item \textbf{Posición fija:} un sprite no se mueve por píxeles; solo puede estar PRESENTADO en su sitio o BORRADO. Hay una tabla con el ancho, el alto y la posición (x, y) de cada uno, de modo que su rectángulo (caja) es constante y se conoce desde que se carga el cartucho.
+	\item \textbf{Los sprites no se solapan entre sí en píxeles} (lo valida el Designer con la comparación por diferencia de píxeles). Atención: que no se solapen sus píxeles no implica que no se solapen sus cajas.
+	\item \textbf{El fondo es estático:} se pinta al empezar y no cambia durante la partida. En el cartucho es opcional; si no hay img\_f vale el \texttt{ColorFondo} del Bloque 0 (F5-I13).
+	\item El Motor Gráfico ya redibuja solo los segmentos cuya marca de cambio está activa (F1), de modo que el firmware recibe peticiones del tipo <<presentar el sprite $i$>> o <<borrar el sprite $i$>>.
+\end{itemize}
+
+\subsection{Análisis}
+\label{sec:F6I01Analisis}
+
+\subsubsection{Presupuesto de memoria}
+
+La imagen de fondo ocupa lo que muestra la tabla~\ref{tab:F6I01Tamanos} según el formato. Los números son exactos (píxeles $\times$ bytes por píxel, más la paleta cuando existe).
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrrr}
+		\toprule
+		Formato & 320$\times$240 & 480$\times$320 & 1024$\times$600 \\
+		\midrule
+		RGB565 crudo (2 bytes/píxel) & 153\,600 & 307\,200 & 1\,228\,800 \\
+		Paleta de 8 bits (+512 de paleta) & 77\,312 & 154\,112 & 614\,912 \\
+		Paleta de 4 bits (+32 de paleta) & 38\,432 & 76\,832 & 307\,232 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Tamaño del fondo en bytes según el formato y la resolución}
+	\label{tab:F6I01Tamanos}
+\end{table}
+
+\begin{itemize}
+	\item Un framebuffer completo RGB565 de 320$\times$240 son 150\,KB. Sin PSRAM es inviable en la práctica (no hay un bloque contiguo tan grande con el resto del programa funcionando) y a 480$\times$320 (300\,KB) es imposible. Por eso se descarta como solución general.
+	\item La flash, en cambio, es abundante (4\,MB o más): 150\,KB o incluso 300\,KB son pocos. El cartucho no necesita comprimir el fondo para que quepa; comprimirlo solo ahorra flash, que no es el recurso escaso.
+	\item \textbf{El recurso escaso es la RAM,} y es la que mide la iteración F5-I20 (MA02). Por tanto el fondo debe quedarse en la flash y leerse desde ahí sin copiarlo entero a la RAM.
+\end{itemize}
+
+\subsubsection{Ideas estudiadas y descartadas}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{4.2cm}p{9cm}}
+		\toprule
+		Idea & Valoración \\
+		\midrule
+		Dibujar con XOR (como en el simulador) & No sirve: el XOR solo restaura el fondo si este es de un único color conocido (blanco). Con una imagen de fondo cualquiera produce colores falsos. \\
+		Guardar en RAM el trozo de fondo bajo cada sprite antes de presentarlo y devolverlo al borrar & Funciona, pero gasta RAM por sprite (y ya sabemos que la RAM es lo escaso) para guardar algo que \emph{ya está en la flash}. Con fondo estático, releer de la flash es mejor. \\
+		Framebuffer completo en la RAM & Lo más sencillo, pero no cabe (ver arriba). Solo tendría sentido con PSRAM. \\
+		Fondo comprimido en JPEG o PNG & Impide el acceso a un rectángulo cualquiera, exige descomprimir todo en la RAM, gasta CPU y el JPEG ensucia los colores planos. \\
+		Leer la pantalla para restaurar & No es posible o es muy lento en los controladores SPI. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Alternativas descartadas}
+	\label{tab:F6I01Descartadas}
+\end{table}
+
+\subsubsection{La idea elegida: la flash ya es la copia guardada}
+
+La idea de <<guardar el trozo de fondo y volver a ponerlo al borrar>> se simplifica: el trozo de fondo que hay debajo de cualquier sprite \textbf{ya está guardado} en la flash, sin gastar nada de RAM. Borrar un sprite es volver a pintar su rectángulo con el fondo leído de la flash. Falta resolver una única cuestión, que es la del siguiente punto.
+
+\subsubsection{El problema de las cajas que se solapan}
+
+Un sprite en diagonal (una pierna, un brazo, una cuerda) tiene una caja grande en la que sus píxeles negros son pocos. Esa caja puede contener a su vez píxeles de OTRO sprite que esté presentado. Si para borrar A se repinta toda su caja con el fondo, se borra un trozo de B, que sigue presentado. Ocurre igualmente al presentar: la caja de A pisaría con fondo parte de B si se pintase la caja entera.
+
+La solución es el \textbf{compositor de rectángulos sucios:} al cambiar un sprite no se pinta su máscara sino que se \emph{compone} su caja entera en un búfer pequeño de RAM (fondo leído de la flash más los sprites presentados que cortan esa caja) y se envía ese búfer a la pantalla de una vez. Como los píxeles de los sprites no se solapan, el orden de composición no afecta al resultado.
+
+Esto trae además dos ventajas: \textbf{no hay parpadeo} (nunca se ve el borrado y después el dibujado, la pantalla recibe el resultado final) y no hace falta ninguna RAM proporcional al número de sprites.
+
+\subsection{Diseño}
+\label{sec:F6I01Diseno}
+
+\subsubsection{Modelo de datos en el firmware}
+
+\begin{itemize}
+	\item \textbf{Tabla de sprites} (constante, en la flash, sale del GWC; los Bloques 2 y 3 ya contienen estos datos): por cada sprite \texttt{ancho}, \texttt{alto}, \texttt{x}, \texttt{y} y el desplazamiento de su máscara. La caja es $[x,\,x+ancho)\times[y,\,y+alto)$.
+	\item \textbf{Máscara:} cadena de bits continua, de $ancho\times alto$ bits, por filas, de izquierda a derecha y de arriba a abajo; el bit más significativo del byte es el primero. No se rellena cada fila hasta el byte: así el formato coincide con el que ya genera el GWC, y el compositor lleva un índice de bit que simplemente se incrementa (sin multiplicaciones por píxel).
+	\item \textbf{Estado de presentación} (RAM, 1 bit por sprite): \texttt{visible[i]}. Es todo lo que el compositor necesita saber en tiempo de ejecución.
+	\item \textbf{Lista de vecinos} de cada sprite: los otros sprites cuya caja corta con la suya. Se calcula una sola vez al cargar el cartucho (con 54 sprites son $54^2\approx 2\,900$ comparaciones de rectángulos, despreciable) y se guarda como una lista corta de índices. Se puede calcular en el firmware o en el Designer; se decide al implementar (ver \ref{sec:F6I01Abiertos}).
+	\item Un sprite sin vecinos (lo habitual) usa el camino rápido descrito más abajo.
+\end{itemize}
+
+\subsubsection{Formato del fondo en el GWC (Bloque 5)}
+
+Hoy el Bloque 5 del GWC está reservado y vacío (F5-I06). Se propone el siguiente contenido, que mantiene el criterio de que el ESP32 no procese ni interprete nada al leerlo:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		Campo & Tamaño & Contenido \\
+		\midrule
+		\texttt{formato} & 1 byte & 0 = RGB565 crudo; 1 = paleta de 8 bits; 2 = paleta de 4 bits (reservados 3 en adelante: teselas, compresión) \\
+		\texttt{ancho}, \texttt{alto} & 2 + 2 bytes & Deben coincidir con la resolución del Setup (el Designer ya escala img\_f a esa resolución, F5-I13) \\
+		\texttt{numColores} & 2 bytes & Solo para paleta; 0 en RGB565 \\
+		paleta & $numColores\times 2$ & Colores ya en RGB565 y en el orden de bytes de la pantalla \\
+		datos & según formato & Píxeles por filas, sin relleno entre filas salvo en 4 bits (el último nibble de una fila impar se rellena para que cada fila empiece en byte) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Contenido propuesto para el Bloque 5 (fondo)}
+	\label{tab:F6I01Bloque5}
+\end{table}
+
+\begin{itemize}
+	\item \textbf{RGB565 con los bytes ya en el orden de la pantalla} (normalmente byte alto primero). Así el firmware copia filas de la flash a un búfer y las envía tal cual, sin intercambiar bytes píxel a píxel. El orden depende del controlador, por lo que se fija en una cabecera del cartucho o en una constante del firmware, y se prueba en el equipo real.
+	\item \textbf{Formato por defecto: RGB565 crudo.} Es lo más simple y no cuesta nada de CPU. Con 150\,KB a 320$\times$240 está sobrado.
+	\item \textbf{Paleta de 4 u 8 bits:} el Designer cuenta los colores exactos de img\_f; si hay 16 o menos usa 4 bits, si hay 256 o menos usa 8 bits, y si hay más usa RGB565 crudo (no se cuantiza ni se hace dithering sin que el usuario lo pida). Cuesta una consulta a una tabla de 16 o 256 entradas por píxel, que es prácticamente gratis. Atención a la lección de F5 (el antialiasing de los editores de imagen convierte unos pocos colores en cientos): un fondo con muchos colores <<casi iguales>> no se reducirá a paleta y se quedará en RGB565.
+	\item \textbf{Sin img\_f:} el Bloque 5 va vacío y se usa \texttt{ColorFondo} (Bloque 0). El compositor entonces no lee la flash: rellena el búfer con ese color. Ver también el arranque.
+	\item \textbf{Fondo en la flash:} el GWC (o su Bloque 5) se guarda en una partición de datos. Se accede por memoria mapeada (\texttt{esp\_partition\_mmap}), con lo que leer una fila del fondo es leer un bloque contiguo de memoria; la caché de la flash hace el resto. Si se prefiere no mapear, \texttt{esp\_partition\_read} copia una fila al búfer con el mismo resultado un poco más lento. El mapeo se hace de la partición entera y se accede por desplazamiento, ya que el mapeo exige alineación de 64\,KB.
+\end{itemize}
+
+\subsubsection{Algoritmo del compositor}
+
+El Motor Gráfico no pinta directamente: actualiza \texttt{visible[i]} y marca los sprites cambiados. Al terminar la iteración se vacía la lista de cambios con el algoritmo siguiente. \textbf{Primero se actualizan todos los estados y después se compone,} de otro modo la composición de un sprite vería un estado intermedio de otro que cambia en la misma iteración.
+
+\begin{verbatim}
+	para cada sprite i marcado como cambiado:
+	caja = (x[i], y[i], ancho[i], alto[i])
+	si vecinos[i] está vacío:                 // camino rápido
+	si visible[i]:  copiar filas del fondo + poner negro la máscara
+	si no:          copiar filas del fondo (nada más)
+	si no:                                    // camino general
+	copiar filas del fondo
+	para cada sprite j en {i} + vecinos[i]:
+	si visible[j]: poner negro la máscara de j, recortada a la caja
+	enviar el búfer a la pantalla (ventana = caja)
+	quitar la marca de i
+\end{verbatim}
+
+\begin{itemize}
+	\item \textbf{Copiar filas del fondo:} para cada fila de la caja se copia \texttt{ancho[i]} píxeles desde \texttt{fondo + (fila\,$\times$\,anchoPantalla + x)\,$\times$\,2} (en RGB565) al búfer. Con paleta se convierte con la tabla de colores al copiar.
+	\item \textbf{Poner negro la máscara:} se recorre la cadena de bits de la máscara; por cada 1 se escribe \texttt{0x0000} (negro en RGB565, que además es el mismo en cualquier orden de bytes) en la posición correspondiente del búfer. Un byte de la máscara a 0 se salta de golpe (los sprites suelen tener mucho vacío). Con un vecino, se recorta a la parte de su máscara que cae dentro de la caja.
+	\item \textbf{Dos sprites cambiados con cajas que se tocan en la misma iteración:} cada uno compone su caja con el estado ya final de todos, de modo que el resultado es correcto y solo se repinta un par de veces la zona común. No hace falta fusionar rectángulos.
+	\item \textbf{Cajas grandes:} el búfer tiene un tamaño fijo y se procesa la caja por bandas de $N$ filas (p.~ej. 16). Con $N=16$ y una caja de la anchura de la pantalla (320) el búfer es de $320\times16\times2=10\,240$ bytes; con dos búferes (uno se envía mientras se compone el otro) son 20\,KB. Es un presupuesto fijo e independiente del número de sprites.
+	\item \textbf{Coste del camino rápido al borrar:} es copiar filas de la flash a un búfer y enviarlas; sin ninguna lógica de máscaras.
+\end{itemize}
+
+\subsubsection{Envío a la pantalla}
+
+\begin{itemize}
+	\item Cada rectángulo se envía como: fijar ventana (columnas y filas), orden de escritura de memoria y los datos. El firmware se limita a dos funciones propias, \texttt{pantallaVentana(x, y, w, h)} y \texttt{pantallaEnviar(búfer, bytes)}, de modo que cambiar de controlador o de biblioteca (esp\_lcd, TFT\_eSPI, LovyanGFX, \ldots) no toque el compositor.
+	\item \textbf{DMA:} el búfer debe estar en la RAM interna (no en la flash) y alineado. El DMA del SPI no puede leer directamente de la flash mapeada, y por eso se copia primero al búfer. Con dos búferes se solapa la composición con el envío.
+	\item \textbf{Reloj del SPI:} 40\,MHz como punto de partida; muchos paneles admiten más (hasta 80\,MHz) y se sube después de medir.
+\end{itemize}
+
+\subsubsection{Arranque y cambio de partida}
+
+\begin{itemize}
+	\item Al arrancar (o al volver a empezar) se pinta el fondo completo por bandas, copiando filas de la flash al búfer y enviándolas. Después se pintan los sprites que arrancan presentados, usando el compositor normal.
+	\item Si no hay img\_f, el fondo es un color liso: se rellena el búfer una sola vez con \texttt{ColorFondo} y se reutiliza en todas las bandas, sin tocar la flash.
+	\item Si el cartucho cambia o se carga otro, se vuelve a ejecutar el arranque. No hay estado del fondo que invalidar porque el fondo nunca se guarda en la RAM.
+\end{itemize}
+
+\subsection{Estimaciones de tiempo}
+\label{sec:F6I01Tiempos}
+
+Son órdenes de magnitud para decidir; se medirán en el equipo (\ref{sec:F6I01Pruebas}).
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		Operación & Datos & Tiempo (SPI a 40\,MHz $\approx$ 5\,MB/s) \\
+		\midrule
+		Sprite de 20$\times$30 & 1\,200 bytes & $\approx 0'24$\,ms \\
+		Caja de 100$\times$100 & 20\,000 bytes & $\approx 4$\,ms \\
+		Fondo completo 320$\times$240 & 153\,600 bytes & $\approx 31$\,ms \\
+		Fondo completo 480$\times$320 & 307\,200 bytes & $\approx 61$\,ms \\
+		\bottomrule
+	\end{tabular}
+	\caption{Tiempo de envío por SPI según el tamaño del rectángulo}
+	\label{tab:F6I01Tiempos}
+\end{table}
+
+\begin{itemize}
+	\item Una iteración típica (decenas de sprites cambiando como mucho, casi siempre pocos) queda en pocos milisegundos. Las Game \& Watch iteran a decenas o centenas de milisegundos, con lo que hay mucho margen.
+	\item El fondo completo solo se pinta al arrancar.
+	\item La lectura de la flash mapeada y la composición añaden poco frente al SPI, pero se medirán por separado (\ref{sec:F6I01Pruebas}).
+\end{itemize}
+
+\subsection{Impacto en el resto del sistema}
+\label{sec:F6I01Impacto}
+
+\begin{itemize}
+	\item \textbf{GWC (Bloque 5):} pasa de reservado a llevar el fondo con el formato anterior. El principio de F5-I13 (<<un GWC debe contener los mismos datos que el GWI y el juego debe funcionar igual>>) se mantiene: el lector del simulador debe poder interpretar el Bloque 5 y mostrar el mismo fondo. Como el RGB565 pierde bits de color, el simulador debería mostrar el fondo ya redondeado a RGB565 al cargar un GWC, para que lo que se ve en el navegador sea lo que verá el ESP32.
+	\item \textbf{Designer:} un generador del Bloque 5 (conversión a RGB565 en el orden de bytes elegido, detección de 16 o 256 colores exactos, paleta, CRC), y la prueba de equivalencia GWI/GWC ampliada con el fondo.
+	\item \textbf{F5-I20 (memoria):} la FLASH informada es el tamaño del bloque de fondo, que hasta ahora era siempre 0. En cuanto el Bloque 5 deje de ser nulo, el aviso del porcentaje lo recoge sin cambiar nada, como se dejó previsto. La RAM del GWC no cambia por el fondo.
+	\item \textbf{RAM del firmware:} los búferes del compositor (unos 20\,KB), la tabla de sprites y de vecinos y el bit de visibilidad de cada sprite no los cuenta el GWC; se suman a la RAM que el usuario declara en el Setup para saber cuánto se deja libre.
+\end{itemize}
+
+\subsection{Pruebas previstas}
+\label{sec:F6I01Pruebas}
+
+\begin{itemize}
+	\item \textbf{Compositor en el PC:} el compositor se escribe como una función pura (entrada: fondo, tabla de sprites, estados y caja; salida: búfer), sin dependencias del ESP32, de modo que se compile y se pruebe en el PC.
+	\item \textbf{Equivalencia por propiedad:} tras una secuencia aleatoria de <<presentar/borrar>> componiendo solo las cajas sucias, la pantalla (simulada en un búfer del PC) debe ser idéntica a la que sale de pintar desde cero el fondo y todos los sprites presentados. Se repite con muchas secuencias y con cajas solapadas a propósito (el caso difícil).
+	\item \textbf{Imagen de referencia:} se comparan las salidas con la imagen que genera el simulador JavaScript para el mismo cartucho (la del Parachute como referencia), una vez convertido el fondo a RGB565.
+	\item \textbf{Formatos del fondo:} el mismo fondo en RGB565 crudo, paleta de 8 bits y paleta de 4 bits da la misma imagen compuesta.
+	\item \textbf{Casos límite:} sprite en el borde de la pantalla, sprite de una sola fila o columna, dos sprites cuya caja se solapa y cuyas máscaras no, máscara vacía, fondo liso por \texttt{ColorFondo}, y cartucho con sprites fuera de la pantalla (se rechaza al cargar con un mensaje claro, igual que el resto de validaciones del lector).
+	\item \textbf{Medidas en el ESP32:} microsegundos por iteración (lectura de la flash, composición y envío por separado), RAM libre mínima durante una partida y comprobación visual de que no hay parpadeo.
+\end{itemize}
+
+\subsection{Puntos abiertos}
+\label{sec:F6I01Abiertos}
+
+\begin{itemize}
+	\item \textbf{Lista de vecinos:} calcularla en el firmware al cargar (más sencillo, un poco más de arranque) o guardarla en el GWC (más datos en el cartucho, nada que calcular). Mi inclinación es calcularla en el firmware.
+	\item \textbf{Orden de bytes y controlador:} depende de la pantalla definitiva (ILI9341, ST7789, \ldots); se comprueba en el equipo real y, de hacer falta, se parametriza.
+	\item \textbf{Pantallas mayores:} más allá de 480$\times$320 el SPI se queda corto para repintar el fondo entero (60\,ms o más), aunque los sprites siguen siendo baratos. Es aceptable porque el fondo solo se pinta al empezar.
+	\item \textbf{Pantalla que sí permita leer, o hardware con PSRAM:} no se usan. El diseño funciona sin ellos y sin cambios; si más adelante se quisiera un framebuffer completo en el S3 con PSRAM sería una variante del compositor, no un cambio de formato.
+	\item \textbf{Teselas con deduplicación y RLE:} una optimización posterior, solo si el tamaño del cartucho llegara a importar. El campo \texttt{formato} del Bloque 5 deja sitio para ello sin cambiar nada más.
+	\item \textbf{Ajuste del reloj del SPI y doble búfer:} se afinan con las medidas del equipo.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F6I01Criterios}
+
+\begin{itemize}
+	\item El fondo no se guarda en la RAM en ningún formato; solo se leen de la flash las filas que hacen falta.
+	\item Presentar o borrar cualquier sprite deja la pantalla idéntica a la de pintar todo desde cero, incluso con cajas solapadas.
+	\item La RAM usada por el compositor es fija y no depende del número de sprites.
+	\item El fondo en los tres formatos da la misma imagen y el simulador muestra el mismo fondo que el ESP32.
+	\item Sin parpadeo visible al presentar o borrar.
+	\item Una iteración típica se resuelve en unos pocos milisegundos.
+\end{itemize}

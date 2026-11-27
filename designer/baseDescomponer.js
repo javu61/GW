@@ -4974,6 +4974,16 @@ const baseDescomponer = (() => {
     const bytesRAM = gwc.bytes.length - bytesFondo;
     const textoMemoria = baseCartucho.ocupacionMemoria(memoriaSetup || {}, bytesRAM, bytesFondo);
     baseSetup.informarUltimos({ gwc: bytesRAM, fondo: bytesFondo, memoria: memoriaSetup });
+    // F5-I21: los informativos viajan DENTRO de la «memoria» del setup
+    // (ultimoGWC: bytes de datos; ultimoGWCimg: bytes del bloque del fondo),
+    // así el GWI/GWB que se genera ahora los lleva y, al recargarlo, ya
+    // están (la ficha del Setup los pinta de nuevo al generar).
+    if (setupMem) {
+      const m = (setupMem.memoria && typeof setupMem.memoria === 'object' &&
+        !Array.isArray(setupMem.memoria)) ? setupMem.memoria : (setupMem.memoria = {});
+      if (bytesRAM > 0) m.ultimoGWC = bytesRAM;
+      if (bytesFondo > 0) m.ultimoGWCimg = bytesFondo;
+    }
     const avisoMemoria = textoMemoria ? ' ' + textoMemoria : '';
     // 4. El GWI después, con el Código GWC del par: el código del
     // GWC recién generado (TEXTO «#HHHH#», visible igual que en la

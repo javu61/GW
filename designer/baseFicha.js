@@ -580,16 +580,14 @@ const baseFicha = (function () {
     const json = { tipo: 'GWB', version: 1, nombre: e.nombre };
     if (e.descripcion) json.descripcion = e.descripcion;    // F5-I17 (M13)
     if (e.estilo) json.estilo = e.estilo;
-    if (e.resolucion) json.resolucion = e.resolucion;
     if (e.colorFondo) json.ColorFondo = e.colorFondo;
-    const memoria = _memoriaDelSetup();                 // F5-I21: la del setup vigente
-    if (memoria) json.memoria = memoria;
     json.imagenes = { img_s: 'img_s.png' };
     if (e.imagenes.img_f) json.imagenes.img_f = 'img_f.png';
     if (e.imagenes.img_m) json.imagenes.img_m = 'img_m.png';
-    // F5-I21: los botones del GWB son los del setup (nombres de campo y
-    // datos de la pestaña Setup); la ficha ya no los declara.
-    json.botones = _botonesDelSetup();
+    // F5-I21: el GWB es SOLO las imágenes de partida (+ estilo y
+    // ColorFondo): SIN resolucion, SIN memoria y SIN botones. Esos datos
+    // viajan en el GWI (autosuficiente) y en el setup (GWS); al cargar un
+    // GWB salen del setup vigente o del derivado.
     for (const k of ['combinar', 'etiquetas']) {
       if (extras[k] !== undefined) json[k] = extras[k];
     }
@@ -644,7 +642,8 @@ const baseFicha = (function () {
 
   /**
    * La memoria del setup vigente (solo los subcampos ≠ 0), que es la que
-   * viaja en el GWB/GWI generado (F5-I21: la memoria solo se edita en Setup).
+   * viaja en el GWI generado (F5-I21: la memoria solo se edita en Setup;
+   * el GWB ya no la lleva).
    * @returns {?{RAM:number, FLASH:number}} La memoria, o null si no hay.
    */
   function _memoriaDelSetup() {

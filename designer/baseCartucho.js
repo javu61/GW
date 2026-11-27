@@ -674,6 +674,20 @@ var baseCartucho = (function () {
   }
 
   /**
+   * La «memoria» que viaja en el GWI: los KB de RAM/FLASH solo si no son 0
+   * (memoriaNoCero) y los informativos ultimoGWC/ultimoGWCimg TAL CUAL, con
+   * su 0 explícito si lo tienen: un «ultimoGWCimg: 0» en el cartucho dice
+   * con claridad que no lleva fondo (F5-I21).
+   * @param {Object} m - La «memoria» del GWI (puede ser cualquier cosa).
+   * @returns {Object} La memoria serializable.
+   */
+  function _memoriaGWI(m) {
+    const o = memoriaNoCero(m) || {};
+    for (const k of CLAVES_ULTIMOS) if (m[k] !== undefined) o[k] = m[k];
+    return o;
+  }
+
+  /**
    * Serializa el GWI en JSON legible pero COMPACTO: los arrays largos
    * (sprites y segmentos) van a UNA línea por elemento, el resto de campos
    * también. Con muchos segmentos se pasa de 2500 líneas a unas centenas.
@@ -701,7 +715,7 @@ var baseCartucho = (function () {
       _lineaDeCampo('estilo', json.estilo),
       _lineaDeCampo('resolucion', json.resolucion),
       ...(_esColorRGB(json.ColorFondo) ? [_lineaDeCampo('ColorFondo', json.ColorFondo)] : []),
-      ...(memoriaNoCero(json.memoria) ? [_lineaDeCampo('memoria', memoriaNoCero(json.memoria))] : []),
+      ...(json.memoria ? [_lineaDeCampo('memoria', _memoriaGWI(json.memoria))] : []),
       _lineaDeCampo('imagenes', imagenesGWI),
       // Regla «combinar» (F3-I1): solo si está activa (falsy fuera: es
       // el valor por defecto). El GWC toma su bit de Reglas de aquí.
@@ -717,7 +731,8 @@ var baseCartucho = (function () {
 
   /**
    * Serializa el GWB: solo lo que un GWB declara (sin sprites, segmentos
-   * ni autoría). estilo y resolucion solo si el GWB los lleva.
+   * ni autoría). F5-I21: el GWB es SOLO las imágenes de partida (+ estilo
+   * y ColorFondo): SIN resolucion, SIN memoria y SIN botones.
    * @param {Object} json - GWB a guardar.
    * @returns {string} Texto JSON del GWB.
    */
@@ -731,14 +746,11 @@ var baseCartucho = (function () {
     ];
     if (json.descripcion) lineas.push(_lineaDeCampo('descripcion', json.descripcion));   // F5-I17 (M13)
     if (json.estilo) lineas.push(_lineaDeCampo('estilo', json.estilo));
-    if (json.resolucion) lineas.push(_lineaDeCampo('resolucion', json.resolucion));
     if (_esColorRGB(json.ColorFondo)) lineas.push(_lineaDeCampo('ColorFondo', json.ColorFondo));
-    if (memoriaNoCero(json.memoria)) lineas.push(_lineaDeCampo('memoria', memoriaNoCero(json.memoria)));
     lineas.push(_lineaDeCampo('imagenes', json.imagenes));
     for (const campo of ['combinar', 'etiquetas']) {
       if (json[campo]) lineas.push(_lineaDeCampo(campo, json[campo]));
     }
-    lineas.push(_lineaDeLista('botones', json.botones || []));
     return '{\n' + lineas.join(',\n') + '\n}';
   }
 
@@ -1906,7 +1918,8 @@ var baseCartucho = (function () {
         avisos.push('memoria.' + k + ' (' + String(m[k]) + ') debe ser un entero ≥ 0 de bytes: se trata como 0.');
         m[k] = 0;
       }
-      if (m[k] === 0) delete m[k];
+      // El 0 se CONSERVA (F5-I21): un «ultimoGWCimg: 0» explícito dice que
+      // el cartucho no lleva fondo (decisión del autor, MA02).
     }
     if (CLAVES_MEMORIA.every(k => m[k] === undefined) &&
         CLAVES_ULTIMOS.every(k => m[k] === undefined)) delete json.memoria;

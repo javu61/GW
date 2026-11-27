@@ -7,8 +7,7 @@
 	
 	\item Bloque A: motor y editor 
 	\begin{itemize}
-		\item A01 renombrar los ficheros con el camelCase
-		\item A02 Añadir el fondo al GWC de forma provisional, lugo hay que ajustarlo en F6 con el ESP.
+		\item A02 Añadir el fondo al GWC de forma provisional, luego hay que ajustarlo en F6 con el ESP.
 		\item A03 Revisar el uso del botón de Aplicar de las pestañas de setup y cartucho.
 	\end{itemize}
 	
@@ -26,6 +25,7 @@
 	\item Bloque D: Fase 6
 	\begin{itemize}
 		\item PD1. Fase 6 (ESP32): capas del motor gráfico, puertos GPIO, LCG portable y firmware C++ que lee el GWC. La estrategia de presentación se decide midiendo en hardware real.
+		\item PD2. Revisar la imagen guardada en el GWC, que está provisional solo para el emulador.
 	\end{itemize}
 	
 \end{itemize}
@@ -118,55 +118,3 @@ Playwright en verde (S1--S7, red de seguridad; F5-I18).
 
 
 \clearpage
-
-
-*********************************************************************\\
-*********************************************************************\\
-*********************************************************************\\
-
-
-\section*{Ampliaciones futuras}
-\label{sec:Ampliaciones}
-
-
-
-\begin{itemize}
-	\item Bloque A: Mejoras a incluir en el desarrollo cuando sea posible
-	\begin{itemize}
-		\item MA01 \textbf{Menú de cartuchos}: el nombre y la portada (\texttt{img\_m}) no viajan en el GWC; un selector en el hardware los necesitaría. El anexo de formatos ya está cerrado (PC5): queda decidir cómo viajan nombre y portada al hardware (¿bloque extra del GWC, fichero aparte…?)
-	\end{itemize}
-	
-	\item Bloque B: Mejoras interesantes que se pueden incluir
-	\begin{itemize}
-		\item MB02 Al cargar imágenes \textbf{img\_s}, poder cargar cualquier imagen y convertirla a blanco y negro.
-		
-		\item MB03 YA HECHO en F5-I21, de otra manera: el estilo se edita SOLO en el Setup y, con juego en memoria, se aplica EN CALIENTE sin descartar el cartucho (se rechaza el estilo de 2 botones si hay enlaces de jugador a \texttt{arriba}/\texttt{abajo}).
-		
-		\item MB04 Que al guardar el GWC se genere también un GWS con los datos del setup (YA HECHO en F5-I17: los botones generan ambos junto al GWI/GWC) y, lo que falta, empaquetar ambos en un ZIP: el binario para usar en el ESP y el empaquetado usable en el emulador; si se carga el empaquetado se carga primero el setup, si se carga el binario se verifica que exista un setup.
-		
-	\end{itemize}
-	
-	
-	\item Bloque C: Temas fuera del alcance del proyecto actual:	
-	\begin{itemize}
-		
-		\item MC01 \textbf{Game B}: el segundo juego de las máquinas reales depende del diseño de cada máquina.
-		En el Parachute existe una cuarta ruta que hace oscilar un tiempo a un paracaidista en el extremo derecho; en otro juego puede ser lanzar las rutas más rápido, aumentar la velocidad de salida o añadir segmentos con obstáculos.
-		La política de rutas ya viaja en el cartucho, así que Game B sería un segundo conjunto de parámetros de lanzamiento, más la oscilación temporal del paracaidista (bucles temporales).
-		
-		\item MC02 \textbf{Multi-colisión}: que un mismo segmento de jugador sea punto de colisión de varios elementos; hoy «un jugador, un punto de colisión» es bloqueante en el diseñador.
-		
-		\item MC03 \textbf{Más de una Secuencia}: el cartucho admite una sola animación de fondo.
-		
-		\item MC05 \textbf{Generador inverso de colores} (F1): graficar el GWI como imagen con colores por rol, útil como visualización del cartucho.
-		
-		\item MC06 \textbf{Cambios en las secuencias}: en Donkey Kong un barril puede cambiar su secuencia de caída según el tiempo de juego y la dificultad; sería una regla del cartucho para bifurcaciones de ruta según el progreso.
-		
-		\item MC07 \textbf{Uniones de segundo nivel}.
-		
-		\item MC08 \textbf{Sonido}.
-		
-		\item MC09 \textbf{Deduplicación de imágenes aproximadas}: aporta poco, pero es abordable.
-		
-	\end{itemize}
-\end{itemize}

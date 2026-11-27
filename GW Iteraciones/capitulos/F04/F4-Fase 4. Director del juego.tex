@@ -10,6 +10,11 @@ Cerraremos en esta fase dos temas:
 	\item Como objetivo secundario, cerraremos todos los temas pendientes para la generación del cartucho intermedio, que debe llevar toda la información necesaria para, en la siguiente fase, generar el cartucho compacto.
 \end{itemize}
 
-Al igual que en las fases anteriores, los parámetros pueden llegar opcionalmente del archivo de setup, pero la fuente de verdad durante la autoría es siempre el diseñador gráfico: cualquier edición en la ficha del cartucho se sincroniza con el motor al instante, sin guardar ni recargar.
+Con esta fase los parámetros salen definitivamente del setup y del código: nacen en
+el cartucho (GWI) y viajan al Bloque 1 del GWC (F5-I02); lo que el GWI no declara
+viaja como nulo (F5-I13) y el valor por defecto (los 500 ms históricos, una sola ruta...) lo aplica quien lee, igual en el simulador y en el ESP32. La fuente de verdad
+durante la autoría es siempre el diseñador gráfico: cualquier edición en la ficha del
+cartucho se sincroniza con el motor al instante, sin guardar ni recargar.
+
 
 \clearpage

@@ -1,0 +1,49 @@
+\section{Vigesimo segunda iteración de la Fase 5: Imagen de fondo en el GWC}
+\label{sec:F5I22}
+
+El GWC es el cartucho para el sistema externo y por eso lleva los datos ya escalados a la resolución declarada (F5-I21): el destino no debe reescalar nada. Faltaba incluir la imagen de fondo, aunque ya estaba preparado su inclusión en el Bloque 5, quedó ya reservado, pero va como nulo, esperando que en la Fase 6 se defina el mejor formato. Pero como el emulador lo utiliza, actualmente cuando cargamos un GWC en el emulador, en la pantalla el fondo queda en blanco.
+
+Esta iteración incluye la imagen de fondo en el Bloque 5 con un formato \textbf{PROVISIONAL}, re-escalada adecuadamente, pensado solo para que el emulador la presente y cerrar definitivamente esta fase; en la Fase 6, al decidir el manejo gráfico del ESP32, se sustituirá por el formato definitivo (compacto, rápido de leer y sin necesidad de reescalar).
+
+\subsection{Diseño}
+\label{sec:F5I22Diseno}
+
+En esta iteración usaremos el sistema mas rápido, guardar la imagen PNG directamente, es lo mas rápido de implementar, el formato PNG ya se encarga de la compresión, y JavaScript ya lo manejan sin problemas. En Fase 6 se cambiará por completo a un formato  adecuado para el ESP tras analizar la mejor manera de hacerlo, aquí no conocemos el sistema externo todavía.
+
+\begin{itemize}
+	\item \textbf{Bloque 5 «Fondo»: los bytes PNG de \texttt{img\_f}}. La fuente es siempre la imagen \texttt{img\_f} declarada en el cartucho del juego.
+	\item \textbf{La imagen irá escalada a la resolución declarada}. Aunque este punto no es necesario, pues el emulador ya reescala en el canvas, si \texttt{img\_f} ya mide lo que declara la máquina se copian sus bytes PNG tal cual; si no coincide se reescala al tamaño declarado y se exporta el PNG. El registro es una excepción al espíritu del formato (todo lo demás son datos crudos para el ESP32): es solo para el emulador y la Fase 6 lo reemplazará.
+	
+	\item \textbf{Sin fondo en memoria, bloque ausente.} Si no hay \texttt{img\_f} el Bloque 5 no existe y su dirección va a nulo, como hasta ahora: los GWC de la v1 (sin fondo) siguen leyéndose sin error y el fondo queda del ColorFondo.
+	\item \textbf{El emulador presenta el fondo del GWC.} Al cargar un GWC con Bloque 5, se fabrica la imagen del fondo desde sus bytes PNG y se pinta sobre el ColorFondo declarado; sin bloque, fondo plano del ColorFondo (como hoy).
+	\item \textbf{La memoria FLASH ya cuenta el fondo.} Al generar, la estadística añade el tamaño del Bloque 5 y el porcentaje de FLASH sube en consecuencia (los informativos \emph{Último fondo} y \emph{FLASH} del Setup se rellenan solos, F5-I20/I21). El código del GWC cambia al regenerar cualquier cartucho con fondo: el bloque entra bajo el CRC.
+\end{itemize}
+
+\subsection{Plan de cambios}
+\label{sec:F5I22Plan}
+
+\begin{itemize}
+	\item \texttt{baseCartucho.js}: constante \texttt{BLOQUE\_FONDO\_GWC}, montaje del Bloque 5 (\texttt{\_montarFondo}), su lectura con validaciones (\texttt{\_leerFondoGWC}), cuarto parámetro \texttt{imgF} en \texttt{generarGWC}, dirección en el Bloque 0 (nulo si no hay fondo) y estadística con «Fondo».
+	\item \texttt{baseDescomponer.js}: al generar el GWC entrega \texttt{baseDirector.imagenFondo()}; la memoria declarada suma el fondo.
+	\item \texttt{baseDirector.js}: al leer un GWC, fabrica la imagen del fondo desde el Bloque 5 (PNG) o cae al ColorFondo.
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F5I22Pruebas}
+
+\begin{itemize}
+	\item Caja nueva G4 (grupo \texttt{generales}, referenciada en F5-I18): sin fondo, dirección a nulo, sin Bloque 5 y lectura con fondo nulo; con fondo, el bloque mide lo que toca, el CRC cambia, la estadística lo cuenta y la lectura devuelve el fondo a la resolución declarada; con un fondo de la mitad de tamaño, llega ya escalado al doble.
+	\item Caja nueva D11 (grupo \texttt{director}, destructiva): cargar un GWC con fondo deja el fondo en el emulador a la resolución declarada y con los colores del Bloque 5 (el ColorFondo queda detrás).
+	\item C8 (F5-I20) se adapta: al generar un GWI con \texttt{img\_f}, la FLASH sale con el fondo contado (porcentaje positivo) en aviso y panel.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F5I22Criterios}
+
+\begin{enumerate}
+	\item Generar un GWC con \texttt{img\_f} en memoria produce un Bloque 5 con el fondo en color ya escalado a la resolución declarada; sin \texttt{img\_f}, el bloque no existe y su dirección va a nulo.
+	\item Los GWC v1 sin fondo siguen cargándose sin error (compatibilidad).
+	\item El emulador presenta el fondo del GWC cargado; sin Bloque 5, fondo plano del ColorFondo.
+	\item La FLASH contada al generar incluye el fondo, con su porcentaje en el aviso y el panel.
+	\item Documentado como provisional: F6 sustituirá el formato del Bloque 5 por el definitivo del ESP32.
+\end{enumerate}

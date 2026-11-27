@@ -587,11 +587,13 @@ const baseSetup = (function () {
 
   /**
    * Rellena los informativos al generar un GWC (F5-I21): lo usado de RAM
-   * (los bytes del GWC) y de FLASH (el bloque del fondo, hoy 0), con su %
+   * (los DATOS del GWC, SIN el bloque del fondo: la imagen no se carga en
+   * RAM, irá a FLASH) y de FLASH (el bloque del fondo), con su %
    * de la memoria declarada del setup aplicado. Es la misma función que
    * escribe el porcentaje de la generación (F5-I20): baseCartucho.textoUsoMemoria.
    * @param {{gwc:number, fondo:number, memoria:?{RAM:number, FLASH:number}}} d -
-   *        Bytes del GWC y del fondo, y la memoria declarada (o null).
+   *        Bytes de datos del GWC (sin el fondo) y del fondo, y la memoria
+   *        declarada (o null).
    * @returns {void}
    */
   function informarUltimos(d) {

@@ -4991,6 +4991,12 @@ const baseDescomponer = (() => {
     // «Verificar y Guardar» guarda sin codigoGWC, el GWI no lleva
     // sobras).
     json.codigoGWC = gwc.codigo;
+    // F5-I21: el «último GWC calculado» del GWI sale del GWC REAL generado
+    // aquí al lado: los bytes de datos y, SIEMPRE (a 0 si no hay), los del
+    // fondo — un 0 explícito en el cartucho dice que no lleva fondo.
+    if (!json.memoria || typeof json.memoria !== 'object' || Array.isArray(json.memoria)) json.memoria = {};
+    json.memoria.ultimoGWC = bytesRAM;
+    json.memoria.ultimoGWCimg = bytesFondo;
     baseFicha.actualizarCodigoGWC(gwc.codigo);   // F5-I17 (M1): la ficha enseña el código nuevo
     // F5-I17 (M2): si el GWI cargado traía codigoGWC (#X#) y el código
     // nuevo del par es #Y# distinto, el GWC #X# de la carpeta queda
@@ -5195,9 +5201,18 @@ const baseDescomponer = (() => {
       return;
     }
     const imagenesFicha = baseFicha.imagenesEnMemoria();
+    // F5-I21: el GWI guardado a secas viaja SIN los informativos del
+    // «último GWC calculado»: no hay GWC nuevo y el dato podría quedar
+    // discrepante con cambios hechos después en el editor.
+    const jsonGWI = _montarGWI();
+    if (jsonGWI.memoria && typeof jsonGWI.memoria === 'object' && !Array.isArray(jsonGWI.memoria)) {
+      delete jsonGWI.memoria.ultimoGWC;
+      delete jsonGWI.memoria.ultimoGWCimg;
+      if (Object.keys(jsonGWI.memoria).length === 0) delete jsonGWI.memoria;
+    }
     // El módulo de cartuchos gestiona JSZip, los avisos de inicio y
     // fin, y el bloqueo del botón mientras el ZIP se escribe.
-    const tamGWI = await baseCartucho.guardarGWI(_montarGWI(), sprites,
+    const tamGWI = await baseCartucho.guardarGWI(jsonGWI, sprites,
       imagenesFicha.img_f, imagenesFicha.img_s,
       imagenesFicha.img_m, nAvisos);
     if (tamGWI) {

@@ -31,6 +31,10 @@
 //                               «escalar» del generador de GWC con la nueva pantalla, y las
 //                               posiciones de los segmentos son su redondeo canónico. Solo
 //                               consola.
+//   C10 memoria (F5-I21)        El «último GWC calculado» viaja en la «memoria» del GWI del par
+//                               (ultimoGWC, y ultimoGWCimg a 0 explícito si no hay fondo); el GWI
+//                               guardado a secas va sin él; el GWB ya no lleva resolucion,
+//                               memoria ni botones. Solo consola.
 //
 // FUNCIONES
 //   _codigoEnFicha              (F5-I17) El campo solo lectura «Código GWC» de la ficha de Cartucho.
@@ -41,6 +45,7 @@
 //   _generarConMemoria         (F5-I20) Carga setup (+ memoria) y GWI (+ memoria), genera y devuelve aviso final y panel.
 //   _pruebaMemoria             (F5-I20) Prueba «C8 memoria: porcentaje al generar» (solo consola).
 //   _pruebaAjuste              (F5-I21) Prueba «C9 ajuste de resolución» (solo consola).
+//   _pruebaUltimos             (F5-I21) Prueba «C10 memoria: ultimoGWC en el GWI» (solo consola).
 //   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
 //   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
 //   _pruebaEquivalencia         Pruebas de datos (normal y variante).
@@ -446,6 +451,75 @@
     return out;
   }
 
+  // F5-I21: el «último GWC calculado» (ultimoGWC/ultimoGWCimg) vive en la
+  // «memoria» del GWI que sale del par (a 0 explícito si no hay fondo); el
+  // GWI guardado a secas va SIN él; el GWB ya no lleva resolucion, memoria
+  // ni botones (solo estilo). Descarga ficheros: solo consola.
+  async function _pruebaUltimos(opc) {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const dec = new TextDecoder();
+    const capturas = { gwi: null, gwb: null };
+    const gwiReal = baseCartucho.guardarGWI, gwbReal = baseCartucho.guardarGWB;
+    baseCartucho.guardarGWI = async function () { capturas.gwi = arguments[0]; return gwiReal.apply(baseCartucho, arguments); };
+    baseCartucho.guardarGWB = async function () { capturas.gwb = arguments[0]; return gwbReal.apply(baseCartucho, arguments); };
+    try {
+      const montar = async (sinFondo) => {
+        const setup = JSON.parse(dec.decode(await U.traerBytes(opc.setupUrl || 'pruebas/cartuchos/setup2.json')));
+        setup.memoria = { RAM: 64, FLASH: 32 };
+        const bytes = await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip');
+        const zip = await JSZip.loadAsync(bytes);
+        const nombreJson = Object.keys(zip.files).find(n => /^[^/]+\.json$/.test(n));
+        const json = JSON.parse(await zip.file(nombreJson).async('string'));
+        delete json.memoria;
+        if (sinFondo) { zip.remove('img_f.png'); delete json.imagenes.img_f; }
+        zip.file(nombreJson, JSON.stringify(json, null, 2));
+        await _cargarGWI(JSON.stringify(setup), await zip.generateAsync({ type: 'uint8array' }));
+      };
+      // 1) Par CON fondo: el GWI lleva los dos informativos; el GWB, solo estilo.
+      await montar(false);
+      capturas.gwi = null; capturas.gwb = null;
+      document.getElementById('btnGenerar').click();
+      await U.esperar(6000);
+      const m = capturas.gwi ? capturas.gwi.memoria : null;
+      ok('C10: el GWI del par lleva memoria.ultimoGWC (bytes de datos, sin el fondo)',
+        !!m && Number.isInteger(m.ultimoGWC) && m.ultimoGWC > 0, JSON.stringify(m));
+      ok('C10: el GWI del par lleva memoria.ultimoGWCimg (el bloque del fondo)',
+        !!m && Number.isInteger(m.ultimoGWCimg) && m.ultimoGWCimg > 0, JSON.stringify(m));
+      ok('C10: el GWI del par mantiene los KB de RAM/FLASH del setup',
+        !!m && m.RAM === 64 && m.FLASH === 32, JSON.stringify(m));
+      const g = capturas.gwb;
+      ok('C10: el GWB ya no lleva resolucion',
+        !!g && g.resolucion === undefined, g ? 'resolucion: ' + JSON.stringify(g.resolucion) : 'sin captura');
+      ok('C10: el GWB ya no lleva memoria',
+        !!g && g.memoria === undefined, g ? 'memoria: ' + JSON.stringify(g.memoria) : 'sin captura');
+      ok('C10: el GWB ya no lleva botones',
+        !!g && g.botones === undefined, g ? 'botones: ' + JSON.stringify(g.botones) : 'sin captura');
+      ok('C10: el GWB sigue llevando el estilo',
+        !!g && g.estilo !== undefined && g.estilo !== null, g ? String(g.estilo) : 'sin captura');
+      // 2) Par SIN fondo: ultimoGWCimg a 0 EXPLÍCITO (el cartucho dice que no lleva fondo).
+      await montar(true);
+      capturas.gwi = null; capturas.gwb = null;
+      document.getElementById('btnGenerar').click();
+      await U.esperar(6000);
+      const m2 = capturas.gwi ? capturas.gwi.memoria : null;
+      ok('C10: sin fondo, el GWI lleva ultimoGWCimg a 0 (explícito) y su ultimoGWC',
+        !!m2 && m2.ultimoGWCimg === 0 && m2.ultimoGWC > 0, JSON.stringify(m2));
+      // 3) GWI a secas: SIN los informativos (no hay GWC nuevo; así no
+      //    queda discrepante con cambios hechos después en el editor).
+      capturas.gwi = null;
+      document.getElementById('btnGuardar').click();
+      await U.esperar(2500);
+      const m3 = capturas.gwi ? capturas.gwi.memoria : null;
+      ok('C10: el GWI a secas va SIN ultimoGWC/ultimoGWCimg',
+        !!capturas.gwi && !!m3 && m3.ultimoGWC === undefined && m3.ultimoGWCimg === undefined, JSON.stringify(m3));
+    } finally {
+      baseCartucho.guardarGWI = gwiReal;
+      baseCartucho.guardarGWB = gwbReal;
+    }
+    return out;
+  }
+
   Pruebas.registrar([
     { id: 'equivalencia', grupo: 'gwi_gwc', nombre: 'C1 equivalencia (datos)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(false) },
     { id: 'equivalenciaVariante', grupo: 'gwi_gwc', nombre: 'C2 equivalencia (variante)', necesita: 'gwi', ejecutar: () => _pruebaEquivalencia(true) },
@@ -455,7 +529,8 @@
     { id: 'parGuardar', grupo: 'gwi_gwc', nombre: 'C6 par: guardar despareja', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaParGuardar() },
     { id: 'parGenerar', grupo: 'gwi_gwc', nombre: 'C7 par: generar desfasado', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaParGenerar(o) },
     { id: 'memoria', grupo: 'gwi_gwc', nombre: 'C8 memoria: porcentaje al generar', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaMemoria(o) },
-    { id: 'ajuste', grupo: 'gwi_gwc', nombre: 'C9 ajuste de resolución (F5-I21)', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaAjuste() }
+    { id: 'ajuste', grupo: 'gwi_gwc', nombre: 'C9 ajuste de resolución (F5-I21)', necesita: 'gwi', soloConsola: true, ejecutar: () => _pruebaAjuste() },
+    { id: 'ultimos', grupo: 'gwi_gwc', nombre: 'C10 memoria: ultimoGWC en el GWI (F5-I21)', necesita: 'gwi', soloConsola: true, ejecutar: (o) => _pruebaUltimos(o) }
   ]);
 })();
 

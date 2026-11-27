@@ -43,7 +43,7 @@
 //   Lectura
 //     leer               Construye el JSON del GWS con lo que hay en la ficha.
 //     verificar          Valida la ficha con las reglas del director.
-//     guardar            Verifica y descarga el GWS (.json).
+//     guardar            Verifica y descarga el GWS (.json, sin los informativos del último GWC: F5-I21).
 //   Aplicar
 //     hayCambios         ¿Hay cambios sin aplicar (borrador)?
 //     marcarAplicado     Da la ficha por aplicada (apaga el aviso).
@@ -456,7 +456,8 @@ const baseSetup = (function () {
       if (t !== '' && Number(t) !== 0) memoria[k] = Number(t);
     }
     // F5-I21: los informativos del Último GWC viajan DENTRO de «memoria»
-    // (BYTES, no KB): sobreviven a Aplicar y viajan en el GWS/GWB/GWI.
+    // (BYTES, no KB): sobreviven a Aplicar y viajan en el GWI; el GWB y
+    // el GWS guardados van SIN ellos (solo la memoria del aparato).
     if (ultimoGWC > 0) memoria.ultimoGWC = ultimoGWC;
     if (ultimoGWCimg > 0) memoria.ultimoGWCimg = ultimoGWCimg;
     if (Object.keys(memoria).length > 0) json.memoria = memoria;
@@ -583,7 +584,14 @@ const baseSetup = (function () {
   function guardar() {
     const r = verificar({ mostrar: true });
     if (r.errores.length > 0) return null;
-    _descargar(_nombreFichero(r.json.nombre), JSON.stringify(r.json, null, 2));
+    // F5-I21: el GWS guardado define la MÁQUINA: su memoria es solo la
+    // del aparato (RAM/FLASH), SIN los informativos del último GWC
+    // (viajan en el GWI; en memoria del módulo se conservan para que
+    // Aplicar no los pierda y la vista siga enseñándolos).
+    const sinUltimos = baseCartucho.memoriaSinUltimos(r.json.memoria);
+    const copia = Object.assign({}, r.json);
+    if (sinUltimos) copia.memoria = sinUltimos; else delete copia.memoria;
+    _descargar(_nombreFichero(r.json.nombre), JSON.stringify(copia, null, 2));
     return r.json;
   }
 

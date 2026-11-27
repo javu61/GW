@@ -135,6 +135,7 @@
 //  Memoria del hardware (F5-I20, MA02): campo opcional «memoria» {RAM, FLASH} en KB
 //   memoriaNoCero           Solo los subcampos válidos y distintos de 0 de una «memoria» (o null): lo que se serializa.
 //   memoriaEfectiva         Memoria al CARGAR un cartucho: la suya por subcampo manda sobre la del setup previo (F5-I21: luego solo vive en el Setup).
+//   memoriaSinUltimos       Copia de la memoria SIN los informativos del último GWC (F5-I21): la que se guarda en un GWS.
 //   textoUsoMemoria         Lo usado de un tipo de memoria: «4.2 KB (2 %)» (informativos del Setup, F5-I21).
 //   ocupacionMemoria        Texto «RAM: 4 de 216 KB (2 %) · FLASH: …» de lo usado frente a la memoria efectiva (null si no hay memoria).
 //   _revisarMemoria         Avisa de los subcampos inválidos de «memoria», los trata como 0 y quita los ceros.
@@ -1942,6 +1943,21 @@ var baseCartucho = (function () {
   }
 
   /**
+   * F5-I21: la memoria que viaja en un GWS guardado: SOLO la del
+   * aparato (RAM/FLASH), SIN los informativos ultimoGWC/ultimoGWCimg
+   * (esos son del cartucho y viajan en el GWI). Copia; no toca el
+   * original (en memoria del módulo se conservan).
+   * @param {*} memoria - La «memoria» del setup (o null).
+   * @returns {?Object} Copia sin los informativos, o null si queda vacía.
+   */
+  function memoriaSinUltimos(memoria) {
+    if (!memoria || typeof memoria !== 'object' || Array.isArray(memoria)) return null;
+    const o = Object.assign({}, memoria);
+    for (const k of CLAVES_ULTIMOS) delete o[k];
+    return Object.keys(o).length > 0 ? o : null;
+  }
+
+  /**
    * La memoria que vale para un cartucho: la que declara él, o la del
    * setup, SUBCAMPO a subcampo (el 0 o la ausencia significan «no declara»).
    * @param {*} delCartucho - «memoria» del cartucho (o null).
@@ -2823,6 +2839,7 @@ var baseCartucho = (function () {
     limitarValor: limitarValor,
     // Memoria del hardware (F5-I20)
     memoriaNoCero: memoriaNoCero,
+    memoriaSinUltimos: memoriaSinUltimos,
     memoriaEfectiva: memoriaEfectiva,
     ocupacionMemoria: ocupacionMemoria,
     textoUsoMemoria: textoUsoMemoria,

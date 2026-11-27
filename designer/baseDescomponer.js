@@ -135,7 +135,7 @@
 //   _avisoTopes            Presenta los avisos de tope de 255.
 //   _nombreFichero         Nombre de fichero saneado: el nombre del cartucho (F5-I17 M10).
 //   _descargarGWC          Descarga el fichero .gwc generado (con su nombre; F5-I17 M10).
-//   _descargarGWS          Descarga el GWS del setup vigente junto al GWC (F5-I17 M9).
+//   _descargarGWS          Descarga el GWS del setup vigente junto al GWC (F5-I17 M9), sin los informativos del último GWC (F5-I21).
 //   _montarGWI             Monta el JSON del GWI (con la autoría).
 //   _guardarGWI             Validaciones de contexto y delega en
 //                          baseCartucho.guardarGWI.
@@ -4845,7 +4845,13 @@ const baseDescomponer = (() => {
    */
   function _descargarGWS(setup) {
     if (!setup) return;
-    const blob = new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' });
+    // F5-I21: el GWS guardado define la MÁQUINA: memoria solo del
+    // aparato (RAM/FLASH), SIN los informativos del último GWC (viajan
+    // en el GWI; el setup en memoria los conserva).
+    const copia = Object.assign({}, setup);
+    const memoria = baseCartucho.memoriaSinUltimos(setup.memoria);
+    if (memoria) copia.memoria = memoria; else delete copia.memoria;
+    const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
     basePack.descargarBlob(blob, _nombreFichero(setup.nombre, '.GWS'));
   }
 

@@ -45,7 +45,7 @@
 //   _generarConMemoria         (F5-I20) Carga setup (+ memoria) y GWI (+ memoria), genera y devuelve aviso final y panel.
 //   _pruebaMemoria             (F5-I20) Prueba «C8 memoria: porcentaje al generar» (solo consola).
 //   _pruebaAjuste              (F5-I21) Prueba «C9 ajuste de resolución» (solo consola).
-//   _pruebaUltimos             (F5-I21) Prueba «C10 memoria: ultimoGWC en el GWI» (solo consola).
+//   _pruebaUltimos             (F5-I21) Prueba «C10 memoria: ultimoGWC en el GWI; el GWS va sin ellos» (solo consola).
 //   _prepararEquivalencia       El GWI en memoria + el GWC que sale de él, releído.
 //   _diferenciasEquivalencia    Configuración y campo a campo de cada segmento: GWI frente a GWC.
 //   _pruebaEquivalencia         Pruebas de datos (normal y variante).
@@ -476,11 +476,24 @@
         zip.file(nombreJson, JSON.stringify(json, null, 2));
         await _cargarGWI(JSON.stringify(setup), await zip.generateAsync({ type: 'uint8array' }));
       };
-      // 1) Par CON fondo: el GWI lleva los dos informativos; el GWB, solo estilo.
+      // 1) Par CON fondo: el GWI lleva los dos informativos; el GWB, solo estilo;
+      //    el GWS, solo la memoria del aparato (RAM/FLASH, SIN los informativos).
       await montar(false);
       capturas.gwi = null; capturas.gwb = null;
+      let gwsTexto = null;
+      const dlReal = basePack.descargarBlob;
+      basePack.descargarBlob = function (blob, nombre) {
+        if (/\.GWS$/i.test(String(nombre))) {
+          const fr = new FileReader();
+          fr.onload = () => { gwsTexto = String(fr.result); };
+          fr.readAsText(blob);
+          return;
+        }
+        return dlReal.apply(basePack, arguments);
+      };
       document.getElementById('btnGenerar').click();
       await U.esperar(6000);
+      basePack.descargarBlob = dlReal;
       const m = capturas.gwi ? capturas.gwi.memoria : null;
       ok('C10: el GWI del par lleva memoria.ultimoGWC (bytes de datos, sin el fondo)',
         !!m && Number.isInteger(m.ultimoGWC) && m.ultimoGWC > 0, JSON.stringify(m));
@@ -497,6 +510,13 @@
         !!g && g.botones === undefined, g ? 'botones: ' + JSON.stringify(g.botones) : 'sin captura');
       ok('C10: el GWB sigue llevando el estilo',
         !!g && g.estilo !== undefined && g.estilo !== null, g ? String(g.estilo) : 'sin captura');
+      const gws = gwsTexto ? JSON.parse(gwsTexto) : null;
+      const mg = gws ? gws.memoria : null;
+      ok('C10: el GWS del par lleva solo la memoria del aparato (RAM/FLASH)',
+        !!mg && mg.RAM === 64 && mg.FLASH === 32, gwsTexto ? JSON.stringify(mg) : 'sin descarga');
+      ok('C10: el GWS del par va SIN ultimoGWC/ultimoGWCimg',
+        !!gws && mg.ultimoGWC === undefined && mg.ultimoGWCimg === undefined,
+        gwsTexto ? JSON.stringify(mg) : 'sin descarga');
       // 2) Par SIN fondo: ultimoGWCimg a 0 EXPLÍCITO (el cartucho dice que no lleva fondo).
       await montar(true);
       capturas.gwi = null; capturas.gwb = null;

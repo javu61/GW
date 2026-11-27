@@ -4932,7 +4932,10 @@ const baseDescomponer = (() => {
       fuente: { ancho: base.ancho, alto: base.alto }
     };
     baseDirector.avisar('Generando GWC…');
-    const gwc = baseCartucho.generarGWC(json, sprites, pantalla);
+    // A02: el fondo (img_f) viaja en el Bloque 5 del GWC, YA escalado a la
+    // pantalla declarada (el ESP32 no reescala). Sin fondo en memoria, el
+    // bloque no existe (como en la v1).
+    const gwc = baseCartucho.generarGWC(json, sprites, pantalla, baseDirector.imagenFondo());
     // Espacio ahorrado por la deduplicación de sprites: los segmentos
     // que comparten imagen solo la escriben UNA vez (sin deduplicación,
     // cada segmento llevaría su copia). GWI: bytes del PNG real de cada
@@ -4961,11 +4964,12 @@ const baseDescomponer = (() => {
     // F5-I20 (MA02) y F5-I21: ocupación de la memoria, solo informativa. La
     // memoria es la del Setup (solo se edita allí y es la que lleva el GWI);
     // sin memoria (o a 0) no hay texto. RAM usada = bytes del GWC; FLASH
-    // usada = el bloque de fondo, que hoy no se cuenta (0). Los informativos
+    // usada = el bloque del fondo (A02: la img_f escalada ya viaja en el
+    // GWC). Los informativos
     // «Último GWC calculado» y «Último fondo» del Setup salen de aquí mismo.
     const setupMem = baseDirector.datosSetup();
     const memoriaSetup = baseCartucho.memoriaNoCero(setupMem ? setupMem.memoria : null);
-    const bytesFondo = 0;
+    const bytesFondo = gwc.bloques.fondo;
     const textoMemoria = baseCartucho.ocupacionMemoria(memoriaSetup || {}, gwc.bytes.length, bytesFondo);
     baseSetup.informarUltimos({ gwc: gwc.bytes.length, fondo: bytesFondo, memoria: memoriaSetup });
     const avisoMemoria = textoMemoria ? ' ' + textoMemoria : '';

@@ -17,8 +17,6 @@
 		
 		\item PC4. Cabeceras PROPÓSITO/SEPARACIÓN/FUNCIONES de los Juego*.js y quitar los \texttt{@since}.
 		
-		\item PC6. Integración de textos
-
 		\item PC7. F5-I21/I22: convertir los ficheros de datos al campo nuevo «Texto Pantalla» (\texttt{setup*.json}, los cartuchos de ejemplo y \texttt{pruebas/cartuchos/*}); hoy siguen con \texttt{alias}/\texttt{id} y se leen por compatibilidad (se convierten al guardarlos de nuevo).
 	\end{itemize}
 	
@@ -65,11 +63,11 @@ Playwright en verde (S1--S7, red de seguridad; F5-I18).
 	
 		& B. \textbf{BaseCartucho:}\newline exports que ya solo usan las pruebas o el propio módulo (\texttt{escalar}, \texttt{indiceDe}, \texttt{bloque}, \texttt{leerJSON}); la lectura de \texttt{json.img\_s} de la raíz por compatibilidad al cargar un GWI (\texttt{validarComunes} ya solo admite \texttt{imagenes.img\_s}). \\
 	
-	& C. \textbf{BaseDescomponer:}\newline parámetro \texttt{codigo} de \texttt{montarGWI}; \texttt{dx}/\texttt{dy} (restos de «Posicionar»); compatibilidad con GWI antiguos (\texttt{uniones}, \texttt{\{unir\}}, tipo 99, «Deshacer unión»): aislar o retirar. \\
-	
-	& D. \textbf{JuegoMotorEstados:}\newline \texttt{splice} de \texttt{iniciar} sin efecto; \texttt{pruebaAleatorios}, \texttt{jugadorActual}, \texttt{rutasVivas}, \texttt{congelada}, \texttt{estadoRutas} y \texttt{MOVER} exportados sin uso (\texttt{estadoRutas} y \texttt{BasePACK.verificarPACK} se dejan: API del Anexo A). \\
-	
-	& E. \textbf{JuegoDirector:}\newline 14 líneas de prueba comentadas en \texttt{arrancar}, \texttt{pausaVigente} y comprobación redundante \texttt{ticks > 0}. \\
+		& C. \textbf{BaseDescomponer:}\newline parámetro \texttt{codigo} de \texttt{montarGWI}; \texttt{dx}/\texttt{dy} (restos de «Posicionar»); compatibilidad con GWI antiguos (\texttt{uniones}, \texttt{\{unir\}}, tipo 99, «Deshacer unión»): aislar o retirar. \\
+		
+		& D. \textbf{JuegoMotorEstados:}\newline \texttt{splice} de \texttt{iniciar} sin efecto; \texttt{pruebaAleatorios}, \texttt{jugadorActual}, \texttt{rutasVivas}, \texttt{congelada}, \texttt{estadoRutas} y \texttt{MOVER} exportados sin uso (\texttt{estadoRutas} y \texttt{BasePACK.verificarPACK} se dejan: API del Anexo A). \\
+		
+		& E. \textbf{JuegoDirector:}\newline 14 líneas de prueba comentadas en \texttt{arrancar}, \texttt{pausaVigente} y comprobación redundante \texttt{ticks > 0}. \\
 	
 	\midrule
 	

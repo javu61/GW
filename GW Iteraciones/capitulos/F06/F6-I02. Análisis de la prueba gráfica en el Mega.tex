@@ -1,0 +1,116 @@
+\section{Segunda iteración de la Fase 6: Análisis de la prueba gráfica en el Mega}
+\label{sec:F6I02}
+
+Esta iteración es de análisis. Define como se va a realziar la primera prueba en el Arduino Mega: \textbf{un cartucho real del Parachute, sin imagen de fondo, con el paracaidista cayendo en la pantalla}, movido por un director básico y un motor de estados mínimo, y dibujado por el motor gráfico de fondo liso (F6-I01). Es el equivalente de la Fase~2 (sección~\ref{sec:AnalisisMotorMinimo}) en el hardware, y es el paso básico sobre el que se construye el resto del firmware.
+
+\subsection{Objetivo a alcanzar}
+\label{sec:F6I02Objetivo}
+
+\begin{itemize}
+	\item Cargar el GWC del Parachute (compilado en el programa) y validar su cabecera y su CRC.
+	\item Pintar la pantalla con el color de fondo del cartucho (\texttt{ColorFondo}, Bloque~0).
+	\item Ver cómo una secuencia fija de segmentos se enciende y se apaga uno a uno, con el paracaidista descendiendo de arriba a abajo, a un ritmo cómodo, sin dejar rastro ni parpadeo y en bucle.
+	\item Medir por el puerto serie el tiempo de cada iteración y la RAM libre, para confirmar las estimaciones de F6-I01.
+\end{itemize}
+
+Queda fuera: los botones y el teclado, las reglas del juego, el azar, las colisiones y los contadores, la lectura de las rutas del cartucho y la imagen de fondo. Es un andamiaje como el de la Fase~2: si la pantalla del Mega es indistinguible de la secuencia del simulador, la prueba ha cumplido.
+
+\subsection{Los componentes}
+\label{sec:F6I02Componentes}
+
+\begin{itemize}
+	\item \textbf{Director básico (\texttt{juegoDirector}).} Solo el reloj: en cada iteración llama al motor de estados mínimo, después al motor gráfico, mide el tiempo y espera hasta cumplir la pausa. Sin bloqueos: usa \texttt{millis()} para saber si toca la siguiente iteración, de modo que más adelante pueda atender los botones en el mismo bucle.
+	\item \textbf{Motor de estados mínimo (\texttt{juegoMotorEstados}).} Andamiaje, el equivalente del de la Fase~2. Contiene una \textbf{secuencia fija de números de segmento}: los del paracaidista, de la posición más alta a la más baja (los índices son los de los segmentos del GWC del Parachute). En cada iteración apaga el segmento anterior y enciende el siguiente; al llegar al final, vuelve al principio. Habla solo en estados (<<el segmento $i$ está visible>>), nunca en órdenes de dibujo.
+	\item \textbf{Motor gráfico de fondo liso (\texttt{juegoMotorGrafico}).} Es la pieza que se conserva. \texttt{mgIniciar} rellena la pantalla con el color de fondo; \texttt{mgFijarSegmento(i, visible)} actualiza el estado y marca el segmento como cambiado; \texttt{mgPresentar} recorre los segmentos marcados y los pinta (máscara negra si visible, color de fondo si no).
+	\item \textbf{Pantalla (\texttt{basePantalla}).} Capa mínima: iniciar, rellenar con un color, y pintar una tira horizontal de píxeles de un color. En el Mega se apoya en el shield TFT de 2,4\,pulgadas de MCUFRIEND con la biblioteca \texttt{MCUFRIEND\_kbv} (\texttt{fillScreen}, \texttt{drawFastHLine}) y se gira a apaisado, 320$\times$240; si resultara lenta, se sustituye solo esta capa.
+	\item \textbf{Cartucho (\texttt{baseCartucho}).} Lector del GWC por funciones de acceso (\texttt{cartLeer8/16/32}), que en el Mega leen de \texttt{PROGMEM}. Valida la cabecera y el CRC al arrancar y proporciona al motor gráfico lo que necesita (resolución, \texttt{ColorFondo}, y para cada segmento su sprite y su posición). Según F5-I06 el GWC incluye los bloques de datos, de sprites (las máscaras), de segmentos (registros de 32 bytes, que apuntan a su sprite y a su posición) y de secuencias; el bloque de fondo está vacío.
+\end{itemize}
+
+\subsection{El cartucho de prueba}
+\label{sec:F6I02Cartucho}
+
+\begin{itemize}
+	\item El GWC del Parachute generado por el Designer con la \textbf{resolución del Setup igual a la de la pantalla del Mega} (el cartucho debe coincidir con ella). Sin imagen de fondo, o con ella pero sin que viaje (el Bloque~5 va vacío hasta la etapa 2), de modo que el fondo es \texttt{ColorFondo}.
+	\item Se vuelca a un fichero de cabecera (\texttt{.h}) con un guion (tipo \texttt{xxd -i}), que define un array \texttt{const uint8\_t GWC[] PROGMEM}. En el futuro un botón del Designer podría generar ese fichero directamente.
+	\item La secuencia de segmentos del paracaidista se toma de un cartucho real y se anota en el código como una constante (hay que identificar en el editor los índices de los segmentos de una columna de paracaidista y, si se quiere, el barco).
+\end{itemize}
+
+\subsection{Diseño del motor gráfico de fondo liso}
+\label{sec:F6I02Grafico}
+
+\begin{itemize}
+	\item \textbf{Registro del segmento:} los datos que lee de la tabla del cartucho: posición ($x$, $y$) y el sprite, del que salen el ancho, el alto y el desplazamiento de su máscara.
+	\item \textbf{Máscara:} cadena continua de bits, de $ancho\times alto$ bits, por filas, con el bit más significativo del byte primero (el formato del GWC, sin relleno por fila).
+	\item \textbf{Pintar un segmento:} se recorre la máscara fila a fila; las \textbf{tiras de unos consecutivos} se pintan con una sola orden de línea horizontal (\texttt{pantallaTira(x, y, longitud, color)}). Es mucho más barato que píxel a píxel, porque cada orden cuesta una ventana y un envío.
+	\item \textbf{Borrar un segmento:} exactamente el mismo recorrido, pero con el color de fondo. Funciona porque los segmentos no se solapan en píxeles (validado por el Designer) y por tanto borrar los píxeles de uno no toca los de otro.
+	\item \textbf{Un byte de máscara a cero} se salta de golpe, porque los sprites tienen mucho vacío.
+	\item \textbf{Marca de cambio:} igual que en el simulador (F2); la marca se pone al cambiar el estado y se limpia en \texttt{mgPresentar}. Los segmentos sin cambio no se tocan.
+	\item \textbf{Orden de operaciones en una iteración:} primero todos los cambios de estado (el motor de estados), después \texttt{mgPresentar}. Si en una iteración se apaga uno y se enciende otro, se pintan los dos, en cualquier orden.
+\end{itemize}
+
+\subsection{El director y las medidas}
+\label{sec:F6I02Director}
+
+\begin{itemize}
+	\item \textbf{Pausa fija} (\texttt{PAUSA\_MS}, del orden de 500\,ms como en la Fase~2) entre iteraciones. Es una constante del andamiaje y se ajusta para que la secuencia se vea cómoda.
+	\item Con \texttt{micros()} se mide el tiempo del motor de estados y el del motor gráfico en cada iteración. Cada cierto número de iteraciones (p.~ej. cada 20) se escribe por el puerto serie un resumen con el mínimo, medio y máximo de cada tiempo, y la \textbf{RAM libre} (diferencia entre el final del montón y la pila, o una función de medida de memoria libre) con su mínimo histórico.
+	\item Los textos de depuración se escriben con \texttt{F("...")} para no gastar RAM.
+\end{itemize}
+
+\subsection{Presupuesto de RAM}
+\label{sec:F6I02Ram}
+
+\begin{itemize}
+	\item \textbf{Constantes en \texttt{PROGMEM}:} el GWC completo (unos 7\,KB), la fuente de depuración si se usara y los textos.
+	\item \textbf{Variables en RAM:} un bit de visible y otro de cambiar por segmento (54 segmentos, unos 14 bytes), el índice de la secuencia, tiempos y contadores de las medidas, y los búferes de la biblioteca de pantalla y de serie.
+	\item \textbf{Objetivo:} menos de 2\,KB de RAM usada en esta prueba. Sin memoria dinámica.
+\end{itemize}
+
+\subsection{Pasos de desarrollo}
+\label{sec:F6I02Pasos}
+
+\begin{enumerate}
+	\item \textbf{Proyecto base} que compile, grabe y escriba por el puerto serie (con la RAM libre).
+	\item \textbf{Pantalla:} inicializarla (anotando el controlador que identifica \texttt{MCUFRIEND\_kbv} y su resolución nativa de 240$\times$320), girarla a apaisado, rellenar con colores (rojo, verde, azul, negro, blanco) y comprobar que se ven bien, la orientación (apaisada) y la resolución completa, sin franjas ni espejos. Medir cuánto tarda en rellenarse entera y una tira.
+	\item \textbf{Cartucho:} generar el GWC del Parachute con la resolución de la pantalla, volcarlo a \texttt{.h}, validar cabecera y CRC y escribir por serie lo que lee (resolución, \texttt{ColorFondo}, número de segmentos).
+	\item \textbf{Fondo:} rellenar la pantalla con \texttt{ColorFondo}.
+	\item \textbf{Un segmento fijo:} presentarlo y borrarlo con la máscara, comprobar su forma (sin espejo ni cortes) y su posición contra el simulador.
+	\item \textbf{La secuencia:} activar el motor de estados mínimo y el director, ver caer al paracaidista y ajustar \texttt{PAUSA\_MS}.
+	\item \textbf{Medidas:} tiempos por iteración y RAM libre; compararlos con lo previsto en F6-I01.
+	\item \textbf{Comprobación de los botones} (opcional, preparación de la etapa siguiente): leer los pulsadores con \texttt{INPUT\_PULLUP} y escribir su estado por el puerto serie, para validar el cableado antes del motor de estados completo.
+\end{enumerate}
+
+\subsection{Pruebas y comprobaciones}
+\label{sec:F6I02Pruebas}
+
+\begin{itemize}
+	\item \textbf{Visuales:} la forma y la posición de cada segmento coinciden con las del simulador; el anterior desaparece sin rastro; la secuencia se repite indefinidamente sin deriva; la pantalla no parpadea.
+	\item \textbf{Automáticas en el PC (opcional):} el lector del cartucho y el motor gráfico, por ser código común, se compilan en el PC con una pantalla falsa que escribe en un búfer en memoria. Tras cada paso de la secuencia, ese búfer se compara con el que sale de pintar desde cero los segmentos visibles sobre el fondo, y con la imagen que genera el simulador de JavaScript para el mismo cartucho.
+	\item \textbf{Casos límite:} segmento en los bordes de la pantalla, de una sola fila o columna, de máscara vacía, y una secuencia de un solo segmento.
+	\item \textbf{Cartucho dañado:} si se cambia un byte del GWC, el lector lo rechaza con un mensaje por el puerto serie y no se pinta nada.
+	\item \textbf{Larga duración:} unos diez minutos de secuencia sin cambios en la imagen ni en la RAM libre.
+\end{itemize}
+
+\subsection{Criterios de aceptación}
+\label{sec:F6I02Criterios}
+
+\begin{itemize}
+	\item El GWC se valida al arrancar y uno dañado se rechaza.
+	\item El fondo se pinta con el color del cartucho.
+	\item El paracaidista desciende por la pantalla con la forma y la posición del simulador, sin rastro ni parpadeo, en bucle.
+	\item La RAM usada es menor que 2\,KB, no crece durante la ejecución y no hay reservas dinámicas.
+	\item Se tienen anotados los tiempos medidos y la RAM libre.
+	\item El código de director, motor de estados, lector del cartucho y motor gráfico no tiene nada específico del Mega fuera de la capa de plataforma.
+\end{itemize}
+
+\subsection{Puntos abiertos}
+\label{sec:F6I02Abiertos}
+
+\begin{itemize}
+	\item \textbf{Modelo de la pantalla, biblioteca y pines:} se concretan en el paso 2.
+	\item \textbf{Índices de los segmentos de la secuencia} del paracaidista: se toman del GWC real al empezar.
+	\item \textbf{Biblioteca o puertos:} si el pintado con la biblioteca fuera lento, se pasa a escritura directa en \texttt{basePantalla}.
+	\item \textbf{Pausa y tamaño de los segmentos:} dependen de la resolución real de la pantalla.
+\end{itemize}
+
+\clearpage

@@ -51,7 +51,7 @@
 //   paquete ("segmentos/img_001.png") y contenido un Blob o un texto.
 // ====================================================================================================
 
-var BasePACK = (function () {
+var basePack = (function () {
 
   // ---------------- Formato ZIP (JSZip) ----------------
 

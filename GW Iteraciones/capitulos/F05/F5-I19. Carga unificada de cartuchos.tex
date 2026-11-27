@@ -78,13 +78,13 @@ El proceso se realiza en dos fases, en la primera se añade la nueva pestaña, c
 \begin{itemize}
 	\item \texttt{index.html}: pestaña y panel nuevos; fuera los botones e
 	inputs duplicados.
-	\item \texttt{BaseDirector.js}: escuchadores del panel (change de ambos
+	\item \texttt{baseDirector.js}: escuchadores del panel (change de ambos
 	inputs, dragover/drop, paste) todos hacia
 	\texttt{\_cargarCartucho(ficheros)} sin tipo esperado;
 	\texttt{validarComunes} toma la condición del GWB sin estilo (error
 	claro); la reconstrucción de máquina pobla ambas pestañas; recorte de
 	\texttt{BOTONES\_ACCION}/\texttt{BOTONES\_CARTUCHO}; cabeceras al día.
-	\item \texttt{BaseCartucho.js}: retirar restos R07-B; exclusión de
+	\item \texttt{baseCartucho.js}: retirar restos R07-B; exclusión de
 	\texttt{'GWC'} de \texttt{TIPOS\_CARTUCHO}; cabeceras al día.
 \end{itemize}
 
@@ -92,7 +92,7 @@ Ajustes tras las pruebas:
 \begin{itemize}
 	\item La vista \texttt{vistaSetup} arranca OCULTA (antes dejaba ver debajo sus botones de Aplicar/Guardar al abrir la página).
 	\item El panel de arrastre aparece´cia centrado, se desplaza a la  izquierda de la página.
-	\item La pestaña de carga gana un botón \texttt{Limpiar} (\texttt{\_limpiarTodo} en \texttt{BaseDirector.js}) que reinicia TODO el diseño: sin setup ni cartucho en memoria, object URLs revocadas, máquina oculta, fichas en blanco, pestaña de Carga delante y pestañas de datos deshabilitadas, como al abrir la página.
+	\item La pestaña de carga gana un botón \texttt{Limpiar} (\texttt{\_limpiarTodo} en \texttt{baseDirector.js}) que reinicia TODO el diseño: sin setup ni cartucho en memoria, object URLs revocadas, máquina oculta, fichas en blanco, pestaña de Carga delante y pestañas de datos deshabilitadas, como al abrir la página.
 	\item Lo cubre la caja D8 (destructiva) del grupo \texttt{director} (ver F5-I18). El botón pide confirmación antes de borrar cuando hay datos en memoria (\texttt{window.confirm}); la omite con \texttt{GW\_DEBUG}, para que las suites corran solas (la caja D8 lo aprovecha para comprobar también que un Limpiar repetido, sin nada cargado, no rompe).
 	\item En el proceso que responde al botón de «Guardar GWB+GWI+GWC» se añade que  guarde también el cartucho GWS.
 	\item Se cambian los nombres de los botones de la pestaña Editor, «Guardar GWI» y «Guardar GWS», el tooltip de los mismos ya informa de todo lo que se va a realizar al pulsarlos.

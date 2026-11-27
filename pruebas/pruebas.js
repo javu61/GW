@@ -131,21 +131,21 @@ var Pruebas = (function () {
    */
   function salvarListas() {
     const s = {
-      sprites: ComunListas.sprites().slice(), segmentos: ComunListas.segmentos().slice(),
-      fondo: ComunListas.fondo(), reglas: ComunListas.reglas(),
-      fin: ComunListas.finDeCartucho(), secuencia: ComunListas.secuenciaDeCartucho(),
-      pausas: ComunListas.pausasDeCartucho(), aceleracion: ComunListas.aceleracionDeCartucho(),
-      rutas: ComunListas.rutasDeCartucho()
+      sprites: comunListas.sprites().slice(), segmentos: comunListas.segmentos().slice(),
+      fondo: comunListas.fondo(), reglas: comunListas.reglas(),
+      fin: comunListas.finDeCartucho(), secuencia: comunListas.secuenciaDeCartucho(),
+      pausas: comunListas.pausasDeCartucho(), aceleracion: comunListas.aceleracionDeCartucho(),
+      rutas: comunListas.rutasDeCartucho()
     };
     return function restaurar() {
-      ComunListas.cargar(s.sprites, s.segmentos);
-      ComunListas.fijarFondo(s.fondo);
-      ComunListas.fijarReglas(s.reglas);
-      ComunListas.fijarFin(s.fin);
-      ComunListas.fijarSecuencia(s.secuencia);
-      ComunListas.fijarPausas(s.pausas);
-      ComunListas.fijarAceleracion(s.aceleracion);
-      ComunListas.fijarRutas(s.rutas);
+      comunListas.cargar(s.sprites, s.segmentos);
+      comunListas.fijarFondo(s.fondo);
+      comunListas.fijarReglas(s.reglas);
+      comunListas.fijarFin(s.fin);
+      comunListas.fijarSecuencia(s.secuencia);
+      comunListas.fijarPausas(s.pausas);
+      comunListas.fijarAceleracion(s.aceleracion);
+      comunListas.fijarRutas(s.rutas);
     };
   }
 
@@ -153,7 +153,7 @@ var Pruebas = (function () {
    * Cartucho de laboratorio: 2 sprites y 3 segmentos, pantalla 320×240 (la menor que admite el GWC) sin escalar.
    * Lo usan las pruebas que no dependen del cartucho cargado.
    * @returns {{json:Object, sprites:Array, pantalla:Object}} Los tres argumentos
-   *          de BaseCartucho.generarGWC.
+   *          de baseCartucho.generarGWC.
    */
   function cartuchoLaboratorio() {
     const mk = (w, h) => {

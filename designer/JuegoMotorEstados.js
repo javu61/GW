@@ -1,7 +1,7 @@
-// JuegoMotorEstados — el que decide qué segmentos están encendidos y dónde.
+// juegoMotorEstados — el que decide qué segmentos están encendidos y dónde.
 // ====================================================================================================
 // Motor de juego (Fase 3): el estado del juego VIVE EN LA LISTA DE
-// SEGMENTOS del puente ComunListas (la que la carga del GWI deja
+// SEGMENTOS del puente comunListas (la que la carga del GWI deja
 // en memoria). El tick hace, en este orden:
 //   0. Apaga las banderas de cambiado (todo segmento con cambiar
 //      =true pasa a false: el estado anterior ya fue presentado).
@@ -9,7 +9,7 @@
 //      análisis F2 fija): las marcas del propio tick han de
 //      sobrevivir a él.
 //   1. ENTRADA: vacía la cola de pulsaciones pendientes (la llena
-//      la máquina vía JuegoDirector; vive en el puente) y mueve al
+//      la máquina vía juegoDirector; vive en el puente) y mueve al
 //      JUGADOR según la tabla MOVER. El jugador NO es un segmento
 //      que se desplaza por coordenadas: es un segmento ACTIVO que
 //      CAMBIA por los enlaces izquierda/derecha/arriba/abajo que
@@ -79,9 +79,9 @@
 // lee la lista.
 //
 // F3-I4 (generador de aleatorios): el azar es un SERVICIO del
-// JuegoDirector (LCG con semilla; misma semilla = misma partida);
+// juegoDirector (LCG con semilla; misma semilla = misma partida);
 // este motor sigue PURO y determinista y solo PIDE números
-// (JuegoDirector.aleatorio). Para las pruebas de esta iteración
+// (juegoDirector.aleatorio). Para las pruebas de esta iteración
 // existe pruebaAleatorios(): pide 10 números seguidos y los
 // devuelve; el director la llama dos veces con la semilla
 // reiniciada entre ambas y verifica que las dos pasadas son
@@ -94,10 +94,10 @@
 // activa; con ella apagada el motor corre en silencio.
 //
 // Script clásico (sin módulos, compatible file://). Carga tras
-// BaseDirector.js y antes de JuegoMotorGrafico.js.
+// baseDirector.js y antes de juegoMotorGrafico.js.
 // ====================================================================================================
 
-var JuegoMotorEstados = (function () {
+var juegoMotorEstados = (function () {
   'use strict';
 
   /**
@@ -464,22 +464,22 @@ var JuegoMotorEstados = (function () {
    * ENUMERACIONES DEL PUENTE (F3-I11): los tipos de segmento y los
    * mecanismos de fin con NOMBRE — las comparaciones se leen
    * (seg.tipo === tipos.juego), nada de dígitos mágicos. Los valores
-   * son los mismos de siempre; viven en ComunListas porque los usan
+   * son los mismos de siempre; viven en comunListas porque los usan
    * las dos etapas. El fallback local es solo defensivo.
    * @constant {Object}
    * @since 3.8
    */
-  var tiposEnum = (typeof ComunListas !== 'undefined' &&
-    ComunListas.tipos)
-    ? ComunListas.tipos
+  var tiposEnum = (typeof comunListas !== 'undefined' &&
+    comunListas.tipos)
+    ? comunListas.tipos
     : {
       jugador: 0, juego: 1, inicio: 2, vida: 3, muerte: 4,
       digito: 5, contador: 6, cartucho: 7,
       adicional: 8, inicioAdicional: 9
     };
-  var finEnum = (typeof ComunListas !== 'undefined' &&
-    ComunListas.fin)
-    ? ComunListas.fin
+  var finEnum = (typeof comunListas !== 'undefined' &&
+    comunListas.fin)
+    ? comunListas.fin
     : {
       ninguno: null, vida: 'vida', muerte: 'muerte',
       contador: 'contador'
@@ -487,14 +487,14 @@ var JuegoMotorEstados = (function () {
 
   /**
    * La lista de segmentos en memoria, por REFERENCIA, del puente
-   * de datos ComunListas. Se pide en cada uso: si se recarga el
+   * de datos comunListas. Se pide en cada uso: si se recarga el
    * cartucho, la lista cambia y el motor nunca escribe en una
    * lista muerta. Sin cartucho GWI cargado: lista vacía.
    * @returns {Array<Object>} Segmentos en memoria.
    * @since 2.7
    */
   function _lista() {
-    return (typeof ComunListas !== 'undefined') ? ComunListas.segmentos() : [];
+    return (typeof comunListas !== 'undefined') ? comunListas.segmentos() : [];
   }
 
   /**
@@ -510,8 +510,8 @@ var JuegoMotorEstados = (function () {
     // subir la combinación de pulsaciones por ejes al cartucho quedó
     // como AMPLIACIÓN futura (decisión del usuario, 24-10-2026:
     // solo la usan los últimos juegos lanzados).
-    return typeof ComunListas !== 'undefined' &&
-      !!ComunListas.reglas() && !!ComunListas.reglas().combinar;
+    return typeof comunListas !== 'undefined' &&
+      !!comunListas.reglas() && !!comunListas.reglas().combinar;
   }
 
   /**
@@ -610,8 +610,8 @@ var JuegoMotorEstados = (function () {
    * @since 3.2 (por enlaces: 3.3)
    */
   function _aplicarEntrada(segs) {
-    var cola = (typeof ComunListas !== 'undefined') ?
-      ComunListas.colaPulsaciones() : [];
+    var cola = (typeof comunListas !== 'undefined') ?
+      comunListas.colaPulsaciones() : [];
     // CONGELACIÓN (duodécima iteración): con un desenlace en
     // marcha el jugador NO responde — las pulsaciones se consumen
     // sin efecto (como en la máquina real, que ignora los botones
@@ -649,7 +649,7 @@ var JuegoMotorEstados = (function () {
   /**
    * LANZA una ruta nueva (F3-I5): si no queda NINGÚN elemento de
    * ruta visible (ninguna viva), pide un número de ruta al PRNG
-   * del director (JuegoDirector.aleatorio), localiza el segmento
+   * del director (juegoDirector.aleatorio), localiza el segmento
    * inicio de esa ruta entre los de tipo 2 (ordenados por su
    * número de ruta) y lo ENCIENDE: la ruta nace con su primer
    * elemento encendido. Si el cartucho no tiene inicios, aviso y
@@ -683,9 +683,9 @@ var JuegoMotorEstados = (function () {
     // rutas.aumentarCada lanzamientos; 1 si el GWI no lo declara,
     // que es la regla histórica). Tope de seguridad: nunca más
     // simultáneas que las rutas DEFINIDAS en el cartucho.
-    var maxSim = (typeof JuegoDirector !== 'undefined' &&
-      typeof JuegoDirector.maxRutasSimultaneas === 'function')
-      ? JuegoDirector.maxRutasSimultaneas() : 1;
+    var maxSim = (typeof juegoDirector !== 'undefined' &&
+      typeof juegoDirector.maxRutasSimultaneas === 'function')
+      ? juegoDirector.maxRutasSimultaneas() : 1;
     if (maxSim > inicios.length) maxSim = inicios.length;
     if (nRutasVivas >= maxSim) return;
     inicios.sort(function (a, b) { return (a.ruta || 0) - (b.ruta || 0); });
@@ -707,7 +707,7 @@ var JuegoMotorEstados = (function () {
         if (otros.length > 0) candidatos = otros;
       }
     }
-    var elegido = candidatos[JuegoDirector.aleatorio(candidatos.length)];
+    var elegido = candidatos[juegoDirector.aleatorio(candidatos.length)];
     ultimasRutas.push(elegido.ruta || 0);
     while (ultimasRutas.length > MAX_REPETICIONES_RUTA) ultimasRutas.shift();
     elegido.visible = true;
@@ -716,9 +716,9 @@ var JuegoMotorEstados = (function () {
     // lanzamiento (su total sube y con él, cada múltiplo de
     // rutas.aumentarCada, el máximo de simultáneas).
     nRutasVivas++;
-    if (typeof JuegoDirector !== 'undefined' &&
-      typeof JuegoDirector.rutaLanzada === 'function') {
-      JuegoDirector.rutaLanzada();
+    if (typeof juegoDirector !== 'undefined' &&
+      typeof juegoDirector.rutaLanzada === 'function') {
+      juegoDirector.rutaLanzada();
     }
     if (_debug()) {
       console.log('motor del juego: ruta ' + (elegido.ruta || '?') +
@@ -1426,7 +1426,7 @@ var JuegoMotorEstados = (function () {
    * que se encuentre) y ENCENDIDO en su posición: la referencia
    * visual de que el juego está vivo. No hay ruta viva: el
    * primer tick lanzará la primera (F3-I5). Lo llama el
-   * JuegoDirector al arrancar: el reloj y el estado se
+   * juegoDirector al arrancar: el reloj y el estado se
    * reinician juntos.
    * @returns {void}
    * @since 2.5 (jugador por enlaces: 3.3, rutas: 3.5)
@@ -1442,9 +1442,9 @@ var JuegoMotorEstados = (function () {
     animados = {};
     secContador = 0;                // la Secuencia, a cero al inicio
     secIdx = -1;
-    configSec = (typeof ComunListas !== 'undefined' &&
-      typeof ComunListas.secuenciaDeCartucho === 'function')
-      ? ComunListas.secuenciaDeCartucho() : null;
+    configSec = (typeof comunListas !== 'undefined' &&
+      typeof comunListas.secuenciaDeCartucho === 'function')
+      ? comunListas.secuenciaDeCartucho() : null;
     var segs = _lista();
     jugador = _buscarJugador(segs);
     // Fusionados (F4-I9 v4): los segmentos absorbidos por una unión
@@ -1482,8 +1482,8 @@ var JuegoMotorEstados = (function () {
     // tipo 7: ese era solo el truco del diseñador para manejarlo.
     configFin.mecanismo = null;
     configFin.contador = 0;
-    var finCfg = (typeof ComunListas.finDeCartucho === 'function')
-      ? ComunListas.finDeCartucho() : null;
+    var finCfg = (typeof comunListas.finDeCartucho === 'function')
+      ? comunListas.finDeCartucho() : null;
     if (finCfg && finCfg.mecanismo) {
       configFin.mecanismo = finCfg.mecanismo;
       configFin.contador = Number(finCfg.contador) || 0;
@@ -1818,9 +1818,9 @@ var JuegoMotorEstados = (function () {
 
   /**
    * PRUEBA DEL GENERADOR (F3-I4): pide 10 números SEGUIDOS al
-   * generador del director (JuegoDirector.aleatorio) y los
+   * generador del director (juegoDirector.aleatorio) y los
    * devuelve como array (con diagnóstico bajo GW_DEBUG). La llama
-   * el JuegoDirector en las pruebas de esta iteración: dos
+   * el juegoDirector en las pruebas de esta iteración: dos
    * pasadas con la semilla reiniciada entre ambas deben dar los
    * MISMOS números (misma semilla = misma secuencia = misma
    * partida). Tras las pruebas el director ya NO la llama (la
@@ -1833,7 +1833,7 @@ var JuegoMotorEstados = (function () {
   function pruebaAleatorios() {
     var numeros = [], i;
     for (i = 0; i < 10; i++) {
-      numeros.push(JuegoDirector.aleatorio(100));
+      numeros.push(juegoDirector.aleatorio(100));
     }
     if (_debug()) {
       console.log('motor del juego: prueba de aleatorios → ' +
@@ -1876,9 +1876,9 @@ var JuegoMotorEstados = (function () {
    * @since 4.2
    */
   function estadoRutas() {
-    var maxSim = (typeof JuegoDirector !== 'undefined' &&
-      typeof JuegoDirector.maxRutasSimultaneas === 'function')
-      ? JuegoDirector.maxRutasSimultaneas() : 1;
+    var maxSim = (typeof juegoDirector !== 'undefined' &&
+      typeof juegoDirector.maxRutasSimultaneas === 'function')
+      ? juegoDirector.maxRutasSimultaneas() : 1;
     return { vivas: nRutasVivas, maxSimultaneas: maxSim };
   }
   return {

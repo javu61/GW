@@ -19,7 +19,7 @@ que la lista dice.
 	cablea la nueva llamada en los dos caminos de entrada de la máquina: el
 	\texttt{pointerdown} del botón físico y la tecla del teclado
 	(\texttt{alPulsarTecla}), siempre con el número físico del botón. El
-	\texttt{JuegoDirector} acepta la pulsación \emph{solo con el juego en marcha} y la
+	\texttt{juegoDirector} acepta la pulsación \emph{solo con el juego en marcha} y la
 	reenvía tal cual al motor usando la función: \texttt{juegoMotorEstados.pulsar}. Sin partida no hay
 	entrada; el Start sigue siendo el Start (relanza, no se encola).
 
@@ -62,7 +62,7 @@ que la lista dice.
 	puerto; cuando las reglas vengan del cartucho, la tabla viajará en el GWC y la vía del
 	dato no cambia.
 	\item \textbf{El buffer pertenece al motor, la aduana al director}: el
-	\texttt{JuegoDirector} no interpreta entradas (solo reenvía con el juego en marcha),
+	\texttt{juegoDirector} no interpreta entradas (solo reenvía con el juego en marcha),
 	igual que no interpreta estados; el motor es el único que toca el buffer y la lista.
 	\item \textbf{La secuencia de fondo sigue latiendo}: el paracaidista del GWI de
 	prueba no se detiene porque el jugador se mueva; ambos comparten el mismo tick y la

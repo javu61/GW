@@ -2,14 +2,14 @@
 \label{sec:F5I4}
 
 Antes de añadir el manejo del GWC, todo lo relativo a los cartuchos que ahora está en otros módulos se reúne en su módulo definitivo. Esta iteración es un
-\textbf{traspaso puro}: mover a \texttt{BaseCartucho.js} la
+\textbf{traspaso puro}: mover a \texttt{baseCartucho.js} la
 lectura y la grabación que hoy funcionan repartidas por otros
 módulos, sin cambiar su comportamiento — el editor sigue
 editando, el motor jugando, y el nuevo módulo lee y escribe los
 ficheros.
 
 
-\subsection{El módulo \texttt{BaseCartucho.js}}
+\subsection{El módulo \texttt{baseCartucho.js}}
 \label{sec:F5I4Modulo}
 
 El nuevo módulo javascript, cargado en el \emph{Index.html} tras el descomponedor, asume la lectura y la grabación de los cartuchos que el proyecto ya tiene:
@@ -33,7 +33,7 @@ El nuevo módulo javascript, cargado en el \emph{Index.html} tras el descomponed
 		imágenes \\
 		\bottomrule
 	\end{tabularx}
-	\caption{Las funciones traspasadas a \texttt{BaseCartucho.js}.}
+	\caption{Las funciones traspasadas a \texttt{baseCartucho.js}.}
 	\label{tab:funcionesTraspaso}
 \end{table}
 
@@ -50,7 +50,7 @@ El traspaso es de mudanza, no de reescritura: los módulos
 afectados pierden las funciones movidas y quedan con su llamada:
 
 \begin{itemize}
-	\item \textbf{baseDirector} delega en \texttt{BaseCartucho} la
+	\item \textbf{baseDirector} delega en \texttt{baseCartucho} la
 	carga del GWB tras el setup y la carga del GWI al abrir un
 	cartucho de autoría; su lógica de arrastre de las listas al
 	puente sigue igual. 
@@ -59,13 +59,13 @@ afectados pierden las funciones movidas y quedan con su llamada:
 		\item Se mudan desde baseDirector: leerJSON, crearURL, cargarImagen, cargarImagenAux, imagenBlob, construirMapaFicheros, elegirJSONCartucho, validarCartucho, validarTamanoImgS y la apertura del ZIP.
 	\end{itemize}
 	
-	\item \textbf{BaseDescomponer} delega en \texttt{BaseCartucho}
+	\item \textbf{baseDescomponer} delega en \texttt{baseCartucho}
 	el guardado del GWI en «Verificar y Guardar»; su verificación
 	previa del diseñador sigue siendo suya y no se toca.
 		\begin{itemize}
-			\item Se mudan desde BaseDescomponer: formatearGWI, guardarGWI (avisos y bloqueo del botón «Guardar») y guardarGWIEnDisco (el ZIP entero, incluida la descarga).
+			\item Se mudan desde baseDescomponer: formatearGWI, guardarGWI (avisos y bloqueo del botón «Guardar») y guardarGWIEnDisco (el ZIP entero, incluida la descarga).
 			
-			\item Se queda en BaseDescomponer: el montaje del JSON con la autoría (idF/cambiosLegibles, fin, secuencia, pausas…), la verificación del diseñador y el check del «cartucho en edición perdido» — son conocimiento del editor. BaseDescomponer pasará el GWI ya montado a BaseCartucho.guardarGWI.		
+			\item Se queda en baseDescomponer: el montaje del JSON con la autoría (idF/cambiosLegibles, fin, secuencia, pausas…), la verificación del diseñador y el check del «cartucho en edición perdido» — son conocimiento del editor. baseDescomponer pasará el GWI ya montado a baseCartucho.guardarGWI.		
 		\end{itemize}
 	
 	\item \textbf{index.html} carga el módulo nuevo tras el
@@ -80,7 +80,7 @@ La API pública que se crea es:
 	\item leerCartucho(ficheros, estiloMaquina) → devuelve {nombre, json, mapa, imgF, imgS, imgM}: hace la lectura COMPLETA (mapa, JSON prioritario, validación, las tres imágenes). Es por donde pasará baseDirector, que luego despacha por tipo como hoy.
 	\item leerGWB / leerGWI existen como envoltorios que exigen el tipo (error explícito si no coincide) — útiles para cargar estricto y para el futuro GWC. La lectura común no podía separarse antes de parsear el JSON, de ahí el núcleo compartido.
 	\item abrirZIP(fichero) → los Blobs con .name base, para reusar el mismo flujo de carpeta.
-	\item guardarGWI(json, sprites, imgF, imgS, nAvisos) → devuelve true/false para que BaseDescomponer repinte solo si se guardó.
+	\item guardarGWI(json, sprites, imgF, imgS, nAvisos) → devuelve true/false para que baseDescomponer repinte solo si se guardó.
 	\item revocarURLs() — nueva: las object URLs ahora las crea el módulo, así que limpiarCartucho del director tendrá que llamarla (cambio del fichero 2).
 \end{itemize}
 

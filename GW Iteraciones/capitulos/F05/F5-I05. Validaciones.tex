@@ -7,7 +7,7 @@ editor: es el \textbf{contrato del formato}, lo que un cartucho
 debe cumplir para poder escribirse, igual que \texttt{validarCartucho}
 define lo que puede leerse. Esta iteración es un
 \textbf{traspaso puro}, como el de la anterior: mudar desde 
-\texttt{BaseDescomponer.js} a \texttt{BaseCartucho.js}, sin cambiar
+\texttt{baseDescomponer.js} a \texttt{baseCartucho.js}, sin cambiar
 su comportamiento, pero aprovechar para darle la forma que sus dos
 futuros puntos de llamada necesitan: una \textbf{función independiente}
 que devuelve su resultado en vez de abrir el guardado.
@@ -63,14 +63,14 @@ el aviso o el bloqueo según quién la llame.
 La mudanza es de traspaso, no de reescritura:
 
 \begin{itemize}
-	\item \textbf{BaseCartucho} gana la sección de validación de
+	\item \textbf{baseCartucho} gana la sección de validación de
 	escritura, junto a la validación de lectura que ya tenía: todo
 	lo que decide si un cartucho puede entrar o salir vive en el
 	mismo módulo.
 	
-	\item \textbf{BaseDescomponer} pierde la verificación y queda
+	\item \textbf{baseDescomponer} pierde la verificación y queda
 	con su llamada: el botón «Verificar y Guardar» llama a
-	\texttt{BaseCartucho.verificar}, y solo si no hay errores
+	\texttt{baseCartucho.verificar}, y solo si no hay errores
 	continúa con el montaje y el guardado de siempre. Se quedan en
 	él lo que es del editor: el check del cartucho en edición, el
 	montaje del GWI y el repintado.

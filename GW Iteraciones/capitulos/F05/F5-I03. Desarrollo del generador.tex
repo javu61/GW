@@ -5,11 +5,11 @@ Tras el análisis y la definición del formato, el código que transforma las li
 editor en ese fichero, su integración en el editor con el botón
 «Generar GWI+GWC», las estadísticas y sus pruebas.
 
-\subsection{El módulo \texttt{BaseCartucho.js}}
+\subsection{El módulo \texttt{baseCartucho.js}}
 \label{sec:F5I3Modulo}
 
 Todo lo relativo a los cartuchos vive ahora en un módulo javascript
-nuevo, \texttt{BaseCartucho.js}, cargado tras el descomponedor, con
+nuevo, \texttt{baseCartucho.js}, cargado tras el descomponedor, con
 una única responsabilidad: la \textbf{lectura y la grabación} de
 los tres formatos de cartucho del proyecto:
 
@@ -25,7 +25,7 @@ Hasta ahora esa lógica
 estaba repartida — el guardado del GWI en el descomponedor, la
 carga del GWB y del GWI en el director — y el GWC iba a nacer
 suelto; con el módulo, el reparto queda limpio: el editor edita,
-el motor juega, \texttt{BaseCartucho.js} lee y escribe ficheros de los tres cartuchos que manejamos. Cada función está separada para cada tipo de cartucho y son todas independientes.
+el motor juega, \texttt{baseCartucho.js} lee y escribe ficheros de los tres cartuchos que manejamos. Cada función está separada para cada tipo de cartucho y son todas independientes.
 
 El módulo no conoce al editor ni el DOM: recibe la estructura que existe en memoria y produce ficheros, o bien recibe ficheros y reconstruye la estructura.
 
@@ -95,7 +95,7 @@ segmento que nadie enciende ni pinta no existe en el GWC.\\\
 		
 		\bottomrule
 	\end{tabularx}
-	\caption{Las funciones de \texttt{BaseCartucho.js} por formato de cartucho.}
+	\caption{Las funciones de \texttt{baseCartucho.js} por formato de cartucho.}
 	\label{tab:funcionesGenerador}
 \end{table}
 % El texto de la nota se coloca justo aquí, fuera del entorno de la tabla

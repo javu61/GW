@@ -1,6 +1,6 @@
 'use strict';
 
-// BaseFicha.js
+// baseFicha.js
 // ====================================================================================================
 // PROPÓSITO
 //   La pestaña «Cartucho» (F5-I10): la ficha del cartucho, FUENTE
@@ -63,7 +63,7 @@
 //    _entrada            _esColor            _liberar                _construir
 // ====================================================================================================
 
-const BaseFicha = (function () {
+const baseFicha = (function () {
 
   // F5-I21: la ficha del Cartucho ya no define botones: los que viajan
   // en el GWB y el GWI son los del Setup (ver _botonesDelSetup).
@@ -255,8 +255,8 @@ const BaseFicha = (function () {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      if (typeof BaseDirector !== 'undefined') {
-        BaseDirector.avisarError('No se pudo leer la imagen ' + fichero.name + '.');
+      if (typeof baseDirector !== 'undefined') {
+        baseDirector.avisarError('No se pudo leer la imagen ' + fichero.name + '.');
       }
     };
     img.src = url;
@@ -298,8 +298,8 @@ const BaseFicha = (function () {
    * @returns {Array} Los botones del setup cargado ([] si no hay setup).
    */
   function _botonesDelSetup() {
-    return (typeof BaseDirector !== 'undefined' && BaseDirector.botonesDeSetup)
-      ? BaseDirector.botonesDeSetup() : [];
+    return (typeof baseDirector !== 'undefined' && baseDirector.botonesDeSetup)
+      ? baseDirector.botonesDeSetup() : [];
   }
 
   // ---------------- Construcción ----------------
@@ -322,8 +322,8 @@ const BaseFicha = (function () {
     boton.style.display = 'inline-block';
     boton.style.marginTop = '4px';
     boton.addEventListener('click', () => {
-      if (typeof BaseDirector !== 'undefined' && BaseDirector.pestanna) {
-        BaseDirector.pestanna('vistaSetup');
+      if (typeof baseDirector !== 'undefined' && baseDirector.pestanna) {
+        baseDirector.pestanna('vistaSetup');
       }
     });
     celda.appendChild(boton);
@@ -454,10 +454,10 @@ const BaseFicha = (function () {
     const errores = [], avisos = [];
     _asegurar();
     const e = estado();
-    const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
-      ? BaseDirector.estiloDeSetup() : null;
-    const pantalla = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
-      ? BaseDirector.pantallaDeSetup() : null;
+    const delSetup = (typeof baseDirector !== 'undefined' && baseDirector.estiloDeSetup)
+      ? baseDirector.estiloDeSetup() : null;
+    const pantalla = (typeof baseDirector !== 'undefined' && baseDirector.pantallaDeSetup)
+      ? baseDirector.pantallaDeSetup() : null;
 
     // F5-I12: el GWI/GWC salen de lo APLICADO; con la ficha en borrador
     // se pide aplicar antes (así lo generado es lo que hay en memoria).
@@ -524,7 +524,7 @@ const BaseFicha = (function () {
     if (errores.length === 0) {
       const json = _montarGWB();
       const mapa = new Map(Object.values(json.imagenes).map(n => [n, true]));
-      const fallo = BaseCartucho.validarGWB(json, mapa, json.estilo || delSetup);
+      const fallo = baseCartucho.validarGWB(json, mapa, json.estilo || delSetup);
       if (fallo) errores.push('Validación del GWB: ' + fallo);
     }
     if (opt.mostrar) _pintarMensajes(errores, avisos);
@@ -565,7 +565,7 @@ const BaseFicha = (function () {
       { type: 'application/json' })];
     const imgs = imagenesEnMemoria();
     for (const clave of Object.keys(json.imagenes)) {
-      const blob = await BaseCartucho.imagenBlob(imgs[clave]);
+      const blob = await baseCartucho.imagenBlob(imgs[clave]);
       ficheros.push(new File([blob], json.imagenes[clave], { type: 'image/png' }));
     }
     return ficheros;
@@ -606,12 +606,12 @@ const BaseFicha = (function () {
     _asegurar();
     const { errores } = verificar({ mostrar: true });
     if (errores.length > 0) {
-      BaseDirector.avisarError('El GWB no se guarda: ' + errores.length +
+      baseDirector.avisarError('El GWB no se guarda: ' + errores.length +
         (errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
       return false;
     }
     const e = estado();
-    const tamano = await BaseCartucho.guardarGWB(_montarGWB(),
+    const tamano = await baseCartucho.guardarGWB(_montarGWB(),
       e.imagenes.img_f ? e.imagenes.img_f.imagen : null,
       e.imagenes.img_s.imagen,
       e.imagenes.img_m ? e.imagenes.img_m.imagen : null);
@@ -648,9 +648,9 @@ const BaseFicha = (function () {
    * @returns {?{RAM:number, FLASH:number}} La memoria, o null si no hay.
    */
   function _memoriaDelSetup() {
-    const setup = (typeof BaseDirector !== 'undefined' && BaseDirector.datosSetup)
-      ? BaseDirector.datosSetup() : null;
-    return setup ? BaseCartucho.memoriaNoCero(setup.memoria) : null;
+    const setup = (typeof baseDirector !== 'undefined' && baseDirector.datosSetup)
+      ? baseDirector.datosSetup() : null;
+    return setup ? baseCartucho.memoriaNoCero(setup.memoria) : null;
   }
 
   /**
@@ -692,10 +692,10 @@ const BaseFicha = (function () {
    */
   function datosCartucho() {
     const e = estado();
-    const delSetup = (typeof BaseDirector !== 'undefined' && BaseDirector.estiloDeSetup)
-      ? BaseDirector.estiloDeSetup() : null;
-    const pantalla = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
-      ? BaseDirector.pantallaDeSetup() : null;
+    const delSetup = (typeof baseDirector !== 'undefined' && baseDirector.estiloDeSetup)
+      ? baseDirector.estiloDeSetup() : null;
+    const pantalla = (typeof baseDirector !== 'undefined' && baseDirector.pantallaDeSetup)
+      ? baseDirector.pantallaDeSetup() : null;
     const nombres = {};
     for (const d of IMAGENES) if (e.imagenes[d.clave]) nombres[d.clave] = d.clave + '.png';
     return {

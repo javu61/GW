@@ -1,13 +1,13 @@
-// pruebas/pruebasEditor.js — Pruebas del EDITOR (BaseDescomponer, BaseCartucho, BaseExtractor)
+// pruebas/pruebasEditor.js — Pruebas del EDITOR (baseDescomponer, baseCartucho, baseExtractor)
 // ================================================================================================
 // PROPÓSITO
 //   Comprueban el editor sobre el cartucho de ejemplo cargado: historial de autoría (ids «F01»,
 //   deshacer, rehacer), presentar el cero, cambio de tipo, alta de la ficha, numeración y uniones,
 //   dígitos y contadores, PNG con alfa y verificación (E1-E9 de F5-I15).
 //
-//   Estas pruebas necesitan ver el INTERIOR de BaseDescomponer (vive dentro de una función
+//   Estas pruebas necesitan ver el INTERIOR de baseDescomponer (vive dentro de una función
 //   cerrada) y el código de producción no lo publica. Por eso solo se lanzan desde la consola:
-//   el lanzador sirve una COPIA temporal del proyecto en la que BaseDescomponer.js exporta además
+//   el lanzador sirve una COPIA temporal del proyecto en la que baseDescomponer.js exporta además
 //   un objeto «_t» con los interiores de la lista «interiores» de este fichero. El código real no
 //   cambia, y en la pestaña «Pruebas» esta prueba no tiene botón (solo aparece en el panel de
 //   comandos).
@@ -19,7 +19,7 @@
 //                        (historial de cambios) sobrevive.
 //
 // FUNCIONES
-//   interiores           (solo Node) Qué variables y funciones de BaseDescomponer hay que exportar.
+//   interiores           (solo Node) Qué variables y funciones de baseDescomponer hay que exportar.
 //   _pruebaEditor        La prueba. Recarga el GWI de ejemplo entre bloques, porque E5 deshace
 //                        todo el historial y contaminaría a los siguientes.
 //   _pruebaE10           (F5-I21) Prueba «E10 ajuste de resolución» (solo consola).
@@ -41,7 +41,7 @@ if (typeof module !== 'undefined') {
   if (typeof Pruebas === 'undefined') return;     // en Node solo cuenta el lanzador del final
 
   async function _pruebaEditor(opc) {
-    if (typeof BaseDescomponer === 'undefined' || !BaseDescomponer._t)
+    if (typeof baseDescomponer === 'undefined' || !baseDescomponer._t)
       return [['esta prueba solo se lanza desde la consola (necesita la copia con los interiores)', false, '']];
     const U = Pruebas.util;
     const res = [];
@@ -56,17 +56,17 @@ if (typeof module !== 'undefined') {
   // ---- E2: el historial cargado de un GWI usa los ids internos (los de las piezas, números negativos) ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       const crudo = JSON.stringify(t.cambios());
       const conF = (crudo.match(/"F\d+"/g) || []).length;
-      const orig = BaseDirector.datosCartucho().autoria.cambios;
+      const orig = baseDirector.datosCartucho().autoria.cambios;
       const ida = JSON.stringify(t._montarGWI().autoria.cambios);
       return { conF, ida: ida === JSON.stringify(orig), n: t.cambios().length };
     });
     ok('E2: tras cargar un GWI el historial no guarda ids «F01» (son raíces numéricas)', r.conF === 0, r.conF + ' ids F en el historial interno');
     ok('E2: guardar el historial cargado reproduce el del GWI (ida y vuelta)', r.ida, '');
     const d = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       const antes = { ficticios: t.ficticios().length, grupos: t.grupos().length, cambios: t.cambios().length };
       let err = '';
       // se deshace la última acción que cree o borre una pieza F (alta/baja de ficticio)
@@ -74,10 +74,10 @@ if (typeof module !== 'undefined') {
         const ult = t.cambios()[t.cambios().length - 1];
         const n = t.cambios().filter(c => c.n === ult.n);
         if (n.some(c => Array.isArray(c.altaFicticio))) break;
-        try { BaseDescomponer.deshacer(); } catch (e) { err = e.message; break; }
+        try { baseDescomponer.deshacer(); } catch (e) { err = e.message; break; }
       }
       const despues = { ficticios: t.ficticios().length, cambios: t.cambios().length };
-      try { BaseDescomponer.deshacer(); } catch (e) { err = e.message; }
+      try { baseDescomponer.deshacer(); } catch (e) { err = e.message; }
       return { antes, despues, tras: { ficticios: t.ficticios().length, cambios: t.cambios().length }, err };
     });
     ok('E2: deshacer el alta de una pieza F cargada la quita de verdad', d.tras.ficticios === d.despues.ficticios - 1 && !d.err, JSON.stringify(d));
@@ -87,8 +87,8 @@ if (typeof module !== 'undefined') {
   // ---- E3: «Presentar el cero = false» llega al GWI y sobrevive a la recarga ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
-      const libre = t.grupos().find(g => g.prop.tipo === 'dígito' && !BaseDescomponer.listar().some(() => false));
+      const t = baseDescomponer._t;
+      const libre = t.grupos().find(g => g.prop.tipo === 'dígito' && !baseDescomponer.listar().some(() => false));
       t.marcados().clear();
       const dig = t.grupos().filter(g => g.prop.tipo === 'dígito').find(g => {
         try { return !g.contadorDe; } catch (e) { return true; }
@@ -105,7 +105,7 @@ if (typeof module !== 'undefined') {
       const sc = gwi.segmentos.find(s => s.tipo === 'contador' || s.id === ('F' + String(-cont.raiz).padStart(2, '0')));
       const viaje = !!sc && sc.presentarCero === false;
       // recarga: se reproduce el historial guardado y se vuelve a leer
-      BaseDescomponer.cargarAutoria({ cambios: gwi.autoria.cambios, ultimoOp: gwi.autoria.ultimoOp });
+      baseDescomponer.cargarAutoria({ cambios: gwi.autoria.cambios, ultimoOp: gwi.autoria.ultimoOp });
       t._reconstruir();
       const cont2 = t.grupos().find(g => g.prop.tipo === 'contador');
       return { viaje, recarga: !!cont2 && cont2.prop.presentarCero === false, seg: sc ? JSON.stringify(sc) : null };
@@ -118,10 +118,10 @@ if (typeof module !== 'undefined') {
   // ---- E1: los enlaces sec_1..sec_5 de la Secuencia se re-apuntan al unir y los revisa la verificación ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       const cart = t._cartuchoDe();
       const libres = t.grupos().filter(g => g.prop.tipo === 'juego' && g.raiz >= 0 && g.miembros.length === 1 &&
-        !BaseDescomponer.segmentos().some(() => false));
+        !baseDescomponer.segmentos().some(() => false));
       const A = libres[0], B = libres[1];
       const pc = t._propsDe(cart.raiz);
       pc.sec_1 = A.raiz; pc.sec_2 = B.raiz;
@@ -140,7 +140,7 @@ if (typeof module !== 'undefined') {
   // ---- E4: cambiar de tipo descarta solo los campos que el tipo nuevo no usa ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       const libres = t.grupos().filter(g => g.prop.tipo === 'juego' && g.raiz >= 0 && g.miembros.length === 1);
       const [A, B, C] = libres;
       const pA = t._propsDe(A.raiz), pC = t._propsDe(C.raiz);
@@ -169,11 +169,11 @@ if (typeof module !== 'undefined') {
   // ---- E5: el alta de la ficha del cartucho no se puede deshacer ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       let pasos = 0;
       for (; pasos < 2000 && t.cambios().length > 0; pasos++) {
         const antes = t.cambios().length;
-        BaseDescomponer.deshacer();
+        baseDescomponer.deshacer();
         if (t.cambios().length === antes) break;      // «nada que deshacer»
       }
       const ficha = t._cartuchoDe();
@@ -188,9 +188,9 @@ if (typeof module !== 'undefined') {
   // ---- E6: los absorbidos por una unión no cuentan en las familias ni en la numeración de rutas ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
-      const rutas = () => BaseDescomponer.segmentos().filter(s => s.tipo === 2 && !s.fusionadoPor).map(s => s.ruta).sort((a, b) => a - b);
-      const conRuta = () => BaseDescomponer.segmentos().filter(s => s.fusionadoPor && s.ruta !== undefined).length;
+      const t = baseDescomponer._t;
+      const rutas = () => baseDescomponer.segmentos().filter(s => s.tipo === 2 && !s.fusionadoPor).map(s => s.ruta).sort((a, b) => a - b);
+      const conRuta = () => baseDescomponer.segmentos().filter(s => s.fusionadoPor && s.ruta !== undefined).length;
       const ini = t.grupos().filter(g => g.prop.tipo === 'inicio' && g.raiz >= 0 && g.miembros.length === 1);
       const antes = rutas();
       const id = t._unirGrupos([ini[0], ini[1]]);
@@ -206,7 +206,7 @@ if (typeof module !== 'undefined') {
   // ---- E7: no se unen dígitos ni contadores, ni una pieza de unión pasa a dígito o contador ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       // dos dígitos de laboratorio: dos segmentos de juego puestos a tipo «dígito»
       const dj = t.grupos().filter(g => g.prop.tipo === 'juego' && g.raiz >= 0 && !g.absorbido && g.miembros.length === 1);
       t._propsDe(dj[0].raiz).tipo = 'dígito'; t._propsDe(dj[1].raiz).tipo = 'dígito';
@@ -239,8 +239,8 @@ if (typeof module !== 'undefined') {
       g.fillStyle = '#000'; g.fillRect(2, 2, 3, 3);       // un cuadrado negro 3x3
       const img = new Image();
       img.onload = () => {
-        const bn = BaseExtractor.verificarBN(img);
-        const ex = BaseExtractor.extraerBN(img);
+        const bn = baseExtractor.verificarBN(img);
+        const ex = baseExtractor.extraerBN(img);
         res({ bn, comps: ex.comps.length, ancho: ex.comps[0] && ex.comps[0].ancho, alto: ex.comps[0] && ex.comps[0].alto });
       };
       img.src = c.toDataURL('image/png');
@@ -253,7 +253,7 @@ if (typeof module !== 'undefined') {
   // ---- E9: los inversos que calcula la verificación no son acciones del autor ----
   {
     const r = await pg.evaluate(() => {
-      const t = BaseDescomponer._t;
+      const t = baseDescomponer._t;
       const jug = t.grupos().filter(g => g.prop.tipo === 'jugador' && !g.absorbido);
       const A = jug[0], B = jug[1];
       for (const g of jug) for (const d of ['izquierda', 'derecha', 'arriba', 'abajo']) t._propsDe(g.raiz)[d] = null;
@@ -263,16 +263,16 @@ if (typeof module !== 'undefined') {
       t._registrarCambio(A.raiz, { derecha: B.raiz }, { derecha: null });
       t._reconstruir();
       const nAntes = t.cambios().length;
-      BaseCartucho.verificarCartucho(t._ctxVerificacion());
+      baseCartucho.verificarCartucho(t._ctxVerificacion());
       const nVerif = t.cambios().length;
       const inverso = t._propsDe(B.raiz).izquierda === A.raiz;
       const gwi = t._montarGWI();
       const autoEnGWI = gwi.autoria.cambios.filter(c => c.auto === true).length;
-      BaseDescomponer.deshacer();           // UNA sola vez
+      baseDescomponer.deshacer();           // UNA sola vez
       const tras = { derecha: t._propsDe(A.raiz).derecha, izq: t._propsDe(B.raiz).izquierda };
-      BaseDescomponer.rehacer();            // devuelve la acción y su inverso derivado
+      baseDescomponer.rehacer();            // devuelve la acción y su inverso derivado
       const rehecho = { derecha: t._propsDe(A.raiz).derecha === B.raiz, izq: t._propsDe(B.raiz).izquierda === A.raiz, n: t.cambios().length };
-      BaseDescomponer.deshacer();
+      baseDescomponer.deshacer();
       return { rehecho, autoEnGWI, nAntes, nVerif, inverso, derecha: t._propsDe(A.raiz).derecha, izquierda: t._propsDe(B.raiz).izquierda, nDespues: t.cambios().length };
     });
     ok('E9 (previo): la verificación calculó el inverso B.izquierda = A', r.inverso && r.nVerif > r.nAntes, JSON.stringify(r));
@@ -294,21 +294,21 @@ if (typeof module !== 'undefined') {
     const ok = (n, c, x) => res.push([n, !!c, x === undefined ? '' : String(x)]);
     const gwiBytes = await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip');
     await U.cargarEn('ficheroCartucho', [U.fichero('cartucho.zip', gwiBytes)], 3000);
-    const dims = () => BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]);
-    const crudos = () => BaseDescomponer.segmentos().map(s => [s.id, s.x, s.y]);
+    const dims = () => baseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]);
+    const crudos = () => baseDescomponer.segmentos().map(s => [s.id, s.x, s.y]);
     const en320dims = JSON.stringify(dims());
     const en320segs = JSON.stringify(crudos());
     // ×2 declarado: el juego no se toca (los sprites siguen siendo los mismos).
     ok('E10: ajustar a 640×480 se aplica',
-      BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
+      baseDirector.aplicarAjusteResolucion(640, 480) === true, '');
     let puros = true, toques = 0;
     // El ficticio «cartucho» lleva por diseño un lienzo en blanco
     // (F3-I11: solo es una marca en el mapa, nunca se presenta): no
     // es un sprite B/N y no entra en esta comprobación.
-    const sinSprite = new Set(BaseDescomponer._t.grupos()
+    const sinSprite = new Set(baseDescomponer._t.grupos()
       .filter(g => g.raiz < 0 && g.prop.tipo === 'cartucho' && g.spriteId)
       .map(g => g.spriteId));
-    for (const s of BaseDescomponer.sprites()) {
+    for (const s of baseDescomponer.sprites()) {
       if (sinSprite.has(s.id)) continue;
       toques++;
       const idd = s.imagen.getContext('2d').getImageData(0, 0, s.ancho, s.alto).data;
@@ -323,12 +323,12 @@ if (typeof module !== 'undefined') {
     ok('E10: tras el ajuste el juego es byte a byte el mismo (dimensiones y posiciones)',
       JSON.stringify(dims()) === en320dims && JSON.stringify(crudos()) === en320segs, '');
     // Vuelta a 320×240: exacta (nada se reescala nunca).
-    BaseDirector.aplicarAjusteResolucion(320, 240);
+    baseDirector.aplicarAjusteResolucion(320, 240);
     ok('E10: round-trip 320→640→320 exacto (dimensiones y posiciones)',
       JSON.stringify(dims()) === en320dims && JSON.stringify(crudos()) === en320segs, '');
     // Y las acciones de autoría siguen vivas.
-    ok('E10: la autoría sobrevive al ajuste', BaseDescomponer.numeroDeCambios() > 0,
-      String(BaseDescomponer.numeroDeCambios()));
+    ok('E10: la autoría sobrevive al ajuste', baseDescomponer.numeroDeCambios() > 0,
+      String(baseDescomponer.numeroDeCambios()));
     return res;
   }
 

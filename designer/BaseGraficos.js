@@ -7,8 +7,8 @@
 //
 // SEPARACIÓN
 //   Presentación del mapa de trabajo, NO del aparato: la pantalla del
-//   aparato la compone BaseDescomponer (fondo + segmentos en negro
-//   puro), y el simulador tiene su propio dibujo (JuegoMotorGrafico).
+//   aparato la compone baseDescomponer (fondo + segmentos en negro
+//   puro), y el simulador tiene su propio dibujo (juegoMotorGrafico).
 //   Este módulo no interpreta la autoría: solo recibe una lista
 //   residente de segmentos y una imagen de fondo, y las presenta.
 //
@@ -38,7 +38,7 @@
 // baseDirector.js.
 // ====================================================================================================
 
-var BaseGraficos = (function () {
+var baseGraficos = (function () {
   'use strict';
 
   // Color de presentación LCD: NEGRO puro. El LCD real SIEMPRE dibuja

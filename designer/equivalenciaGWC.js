@@ -7,7 +7,7 @@
 //
 // QUÉ HACE
 //   1. Carga el setup y el GWI en el diseñador (Playwright, Chromium).
-//   2. Genera con BaseCartucho.generarGWC el GWC del GWI, sin escalar (pantalla = fuente).
+//   2. Genera con baseCartucho.generarGWC el GWC del GWI, sin escalar (pantalla = fuente).
 //   3. DATOS: relee el GWC con leerGWC y compara la configuración (pausas, aceleración, rutas,
 //      fin, secuencia) y cada campo de cada segmento que lee el motor con los del GWI.
 //   4. JUEGO: ejecuta N ticks con el GWI y N con el GWC (mismo arranque, mismo generador de
@@ -102,14 +102,14 @@ function jsonDelGWI(zip) {
       ancho: j.resolucion.ancho, alto: j.resolucion.alto,
       fuente: { ancho: j.resolucion.ancho, alto: j.resolucion.alto }
     };
-    const gwc = BaseCartucho.generarGWC(j, BaseDescomponer.sprites(), pantalla);
+    const gwc = baseCartucho.generarGWC(j, baseDescomponer.sprites(), pantalla);
     return Array.from(gwc.bytes);
   }, json);
   fs.writeFileSync('/tmp/t_equiv.gwc', Buffer.from(gwcBytes));
 
   // --- DATOS: GWI frente a lo que lee leerGWC ---
   const difs = await pg.evaluate(({ j, bytes }) => {
-    const l = BaseCartucho.leerGWC(new Uint8Array(bytes));
+    const l = baseCartucho.leerGWC(new Uint8Array(bytes));
     const d = [];
     const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     const nz = (o) => (o === undefined ? null : o);
@@ -157,7 +157,7 @@ function jsonDelGWI(zip) {
   const jugar = async (cargar, semilla) => {
     await cargar();
     await pg.click('#pesSimulador');
-    await pg.evaluate((sem) => { window.__cola.length = 0; JuegoDirector.fijarSemilla(sem); }, semilla);
+    await pg.evaluate((sem) => { window.__cola.length = 0; juegoDirector.fijarSemilla(sem); }, semilla);
     await pg.keyboard.press('z');                       // A = Start
     await pg.waitForTimeout(100);
     return pg.evaluate(([n, sem, sinPulsar]) => {
@@ -165,9 +165,9 @@ function jsonDelGWI(zip) {
       for (let t = 0; t < n; t++) {
         const f = window.__cola.shift(); if (!f) break;
         // F5-I15: un jugador determinista (izquierda = 0, derecha = 4, según la semilla y el tick)
-        if (!sinPulsar) { const r = (t * 7 + sem) % 5; if (r === 0) ComunListas.encolar(0); else if (r === 1) ComunListas.encolar(4); }
+        if (!sinPulsar) { const r = (t * 7 + sem) % 5; if (r === 0) comunListas.encolar(0); else if (r === 1) comunListas.encolar(4); }
         f();
-        hist.push(ComunListas.segmentos().filter(s => s.tipo !== 99 && !s.fusionadoPor)
+        hist.push(comunListas.segmentos().filter(s => s.tipo !== 99 && !s.fusionadoPor)
           .map(s => (s.visible ? '1' : '0')).join(''));
       }
       return hist;

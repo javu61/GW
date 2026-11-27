@@ -3,7 +3,7 @@
 Con el módulo preparado, llega el nuevo código: generar el
 \textbf{GWC}, el cartucho de ejecución definido en el formato de la
 segunda iteración definida en la sección \ref{sec:F5I2}. Todo se
-incluye en \texttt{BaseCartucho.js} que ya se preparó para el
+incluye en \texttt{baseCartucho.js} que ya se preparó para el
 traspaso, con dos nuevas funciones: la \textbf{lectura} y la
 \textbf{grabación}.
 
@@ -37,7 +37,7 @@ con su mensaje, como en todo el proyecto.
 
 La verificación de los topes acompaña este reparto, y lo hace como
 función independiente: \texttt{validarTopes(listas)} —en el
-\texttt{BaseCartucho.js}— devuelve \textbf{cierto o falso}, y es el
+\texttt{baseCartucho.js}— devuelve \textbf{cierto o falso}, y es el
 punto de llamada quien decide su tratamiento: tras descomponer los
 segmentos y al guardar el GWI su fallo es solo un \textbf{aviso}
 —el diseñador sabe que se ha pasado del tope y decide si seguir—, y
@@ -101,7 +101,7 @@ Se definen estas funciones:
 		GWC generado, con la descomposición por bloques \\
 		\bottomrule
 	\end{tabularx}
-	\caption{Las funciones del GWC en \texttt{BaseCartucho.js}: leer antes que grabar, como los otros dos formatos.}
+	\caption{Las funciones del GWC en \texttt{baseCartucho.js}: leer antes que grabar, como los otros dos formatos.}
 	\label{tab:funcionesGWC}
 \end{table}
 

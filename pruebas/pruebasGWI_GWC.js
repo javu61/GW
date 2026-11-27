@@ -2,7 +2,7 @@
 // ================================================================================================
 // PROPÓSITO
 //   Comprueba el principio de F5-I13: «el juego debe funcionar igual cargando el GWI o el GWC del
-//   que sale». Genera con BaseCartucho.generarGWC el GWC del GWI cargado, sin escalar (pantalla =
+//   que sale». Genera con baseCartucho.generarGWC el GWC del GWI cargado, sin escalar (pantalla =
 //   fuente), y compara:
 //     - DATOS: lo que devuelve leerGWC (configuración y cada campo de cada segmento) con el GWI.
 //     - JUEGO: una partida con el GWI y otra con el GWC (mismo arranque, mismo generador de
@@ -60,7 +60,7 @@
   const U = Pruebas.util;
 
   function _prepararEquivalencia(variante) {
-    const j0 = BaseDirector.datosCartucho();
+    const j0 = baseDirector.datosCartucho();
     if (!j0 || j0.tipo !== 'GWI') return null;
     const j = JSON.parse(JSON.stringify(j0));
     if (variante) {
@@ -73,8 +73,8 @@
       ancho: j.resolucion.ancho, alto: j.resolucion.alto,
       fuente: { ancho: j.resolucion.ancho, alto: j.resolucion.alto }
     };
-    const gwc = BaseCartucho.generarGWC(j, BaseDescomponer.sprites(), pantalla);
-    return { json: j, leido: BaseCartucho.leerGWC(gwc.bytes), gwc: gwc };
+    const gwc = baseCartucho.generarGWC(j, baseDescomponer.sprites(), pantalla);
+    return { json: j, leido: baseCartucho.leerGWC(gwc.bytes), gwc: gwc };
   }
 
   function _diferenciasEquivalencia(j, l) {
@@ -191,7 +191,7 @@
   async function _pruebaParFicha(opc) {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    const j0 = BaseDirector.datosCartucho();
+    const j0 = baseDirector.datosCartucho();
     if (!j0 || j0.tipo !== 'GWI') return null;
     const esperado = (await _codigoDeGWI(await U.traerBytes(opc.gwiUrl || 'pruebas/cartuchos/cartucho_GWI.zip')))
       || '---';
@@ -207,7 +207,7 @@
   async function _pruebaParGuardar() {
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
-    const j0 = BaseDirector.datosCartucho();
+    const j0 = baseDirector.datosCartucho();
     if (!j0 || j0.tipo !== 'GWI') return null;
     const antes = _codigoEnFicha();
     if (!antes || antes === '---') {
@@ -328,16 +328,16 @@
     await cargar();
     document.getElementById('pesSimulador').click();
     window.__cola.length = 0;
-    JuegoDirector.fijarSemilla(semilla);
+    juegoDirector.fijarSemilla(semilla);
     for (const tipo of ['keydown', 'keyup'])
       document.dispatchEvent(new KeyboardEvent(tipo, { key: 'z', bubbles: true }));   // A = Start
     await U.esperar(100);
     const hist = [];
     for (let t = 0; t < ticks; t++) {
       const f = window.__cola.shift(); if (!f) break;
-      if (!sinPulsar) { const r = (t * 7 + semilla) % 5; if (r === 0) ComunListas.encolar(0); else if (r === 1) ComunListas.encolar(4); }
+      if (!sinPulsar) { const r = (t * 7 + semilla) % 5; if (r === 0) comunListas.encolar(0); else if (r === 1) comunListas.encolar(4); }
       f();
-      hist.push(ComunListas.segmentos().filter(s => s.tipo !== 99 && !s.fusionadoPor)
+      hist.push(comunListas.segmentos().filter(s => s.tipo !== 99 && !s.fusionadoPor)
         .map(s => (s.visible ? '1' : '0')).join(''));
     }
     return hist;
@@ -371,8 +371,8 @@
       await _cargarGWI(setup, bytes);
       const pantalla = { ancho: json.resolucion.ancho, alto: json.resolucion.alto,
         fuente: { ancho: json.resolucion.ancho, alto: json.resolucion.alto } };
-      const gwc = BaseCartucho.generarGWC(json, BaseDescomponer.sprites(), pantalla);
-      const difs = _diferenciasEquivalencia(json, BaseCartucho.leerGWC(gwc.bytes));
+      const gwc = baseCartucho.generarGWC(json, baseDescomponer.sprites(), pantalla);
+      const difs = _diferenciasEquivalencia(json, baseCartucho.leerGWC(gwc.bytes));
       ok('datos iguales', difs.length === 0, difs.slice(0, 40).join(' || '));
       for (const semilla of semillas) {
         const hGWI = await _jugarPartida(() => _cargarGWI(setup, bytes), semilla, ticks, opc.sinPulsar);
@@ -414,32 +414,32 @@
     // el GWI conserva el origen; el GWC escala declarada/fuente AL GENERAR
     // (lo que aquí ya se verifica con un cartucho fuente≠declarada en C1-C4)
     // y el emulador reescala al vuelo.
-    const spritesAntes = JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]));
-    const segsAntes = JSON.stringify(BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y]));
-    const fuenteAntes = JSON.stringify(BaseDescomponer.dimensionesBase());
+    const spritesAntes = JSON.stringify(baseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]));
+    const segsAntes = JSON.stringify(baseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y]));
+    const fuenteAntes = JSON.stringify(baseDescomponer.dimensionesBase());
     ok('C9: ajustar a 640×480 se aplica',
-      BaseDirector.aplicarAjusteResolucion(640, 480) === true, '');
+      baseDirector.aplicarAjusteResolucion(640, 480) === true, '');
     ok('C9: los sprites quedan EXACTOS (el juego no se reescala)',
-      JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto])) === spritesAntes, '');
+      JSON.stringify(baseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto])) === spritesAntes, '');
     ok('C9: las posiciones de los segmentos quedan exactas',
-      JSON.stringify(BaseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y])) === segsAntes, '');
+      JSON.stringify(baseDescomponer.segmentos().filter(s => s.tipo < 5).map(s => [s.id, s.x, s.y])) === segsAntes, '');
     ok('C9: img_s no se reescala (el GWI conserva el origen)',
-      JSON.stringify(BaseDescomponer.dimensionesBase()) === fuenteAntes, '');
+      JSON.stringify(baseDescomponer.dimensionesBase()) === fuenteAntes, '');
     ok('C9: el setup declara la nueva resolución',
-      BaseDirector.datosSetup().resolucion.ancho === 640 &&
-      BaseDirector.datosSetup().resolucion.alto === 480,
-      JSON.stringify(BaseDirector.datosSetup().resolucion));
+      baseDirector.datosSetup().resolucion.ancho === 640 &&
+      baseDirector.datosSetup().resolucion.alto === 480,
+      JSON.stringify(baseDirector.datosSetup().resolucion));
     // El escalar del GWC sobre el juego SIN TOCAR, con la nueva declarada:
     // eso es lo que llevará el cartucho (más detalle que a 320×240).
-    const pantalla640 = { ancho: 640, alto: 480, fuente: BaseDescomponer.dimensionesBase() };
-    const primero = BaseDescomponer.sprites()[0];
-    const escalado = BaseCartucho.escalar(primero, pantalla640);
+    const pantalla640 = { ancho: 640, alto: 480, fuente: baseDescomponer.dimensionesBase() };
+    const primero = baseDescomponer.sprites()[0];
+    const escalado = baseCartucho.escalar(primero, pantalla640);
     ok('C9: el escalar del GWC produce sprites para la pantalla nueva',
       escalado && escalado.ancho > 0 && escalado.alto > 0,
       escalado ? (escalado.ancho + '×' + escalado.alto) : 'null');
-    BaseDirector.aplicarAjusteResolucion(320, 240);   // restaurar
+    baseDirector.aplicarAjusteResolucion(320, 240);   // restaurar
     ok('C9: vuelta a 320×240 con el juego exacto',
-      JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto])) === spritesAntes, '');
+      JSON.stringify(baseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto])) === spritesAntes, '');
     return out;
   }
 

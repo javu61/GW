@@ -14,7 +14,7 @@
 //  SEPARACIÓN
 //    La geometría se dibuja, la lógica se señala: aquí no hay roles
 //    (tipo, uniones, secuencias, salidas, bifurcaciones, indicadores);
-//    los asigna el autor en el mapa de objetos de BaseDescomponer.
+//    los asigna el autor en el mapa de objetos de baseDescomponer.
 //    La reagrupación (uniones de componentes) es aparte de la
 //    extracción: extraerBN no aplica ninguna unión, las recibe
 //    reagrupar ya decididas. Se carga antes que baseGraficos.js,
@@ -50,7 +50,7 @@
 //                   inexistentes avisan y se ignoran.
 // ====================================================================================================
 
-const BaseExtractor = (() => {
+const baseExtractor = (() => {
 
   const UMBRAL_RUIDO = 4;   // componentes menores: ruido descartado
 

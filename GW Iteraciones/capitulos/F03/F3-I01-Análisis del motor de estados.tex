@@ -20,12 +20,12 @@ Start (\emph{F2-I2}), solo que en el otro sentido:
 
 \begin{itemize}
 	\item El \texttt{baseDirector}, en sus eventos \texttt{pointerdown} y en
-	\texttt{alPulsarTecla}, llama a la función \texttt{JuegoDirector.pulsar(numero)} con el
+	\texttt{alPulsarTecla}, llama a la función \texttt{juegoDirector.pulsar(numero)} con el
 	\textbf{número físico} del botón. Nada más: ni id del cartucho, ni el evento del DOM.
 	El número físico es el identificador estable de la máquina (el mismo que viajará al
 	puerto del ESP32); la traducción número $\rightarrow$ acción es cosa del juego.
 
-	\item El \texttt{JuegoDirector} solo acepta pulsaciones \emph{con el juego en marcha};
+	\item El \texttt{juegoDirector} solo acepta pulsaciones \emph{con el juego en marcha};
 	si no está en marcha, la pulsación no existe (y el Start, que ya está cableado, sigue
 	siendo el que relanza). Él se limita a reenviar al motor:
 	\texttt{juegoMotorEstados.pulsar(numero)}. El director no interpreta entradas, igual

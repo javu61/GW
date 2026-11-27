@@ -54,7 +54,7 @@ Este fichero se comporta conceptualmente como un \emph{INCLUDE} en los módulos 
   	 \texttt{comunListas} solo guarda referencias.
   	
   	\item \textbf{Quién escribe y quién lee en cada etapa}: la autoría escribe (carga del
-  	GWI: \texttt{BaseDescomponer.cargarListas} delega en el puente, \texttt{reset} lo
+  	GWI: \texttt{baseDescomponer.cargarListas} delega en el puente, \texttt{reset} lo
   	limpia, \texttt{baseDirector} fija el fondo); el motor de estados escribe las banderas
   	\texttt{visible}/\texttt{cambiar} en los objetos de la lista del puente; el motor
   	gráfico lee fondo, posiciones e imágenes y \emph{nunca} escribe.
@@ -71,15 +71,15 @@ De esta manera independizamos ambas partes y evitamos duplicidad, un fichero com
   	\item \textbf{\texttt{index.html}}: debe ubicar \texttt{<script src="designer/comunListas.js">} como primer script del proyecto, común a todos.
 
   	\item \textbf{\texttt{baseDirector.js}}: junto a
-	\texttt{BaseGraficos.fijarFondo(imgF)}, fija también el fondo en el puente
+	\texttt{baseGraficos.fijarFondo(imgF)}, fija también el fondo en el puente
 	(\texttt{comunListas.fijarFondo}).
 
-  	\item \textbf{\texttt{BaseDescomponer.js}}: \texttt{cargarListas} y
+  	\item \textbf{\texttt{baseDescomponer.js}}: \texttt{cargarListas} y
   	\texttt{segmentosEnMemoria} pasan a delegar en el puente, en lugar de usarlos como variables
   	propias de listas); \texttt{reset} limpia el puente. Las funciones de pintado del
   	aparato dejan de exponerse para el motor (el motor ya no las usa).
   	
- 	\item \textbf{\texttt{JuegoMotorEstados.js}}: El futuro motor de estados del juego 
+ 	\item \textbf{\texttt{juegoMotorEstados.js}}: El futuro motor de estados del juego 
  	 puede leer y cambiar la información de los segmentos que existen en \texttt{comunListas}. 
   	
   	\item \textbf{\texttt{juegoMotorGrafico.js}}: El futuro motor gráfico leerá la lista desde \texttt{comunListas}, sin alterarlas. 
@@ -101,11 +101,11 @@ De esta manera independizamos ambas partes y evitamos duplicidad, un fichero com
  	.3 estilos.css.
  	.3 comunListas.
  	.3 baseDirector.js.
- 	.3 BaseDescomponer.js.
- 	.3 BaseExtractor.js.
- 	.3 BaseGraficos.js.
- 	.3 JuegoDirector.js.
- 	.3 JuegoMotorEstados.js.
+ 	.3 baseDescomponer.js.
+ 	.3 baseExtractor.js.
+ 	.3 baseGraficos.js.
+ 	.3 juegoDirector.js.
+ 	.3 juegoMotorEstados.js.
  	.3 juegoMotorGrafico.js.
  	.2 cartucho/.
  	.3 parachute.json.

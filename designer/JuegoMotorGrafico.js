@@ -1,11 +1,11 @@
-// JuegoMotorGrafico — el que presenta la pantalla (la pieza real).
+// juegoMotorGrafico — el que presenta la pantalla (la pieza real).
 // ====================================================================================================
 // Motor gráfico REAL (Fase 2): composición pura con REPINTADO
 // COMPLETO por estado. Dos instrucciones, como definió el
 // análisis (F2-I1):
 //   - inicializar(): presenta el FONDO FIJO solo (la máquina queda
 //     operativa antes de que empiece el juego). Lo llama el
-//     JuegoDirector al arrancar, justo después de limpiar.
+//     juegoDirector al arrancar, justo después de limpiar.
 //   - tick(): la presentación de cada tick — pinta el fondo y,
 //     encima, TODOS los segmentos con visible=true, en negro
 //     puro, en su posición y con la escala del aparato. Como el
@@ -14,9 +14,9 @@
 //
 // Etapas INCONEXAS (decisión de diseño): este fichero NO usa nada
 // de la autoría (nada de Base*). Los datos del cartucho le
-// llegan por el PUENTE ComunListas (fichero propio, común a las
-// dos etapas): el fondo (ComunListas.fondo) y la lista de
-// segmentos (ComunListas.segmentos), cuyos objetos llevan su
+// llegan por el PUENTE comunListas (fichero propio, común a las
+// dos etapas): el fondo (comunListas.fondo) y la lista de
+// segmentos (comunListas.segmentos), cuyos objetos llevan su
 // imagen (seg.imagen) colgada por la carga. El DIBUJO también es
 // propio: las funciones locales de abajo (equivalentes a las de
 // la Fase 1, sin compartirlas). La escala del aparato vive como
@@ -31,10 +31,10 @@
 // variable global GW_DEBUG (index.html) está activa.
 //
 // Script clásico (sin módulos, compatible file://). Carga tras
-// JuegoMotorEstados.js y antes de JuegoDirector.js.
+// juegoMotorEstados.js y antes de juegoDirector.js.
 // ====================================================================================================
 
-var JuegoMotorGrafico = (function () {
+var juegoMotorGrafico = (function () {
   'use strict';
 
   /**
@@ -68,7 +68,7 @@ var JuegoMotorGrafico = (function () {
   /**
    * Presenta el FONDO FIJO: base blanca opaca (LCD apagado) y
    * encima el arte del cartucho (img_f), estirado para llenar el
-   * canvas siempre. El fondo viene del puente ComunListas.
+   * canvas siempre. El fondo viene del puente comunListas.
    * @returns {void}
    * @since 2.7
    */
@@ -78,7 +78,7 @@ var JuegoMotorGrafico = (function () {
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const imgF = (typeof ComunListas !== 'undefined') ? ComunListas.fondo() : null;
+    const imgF = (typeof comunListas !== 'undefined') ? comunListas.fondo() : null;
     if (imgF) ctx.drawImage(imgF, 0, 0, canvas.width, canvas.height);
   }
 
@@ -133,7 +133,7 @@ var JuegoMotorGrafico = (function () {
 
   /**
    * INICIALIZA la pantalla: presenta el FONDO FIJO solo (arte
-   * del cartucho, sin segmentos). Lo llama el JuegoDirector al
+   * del cartucho, sin segmentos). Lo llama el juegoDirector al
    * arrancar; sin cartucho cargado queda la base blanca (LCD
    * apagado) y se avisa (con depuración).
    * @returns {void}
@@ -142,7 +142,7 @@ var JuegoMotorGrafico = (function () {
   function inicializar() {
     _pintarFondo();
     if (_debug()) {
-      const imgF = (typeof ComunListas !== 'undefined') ? ComunListas.fondo() : null;
+      const imgF = (typeof comunListas !== 'undefined') ? comunListas.fondo() : null;
       if (!imgF) {
         console.warn('motor gráfico: sin cartucho cargado, pantalla en blanco (LCD apagado)');
       } else {
@@ -160,7 +160,7 @@ var JuegoMotorGrafico = (function () {
    */
   function tick() {
     const canvas = document.getElementById('pantalla');
-    const segs = (typeof ComunListas !== 'undefined') ? ComunListas.segmentos() : [];
+    const segs = (typeof comunListas !== 'undefined') ? comunListas.segmentos() : [];
     _pintarFondo();
     let presentados = 0;
     let sinImagen = 0;

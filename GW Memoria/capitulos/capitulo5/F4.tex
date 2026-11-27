@@ -91,7 +91,7 @@ necesaria para generar el cartucho final.
 Esta iteración implementa el análisis anterior. Los tres bloques
 (velocidades, aceleración y política de rutas) comparten el mismo
 camino de datos, así que se desarrollaron juntos: viajan en el GWI,
-cruzan el puente \texttt{ComunListas} y se editan en la ficha del
+cruzan el puente \texttt{comunListas} y se editan en la ficha del
 cartucho del diseñador, con el mismo patrón que ya usaban el fin de
 partida y la Secuencia.
 
@@ -151,13 +151,13 @@ Al repartirlos así, cada contador vive con su dueño natural: el
 Director lleva la progresión (lanza y autoriza) y el motor lleva la
 pantalla (cuenta lo que hay encendido). La comunicación usa dos
 funciones nuevas de la API: el motor llama a
-\texttt{JuegoDirector.rutaLanzada()} al encender el inicio de una
-ruta, y consulta \texttt{JuegoDirector.maxRutasSimultaneas()} antes
+\texttt{juegoDirector.rutaLanzada()} al encender el inicio de una
+ruta, y consulta \texttt{juegoDirector.maxRutasSimultaneas()} antes
 de decidir; el motor expone además
 \texttt{estadoRutas()}, que devuelve \texttt{\{vivas,
 	maxSimultaneas\}} para las pruebas y el diagnóstico.
 
 \subsection{El camino de los datos: el puente}
 
-\texttt{ComunListas} gana tres pares de accesos, siguiendo el patrón
+\texttt{comunListas} gana tres pares de accesos, siguiendo el patrón
 del fin de partida y de la Secuencia:

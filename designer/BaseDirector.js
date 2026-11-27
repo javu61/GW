@@ -1,18 +1,18 @@
 'use strict';
 
-// BaseDirector.js
+// baseDirector.js
 // ====================================================================================================
 //
 // PROPÓSITO
 //   Orquesta la máquina y el cartucho: cablea los botones e inputs,
 //   carga y valida el setup, lanza el flujo automático por tipo de
 //   cartucho (GWB → descomponer; GWI → listas + edición; GWC → carga
-//   binaria) y arrastra las listas al puente (ComunListas) para el
+//   binaria) y arrastra las listas al puente (comunListas) para el
 //   motor. El modo juego se prepara con jugar() al pulsar el Start.
 //
 // SEPARACIÓN
 //   No dibuja la máquina (HTML/CSS de cada estilo), no hace la autoría
-//   (BaseDescomponer.js) ni lee ficheros (BaseCartucho.js): cablea,
+//   (baseDescomponer.js) ni lee ficheros (baseCartucho.js): cablea,
 //   valida, delega y presenta. El campo "puerto" del setup se lee pero
 //   aún no se usa: lo consumirá el firmware del ESP32.
 //
@@ -58,7 +58,7 @@
 //   informarTamanos          Tamaños del GWI y del GWC generados, línea de deduplicación y línea de memoria (F5-I20).
 //   _sumarGWI                 Tamaño aproximado de un GWI cargado.
 //
-//  Carga del cartucho (delegada en BaseCartucho)
+//  Carga del cartucho (delegada en baseCartucho)
 //   _alSeleccionarFicheros    Input multiple de la pestaña Carga (F5-I19):
 //                            GWS, GWB (ZIP), GWI (ZIP) y GWC por el mismo sitio.
 //   _alSeleccionarCarpeta     Input de carpeta (webkitdirectory, F5-I19).
@@ -81,7 +81,7 @@
 //
 //  Edición, teclado y juego
 //   _descomponerImagen        Arranca la autoría (según el tipo).
-//   _verificarYGuardar        Delegado en BaseDescomponer.
+//   _verificarYGuardar        Delegado en baseDescomponer.
 //   buscarBotonPorTecla / alPulsarTecla / alSoltarTecla
 //                            Jugar con el teclado.
 //   _alAtajoTeclado           Ctrl+Z / Ctrl+Y del historial.
@@ -90,13 +90,13 @@
 //   mostrarPestanna          Cambia de vista; la barra y el panel la siguen.
 //   _actualizarPestanas       Qué pestañas están disponibles.
 //   jugar / finDePartida     Entrar y salir del modo juego (finDePartida
-//                            la llama el JuegoDirector: ÚNICA salida).
+//                            la llama el juegoDirector: ÚNICA salida).
 //   _comprobarSalud           Los id del index.html, todos presentes.
 //   inicializar              Cablea botones, inputs, mapa y teclado.
 //
 // JS puro, script clásico sin módulos ES (compatible con file://).
 // Encapsulado como los demás ficheros del proyecto: IIFE con el
-// objeto público BaseDirector.
+// objeto público baseDirector.
 //
 //  Otras funciones internas (lista completada en F5-I14)
 //   _aplicarJSONSetup             Valida y APLICA un setup ya leído (de fichero o de la ficha de la p…
@@ -125,18 +125,18 @@
 //   _lanzarJuego                  Lanza la partida con el TIPO del botón pulsado (F5-I10):
 // ====================================================================================================
 
-var BaseDirector = (function () {
+var baseDirector = (function () {
 
   // Trío de sistema (F5-I10): A/B/R como en las máquinas reales
   // (GAME A / GAME B / TIME). Constantes para NO repetir valores.
   const BOTON_A = '6';
   const BOTON_B = '7';
   const BOTON_R = '8';
-  // TIPO de arranque que recibe JuegoDirector.arrancar según el botón.
+  // TIPO de arranque que recibe juegoDirector.arrancar según el botón.
   const TIPO_SISTEMA = { [BOTON_A]: 0, [BOTON_B]: 1, [BOTON_R]: 2 };
   const TIPO_A = TIPO_SISTEMA[BOTON_A];
 
-  // ---------------- Estado privado del BaseDirector ----------------
+  // ---------------- Estado privado del baseDirector ----------------
 
   let setupGWS = null;                       // JSON del hardware leído
   let cartucho = null;                    // JSON del cartucho leído
@@ -321,7 +321,7 @@ var BaseDirector = (function () {
 
   /**
    * Lee un File y lo parsea como JSON. Copia local mínima: el director
-   * la usa para su SETUP (los cartuchos van por BaseCartucho, que tiene
+   * la usa para su SETUP (los cartuchos van por baseCartucho, que tiene
    * la suya: el módulo es autocontenido para su futuro puerto).
    * @param {File} fichero - Fichero .json a leer.
    * @returns {Promise<Object>} Objeto JSON parseado.
@@ -367,12 +367,12 @@ var BaseDirector = (function () {
     }
     // F5-I16 (M5): fuera del rango de pantallas es ERROR bloqueante
     // (se conserva el setup anterior), no un aviso.
-    if (res.ancho < BaseCartucho.PANTALLA_MIN.ancho || res.alto < BaseCartucho.PANTALLA_MIN.alto ||
-      res.ancho > BaseCartucho.PANTALLA_MAX.ancho || res.alto > BaseCartucho.PANTALLA_MAX.alto) {
+    if (res.ancho < baseCartucho.PANTALLA_MIN.ancho || res.alto < baseCartucho.PANTALLA_MIN.alto ||
+      res.ancho > baseCartucho.PANTALLA_MAX.ancho || res.alto > baseCartucho.PANTALLA_MAX.alto) {
       return 'la "resolucion" del setup (' + res.ancho + 'x' + res.alto +
-        ') está fuera del rango de pantallas (' + BaseCartucho.PANTALLA_MIN.ancho + 'x' +
-        BaseCartucho.PANTALLA_MIN.alto + ' a ' + BaseCartucho.PANTALLA_MAX.ancho + 'x' +
-        BaseCartucho.PANTALLA_MAX.alto + ').';
+        ') está fuera del rango de pantallas (' + baseCartucho.PANTALLA_MIN.ancho + 'x' +
+        baseCartucho.PANTALLA_MIN.alto + ' a ' + baseCartucho.PANTALLA_MAX.ancho + 'x' +
+        baseCartucho.PANTALLA_MAX.alto + ').';
     }
     if (!Array.isArray(jsonGWS.botones)) {
       return 'el setup necesita un array "botones".';
@@ -431,7 +431,7 @@ var BaseDirector = (function () {
   function _confirmarDescarteCartucho(accion) {
     if (!cartucho) return true;
     if (typeof GW_DEBUG !== 'undefined' && GW_DEBUG) return true;
-    const n = BaseDescomponer.numeroDeCambios();
+    const n = baseDescomponer.numeroDeCambios();
     return window.confirm(accion + ' descarta el cartucho en memoria' +
       (n > 0 ? ' y su juego (' + n + ' acción(es) de autoría)' : '') +
       '. ¿Continuar?');
@@ -490,8 +490,8 @@ var BaseDirector = (function () {
     if (!setupGWS) { avisarError('Aplica antes un setup.'); return; }
     if (enJuego) { avisarError('No se ajusta la resolución con una partida en marcha.'); return; }
     _cerrarVentanaResolucion();
-    const baseDims = BaseDescomponer.dimensionesBase ? BaseDescomponer.dimensionesBase() : null;
-    const resumen = (baseDims && BaseDescomponer.resumen) ? BaseDescomponer.resumen() : null;
+    const baseDims = baseDescomponer.dimensionesBase ? baseDescomponer.dimensionesBase() : null;
+    const resumen = (baseDims && baseDescomponer.resumen) ? baseDescomponer.resumen() : null;
     const haySegmentos = !!(baseDims && resumen && resumen.segmentos > 0);
     const fuenteX = baseDims ? baseDims.ancho : setupGWS.resolucion.ancho;
     const fuenteY = baseDims ? baseDims.alto : setupGWS.resolucion.alto;
@@ -519,8 +519,8 @@ var BaseDirector = (function () {
     filaNueva.append(document.createTextNode('Nueva: '));
     const inAncho = document.createElement('input');
     inAncho.type = 'number';
-    inAncho.min = String(BaseCartucho.PANTALLA_MIN.ancho);
-    inAncho.max = String(BaseCartucho.PANTALLA_MAX.ancho);
+    inAncho.min = String(baseCartucho.PANTALLA_MIN.ancho);
+    inAncho.max = String(baseCartucho.PANTALLA_MAX.ancho);
     inAncho.step = '1';
     inAncho.value = String(setupGWS.resolucion.ancho);
     inAncho.style.width = '5em';
@@ -557,7 +557,7 @@ var BaseDirector = (function () {
         : 'No afecta a segmentos (no hay juego en memoria).';
       avisoEscala.textContent = (!baseDims || (Number.isInteger(fx) && Number.isInteger(fy)))
         ? '' : 'La escala declarada/img_s no es entera: el GWC reescala al generar y puede degradar las formas.';
-      const fuera = BaseCartucho.avisosDeResolucion({ ancho: a, alto: l });
+      const fuera = baseCartucho.avisosDeResolucion({ ancho: a, alto: l });
       errorRango.textContent = fuera ? fuera : '';
       btnAjustar.disabled = !!fuera;
     }
@@ -602,7 +602,7 @@ var BaseDirector = (function () {
    * @returns {boolean} true si se aplicó.
    */
   function _aplicarAjusteResolucion(anchoNuevo, altoNuevo) {
-    const fueraDeRango = BaseCartucho.avisosDeResolucion({ ancho: anchoNuevo, alto: altoNuevo });
+    const fueraDeRango = baseCartucho.avisosDeResolucion({ ancho: anchoNuevo, alto: altoNuevo });
     if (fueraDeRango) {
       avisarError('Resolución NO ajustada: ' + fueraDeRango);
       return false;
@@ -616,16 +616,16 @@ var BaseDirector = (function () {
       // 2. La resolución DECLARADA del setup y de las fichas. Nada más:
       //    ni img_s, ni img_f, ni sprites, ni segmentos.
       if (setupGWS) setupGWS.resolucion = { ancho: anchoNuevo, alto: altoNuevo };
-      BaseSetup.fijarResolucion({ ancho: anchoNuevo, alto: altoNuevo });   // las fichas muestran la vigente
-      BaseFicha.poblar({ resolucion: { ancho: anchoNuevo, alto: altoNuevo } });
+      baseSetup.fijarResolucion({ ancho: anchoNuevo, alto: altoNuevo });   // las fichas muestran la vigente
+      baseFicha.poblar({ resolucion: { ancho: anchoNuevo, alto: altoNuevo } });
       // 3. Repintado: el fondo se estira al pintar; repintarAparato
       //    re-fija la escala del canvas nuevo y repinta fondo + segmentos.
       if (cartucho) {
-        BaseGraficos.fijarFondo(imgF);
-        if (editable) BaseDescomponer.repintarAparato();
+        baseGraficos.fijarFondo(imgF);
+        if (editable) baseDescomponer.repintarAparato();
         else _pintarFondoCartucho(imgF);
       } else {
-        BaseGraficos.fijarFondo(null);
+        baseGraficos.fijarFondo(null);
         _pintarFondoNeutro();
       }
       pintarInfo();
@@ -640,8 +640,8 @@ var BaseDirector = (function () {
 
   /**
    * Revoca las object URLs del cartucho y vacía su estado en memoria.
-   * Limpia también toda la autoría: BaseDescomponer.reset oculta el mapa
-   * de segmentos y su panel, y el BaseGraficos queda sin fondo ni segmentos
+   * Limpia también toda la autoría: baseDescomponer.reset oculta el mapa
+   * de segmentos y su panel, y el baseGraficos queda sin fondo ni segmentos
    * (recargar setup con un cartucho cargado no debe dejar restos).
    * @returns {void}
    */
@@ -656,13 +656,13 @@ var BaseDirector = (function () {
     imgF = null;
     colorFondo = '#FFFFFF';
     imgS = null;
-    BaseDescomponer.reset();
-    BaseGraficos.fijarFondo(null);
-    BaseGraficos.fijarSegmentos([]);
-    // Las object URLs del cartucho viven en BaseCartucho (las crea su
+    baseDescomponer.reset();
+    baseGraficos.fijarFondo(null);
+    baseGraficos.fijarSegmentos([]);
+    // Las object URLs del cartucho viven en baseCartucho (las crea su
     // lectura): el director NO las revoca aquí — el que limpia con
     // criterio (antes de leer el nuevo, o al recargar el setup) las
-    // revoca explícitamente con BaseCartucho.revocarURLs().
+    // revoca explícitamente con baseCartucho.revocarURLs().
   }
 
   /**
@@ -686,11 +686,11 @@ var BaseDirector = (function () {
       }
     }
     _limpiarCartucho();
-    BaseCartucho.revocarURLs();
+    baseCartucho.revocarURLs();
     setupGWS = null;
     setupDerivado = false;
-    BaseFicha.reiniciar();
-    BaseSetup.reiniciar();
+    baseFicha.reiniciar();
+    baseSetup.reiniciar();
     // Fuera la máquina visible: esqueletos ocultos, carcasa y panel
     // de información fuera. _construirBotonera limpia los restos del
     // DOM del siguiente setup que se aplique.
@@ -743,7 +743,7 @@ var BaseDirector = (function () {
    * pantalla y pista. F5-I21: el texto de pantalla viaja como
    * "textoPantalla" (los GWS antiguos traían "alias").
    * resaltado al pulsar (de momento solo deja constancia en consola;
-   * aquí se conectarán las pulsaciones al futuro BaseGraficos de Juego).
+   * aquí se conectarán las pulsaciones al futuro baseGraficos de Juego).
    * @param {Object} boton - Declaración del setup (numero/textoPantalla/tecla/puerto).
    * @param {Object} pos - Hueco, forma y contenedor que dicta el estilo.
    * @returns {HTMLButtonElement} Botón físico listo para colgar.
@@ -751,7 +751,7 @@ var BaseDirector = (function () {
   function _crearBotonFisico(boton, pos) {
     const el = document.createElement('button');
     el.type = 'button';
-    el.dataset.numero = boton.numero;          // referencia estable para el futuro BaseGraficos de Juego
+    el.dataset.numero = boton.numero;          // referencia estable para el futuro baseGraficos de Juego
     el.className = 'botonFisico ' + pos.forma;
     if (pos.celda) {                           // hueco anclado en la cruceta (estilo 5)
       el.style.gridRow = pos.celda[0];
@@ -811,11 +811,11 @@ var BaseDirector = (function () {
       _pulsarSistema(numero);
       return;
     }
-    if (typeof JuegoDirector === 'undefined') return;
+    if (typeof juegoDirector === 'undefined') return;
     if (numero === numeroStart) {
-      JuegoDirector.arrancar(TIPO_A);
-    } else if (typeof JuegoDirector.pulsar === 'function') {
-      JuegoDirector.pulsar(numero);
+      juegoDirector.arrancar(TIPO_A);
+    } else if (typeof juegoDirector.pulsar === 'function') {
+      juegoDirector.pulsar(numero);
     }
   }
 
@@ -1066,7 +1066,7 @@ var BaseDirector = (function () {
     // máquina previa, que es del hardware): así, al aplicar la ficha de
     // Cartucho o cargar el cartucho, el setup visible muestra la memoria
     // que MANDA (F5-I19: el cartucho cargado manda, también aquí).
-    const mem = BaseCartucho.memoriaEfectiva(json.memoria,
+    const mem = baseCartucho.memoriaEfectiva(json.memoria,
       previo ? previo.memoria : null);
     const memoriaDerivada = (mem.RAM > 0 || mem.FLASH > 0) ? mem : null;
     return {
@@ -1090,7 +1090,7 @@ var BaseDirector = (function () {
   function _estiloIncompatible(estilo) {
     if (!cartucho || !editable) return null;
     const permitidas = DIRECCIONES_POR_ESTILO[String(estilo)] || [];
-    const sobran = BaseDescomponer.direccionesDeJugador().filter(d => !permitidas.includes(d));
+    const sobran = baseDescomponer.direccionesDeJugador().filter(d => !permitidas.includes(d));
     if (sobran.length === 0) return null;
     return 'el juego tiene enlaces de jugador "' + sobran.join('", "') +
       '" y el estilo ' + estilo + ' solo tiene ' + permitidas.join(' y ') +
@@ -1114,16 +1114,16 @@ var BaseDirector = (function () {
     const incompatible = _estiloIncompatible(json.estilo);
     if (incompatible) throw new Error(incompatible);
     json.resolucion = { ancho: setupGWS.resolucion.ancho, alto: setupGWS.resolucion.alto };
-    const avisosLimites = BaseCartucho.revisarValores('GWS', json);
+    const avisosLimites = baseCartucho.revisarValores('GWS', json);
     setupGWS = json;
     setupDerivado = false;
     if (cartucho) cartucho.estilo = json.estilo;
-    BaseFicha.poblar({ estilo: json.estilo });
-    BaseSetup.poblar(json);
+    baseFicha.poblar({ estilo: json.estilo });
+    baseSetup.poblar(json);
     _fijarHardware();
-    BaseGraficos.fijarFondo(imgF);
-    BaseDescomponer.pintarFondoAparato();
-    BaseDescomponer.repintarAparato();
+    baseGraficos.fijarFondo(imgF);
+    baseDescomponer.pintarFondoAparato();
+    baseDescomponer.repintarAparato();
     _actualizarPestanas();
     avisar('Setup aplicado: ' + (json.nombre || '(sin nombre)') +
       ' (el cartucho y su autoría siguen en memoria).' +
@@ -1143,10 +1143,10 @@ var BaseDirector = (function () {
     if (error) throw new Error(error);
     // F5-I16: límites asentados al validar el setup (puertos fuera de
     // rango se limitan aquí; la resolución solo avisa).
-    const avisosLimites = BaseCartucho.revisarValores('GWS', json);
+    const avisosLimites = baseCartucho.revisarValores('GWS', json);
     textoMemoria = null;                      // F5-I20: la línea de memoria era del cartucho anterior
     _limpiarCartucho();                       // aplicar un setup limpia el cartucho actual
-    BaseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
+    baseCartucho.revocarURLs();              // y las object URLs del cartucho viejo
     setupGWS = json;
     setupDerivado = false;                   // F5-I19: un GWS aplicado es REAL, no derivado
     // La ficha del cartucho recibe del GWS TODOS los datos comunes
@@ -1156,10 +1156,10 @@ var BaseDirector = (function () {
     // la ficha ya no recibe botones ni los edita: viajan en los
     // cartuchos con los nombres de campo y los datos de esta pestaña
     // Setup, y el Aplicar deja de sincronizarlos.
-    BaseFicha.reiniciar();
-    BaseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion,
+    baseFicha.reiniciar();
+    baseFicha.poblar({ estilo: json.estilo, resolucion: json.resolucion,
       nombre: json.nombre, colorFondo: json.ColorFondo || null });
-    BaseSetup.poblar(json);
+    baseSetup.poblar(json);
     _aplicarSetup(avisosLimites);
   }
 
@@ -1173,13 +1173,13 @@ var BaseDirector = (function () {
     try {
       let json;
       if (guardar) {
-        json = BaseSetup.guardar();         // verifica, muestra y descarga
+        json = baseSetup.guardar();         // verifica, muestra y descarga
         if (!json) {
           avisarError('El GWS no se guarda ni se aplica: hay errores en la ficha.');
           return;
         }
       } else {
-        const r = BaseSetup.verificar({ mostrar: true });
+        const r = baseSetup.verificar({ mostrar: true });
         if (r.errores.length > 0) {
           avisarError('Setup NO aplicado: hay ' + r.errores.length +
             (r.errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
@@ -1217,7 +1217,7 @@ var BaseDirector = (function () {
    */
   async function _aplicarDesdeFichaCartucho() {
     if (!setupGWS) { avisarError('Aplica antes un setup.'); return; }
-    const r = BaseFicha.verificar({ mostrar: true });
+    const r = baseFicha.verificar({ mostrar: true });
     if (r.errores.length > 0) {
       avisarError('Cartucho NO aplicado: hay ' + r.errores.length +
         (r.errores.length === 1 ? ' error' : ' errores') + ' en la ficha.');
@@ -1230,7 +1230,7 @@ var BaseDirector = (function () {
       avisar('Cartucho NO aplicado: cancelado por el usuario.');
       return;
     }
-    const ficheros = await BaseFicha.ficherosGWB();
+    const ficheros = await baseFicha.ficherosGWB();
     await _cargarCartucho(ficheros);   // F5-I19: sin tipo esperado
   }
 
@@ -1258,7 +1258,7 @@ var BaseDirector = (function () {
       'Cartucho: ' + (cartucho ? cartucho.nombre || '(sin nombre)' : '(ninguno)') +
       ' · Pantalla: ' + setupGWS.resolucion.ancho + '×' + setupGWS.resolucion.alto +
       ' · Botones: ' + setupGWS.estilo;
-    const diseno = editable ? BaseDescomponer.resumen() : null;
+    const diseno = editable ? baseDescomponer.resumen() : null;
     _$('infoDiseno').textContent =
       'Segmentos: ' + (diseno ? diseno.segmentos : '—') +
       ' · Imágenes: ' + (diseno ? diseno.imagenes : '—') +
@@ -1299,9 +1299,9 @@ var BaseDirector = (function () {
       .reduce((suma, f) => suma + f.size, 0);
   }
 
-  // ---------------- Carga del cartucho (delegada en BaseCartucho) ----------------
+  // ---------------- Carga del cartucho (delegada en baseCartucho) ----------------
   // La LECTURA (mapa de ficheros, JSON prioritario, validación e imágenes)
-  // vive en BaseCartucho.js (traspaso F5-I4); el director conserva la
+  // vive en baseCartucho.js (traspaso F5-I4); el director conserva la
   // orquestación: eventos del panel de carga (F5-I19), el detector de
   // forma (F5-I9) y el flujo automático por tipo.
 
@@ -1470,9 +1470,9 @@ var BaseDirector = (function () {
         // UN .zip: carpeta empaquetada; se descomprime en memoria y el
         // resultado vuelve a entrar en el detector (la forma no cambia
         // al descomprimir).
-        if (BasePACK.esPACK(nombre)) {
+        if (basePack.esPACK(nombre)) {
           return await _cargarCartucho(
-            await BaseCartucho.abrirPACK(ficheros[0]));
+            await baseCartucho.abrirPACK(ficheros[0]));
         }
         // UN .gwc: el cartucho de ejecución binario viaja solo; SIN la
         // configuración de la máquina (estilo y botones no viajan en el
@@ -1500,7 +1500,7 @@ var BaseDirector = (function () {
    * Flujo de CARPETA del cartucho (F5-I9: llamado desde el núcleo
    * unificado cargarCartucho), venga la carpeta de un input
    * webkitdirectory o de un ZIP descomprimido en memoria: el
-   * director DELEGA la lectura en BaseCartucho (mapa de ficheros, JSON
+   * director DELEGA la lectura en baseCartucho (mapa de ficheros, JSON
    * prioritario, validación despachada por tipo e imágenes, F5-I4) y
    * orquesta lo demás: flujo automático por tipo y arrastre de las
    * listas al puente. F5-I19: el cartucho cargado MANDA — la máquina
@@ -1531,19 +1531,19 @@ var BaseDirector = (function () {
       // revocación tardía las mataría a ellas. Las imágenes YA cargadas
       // del cartucho viejo no sufren (un HTMLImageElement descargado no
       // necesita su URL).
-      BaseCartucho.revocarURLs();
+      baseCartucho.revocarURLs();
       // Lectura completa en el módulo: JSON prioritario, validación
       // despachada por tipo (F5-I19: sin tipo esperado) e imágenes
       // img_f/img_s. F5-I19: el estilo de la máquina NI SE PASA como
       // requisito: el cartucho manda y puede cambiar de máquina.
-      const leido = await BaseCartucho.leerCartucho(ficheros,
+      const leido = await baseCartucho.leerCartucho(ficheros,
         setupGWS ? setupGWS.estilo : null);
       const json = leido.json;
       const mapa = leido.mapa;
 
       // F5-I16: límites asentados al cargar (aviso junto al mensaje de
       // carga; lo que arrastra al puente y a las fichas ya es lo justo).
-      const avisosLimites = BaseCartucho.revisarValores(json.tipo, json);
+      const avisosLimites = baseCartucho.revisarValores(json.tipo, json);
 
       // F5-I19: el cartucho cargado MANDA — la máquina se re-ajusta en
       // caliente derivando el setup del cartucho. Primero SIMULADO:
@@ -1560,7 +1560,7 @@ var BaseDirector = (function () {
       // contarlas ANTES de limpiar (la limpieza resetea la autoría). Si encima
       // viene un GWB (no un GWI, que trae la SUYA), se descartan sin que el
       // autor diga nada: hay que avisar (no bloqueante).
-      const accionesPrevias = BaseDescomponer.numeroDeCambios();
+      const accionesPrevias = baseDescomponer.numeroDeCambios();
 
       _limpiarCartucho();                       // fuera el cartucho anterior
       cartucho = json;
@@ -1572,7 +1572,7 @@ var BaseDirector = (function () {
       setupGWS = candidato;
       setupDerivado = true;
       _fijarHardware();
-      BaseSetup.poblar(setupGWS);
+      baseSetup.poblar(setupGWS);
       // Tamaño del GWI cargado (aproximado: JSON + PNG); un GWB no tiene
       tamGWI = tipo === 'GWI' ? _sumarGWI(ficheros) : null;
       // F5-I19 (ya F3-I1): si el cartucho pide un botón que SU máquina
@@ -1590,13 +1590,13 @@ var BaseDirector = (function () {
       const fondo = imgF || _fondoDeColor(colorFondo);
       _pintarFondoCartucho(fondo);
       // El fondo es SIEMPRE el fondo en todas las vistas; el
-      // BaseGraficos lo guarda: DibujarFondo y el XOR lo necesitan.
-      BaseGraficos.fijarFondo(fondo);
+      // baseGraficos lo guarda: DibujarFondo y el XOR lo necesitan.
+      baseGraficos.fijarFondo(fondo);
 
       // img_s: la base de la geometría (leída por el módulo; en GWI
       // puede venir como fichero propio copiado al guardar).
       imgS = leido.imgS;
-      BaseDescomponer.reset();                     // autoría anterior, fuera
+      baseDescomponer.reset();                     // autoría anterior, fuera
       // El puente se escribe DESPUÉS del reset (ver volcarAlPuente).
       _volcarAlPuente(fondo, !!json.combinar, json);
       // GWB: pantalla = solo fondo HASTA descomponer (entonces la
@@ -1607,13 +1607,13 @@ var BaseDirector = (function () {
         // descomponer, y el editor se abre DIRECTAMENTE: re-extrae +
         // precarga la autoría del GWI.
         if (Array.isArray(json.sprites)) {
-          BaseDescomponer.cargarListas(json.sprites, json.segmentos);
+          baseDescomponer.cargarListas(json.sprites, json.segmentos);
           // El GWI referencia los sprites como "segmentos/img_NNN.png",
           // pero el mapa de ficheros es plano (nombre → File): se
           // resuelve también por el nombre solo, por si acaso.
           if (imgS) {
-            BaseDescomponer.pintarGWI(imgS, json.sprites, json.segmentos,
-              fich => BaseCartucho.cargarImagen(mapa.get(fich) ||
+            baseDescomponer.pintarGWI(imgS, json.sprites, json.segmentos,
+              fich => baseCartucho.cargarImagen(mapa.get(fich) ||
                 mapa.get(fich.split('/').pop())));
           }
         }
@@ -1634,10 +1634,10 @@ var BaseDirector = (function () {
       // se muestra.
       // F5-I10: la ficha del cartucho se rellena con TODO lo que trae
       // el GWB/GWI (la portada, cuando termine de cargar).
-      BaseFicha.reiniciar();
+      baseFicha.reiniciar();
       // F5-I19: estilo y resolución vienen del cartucho, o de la
       // máquina derivada si el cartucho no los declara (heredados).
-      BaseFicha.poblar({
+      baseFicha.poblar({
         nombre: json.nombre,
         descripcion: json.descripcion || null,   // F5-I17 (M13)
         estilo: json.estilo !== undefined ? json.estilo : setupGWS.estilo,
@@ -1651,7 +1651,7 @@ var BaseDirector = (function () {
       });
       leido.imgM.then(img => {
         imgM = img;
-        BaseFicha.ponerImagen('img_m', img);
+        baseFicha.ponerImagen('img_m', img);
       });
 
       pintarInfo();
@@ -1678,7 +1678,7 @@ var BaseDirector = (function () {
   // única puerta; el detector de forma (cargarCartucho) decide el flujo.)
 
   /**
-   * Vuelca al puente (ComunListas) lo que el motor lee del cartucho:
+   * Vuelca al puente (comunListas) lo que el motor lee del cartucho:
    * lo comparten el flujo GWB/GWI y el del GWC (antes, el mismo bloque
    * escrito dos veces). Se llama DESPUÉS del reset de la autoría:
    * limpiar() vacía fondo y reglas, y lo que se fija antes lo borraría
@@ -1694,20 +1694,20 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function _volcarAlPuente(fondo, combinar, datos) {
-    ComunListas.fijarFondo(fondo);
-    ComunListas.fijarReglas({ combinar: combinar });
-    ComunListas.fijarFin(datos.fin || null);
-    ComunListas.fijarSecuencia(datos.secuencia || null);
-    ComunListas.fijarPausas(datos.pausas || null);
-    ComunListas.fijarAceleracion(datos.aceleracion || null);
-    ComunListas.fijarRutas(datos.rutas || null);
+    comunListas.fijarFondo(fondo);
+    comunListas.fijarReglas({ combinar: combinar });
+    comunListas.fijarFin(datos.fin || null);
+    comunListas.fijarSecuencia(datos.secuencia || null);
+    comunListas.fijarPausas(datos.pausas || null);
+    comunListas.fijarAceleracion(datos.aceleracion || null);
+    comunListas.fijarRutas(datos.rutas || null);
   }
 
   // ---------------- Carga del GWC (F5-I6) ----------------
 
   /**
    * Carga de un cartucho GWC (el cartucho de EJECUCIÓN binario, F5-I6):
-   * se valida con BaseCartucho.leerGWC (cabecera, suma de verificación,
+   * se valida con baseCartucho.leerGWC (cabecera, suma de verificación,
    * bloques) y se presentan el fondo y los segmentos en pantalla —
    * visualmente lo mismo que un GWI — con el juego LISTO para arrancar:
    * las listas van al puente con la IMAGEN de cada segmento fabricada
@@ -1726,7 +1726,7 @@ var BaseDirector = (function () {
   async function _procesarGWC(fichero) {
     let leido = null;
     try {
-      leido = BaseCartucho.leerGWC(new Uint8Array(await fichero.arrayBuffer()));
+      leido = baseCartucho.leerGWC(new Uint8Array(await fichero.arrayBuffer()));
       // La máquina manda, como con el JSON: el estilo del Bloque 0
       // debe ser el del setup cargado.
       // (Un GWC de menos botones se juega en una máquina con más.)
@@ -1736,26 +1736,26 @@ var BaseDirector = (function () {
       }
       // F5-I16 (M5): la resolución del GWC es BLOQUEANTE (fuera de
       // rango no se carga, se conserva el cartucho anterior).
-      if (leido.resolucion.ancho < BaseCartucho.PANTALLA_MIN.ancho ||
-        leido.resolucion.alto < BaseCartucho.PANTALLA_MIN.alto ||
-        leido.resolucion.ancho > BaseCartucho.PANTALLA_MAX.ancho ||
-        leido.resolucion.alto > BaseCartucho.PANTALLA_MAX.alto) {
+      if (leido.resolucion.ancho < baseCartucho.PANTALLA_MIN.ancho ||
+        leido.resolucion.alto < baseCartucho.PANTALLA_MIN.alto ||
+        leido.resolucion.ancho > baseCartucho.PANTALLA_MAX.ancho ||
+        leido.resolucion.alto > baseCartucho.PANTALLA_MAX.alto) {
         throw new Error('la "resolucion" del GWC (' + leido.resolucion.ancho + 'x' +
           leido.resolucion.alto + ') está fuera del rango de pantallas (' +
-          BaseCartucho.PANTALLA_MIN.ancho + 'x' + BaseCartucho.PANTALLA_MIN.alto + ' a ' +
-          BaseCartucho.PANTALLA_MAX.ancho + 'x' + BaseCartucho.PANTALLA_MAX.alto + ').');
+          baseCartucho.PANTALLA_MIN.ancho + 'x' + baseCartucho.PANTALLA_MIN.alto + ' a ' +
+          baseCartucho.PANTALLA_MAX.ancho + 'x' + baseCartucho.PANTALLA_MAX.alto + ').');
       }
     } catch (e) {
       avisarError('Cartucho NO cargado: ' + e.message +
         ' (se conserva el cartucho anterior).');
       return;
     }
-    BaseCartucho.revocarURLs();    // object URLs del cartucho anterior, fuera
+    baseCartucho.revocarURLs();    // object URLs del cartucho anterior, fuera
     // F5-I16: límites asentados también en el GWC binario cargado.
-    const avisosLimites = BaseCartucho.revisarValores('GWC', leido);
+    const avisosLimites = baseCartucho.revisarValores('GWC', leido);
     // F5-I15 (D1): el GWC es pura ejecución y no se edita: la autoría del
     // cartucho anterior (GWB/GWI) se descarta entera, con sus botones.
-    BaseDescomponer.reset();
+    baseDescomponer.reset();
     editable = false;
     tamGWI = null;
     // El fondo del GWC es un COLOR (v1: sin bloque de fondo): se
@@ -1767,7 +1767,7 @@ var BaseDirector = (function () {
     imgS = null;                   // el GWC no lleva img_s: sin geometría
     imgM = null;                   // ni portada
     _pintarFondoCartucho(imgF);
-    BaseGraficos.fijarFondo(imgF);
+    baseGraficos.fijarFondo(imgF);
     // Las imágenes de los segmentos se fabrican de las MÁSCARAS de 1
     // bit (negro = 1, bit más significativo a la izquierda): las
     // mismas formas B/N que produce el editor.
@@ -1798,13 +1798,13 @@ var BaseDirector = (function () {
     // Puente, como en el flujo del GWI (volcarAlPuente), y las listas
     // con la imagen colgada de cada segmento, listas para el motor.
     _volcarAlPuente(imgF, !!leido.combinar, leido);
-    BaseDescomponer.cargarListas(leido.sprites, leido.segmentos);
+    baseDescomponer.cargarListas(leido.sprites, leido.segmentos);
     // Presentación: fondo + segmentos visibles en el aparato. Se
     // reutiliza el pintado del GWI (visualmente carga lo mismo que un
     // GWI) con las imágenes fabricadas como "loader" y la pantalla
     // declarada como referencia de escala (1: las listas del GWC ya
     // viven en coordenadas de pantalla).
-    await BaseDescomponer.pintarGWI(
+    await baseDescomponer.pintarGWI(
       { naturalWidth: leido.resolucion.ancho, naturalHeight: leido.resolucion.alto },
       leido.sprites.map(s => ({
         id: s.id, ancho: s.ancho, alto: s.alto,
@@ -1886,7 +1886,7 @@ var BaseDirector = (function () {
   }
 
   // ---------------- Descomposición (delegada) ----------------
-  // El BaseDirector orquesta; la autoría de segmentos vive en BaseDescomponer.js
+  // El baseDirector orquesta; la autoría de segmentos vive en baseDescomponer.js
   // (mapa de objetos, panel de propiedades, verificación y guardado del
   // GWI). Aquí solo se comprueban los requisitos y se delega.
 
@@ -1902,7 +1902,7 @@ var BaseDirector = (function () {
       return;
     }
     const autoria = (cartucho && cartucho.tipo === 'GWI') ? cartucho.autoria : null;
-    editable = BaseDescomponer.arrancar(imgS, cartucho, autoria);
+    editable = baseDescomponer.arrancar(imgS, cartucho, autoria);
     _actualizarPestanas();         // Segmentos y Sprites: solo con autoría
     pintarInfo();
     if (!editable) return;        // el error ya lo ha avisado arrancar
@@ -1910,9 +1910,9 @@ var BaseDirector = (function () {
     // botones: «Verificar y Guardar» y «Generar GWI+GWC», F5-I6) y el
     // deshacer/rehacer del historial de autoría.
     _$('btnGuardar').classList.remove('oculto');
-    _$('btnGuardar').disabled = BaseDescomponer.segmentos().length === 0;
+    _$('btnGuardar').disabled = baseDescomponer.segmentos().length === 0;
     _$('btnGenerar').classList.remove('oculto');
-    _$('btnGenerar').disabled = BaseDescomponer.segmentos().length === 0;
+    _$('btnGenerar').disabled = baseDescomponer.segmentos().length === 0;
     _$('btnDeshacer').classList.remove('oculto');
     _$('btnDeshacer').disabled = false;
     _$('btnRehacer').classList.remove('oculto');
@@ -1928,11 +1928,11 @@ var BaseDirector = (function () {
   }
 
   /**
-   * Botón "Verificar y Guardar": delegado en BaseDescomponer.js.
+   * Botón "Verificar y Guardar": delegado en baseDescomponer.js.
    * @returns {void}
    */
   function _verificarYGuardar() {
-    BaseDescomponer.verificarYGuardar();
+    baseDescomponer.verificarYGuardar();
   }
 
   // ---------------- Teclado ----------------
@@ -2031,13 +2031,13 @@ var BaseDirector = (function () {
       _$(botones[v]).classList.toggle('pestActiva', v === id);
     }
     document.body.dataset.vista = id;
-    if (id === 'vistaSprites') BaseDescomponer.pintarListaSegmentos(_$('listaSegmentos'));
+    if (id === 'vistaSprites') baseDescomponer.pintarListaSegmentos(_$('listaSegmentos'));
     // F5-I10: la ficha del cartucho se repinta al ENTRAR en la pestaña
     // (así siempre refleja el estado vigente del cartucho en memoria).
     // F5-I12: img_s ya no se bloquea: cambiarla solo tiene efecto al
     // Aplicar, que descarta y recalcula segmentos y sprites.
-    if (id === 'vistaCartucho') BaseFicha.pintar(_$('fichaCartucho'));
-    if (id === 'vistaSetup') BaseSetup.pintar(_$('fichaSetup'));
+    if (id === 'vistaCartucho') baseFicha.pintar(_$('fichaCartucho'));
+    if (id === 'vistaSetup') baseSetup.pintar(_$('fichaSetup'));
   }
 
   /**
@@ -2068,7 +2068,7 @@ var BaseDirector = (function () {
 
   /**
    * Prepara el MODO JUEGO al pulsar el Start (lo llama el
-   * JuegoDirector): la vista Simulador delante, la pantalla limpia al
+   * juegoDirector): la vista Simulador delante, la pantalla limpia al
    * fondo neutro —el motor gráfico presentará sobre ella lo que
    * toque— y, mientras dura la partida, las otras pestañas y los
    * botones de carga DESHABILITADOS (no ocultos). Vuelven con
@@ -2085,7 +2085,7 @@ var BaseDirector = (function () {
 
   /**
    * Fin de la partida (F5-I10: ÚNICA salida, la llama la función de
-   * fin del JuegoDirector, tanto si el juego terminó solo como si se
+   * fin del juegoDirector, tanto si el juego terminó solo como si se
    * pulsó Stop): vuelven las pestañas y los botones de carga, el trío
    * recupera sus etiquetas y se presenta el aviso según el motivo. La
    * pantalla queda congelada tal cual, como en las máquinas reales.
@@ -2129,9 +2129,9 @@ var BaseDirector = (function () {
    */
   function _etiquetarSistema() {
     if (!botonesSistema) return;
-    const pausada = (typeof JuegoDirector !== 'undefined' &&
-      typeof JuegoDirector.estaPausada === 'function' &&
-      JuegoDirector.estaPausada());
+    const pausada = (typeof juegoDirector !== 'undefined' &&
+      typeof juegoDirector.estaPausada === 'function' &&
+      juegoDirector.estaPausada());
     for (const numero of [BOTON_A, BOTON_B, BOTON_R]) {
       const el = document.querySelector('.botonFisico[data-numero="' + numero + '"]');
       const et = el && el.querySelector('.etiqueta');
@@ -2156,19 +2156,19 @@ var BaseDirector = (function () {
    * @returns {void}
    */
   function _pulsarSistema(numero) {
-    if (typeof JuegoDirector === 'undefined') return;
+    if (typeof juegoDirector === 'undefined') return;
     if (!enJuego) {
       _lanzarJuego(TIPO_SISTEMA[numero]);
       return;
     }
     if (numero === BOTON_A) {
-      JuegoDirector.setPausa();
+      juegoDirector.setPausa();
       _etiquetarSistema();
-      avisar(JuegoDirector.estaPausada()
+      avisar(juegoDirector.estaPausada()
         ? 'Pausa — pulsa Reanudar (A) para continuar.'
         : 'Continúa la partida.');
     } else if (numero === BOTON_B) {
-      JuegoDirector.setStop();    // el siguiente tick llama a la función de fin
+      juegoDirector.setStop();    // el siguiente tick llama a la función de fin
       avisar('Stop — la partida se detiene al final del tick.');
     }
     // BOTON_R en partida: sin función.
@@ -2183,7 +2183,7 @@ var BaseDirector = (function () {
    */
   function _lanzarJuego(tipo) {
     console.info('[juego] arranque de tipo ' + tipo);
-    JuegoDirector.arrancar(tipo);
+    juegoDirector.arrancar(tipo);
   }
 
   // ---------------- Arranque ----------------
@@ -2220,7 +2220,7 @@ var BaseDirector = (function () {
 
   /**
    * Ctrl+Z / Ctrl+Y (o Ctrl+Shift+Z): deshacer y rehacer la última
-   * acción de autoría, delegados en BaseDescomponer.js. No interfiere con
+   * acción de autoría, delegados en baseDescomponer.js. No interfiere con
    * las teclas de la máquina (letras sueltas, sin Ctrl).
    * @param {KeyboardEvent} ev - Evento de teclado.
    * @returns {void}
@@ -2230,16 +2230,16 @@ var BaseDirector = (function () {
     const k = (ev.key || '').toLowerCase();
     if (k === 'z' && !ev.shiftKey) {
       ev.preventDefault();
-      BaseDescomponer.deshacer();
+      baseDescomponer.deshacer();
     } else if (k === 'y' || (k === 'z' && ev.shiftKey)) {
       ev.preventDefault();
-      BaseDescomponer.rehacer();
+      baseDescomponer.rehacer();
     }
   }
 
   /**
    * Cablea botones, inputs, mapa y teclado. Único miembro público del
-   * BaseDirector: lo llama la propia página al cargar.
+   * baseDirector: lo llama la propia página al cargar.
    * @returns {void}
    */
   function inicializar() {
@@ -2265,7 +2265,7 @@ var BaseDirector = (function () {
     _$('btnAplicarCartucho').addEventListener('click', _aplicarDesdeFichaCartucho);
     _$('btnGuardarGWB').addEventListener('click', async () => {
       _$('btnGuardarGWB').disabled = true;           // evita guardados solapados
-      try { await BaseFicha.guardar(); } finally { _actualizarPestanas(); }
+      try { await baseFicha.guardar(); } finally { _actualizarPestanas(); }
     });
     document.body.dataset.vista = 'vistaCarga';   // F5-I19: se arranca EN la pestaña Carga
     _$('btnLimpiarCarga').addEventListener('click', _limpiarTodo);
@@ -2280,12 +2280,12 @@ var BaseDirector = (function () {
     _$('btnGuardar').addEventListener('click', _verificarYGuardar);
     // F5-I6: el botón «Generar GWI+GWC» — verificación bloqueante,
     // topes bloqueantes, GWC primero y GWI con el Código GWC del par
-    // después. La lógica vive en BaseDescomponer.
-    _$('btnGenerar').addEventListener('click', () => BaseDescomponer.generarGWIyGWC());
-    _$('btnDeshacer').addEventListener('click', () => BaseDescomponer.deshacer());
-    _$('btnRehacer').addEventListener('click', () => BaseDescomponer.rehacer());
-    BaseDescomponer.inicializar();                 // el clic del mapa, cableado por BaseDescomponer.js
-    BaseSetup.pintar(_$('fichaSetup'));                  // F5-I12: la ficha del setup, desde el arranque
+    // después. La lógica vive en baseDescomponer.
+    _$('btnGenerar').addEventListener('click', () => baseDescomponer.generarGWIyGWC());
+    _$('btnDeshacer').addEventListener('click', () => baseDescomponer.deshacer());
+    _$('btnRehacer').addEventListener('click', () => baseDescomponer.rehacer());
+    baseDescomponer.inicializar();                 // el clic del mapa, cableado por baseDescomponer.js
+    baseSetup.pintar(_$('fichaSetup'));                  // F5-I12: la ficha del setup, desde el arranque
     _actualizarPestanas();                               // F5-I19: se arranca en la pestaña Carga
     document.addEventListener('keydown', _alPulsarTecla);
     document.addEventListener('keyup', _alSoltarTecla);
@@ -2293,11 +2293,11 @@ var BaseDirector = (function () {
   }
 
   // API pública: el arranque, los avisos de la barra de estado (que
-  // usan BaseExtractor/BaseGraficos/BaseDescomponer vía BaseDirector.avisar /
-  // BaseDirector.avisarError), la entrada y salida del modo juego (las
-  // llama el JuegoDirector), el panel de información (lo repinta
-  // BaseDescomponer) y las imágenes en memoria del cartucho (img_f/img_s/
-  // img_m), que BaseDescomponer pasa a BaseCartucho.guardarGWI.
+  // usan baseExtractor/baseGraficos/baseDescomponer vía baseDirector.avisar /
+  // baseDirector.avisarError), la entrada y salida del modo juego (las
+  // llama el juegoDirector), el panel de información (lo repinta
+  // baseDescomponer) y las imágenes en memoria del cartucho (img_f/img_s/
+  // img_m), que baseDescomponer pasa a baseCartucho.guardarGWI.
   return {
     inicializar: inicializar,
     avisar: avisar,
@@ -2326,9 +2326,9 @@ var BaseDirector = (function () {
     aplicarAjusteResolucion: _aplicarAjusteResolucion, // F5-I21: ajuste sin ventana (pruebas D10/C9/E10)
     imagenSegmentos: () => imgS,
     imagenPortada: () => imgM,           // img_m: la pasa guardarGWI al ZIP
-    imagenBlob: (img) => BaseCartucho.imagenBlob(img)
+    imagenBlob: (img) => baseCartucho.imagenBlob(img)
   };
 
 })();
 
-BaseDirector.inicializar();
+baseDirector.inicializar();

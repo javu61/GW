@@ -114,7 +114,7 @@ Las pruebas que cargan cartuchos propios los leen del proyecto por URL. Con \tex
 \subsection{El Editor: pruebas solo de consola}
 \label{sec:F5I18Editor}
 
-Las pruebas del Editor necesitan ver el interior de \texttt{BaseDescomponer}, que vive dentro de una función cerrada, y el código de producción no lo publica. Para ellas el lanzador sirve una \emph{copia temporal} del proyecto en la que \texttt{BaseDescomponer.js} exporta además un objeto \texttt{\_t} con los interiores que lista \texttt{pruebasEditor.js}. El resto del sistema es el mismo: la prueba está registrada, se ejecuta dentro de la página y devuelve los mismos resultados. En la pestaña real esa prueba no tiene botón (\texttt{soloConsola}); si se llama desde ella, responde que solo se lanza desde la consola.
+Las pruebas del Editor necesitan ver el interior de \texttt{baseDescomponer}, que vive dentro de una función cerrada, y el código de producción no lo publica. Para ellas el lanzador sirve una \emph{copia temporal} del proyecto en la que \texttt{baseDescomponer.js} exporta además un objeto \texttt{\_t} con los interiores que lista \texttt{pruebasEditor.js}. El resto del sistema es el mismo: la prueba está registrada, se ejecuta dentro de la página y devuelve los mismos resultados. En la pestaña real esa prueba no tiene botón (\texttt{soloConsola}); si se llama desde ella, responde que solo se lanza desde la consola.
 
 \subsection{Cartuchos de las pruebas}
 \label{sec:F5I18Cartuchos}
@@ -134,7 +134,7 @@ Los cartuchos están en \texttt{pruebas/cartuchos}: \texttt{setup2.json}, \textt
 		\midrule
 		1 & Las pruebas de GWC fallaban con «la resolución 100$\times$80 está fuera del rango de pantallas (320$\times$240 a 1024$\times$600)»: el cartucho de laboratorio era anterior a la regla de F5-I16/F5-I17 & El cartucho de laboratorio pasa a 320$\times$240, la menor resolución admitida \\
 		2 & Con \texttt{index.html} abierto por \texttt{file://} las pruebas que leen cartuchos fallaban con «Failed to fetch» y sin más pista & El mensaje incluye ahora el código HTTP y la dirección desde la que se lanza; \texttt{Servidor.bat} arranca el servidor local \\
-		3 & D4 fallaba: el aviso «se descarta el historial» no salía nunca al cargar un GWB sobre una autoría. El número de acciones se contaba después de que la limpieza del cartucho reseteara la autoría, es decir, siempre valía 0 & Es un fallo del código, no de la prueba: las acciones se cuentan antes de limpiar (\texttt{BaseDirector.js}) \\
+		3 & D4 fallaba: el aviso «se descarta el historial» no salía nunca al cargar un GWB sobre una autoría. El número de acciones se contaba después de que la limpieza del cartucho reseteara la autoría, es decir, siempre valía 0 & Es un fallo del código, no de la prueba: las acciones se cuentan antes de limpiar (\texttt{baseDirector.js}) \\
 		4 & Un \texttt{.gitattributes} con una coma sobrante en la línea de los \texttt{.ps1} dejaba sin efecto el fin de línea CRLF de esos ficheros & Quitar la coma. Dentro del repositorio los ficheros se guardan normalizados (LF) y en la carpeta de trabajo salen con CRLF \\
 		5 & La copia temporal del Editor se hacía con \texttt{cp -r}, que no existe en Windows & Se hace con \texttt{fs.cpSync} de Node, sin las carpetas de la memoria ni de Git \\
 		\bottomrule

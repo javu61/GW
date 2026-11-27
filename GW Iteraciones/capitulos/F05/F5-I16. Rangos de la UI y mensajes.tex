@@ -110,7 +110,7 @@ Hay un límite en el \textbf{tamaño de la pantalla}: para que sea visible debe 
 
 En la columna \texttt{Max.GWC}: los campos de 2 bytes admiten 65534 porque \texttt{0xFFFF} está reservado como «sin valor»; los de 1 byte admiten 255 con \texttt{0xFF} para los opcionales del Bloque 3. En \texttt{valorInicial} el límite práctico coincide con el del formato. En la \texttt{resolucion} las dos columnas coinciden a propósito: fuera de $320\times240$ a $1024\times600$ no se carga ni se genera nada (error bloqueante), de modo que el formato nunca ve otro rango. En el GWS el \texttt{puerto} se limita a 0--99 en la propia tabla (un pin de la máquina real no justifica valores mayores); donde hoy no se valida nada, \texttt{revisarValores} pasa a hacerlo.
 
-En los campos de 1 byte el generador ya recorta (\texttt{BaseCartucho.js} escribe \texttt{secTicks} con \texttt{Math.min(0xFF, ...)}). Los \texttt{max} de hoy (999 y 9999) no corresponden a ningún límite del formato ni a una decisión práctica: el navegador permite escribir valores que solo la verificación caza después. Fuera de esta tabla quedan los demás campos de lista, que ya hoy son \texttt{<select>} y no admiten tecleo; no hay \texttt{max} que ajustar.
+En los campos de 1 byte el generador ya recorta (\texttt{baseCartucho.js} escribe \texttt{secTicks} con \texttt{Math.min(0xFF, ...)}). Los \texttt{max} de hoy (999 y 9999) no corresponden a ningún límite del formato ni a una decisión práctica: el navegador permite escribir valores que solo la verificación caza después. Fuera de esta tabla quedan los demás campos de lista, que ya hoy son \texttt{<select>} y no admiten tecleo; no hay \texttt{max} que ajustar.
 
 \subsection{Detalles importantes}
 \label{sec:F5I16Detalles}
@@ -132,15 +132,15 @@ Hay algunos detalles que considerar al limitar el manejo de estos valores máxim
 	\textbf{Módulo} & \textbf{\#} & \textbf{Qué se hará} & \textbf{Prueba / estado} \\
 	\midrule
 	\endhead
-	BaseCartucho & M1 & Nueva tabla de límites (\texttt{campo} $\rightarrow$ \texttt{min}/\texttt{maxGWI}/\texttt{maxGWC}) y funciones \texttt{revisarValores(tipo, valores)} y \texttt{limitarValor(valor, maximo, minimo)}; \texttt{limitarValor} informa de cada valor recortado & Caja con \texttt{pausaSim} 5000: la memoria queda en 999 y aparece el aviso \\
+	baseCartucho & M1 & Nueva tabla de límites (\texttt{campo} $\rightarrow$ \texttt{min}/\texttt{maxGWI}/\texttt{maxGWC}) y funciones \texttt{revisarValores(tipo, valores)} y \texttt{limitarValor(valor, maximo, minimo)}; \texttt{limitarValor} informa de cada valor recortado & Caja con \texttt{pausaSim} 5000: la memoria queda en 999 y aparece el aviso \\
 	\midrule
-	\makecell[tl]{BaseCartucho\\BaseDirector} & M2 & Llamar a \texttt{revisarValores} tras cargar cada fichero del cartucho (GWB/GWI/GWC) y al validar el setup (GWS) & Cargar un GWS a mano con \texttt{puerto} 65000: queda 99 con aviso; cargar un GWI a mano con \texttt{pausaSim} 5000: queda 999 con aviso \\
+	\makecell[tl]{baseCartucho\\baseDirector} & M2 & Llamar a \texttt{revisarValores} tras cargar cada fichero del cartucho (GWB/GWI/GWC) y al validar el setup (GWS) & Cargar un GWS a mano con \texttt{puerto} 65000: queda 99 con aviso; cargar un GWI a mano con \texttt{pausaSim} 5000: queda 999 con aviso \\
 	\midrule
-	\makecell[tl]{BaseCartucho\\BaseSetup} & M3 & Llamar a \texttt{revisarValores} antes de guardar GWI y GWC (BaseCartucho) y GWS (BaseSetup); el filtro del GWC aplica máximo GWI y máximo de tamaño de campo & Guardar el GWC de un GWI a mano con \texttt{pausaSim} 5000: el GWC lleva 999 y la equivalencia en memoria sigue verde \\
+	\makecell[tl]{baseCartucho\\baseSetup} & M3 & Llamar a \texttt{revisarValores} antes de guardar GWI y GWC (baseCartucho) y GWS (baseSetup); el filtro del GWC aplica máximo GWI y máximo de tamaño de campo & Guardar el GWC de un GWI a mano con \texttt{pausaSim} 5000: el GWC lleva 999 y la equivalencia en memoria sigue verde \\
 	\midrule
-	\makecell[tl]{BaseSetup\\BaseDirector} & M4 & GWS: \texttt{puerto} limitado a 0--99 (hoy sin validación), \texttt{tecla} ampliada a \texttt{A..Z} + \texttt{0..9} (hoy solo letra en \texttt{validarSetup}) & Puerto 65000 queda 99; la tecla «5» se acepta y «AA» se rechaza \\
+	\makecell[tl]{baseSetup\\baseDirector} & M4 & GWS: \texttt{puerto} limitado a 0--99 (hoy sin validación), \texttt{tecla} ampliada a \texttt{A..Z} + \texttt{0..9} (hoy solo letra en \texttt{validarSetup}) & Puerto 65000 queda 99; la tecla «5» se acepta y «AA» se rechaza \\
 	\midrule
-	\makecell[tl]{BaseCartucho\\BaseSetup\\BaseDirector} & M5 & La \texttt{resolucion} fuera de 320$\times$240 a 1024$\times$600 pasa a ERROR bloqueante en la validación de cada fichero (\texttt{validarGWI}/\texttt{validarGWB}/\texttt{validarSetup}, \texttt{BaseSetup.verificar}) y también en el GWC cargado: no se carga nada y se conserva el estado anterior (adiós al «aviso sin recorte» de la versión previa) & GWS a mano con 100$\times$100: «Setup NO cargado»; GWI a mano con 4000$\times$2000: «Cartucho NO cargado»; teclear 10$\times$15 en la ficha de setup: error visible en la zona de mensajes, y Aplicar no pasa \\
+	\makecell[tl]{baseCartucho\\baseSetup\\baseDirector} & M5 & La \texttt{resolucion} fuera de 320$\times$240 a 1024$\times$600 pasa a ERROR bloqueante en la validación de cada fichero (\texttt{validarGWI}/\texttt{validarGWB}/\texttt{validarSetup}, \texttt{baseSetup.verificar}) y también en el GWC cargado: no se carga nada y se conserva el estado anterior (adiós al «aviso sin recorte» de la versión previa) & GWS a mano con 100$\times$100: «Setup NO cargado»; GWI a mano con 4000$\times$2000: «Cartucho NO cargado»; teclear 10$\times$15 en la ficha de setup: error visible en la zona de mensajes, y Aplicar no pasa \\
 	\midrule
 	Editor & R1 & Campo «Valor inicial» de los contadores: \texttt{max} pasa de 9999 a 255 y el manejador \texttt{change} recorta por arriba & Escribir 256 en el campo deja el valor en 255 \\
 	\midrule
@@ -156,7 +156,7 @@ Hay algunos detalles que considerar al limitar el manejo de estos valores máxim
 \subsection{La zona de mensajes}
 \label{sec:F5I16Mensajes}
 
-Los mensajes viven hoy en la barra superior \texttt{\#estado} (\texttt{BaseDirector.avisar}/\texttt{avisarError}) y en la zona de mensajes de la ficha (\texttt{BaseFicha.\_pintarMensajes}), que se repinta en cada verificación y se limpia al poblar o reiniciar la ficha. El caso a reproducir: un error de una verificación fallida que siga visible después de que una aplicación posterior con éxito lo haya dejado sin sentido. Si la prueba no llega a reproducir retención alguna, el punto se descarta y se documenta. La limpieza cubre la zona de la ficha y también la barra superior, y es también por ahí donde deben salir los avisos de \texttt{limitarValor} (criterio 3).
+Los mensajes viven hoy en la barra superior \texttt{\#estado} (\texttt{baseDirector.avisar}/\texttt{avisarError}) y en la zona de mensajes de la ficha (\texttt{baseFicha.\_pintarMensajes}), que se repinta en cada verificación y se limpia al poblar o reiniciar la ficha. El caso a reproducir: un error de una verificación fallida que siga visible después de que una aplicación posterior con éxito lo haya dejado sin sentido. Si la prueba no llega a reproducir retención alguna, el punto se descarta y se documenta. La limpieza cubre la zona de la ficha y también la barra superior, y es también por ahí donde deben salir los avisos de \texttt{limitarValor} (criterio 3).
 
 \subsection{Pruebas}
 \label{sec:F5I16Pruebas}

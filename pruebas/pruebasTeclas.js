@@ -1,4 +1,4 @@
-// pruebas/pruebasTeclas.js — Teclas del SIMULADOR en BaseDirector (F5-I17, M4/M5/M6)
+// pruebas/pruebasTeclas.js — Teclas del SIMULADOR en baseDirector (F5-I17, M4/M5/M6)
 // ================================================================================================
 // PROPÓSITO
 //   Comprueban la tecla declarada para cada botón en el GWS y las teclas por defecto según el
@@ -80,7 +80,7 @@
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
     await U.cargarEn('ficheroCartucho', [await _setupConTecla('cursor-izquierda')], 600);
     ok('T1: un GWS con tecla «cursor-izquierda» se carga', /Setup cargado/.test(estado()), estado());
-    BaseDirector.pestanna('vistaSimulador');    // las teclas de botón solo juegan aquí (M4)
+    baseDirector.pestanna('vistaSimulador');    // las teclas de botón solo juegan aquí (M4)
     const boton = _botonPorNumero('0');
     const pista = boton ? boton.querySelector('small').textContent : null;
     document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
@@ -130,7 +130,7 @@
       p4: pista('4')
     };
     // dataset.tecla va normalizado en minúsculas (es la clave de comparación con
-    // el teclado, BaseDirector); la letra se pinta en mayúscula en la pista.
+    // el teclado, baseDirector); la letra se pinta en mayúscula en la pista.
     ok('T2: estilo 5 sin teclas — cruceta 0-3 con los cuatro cursores y el 4 con la letra Z',
       r5.b0 === 'cursor-izquierda' && r5.b1 === 'cursor-derecha' &&
       r5.b2 === 'cursor-arriba' && r5.b3 === 'cursor-abajo' &&

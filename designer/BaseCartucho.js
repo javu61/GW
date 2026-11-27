@@ -1,11 +1,11 @@
 'use strict';
 
-// BaseCartucho.js
+// baseCartucho.js
 // ====================================================================================================
 // PROPÓSITO
 //   Lectura y grabación de los tres formatos de cartucho del proyecto
 //   (GWB, GWI y GWC) y verificación del cartucho antes de escribirlo.
-//   El manejo de paquetes (leer, construir, descargar) vive en BasePACK.
+//   El manejo de paquetes (leer, construir, descargar) vive en basePack.
 //
 // FUNCIONES
 //
@@ -32,13 +32,13 @@
 //   leerCartucho            Lectura completa: JSON, validación despachada
 //                           por tipo e imágenes (F5-I19: sin tipo esperado;
 //                           estilo nullable si no hay setup).
-//   abrirPACK               Abre un paquete de cartucho (delega en BasePACK.leerPACK).
+//   abrirPACK               Abre un paquete de cartucho (delega en basePack.leerPACK).
 //
 //  Grabación del GWI
 //   _nombreBase             Base de los nombres guardados: el nombre del cartucho saneado (F5-I17 M10).
 //   _formatearGWI           Serializa el GWI en JSON compacto.
 //   guardarGWI              Guarda el GWI en paquete (avisos y bloqueo del botón).
-//   _guardarGWIEnDisco      Monta las entradas del GWI y las guarda (BasePACK.guardarPACK).
+//   _guardarGWIEnDisco      Monta las entradas del GWI y las guarda (basePack.guardarPACK).
 //   _formatearGWB           Serializa el GWB (solo lo que un GWB declara).
 //   guardarGWB              Guarda el GWB en paquete (F5-I10: JSON + imágenes).
 //
@@ -139,7 +139,7 @@
 //   _memoriaValida          true si un subcampo es un entero ≥ 0.
 // ====================================================================================================
 
-var BaseCartucho = (function () {
+var baseCartucho = (function () {
 
   // ---------------- Estado privado ----------------
 
@@ -155,7 +155,7 @@ var BaseCartucho = (function () {
 
   // Tipo numérico de los fantasmas de unión (solo informativos en el GWI).
   const TIPO_FANTASMA = 99;
-  const TIPO_VIDA_GWC = 3;      // iconos de vida y de muerte (ComunListas.tipos)
+  const TIPO_VIDA_GWC = 3;      // iconos de vida y de muerte (comunListas.tipos)
   const TIPO_MUERTE_GWC = 4;
 
   // Suma R+G+B a partir de la cual un píxel se considera blanco (transparente).
@@ -186,7 +186,7 @@ var BaseCartucho = (function () {
 
   /**
    * Revoca TODAS las object URLs creadas por el módulo (las imágenes del
-   * cartucho anterior mueren con él). La llama BaseDirector al limpiar.
+   * cartucho anterior mueren con él). La llama baseDirector al limpiar.
    * @returns {void}
    */
   function revocarURLs() {
@@ -424,8 +424,8 @@ var BaseCartucho = (function () {
           ') está fuera del rango de pantallas (' + PANTALLA_MIN.ancho + 'x' +
           PANTALLA_MIN.alto + ' a ' + PANTALLA_MAX.ancho + 'x' + PANTALLA_MAX.alto + ').';
       }
-      const ps = (typeof BaseDirector !== 'undefined' && BaseDirector.pantallaDeSetup)
-        ? BaseDirector.pantallaDeSetup() : null;
+      const ps = (typeof baseDirector !== 'undefined' && baseDirector.pantallaDeSetup)
+        ? baseDirector.pantallaDeSetup() : null;
       if (ps && (ps.ancho !== r.ancho || ps.alto !== r.alto)) {
         console.warn('[cartucho] la resolución del cartucho (' + r.ancho + 'x' +
           r.alto + ') difiere de la del setup (' + ps.ancho + 'x' + ps.alto + ').');
@@ -465,13 +465,13 @@ var BaseCartucho = (function () {
       for (const b of json.botones) {
         if (!b || typeof b !== 'object' || b.tecla === undefined ||
           b.tecla === null || b.tecla === '') continue;
-        if (typeof BaseDirector === 'undefined' || !BaseDirector.teclaValida) continue;
-        if (!BaseDirector.teclaValida(String(b.tecla), b.numero)) {
+        if (typeof baseDirector === 'undefined' || !baseDirector.teclaValida) continue;
+        if (!baseDirector.teclaValida(String(b.tecla), b.numero)) {
           return 'la "tecla" del botón ' + b.numero + ' del cartucho debe ser '
             + 'una letra A..Z o un nombre de cursor (cursor-izquierda/derecha/arriba/abajo);'
             + ' el dígito 1/2/3 solo vale en el trío de sistema A/B/R.';
         }
-        const t = BaseDirector.normalizarTecla(String(b.tecla));
+        const t = baseDirector.normalizarTecla(String(b.tecla));
         if (teclasVistas.has(t)) {
           return 'la tecla "' + String(b.tecla) + '" está repetida en los botones del cartucho.';
         }
@@ -625,13 +625,13 @@ var BaseCartucho = (function () {
 
   /**
    * Abre un cartucho empaquetado (GWB o GWI): delega en
-   * BasePACK.leerPACK; el resultado se lee con el MISMO flujo que una
+   * basePack.leerPACK; el resultado se lee con el MISMO flujo que una
    * carpeta (leerCartucho).
    * @param {File} fichero - Fichero de paquete seleccionado.
    * @returns {Promise<Blob[]>} Ficheros del paquete (Blob con ".name" base).
    */
   async function abrirPACK(fichero) {
-    return BasePACK.leerPACK(fichero);
+    return basePack.leerPACK(fichero);
   }
 
   // (F5-I19, R07-B: se retiran leerGWB y leerGWI: solo delegaban en
@@ -758,7 +758,7 @@ var BaseCartucho = (function () {
    * _GWI, F5-I17 M10). Avisa al empezar y bloquea el botón «Guardar»
    * mientras dura: el guardado es asíncrono y sin esto podría lanzarse
    * un segundo guardado solapado.
-   * @param {Object} json - GWI completo (montado por BaseDescomponer).
+   * @param {Object} json - GWI completo (montado por baseDescomponer).
    * @param {Array<{id:string, imagen:HTMLImageElement}>} sprites - Sprites
    *        con su imagen (su PNG va a segmentos/id.png).
    * @param {?HTMLImageElement} imgF - Imagen de fondo en memoria.
@@ -770,7 +770,7 @@ var BaseCartucho = (function () {
    */
   async function guardarGWI(json, sprites, imgF, imgS, imgM, nAvisos) {
     try {
-      BaseDirector.avisar('Guardando GWI (' + sprites.length + ' imagen(es))…');
+      baseDirector.avisar('Guardando GWI (' + sprites.length + ' imagen(es))…');
       const botonGuardar = document.getElementById('btnGuardar');
       botonGuardar.disabled = true;
       try {
@@ -780,7 +780,7 @@ var BaseCartucho = (function () {
       }
     } catch (e) {
       if (e && e.name === 'AbortError') return 0;
-      BaseDirector.avisarError('Guardado fallido: ' + e.message);
+      baseDirector.avisarError('Guardado fallido: ' + e.message);
       return 0;
     }
   }
@@ -819,13 +819,13 @@ var BaseCartucho = (function () {
     if (imgF && referenciaImgF) {
       // F5-I14: en el GWI el fondo va SIEMPRE al tamaño del Setup (el GWB
       // conserva el original).
-      const pantalla = BaseDirector.pantallaDeSetup();
+      const pantalla = baseDirector.pantallaDeSetup();
       entradas.push({
         nombre: referenciaImgF,
         contenido: await imagenBlob(imgF, pantalla ? pantalla.ancho : 0, pantalla ? pantalla.alto : 0)
       });
     } else if (referenciaImgF) {
-      BaseDirector.avisarError('El paquete no incluye img_f: el GWI no podrá cargar solo.');
+      baseDirector.avisarError('El paquete no incluye img_f: el GWI no podrá cargar solo.');
     } else {
       // Cartucho sin fondo (img_f opcional, punto 8 de la Fase 5):
       // legítimo, no es un error; solo se deja constancia en consola.
@@ -846,7 +846,7 @@ var BaseCartucho = (function () {
       if (imgM) {
         entradas.push({ nombre: referenciaImgM, contenido: await imagenBlob(imgM) });
       } else {
-        BaseDirector.avisarError('El paquete no incluye img_m (' + referenciaImgM +
+        baseDirector.avisarError('El paquete no incluye img_m (' + referenciaImgM +
           '), pero el GWI la declara: el GWI no podrá cargar solo.');
       }
     } else {
@@ -857,9 +857,9 @@ var BaseCartucho = (function () {
     const base = _nombreBase(json);            // F5-I17 (M10): el nombre manda
     entradas.push({ nombre: base + '_GWI.json', contenido: _formatearGWI(json) });
 
-    const tamano = await BasePACK.guardarPACK(entradas, base + '_GWI');
+    const tamano = await basePack.guardarPACK(entradas, base + '_GWI');
 
-    BaseDirector.avisar('GWI guardado en ' + BasePACK.nombreFichero(base + '_GWI') + ': ' + sprites.length +
+    baseDirector.avisar('GWI guardado en ' + basePack.nombreFichero(base + '_GWI') + ': ' + sprites.length +
       ' imagen(es) en segmentos/ + ' + base + '_GWI.json en la raíz' +
       (nAvisos ? ' · con ' + nAvisos + ' aviso(s)' : '') + '.' +
       (avisosLimites.length > 0 ? ' ' + avisosLimites.join(' ') : ''));
@@ -875,7 +875,7 @@ var BaseCartucho = (function () {
    * OBLIGATORIA (sin ella el GWB no es un cartucho), img_f e img_m si
    * están declaradas (cierre de la F5-I9: el cartucho lleva SIEMPRE
    * todo lo declarado). El núcleo de carga del director (F5-I9) lee
-   * este paquete por contenido: paquete → abrirPACK (BasePACK.leerPACK) → flujo de carpeta con el
+   * este paquete por contenido: paquete → abrirPACK (basePack.leerPACK) → flujo de carpeta con el
    * tipo esperado 'GWB'.
    * @param {Object} json - GWB completo (el cartucho en memoria).
    * @param {?HTMLImageElement} imgF - Imagen de fondo en memoria.
@@ -886,7 +886,7 @@ var BaseCartucho = (function () {
    */
   async function guardarGWB(json, imgF, imgS, imgM) {
     try {
-      BaseDirector.avisar('Guardando GWB…');
+      baseDirector.avisar('Guardando GWB…');
       const entradas = [];                // {nombre, contenido} del paquete
       const referenciaImgS = (json.imagenes && json.imagenes.img_s) || null;
       const referenciaImgF = (json.imagenes && json.imagenes.img_f) || null;
@@ -896,7 +896,7 @@ var BaseCartucho = (function () {
       } else {
         // img_s es OBLIGATORIA en el contrato de entrada: sin ella el
         // GWB guardado no cargaría, así que no se guarda a medias.
-        BaseDirector.avisarError('El GWB no se guarda: falta img_s' +
+        baseDirector.avisarError('El GWB no se guarda: falta img_s' +
           (referenciaImgS ? ' (' + referenciaImgS + ')' : '') +
           ' en memoria (es obligatoria).');
         return 0;
@@ -905,7 +905,7 @@ var BaseCartucho = (function () {
         if (imgF) {
           entradas.push({ nombre: referenciaImgF, contenido: await imagenBlob(imgF) });
         } else {
-          BaseDirector.avisarError('El paquete no incluye img_f (' +
+          baseDirector.avisarError('El paquete no incluye img_f (' +
             referenciaImgF + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
@@ -913,18 +913,18 @@ var BaseCartucho = (function () {
         if (imgM) {
           entradas.push({ nombre: referenciaImgM, contenido: await imagenBlob(imgM) });
         } else {
-          BaseDirector.avisarError('El paquete no incluye img_m (' +
+          baseDirector.avisarError('El paquete no incluye img_m (' +
             referenciaImgM + '), pero el GWB la declara: el GWB no podrá cargar solo.');
         }
       }
       const base = _nombreBase(json);          // F5-I17 (M10): el nombre manda
       entradas.push({ nombre: base + '_GWB.json', contenido: _formatearGWB(json) });
-      const tamano = await BasePACK.guardarPACK(entradas, base + '_GWB');
-      BaseDirector.avisar('GWB guardado en ' + BasePACK.nombreFichero(base + '_GWB') + ' (JSON + ' +
+      const tamano = await basePack.guardarPACK(entradas, base + '_GWB');
+      baseDirector.avisar('GWB guardado en ' + basePack.nombreFichero(base + '_GWB') + ' (JSON + ' +
         'imágenes de pantalla). Cárgalo por la pestaña Carga (F5-I19).');
       return tamano;
     } catch (e) {
-      BaseDirector.avisarError('Guardado del GWB fallido: ' + e.message);
+      baseDirector.avisarError('Guardado del GWB fallido: ' + e.message);
       return 0;
     }
   }
@@ -2052,7 +2052,7 @@ var BaseCartucho = (function () {
     // no confía en ello. Los avisos salen por #estado.
     const avisosLimites = revisarValores('GWI', json)
       .concat(revisarValores('GWC', json));
-    if (avisosLimites.length > 0) BaseDirector.avisar(avisosLimites.join(' '));
+    if (avisosLimites.length > 0) baseDirector.avisar(avisosLimites.join(' '));
 
     // F5-I16 (M5): la resolución es BLOQUEANTE también al generar (red
     // de seguridad: al cargar y aplicar ya lo estaba).

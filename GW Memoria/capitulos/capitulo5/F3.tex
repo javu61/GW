@@ -19,7 +19,7 @@ un solo escritor (el motor de estados) y tantos lectores como vías de
 presentación existan (hoy el \textit{canvas} del navegador; mañana el
 LCD del ESP32). El motor debe ser además independiente: del director
 recibe únicamente el \textit{tick}, y el resto de datos los maneja a
-través del puente de datos (\emph{ComunListas}).
+través del puente de datos (\emph{comunListas}).
 
 La dificultad propia de la fase no es mover figuras: es el
 \textbf{control de colisiones}, delicado por una razón de fondo del
@@ -49,8 +49,8 @@ iteración cierra cuatro decisiones:
 \begin{itemize}
 	\item \textbf{El canal: la pulsación como dato, no como evento de DOM.}
 	El juego no debe conocer el DOM, igual que el firmware del ESP32 no
-	conoce «botones», solo pines que se ponen a nivel. El \emph{BaseDirector}
-	reenvía a \texttt{JuegoDirector.pulsar(numero)} el \emph{número físico}
+	conoce «botones», solo pines que se ponen a nivel. El \emph{baseDirector}
+	reenvía a \texttt{juegoDirector.pulsar(numero)} el \emph{número físico}
 	del botón (nada de identificadores del cartucho ni del evento), el
 	director solo acepta pulsaciones con el juego en marcha y las reenvía
 	tal cual al motor. La tabla número $\rightarrow$ dirección viaja en el
@@ -95,7 +95,7 @@ cambio; relanzar restaura las posiciones de origen en el mismo barrido
 que limpia banderas. El jugador no se mueve libremente: solo puede
 seguir los enlaces de izquierda, derecha, arriba y abajo, por lo que no
 puede caerse por los bordes. La combinación viaja por el puente:
-\emph{ComunListas} gana una casilla de configuración del juego que la
+\emph{comunListas} gana una casilla de configuración del juego que la
 autoría escribe al cargar el cartucho y el motor lee en cada
 \textit{tick}. El motor gráfico no se toca: la composición pura
 presenta lo que la lista dice, y la secuencia de fondo sigue latiendo
@@ -383,7 +383,7 @@ esa familia con su aviso; si el segmento era el último de su familia,
 el fin se retira. Asociación y retirada viajan en la misma acción
 atómica del historial que el cambio de tipo. Para que las dos etapas
 hablen el mismo idioma, la enumeración de tipos de segmento y de
-mecanismos de fin vive en el puente (\emph{ComunListas}): comparar
+mecanismos de fin vive en el puente (\emph{comunListas}): comparar
 contra constantes con nombre en vez de dígitos mágicos.
 
 En el motor, el estado \textbf{terminada} congela la partida como en

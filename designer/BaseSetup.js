@@ -1,6 +1,6 @@
 'use strict';
 
-// BaseSetup.js
+// baseSetup.js
 // ================================================================================================
 // PROPÓSITO
 //   La pestaña «Setup» (F5-I12): la ficha del setup (GWS), con los
@@ -18,7 +18,7 @@
 //
 // SEPARACIÓN
 //   No aplica nada ni conoce al director salvo para validar: la
-//   verificación reutiliza BaseDirector.validarSetup (las mismas
+//   verificación reutiliza baseDirector.validarSetup (las mismas
 //   reglas que al cargar un GWS), así un GWS creado aquí se puede
 //   cargar siempre. Es el director quien llama a poblar y quien
 //   aplica el JSON que devuelve leer.
@@ -54,7 +54,7 @@
 //     _teclaDeFila           _construir          _limpiarUltimos
 // ====================================================================================================
 
-const BaseSetup = (function () {
+const baseSetup = (function () {
 
   const GWS_TIPO = 'GWS';
   const GWS_VERSION = '1';
@@ -62,7 +62,7 @@ const BaseSetup = (function () {
   const TRIO_SISTEMA = [6, 7, 8];
   const NOMBRE_SISTEMA = { 6: 'A', 7: 'B', 8: 'R' };
   // F5-I17 (M5): los cuatro nombres de cursor admitidos como tecla
-  // (misma lista cerrada que valida BaseDirector.validarSetup).
+  // (misma lista cerrada que valida baseDirector.validarSetup).
   const CURSORES_GWS = ['cursor-izquierda', 'cursor-derecha', 'cursor-arriba', 'cursor-abajo'];
   const BOTONES_POR_ESTILO = {
     '2': [0, 4, ...TRIO_SISTEMA],
@@ -204,15 +204,15 @@ const BaseSetup = (function () {
       const tdN = _crearElemento('td', null, String(n) + (NOMBRE_SISTEMA[n] ? ' (' + NOMBRE_SISTEMA[n] + ')' : ''));
       const puerto = _entrada('number', {
         className: 'colPuerto', min: 0, step: 1,
-        max: BaseCartucho.MAX_PUERTO_GWS, value: d.puerto
+        max: baseCartucho.MAX_PUERTO_GWS, value: d.puerto
       });
       puerto.addEventListener('change', () => {
         if (puerto.value === '') return;
-        const ajustado = BaseCartucho.limitarValor(Number(puerto.value),
-          BaseCartucho.MAX_PUERTO_GWS, 0);
+        const ajustado = baseCartucho.limitarValor(Number(puerto.value),
+          baseCartucho.MAX_PUERTO_GWS, 0);
         if (typeof ajustado === 'number' && ajustado !== Number(puerto.value)) {
           puerto.value = String(ajustado);
-          BaseDirector.avisar('El puerto del botón ' + tr.dataset.numero +
+          baseDirector.avisar('El puerto del botón ' + tr.dataset.numero +
             ' limitado a ' + ajustado + '.');
         }
       });
@@ -289,8 +289,8 @@ const BaseSetup = (function () {
     // F5-I21: el ancho y el alto NO se editan a mano; se cambian con el
     // botón «Ajustar resolución» (su ventana muestra los valores actuales,
     // los nuevos, el factor de escala y si afecta a los segmentos).
-    campos.ancho = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.ancho, step: 1, placeholder: 'ancho', readOnly: true });
-    campos.alto = _entrada('number', { min: 1, max: BaseCartucho.PANTALLA_MAX.alto, step: 1, placeholder: 'alto', readOnly: true });
+    campos.ancho = _entrada('number', { min: 1, max: baseCartucho.PANTALLA_MAX.ancho, step: 1, placeholder: 'ancho', readOnly: true });
+    campos.alto = _entrada('number', { min: 1, max: baseCartucho.PANTALLA_MAX.alto, step: 1, placeholder: 'alto', readOnly: true });
     par.append(campos.ancho, _crearElemento('span', null, '×'), campos.alto);
     const btnAjustar = document.createElement('button');
     btnAjustar.type = 'button';
@@ -342,8 +342,8 @@ const BaseSetup = (function () {
     // la verificación de la resolución sigue corriendo al aplicar y al
     // guardar (todo pasa por verificar) y la ventana valida ANTES.
     btnAjustar.addEventListener('click', () => {
-      if (typeof BaseDirector !== 'undefined' && BaseDirector.ajustarResolucion) {
-        BaseDirector.ajustarResolucion();
+      if (typeof baseDirector !== 'undefined' && baseDirector.ajustarResolucion) {
+        baseDirector.ajustarResolucion();
       }
     });
     contenedor.addEventListener('input', () => _marcarCambios(true));
@@ -486,7 +486,7 @@ const BaseSetup = (function () {
 
   /**
    * Verifica la ficha con las MISMAS reglas que al cargar un GWS
-   * (BaseDirector.validarSetup), más las comprobaciones propias de
+   * (baseDirector.validarSetup), más las comprobaciones propias de
    * un setup nuevo: nombre, puertos y teclas sin repetir.
    * @param {{mostrar:boolean}} [opciones] - mostrar: pinta los mensajes bajo la ficha.
    * @returns {{errores:string[], avisos:string[], json:Object}} Resultado.
@@ -499,7 +499,7 @@ const BaseSetup = (function () {
     if (json.estilo === '') {
       errores.push('Falta elegir el estilo (2, 4 o 5 botones).');
     } else {
-      const fallo = BaseDirector.validarSetup(json);
+      const fallo = baseDirector.validarSetup(json);
       if (fallo) errores.push(fallo.charAt(0).toUpperCase() + fallo.slice(1));
       const puertos = new Set(), teclas = new Set();
       for (const b of json.botones) {
@@ -528,7 +528,7 @@ const BaseSetup = (function () {
     // al aplicar): puertos fuera de rango se limitan; la resolución
     // fuera de 320×240..1024×600 es ERROR bloqueante (M5) — la pesca
     // validarSetup, que verificar llama aquí arriba.
-    avisos.push(...BaseCartucho.revisarValores('GWS', json));
+    avisos.push(...baseCartucho.revisarValores('GWS', json));
     if (opt.mostrar) _pintarMensajes(errores, avisos);
     return { errores: errores, avisos: avisos, json: json };
   }
@@ -589,7 +589,7 @@ const BaseSetup = (function () {
    * Rellena los informativos al generar un GWC (F5-I21): lo usado de RAM
    * (los bytes del GWC) y de FLASH (el bloque del fondo, hoy 0), con su %
    * de la memoria declarada del setup aplicado. Es la misma función que
-   * escribe el porcentaje de la generación (F5-I20): BaseCartucho.textoUsoMemoria.
+   * escribe el porcentaje de la generación (F5-I20): baseCartucho.textoUsoMemoria.
    * @param {{gwc:number, fondo:number, memoria:?{RAM:number, FLASH:number}}} d -
    *        Bytes del GWC y del fondo, y la memoria declarada (o null).
    * @returns {void}
@@ -597,8 +597,8 @@ const BaseSetup = (function () {
   function informarUltimos(d) {
     if (!campos.ultimoGWC) return;               // la ficha aún no se ha pintado
     const mem = (d && d.memoria) || {};
-    campos.ultimoGWC.textContent = BaseCartucho.textoUsoMemoria(d.gwc, mem.RAM) || '—';
-    campos.ultimoFondo.textContent = BaseCartucho.textoUsoMemoria(d.fondo, mem.FLASH) || '—';
+    campos.ultimoGWC.textContent = baseCartucho.textoUsoMemoria(d.gwc, mem.RAM) || '—';
+    campos.ultimoFondo.textContent = baseCartucho.textoUsoMemoria(d.fondo, mem.FLASH) || '—';
   }
 
   /**

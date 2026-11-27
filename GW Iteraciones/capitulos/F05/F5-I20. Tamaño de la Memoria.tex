@@ -9,7 +9,7 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 \begin{itemize}
 	\item De los dos datos que hacen falta para el porcentaje, el sistema ya
 	conoce uno: los bytes del GWC recién creado
-	(\texttt{BaseCartucho.generarGWC}, presentados en el panel del Editor por
+	(\texttt{baseCartucho.generarGWC}, presentados en el panel del Editor por
 	\texttt{informarTamanos}). El otro, la memoria de que dispone la máquina
 	externa, no se declara actualmente en ningún sitio.
 	\item El GWS describe la máquina externa (estilo, resolución, botones,
@@ -73,24 +73,24 @@ En esta iteración incluimos información sobre el sistema externo, en cuanto a 
 \label{sec:F5I20Plan}
 
 \begin{itemize}
-	\item \texttt{BaseSetup.js}: en la ficha de Setup, campos
+	\item \texttt{baseSetup.js}: en la ficha de Setup, campos
 	«RAM (KB)»{} y «FLASH
 	(KB)»{} (enteros $\ge 0$, vacío vale 0); los recoge
 	\texttt{estado()}; la serialización del GWS solo escribe
 	\texttt{memoria} (subcampo a subcampo) con los valores distintos de 0;
 	la repoblación muestra la del GWS cargado.
-	\item \texttt{BaseFicha.js}: los mismos dos campos en la ficha de
+	\item \texttt{baseFicha.js}: los mismos dos campos en la ficha de
 	Cartucho; \texttt{poblar} los lee del GWB/GWI; la serialización los
 	escribe en la raíz del JSON (solo los subcampos distintos de 0).
-	\item \texttt{BaseCartucho.js}: \texttt{validarSetup} (GWS) y
+	\item \texttt{baseCartucho.js}: \texttt{validarSetup} (GWS) y
 	\texttt{validarComunes} (cartucho) aceptan \texttt{memoria} si sus dos
 	subcampos son enteros $\ge 0$ (o no vienen); valor no válido $\to$
 	aviso (F5-I16) y 0. \texttt{\_formatearGWI} y \texttt{\_formatearGWB}
 	serializan \texttt{memoria} según lo dicho.
-	\item \texttt{BaseDescomponer.js}: en \texttt{generarGWIyGWC}, junto a
+	\item \texttt{baseDescomponer.js}: en \texttt{generarGWIyGWC}, junto a
 	\texttt{informarTamanos}, el cálculo del porcentaje (precedencia
 	cartucho $>$ setup) y la línea/aviso de ocupación.
-	\item \texttt{BaseDirector.js} (ajuste tras la primera prueba):
+	\item \texttt{baseDirector.js} (ajuste tras la primera prueba):
 	\texttt{\_aplicarJSONSetup} repuebla la ficha de Cartucho con TODOS los
 	datos comunes del setup (nombre, memoria y ColorFondo, además del
 	estilo y la resolución); \texttt{\_setupDerivadoDe} toma la memoria

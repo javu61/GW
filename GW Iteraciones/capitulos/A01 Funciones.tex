@@ -40,7 +40,7 @@
 		(lo vacía el motor al empezar el tick).
 	\end{itemize}
 	
-	\subsection*{BaseExtractor.js — extracción de la imagen maestra}
+	\subsection*{baseExtractor.js — extracción de la imagen maestra}
 	
 	\begin{itemize}
 		\item \texttt{verificarBN}: bloqueante si \texttt{img\_s} no es
@@ -64,7 +64,7 @@
 		avisos del verificador).
 	\end{itemize}
 	
-	\subsection*{BaseGraficos.js — dibujo del mapa de autoría}
+	\subsection*{baseGraficos.js — dibujo del mapa de autoría}
 	
 	\begin{itemize}
 		\item \texttt{fijarFondo} / \texttt{fijarSegmentos}: estado interno
@@ -79,7 +79,7 @@
 		(XOR en modo simulador; color de tipo en modo autoría).
 	\end{itemize}
 	
-	\subsection*{BaseDescomponer.js — la autoría: mapa, panel, verificación y GWI}
+	\subsection*{baseDescomponer.js — la autoría: mapa, panel, verificación y GWI}
 	
 	\textbf{Ciclo de vida:}
 	\begin{itemize}
@@ -294,20 +294,20 @@
 		\item \texttt{normalizarNumeroBoton}: acepta «A»/«6»/números sin
 		comillas y devuelve el número físico 0--8.
 		\item \texttt{alPulsarTecla} / \texttt{alSoltarTecla}: el teclado de
-		la máquina: resaltado del botón y reenvío al \texttt{JuegoDirector}
+		la máquina: resaltado del botón y reenvío al \texttt{juegoDirector}
 		(con el juego en marcha).
 		\item \texttt{buscarBotonPorTecla}: tecla $\rightarrow$ botón físico.
 		\item \texttt{alAtajoTeclado}: los atajos de edición
 		(Ctrl+Z/Ctrl+Y deshacer/rehacer).
 		\item \texttt{jugar}: el puente del botón Start hacia el
-		\texttt{JuegoDirector}.
+		\texttt{juegoDirector}.
 		\item \texttt{comprobarSalud}: diagnóstico: ficheros cargados,
 		globales esperados y avisos.
 		\item \texttt{verificarYGuardar}: delega en
 		\texttt{Descomponer.verificarYGuardar} el botón de guardado.
 	\end{itemize}
 	
-	\subsection*{JuegoDirector.js — el reloj del simulador}
+	\subsection*{juegoDirector.js — el reloj del simulador}
 	
 	\begin{itemize}
 		\item \texttt{arrancar}: relanza la partida: reinicia semilla, cola,

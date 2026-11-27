@@ -115,9 +115,9 @@ Tambiñen hay que considerar que el cartucho GWC, que es el cartucho más import
 \label{sec:F5I11Cambios}
 
 \begin{itemize}
-	\item \textbf{BaseCartucho.js:} desaparecen las tres comprobaciones de \emph{JSZip} y su propia función de descarga. \texttt{abrirZIP} pasa a llamarse \texttt{abrirPACK} y delega en \texttt{leerPACK}. Las funciones que guardan el GWI y el GWB solo preparan la lista de entradas (el JSON y las imágenes) y llaman a \texttt{guardarPACK}, con un nombre sin extensión.
+	\item \textbf{baseCartucho.js:} desaparecen las tres comprobaciones de \emph{JSZip} y su propia función de descarga. \texttt{abrirZIP} pasa a llamarse \texttt{abrirPACK} y delega en \texttt{leerPACK}. Las funciones que guardan el GWI y el GWB solo preparan la lista de entradas (el JSON y las imágenes) y llaman a \texttt{guardarPACK}, con un nombre sin extensión.
 	\item \textbf{baseDirector.js:} la detección de paquetes por extensión pasa a \texttt{esPACK} y la apertura a \texttt{abrirPACK}.
-	\item \textbf{index.html:} se añade el nuevo \emph{script} antes de \texttt{BaseCartucho.js}, que lo usa.
+	\item \textbf{index.html:} se añade el nuevo \emph{script} antes de \texttt{baseCartucho.js}, que lo usa.
 \end{itemize}
 
 Los nombres de los botones y de los campos de fichero de la interfaz (``Cargar GWB (ZIP)'' y similares) no cambian en esta iteración, porque describen el fichero real que ve el usuario; se unificarán en otra iteración con el cambio previsto sobre la carga unificada de cartuchos, que no dependerá de si son comprimidos o no, y del formato de compresión usado.

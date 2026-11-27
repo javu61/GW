@@ -1,10 +1,10 @@
-// ComunListas — el puente de datos entre las dos etapas del sistema.
+// comunListas — el puente de datos entre las dos etapas del sistema.
 // ====================================================================================================
 // El sistema tiene DOS etapas deliberadamente inconexas (decisión
 // de diseño): la AUTORÍA (ficheros Base*, Fase 1: extraer,
 // editar, guardar el GWI) y el JUEGO (ficheros Juego*, Fase 2:
 // estados y presentación). No se conocen: la única comunicación
-// es que BaseDirector llama al JuegoDirector (el Start). Pero
+// es que baseDirector llama al juegoDirector (el Start). Pero
 // ambas necesitan LOS MISMOS DATOS del cartucho una vez cargado:
 // las listas de sprites y segmentos en memoria y la imagen de
 // fondo. Ese pequeño común vive AQUÍ, en un fichero propio que
@@ -29,7 +29,7 @@
 // PRIMERO de todos los scripts del proyecto.
 // ====================================================================================================
 
-var ComunListas = (function () {
+var comunListas = (function () {
   'use strict';
 
   /** Sprites únicos del GWI (img_NNN) en memoria. */
@@ -90,7 +90,7 @@ var ComunListas = (function () {
   var rutasCartucho = null;
   /**
    * Cola FIFO de pulsaciones pendientes (números físicos de
-   * botón). La llena la máquina (vía JuegoDirector), la vacía el
+   * botón). La llena la máquina (vía juegoDirector), la vacía el
    * motor de estados al empezar cada tick. Con tapa: más de TAPA
    * pulsaciones sin consumir es un martilleo, no un jugador.
    * @constant {number}

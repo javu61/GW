@@ -13,7 +13,7 @@
 // FUNCIONES
 //   _servidor                  Servidor estático mínimo de una carpeta (con ficheros sustitutos);
 //                              público como «servidor»: lo usa también pruebas/servidor.js.
-//   _copiaParcheada            Copia del proyecto con los interiores de BaseDescomponer (editor).
+//   _copiaParcheada            Copia del proyecto con los interiores de baseDescomponer (editor).
 //   _comparar                  Compara las partidas grabadas con las de referencia (COMPARAR).
 //   _lanzar                    Lanza un grupo de pruebas y termina el proceso con su código.
 //   lanzar                     Igual, y convierte cualquier excepción en «RESULTADO: ERROR».

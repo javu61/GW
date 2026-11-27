@@ -50,7 +50,7 @@ leerla. Nada de estados paralelos ni copias: una lista, un escritor, muchos lect
 \begin{itemize}
 	\item \textbf{La lista en memoria, expuesta.} La lista de segmentos que la carga del
 	GWI deja en memoria vive (bien encapsulada) en el módulo de autoría
-	(\texttt{BaseDescomponer}); esta iteración la expone con un único accesor de
+	(\texttt{baseDescomponer}); esta iteración la expone con un único accesor de
 	lectura que devuelve \emph{la referencia} al array ---no una copia---, porque el
 	contrato es escribir en ella. El motor de juego la pide al arrancar; si no hay
 	cartucho GWI cargado la lista está vacía y el motor no revienta (avisa si hay

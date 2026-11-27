@@ -1,6 +1,6 @@
 'use strict';
 
-// BaseDescomponer.js
+// baseDescomponer.js
 // ====================================================================================================
 // PROPÓSITO
 //   La autoría de los segmentos de un cartucho: el mapa de objetos
@@ -11,12 +11,12 @@
 //
 // SEPARACIÓN
 //   La geometría se dibuja, la lógica se señala. La extracción vive en
-//   BaseExtractor, el dibujo del mapa en BaseGraficos, los ficheros
-//   (ZIP, serialización del GWI, GWC binario) en BaseCartucho y el
-//   cableado de botones e inputs en BaseDirector. Este módulo MONTA
+//   baseExtractor, el dibujo del mapa en baseGraficos, los ficheros
+//   (ZIP, serialización del GWI, GWC binario) en baseCartucho y el
+//   cableado de botones e inputs en baseDirector. Este módulo MONTA
 //   el JSON del GWI con la autoría (montarGWI) y repinta; la
 //   VERIFICACIÓN (verificarCartucho) y el guardado (guardarGWI,
-//   generarGWC) los escribe BaseCartucho: verificarYGuardar y
+//   generarGWC) los escribe baseCartucho: verificarYGuardar y
 //   generarGWIyGWC los llaman y presentan sus hallazgos.
 //
 // FUNCIONES
@@ -24,7 +24,7 @@
 //  Arranque y estado
 //   arrancar               Arranca la autoría de un cartucho (GWB o GWI).
 //   reset                  Limpia el estado (recargar cartucho/setup).
-//   cargarListas           Listas del GWI al puente (ComunListas).
+//   cargarListas           Listas del GWI al puente (comunListas).
 //   repintarAparato        Repinta el aparato (F5-I10: tras cambiar img_f en la ficha).
 //   inicializar            Cablea los eventos del mapa (una vez).
 //
@@ -83,7 +83,7 @@
 //   _abrirEnEditor          Pulsar una fila: el segmento en el Editor.
 //   segmentos / listar    Las listas (fantasmas incluidos) y su vuelco.
 //   colorRGB / relacionadosDe / entrantesDe / listaMotor
-//                          Colores de relación y lista para el BaseGraficos.
+//                          Colores de relación y lista para el baseGraficos.
 //
 //  Composición del aparato
 //   _fijarEscalaAparato     Escala de la pantalla del aparato.
@@ -130,7 +130,7 @@
 //                          + topes BLOQUEANTES + GWC + su GWS + GWI con el Código GWC.
 //   _cambiosSinAplicar     F5-I17 (M12): «Generar pide Aplicar» — si el
 //                          setup tiene cambios sin aplicar, no se genera.
-//   _ctxVerificacion        El contexto que pide BaseCartucho para
+//   _ctxVerificacion        El contexto que pide baseCartucho para
 //                          verificar (helpers y tablas de aquí).
 //   _avisoTopes            Presenta los avisos de tope de 255.
 //   _nombreFichero         Nombre de fichero saneado: el nombre del cartucho (F5-I17 M10).
@@ -138,7 +138,7 @@
 //   _descargarGWS          Descarga el GWS del setup vigente junto al GWC (F5-I17 M9).
 //   _montarGWI             Monta el JSON del GWI (con la autoría).
 //   _guardarGWI             Validaciones de contexto y delega en
-//                          BaseCartucho.guardarGWI.
+//                          baseCartucho.guardarGWI.
 //   cargarAutoria         Reproduce el historial de un GWI (precarga).
 //   numeroDeCambios       F5-I17 (M3): acciones de la autoría en curso (sin contar
 //                          el alta de la ficha del cartucho).
@@ -169,7 +169,7 @@
 //   _colorRGB                     Convierte un color hex "#RRGGBB" a componentes [r, g, b].
 //   _relacionadosDe               Segmentos enlazados (SALIENTES) con el seleccionado:
 //   _entrantesDe                  Grupos cuyo enlace apunta DIRECTAMENTE al seleccionado (sus "anteri…
-//   _listaMotor                   Construye la lista residente del BaseGraficos desde los grupos:
+//   _listaMotor                   Construye la lista residente del baseGraficos desde los grupos:
 //   _refrescar                    Refresca todo el estado visible:
 //   _alPulsarMapa                 Pulsación en el mapa:
 //   _alMoverMapa                  Movimiento con el botón pulsado:
@@ -187,7 +187,7 @@
 //   _generarPar                   El cuerpo de «Generar»: se monta todo en memoria y los ficheros se…
 // ====================================================================================================
 
-const BaseDescomponer = (() => {
+const baseDescomponer = (() => {
 
   // ---- Estado ----
 
@@ -1019,7 +1019,7 @@ const BaseDescomponer = (() => {
    */
   function deshacer() {
     if (!base) {
-      BaseDirector.avisar('Nada que deshacer: no hay autoría en curso.');
+      baseDirector.avisar('Nada que deshacer: no hay autoría en curso.');
       return;
     }
     // F5-I15 (E9): los bloques «auto» (inversos derivados por la
@@ -1036,7 +1036,7 @@ const BaseDescomponer = (() => {
    */
   function _deshacerBloque() {
     if (cambios.length === 0) {
-      BaseDirector.avisar('Nada que deshacer.');
+      baseDirector.avisar('Nada que deshacer.');
       return null;
     }
     const nUlt = cambios[cambios.length - 1].n;
@@ -1045,7 +1045,7 @@ const BaseDescomponer = (() => {
     // F5-I15 (E5): el alta de la ficha del cartucho NO es una acción del
     // autor (la crea la propia autoría al arrancar): no se deshace.
     if (_esBloqueDeFicha(bloque)) {
-      BaseDirector.avisar('Nada que deshacer.');
+      baseDirector.avisar('Nada que deshacer.');
       return null;
     }
     const invertible = bloque.every(e =>
@@ -1069,7 +1069,7 @@ const BaseDescomponer = (() => {
     _refrescar();
     _$('panelSegmento').classList.add('oculto');
     _$('panelSegmento').replaceChildren();
-    BaseDirector.avisar('Deshecha la acción ' + nUlt + ' (' +
+    baseDirector.avisar('Deshecha la acción ' + nUlt + ' (' +
       bloque.length + ' cambio(s)).');
     return { auto: !!bloque[0].auto };
   }
@@ -1084,11 +1084,11 @@ const BaseDescomponer = (() => {
    */
   function rehacer() {
     if (!base) {
-      BaseDirector.avisar('Nada que rehacer: no hay autoría en curso.');
+      baseDirector.avisar('Nada que rehacer: no hay autoría en curso.');
       return;
     }
     if (rehacibles.length === 0) {
-      BaseDirector.avisar('Nada que rehacer.');
+      baseDirector.avisar('Nada que rehacer.');
       return;
     }
     // F5-I15 (E9): se rehace el bloque del autor y, tras él, los
@@ -1136,7 +1136,7 @@ const BaseDescomponer = (() => {
     _refrescar();
     _$('panelSegmento').classList.add('oculto');
     _$('panelSegmento').replaceChildren();
-    BaseDirector.avisar('Rehecha la acción ' + bloque[0].n + ' (' +
+    baseDirector.avisar('Rehecha la acción ' + bloque[0].n + ' (' +
       bloque.length + ' cambio(s)).');
   }
 
@@ -1260,7 +1260,7 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
   function _reconstruir() {
-    const r = BaseExtractor.reagrupar(base, uniones);
+    const r = baseExtractor.reagrupar(base, uniones);
     sprites = r.sprites;
     grupos = r.grupos;
     indiceGrupo = new Map();
@@ -1355,7 +1355,7 @@ const BaseDescomponer = (() => {
     }
     // PUENTE (corrección del 23-10-2026): tras cada reconstrucción, la
     // Secuencia de la ficha llega VIVA al puente — el motor la lee
-    // (ComunListas.secuenciaDeCartucho) al iniciar; sin esto, definirla en
+    // (comunListas.secuenciaDeCartucho) al iniciar; sin esto, definirla en
     // el editor y pulsar Start SIN recargar el GWI dejaba el puente
     // en null: las animaciones no se lanzaban nunca.
     _sincronizarSecuencia();
@@ -1450,11 +1450,11 @@ const BaseDescomponer = (() => {
 
   /**
    * Repinta el panel de información (F5-I7): lo compone el
-   * BaseDirector con el resumen del diseño (resumen()).
+   * baseDirector con el resumen del diseño (resumen()).
    * @returns {void}
    */
   function _refrescarInfo() {
-    BaseDirector.pintarInfo();
+    baseDirector.pintarInfo();
   }
 
   /**
@@ -1635,7 +1635,7 @@ const BaseDescomponer = (() => {
     marcados = new Set();
     eleccion = null;
     seleccion = _esCartucho(g) ? g : _piezaDe(g);
-    BaseDirector.pestanna('vistaEditor');
+    baseDirector.pestanna('vistaEditor');
     _pintarMapa();
     _mostrarPanel();
   }
@@ -1794,7 +1794,7 @@ const BaseDescomponer = (() => {
 
   /**
    * Lista por consola (console.table) los sprites y segmentos, y
-   * refresca la tira de sprites y el panel del BaseDirector.
+   * refresca la tira de sprites y el panel del baseDirector.
    * @returns {Array<Object>} La lista de segmentos actual.
    */
   function listar() {
@@ -1908,7 +1908,7 @@ const BaseDescomponer = (() => {
   }
 
   /**
-   * Construye la lista residente del BaseGraficos desde los grupos:
+   * Construye la lista residente del baseGraficos desde los grupos:
    * posición presentada + imagen del sprite + color de
    * su tipo — AZUL si es saliente del seleccionado, MAGENTA si le
    * apunta (el azul prevalece en un ciclo de dos). Es
@@ -1925,7 +1925,7 @@ const BaseDescomponer = (() => {
             : COLOR_TIPO[g.prop.tipo]));
       // La ficha del CARTUCHO (F3-I11) NO se pinta en el mapa
       // (v12.5): fuera del lienzo, sin romper la alineación de
-      // índices del BaseGraficos — se abre con un clic en el vacío.
+      // índices del baseGraficos — se abre con un clic en el vacío.
       if (_esCartucho(g)) {
         return {
           x: -9999, y: -9999, imagen: g.sprite.imagen,
@@ -1935,7 +1935,7 @@ const BaseDescomponer = (() => {
       // Las BARRAS de un dígito y los DÍGITOS de un contador no se
       // pintan (la pieza que los agrupa lleva su imagen fusionada):
       // entrada fuera del lienzo, sin romper la alineación de
-      // índices del BaseGraficos.
+      // índices del baseGraficos.
       if (g.oculto) {
         return {
           x: -9999, y: -9999, imagen: g.sprite.imagen,
@@ -1961,7 +1961,7 @@ const BaseDescomponer = (() => {
    * espacio de la imagen de segmentos, que puede NO medir lo mismo
    * que img_f (cada arte se estira al vuelo a la resolución real que
    * declara el setup; el escalado definitivo lo hace el GWC). Sin
-   * esto el BaseGraficos deduciría la escala de img_f y con imágenes de
+   * esto el baseGraficos deduciría la escala de img_f y con imágenes de
    * tamaños distintos los segmentos caerían fuera del canvas (bug 8h).
    * @param {number} anchoS - Ancho de img_s en píxeles.
    * @param {number} altoS - Alto de img_s en píxeles.
@@ -1970,7 +1970,7 @@ const BaseDescomponer = (() => {
   function _fijarEscalaAparato(anchoS, altoS) {
     const canvas = _$('pantalla');
     if (!anchoS || !altoS) {                 // sin img_s: fuera la escala
-      canvas.escalaX = undefined;            // vieja (que el BaseGraficos deduzca
+      canvas.escalaX = undefined;            // vieja (que el baseGraficos deduzca
       canvas.escalaY = undefined;             // del fondo, como antes)
       return;
     }
@@ -2002,17 +2002,17 @@ const BaseDescomponer = (() => {
    * Pinta el FONDO de la pantalla del aparato (Fase 1, diseñador):
    * base blanca opaca + img_f estirada a la resolución del canvas (la
    * que declara el setup), como el arte impreso bajo el cristal. Esta
-   * presentación NO usa el BaseGraficos: pintar fondo y todos los segmentos
+   * presentación NO usa el baseGraficos: pintar fondo y todos los segmentos
    * en negro es propio del entorno de autoría, y el aparato siempre se
    * repinta desde el fondo (no se borra nada en sitio).
    * @returns {void}
    */
   function pintarFondoAparato() {
     const canvas = _$('pantalla');
-    const imgF = BaseDirector.imagenFondo();
+    const imgF = baseDirector.imagenFondo();
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = BaseDirector.colorFondo();   // base opaca (LCD apagado; ColorFondo del cartucho)
+    ctx.fillStyle = baseDirector.colorFondo();   // base opaca (LCD apagado; ColorFondo del cartucho)
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (imgF) ctx.drawImage(imgF, 0, 0, canvas.width, canvas.height);
   }
@@ -2069,7 +2069,7 @@ const BaseDescomponer = (() => {
 
   /**
    * Pinta el canvas del aparato: SIEMPRE el estado del juego — fondo
-   * (img_f) + TODOS los segmentos en negro (XOR blanco del BaseGraficos,
+   * (img_f) + TODOS los segmentos en negro (XOR blanco del baseGraficos,
    * look LCD real). Este canvas nunca lleva colores de tipo: los
    * colores viven en el mapa de trabajo.
    * @returns {void}
@@ -2104,7 +2104,7 @@ const BaseDescomponer = (() => {
    * Pinta la fusión del GWI en el aparato: fondo (img_f) + todos los
    * segmentos de los PNG del cartucho (leídos UNA vez, lista local
    * temporal). IMPORTANTE: es asíncrona y NO deja su lista en el
-   * BaseGraficos: al terminar restaura la lista del editor (grupos), que
+   * baseGraficos: al terminar restaura la lista del editor (grupos), que
    * arrancar ya fijó — si no, el primer clic en el mapa pintaría
    * sin colores.
    * @param {HTMLImageElement} imgS - img_s del cartucho (no se pinta).
@@ -2129,12 +2129,12 @@ const BaseDescomponer = (() => {
     // por los enlaces del propio GWI, sin autoría.
     const ocultos = new Set();
     for (const seg of (segmentosJson || [])) {
-      if (seg.tipo === ComunListas.tipos.digito) {
+      if (seg.tipo === comunListas.tipos.digito) {
         for (const campo of ENLACES_DIGITO) {
           if (seg[campo]) ocultos.add(seg[campo]);
         }
       }
-      if (seg.tipo === ComunListas.tipos.contador) {
+      if (seg.tipo === comunListas.tipos.contador) {
         for (const campo of ENLACES_CONTADOR) {
           if (seg[campo]) ocultos.add(seg[campo]);
         }
@@ -2154,7 +2154,7 @@ const BaseDescomponer = (() => {
         lista.push({ x: seg.x, y: seg.y, imagen: img, color: null });
       }
     }
-    // Pintado con las funciones propias del diseñador (sin BaseGraficos):
+    // Pintado con las funciones propias del diseñador (sin baseGraficos):
     // fondo + todos los segmentos de la lista temporal, en negro.
     _fijarEscalaAparato(imgS ? imgS.naturalWidth : 0, imgS ? imgS.naturalHeight : 0);
     const canvas = _$('pantalla');
@@ -2164,7 +2164,7 @@ const BaseDescomponer = (() => {
     }
     // Restaurar la lista del editor (la de grupos), que arrancar ya
     // fijó: sin esto, el primer clic en el mapa pintaría sin colores.
-    BaseGraficos.fijarSegmentos(_listaMotor());
+    baseGraficos.fijarSegmentos(_listaMotor());
     console.info('[gwi] pantalla fusionada (fondo + ' + lista.length +
       ' segmentos); ' + (segmentosJson || []).length +
       ' segmento(s) en memoria.');
@@ -2175,9 +2175,9 @@ const BaseDescomponer = (() => {
    * aquí: no es necesario y, si img_f e img_s difieren algo de
    * tamaño, el arte desplazado se mezclaría con los segmentos) y
    * ENCIMA cada segmento con el COLOR de su tipo (tipico=true del
-   * BaseGraficos, color escrito sobre el blanco). Caja y número con el
+   * baseGraficos, color escrito sobre el blanco). Caja y número con el
    * mismo color; el seleccionado, rojo intenso. La escala vive como
-   * propiedad del canvas (canvas.escala), que es lo que usa el BaseGraficos.
+   * propiedad del canvas (canvas.escala), que es lo que usa el baseGraficos.
    * @returns {void}
    */
   function _pintarMapa() {
@@ -2187,23 +2187,23 @@ const BaseDescomponer = (() => {
       Math.max(ESCALA_MIN, Math.floor(ANCHO_MAPA_MAX / base.ancho)));
     canvas.width = base.ancho * escala;
     canvas.height = base.alto * escala;
-    canvas.escala = escala;                  // factor fijo para el BaseGraficos
-    // La lista del BaseGraficos SIEMPRE sincronizada con los grupos antes
+    canvas.escala = escala;                  // factor fijo para el baseGraficos
+    // La lista del baseGraficos SIEMPRE sincronizada con los grupos antes
     // de dibujar: si quedó desfasada (p. ej. la de pintarGWI, con
     // color null tras cargar un GWI), los segmentos saldrían todos
     // negros. El mapa es el consumidor de la vista de trabajo.
-    BaseGraficos.fijarSegmentos(_listaMotor());
+    baseGraficos.fijarSegmentos(_listaMotor());
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#FFFFFF';               // lienzo neutro, sin fondo
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < grupos.length; i++) {
-      BaseGraficos.DibujarSegmento(canvas, i, true);
+      baseGraficos.DibujarSegmento(canvas, i, true);
     }
     const fuente = Math.max(9, 6 * escala);
     ctx.font = fuente + 'px monospace';
     ctx.textBaseline = 'top';
-    // Cajas y números con el mismo criterio que el BaseGraficos: azul los
+    // Cajas y números con el mismo criterio que el baseGraficos: azul los
     // salientes del seleccionado, magenta los que le apuntan, su
     // color de tipo el resto, rojo intenso el seleccionado.
     const relCajas = _relacionadosDe(seleccion);
@@ -2287,13 +2287,13 @@ const BaseDescomponer = (() => {
 
   /**
    * Refresca todo el estado visible: barra de info, lista de
-   * numerables, sincronización de la lista del BaseGraficos y las dos
+   * numerables, sincronización de la lista del baseGraficos y las dos
    * vistas (aparato y mapa).
    * @returns {void}
    */
   function _refrescar() {
     _refrescarInfo();
-    BaseGraficos.fijarSegmentos(_listaMotor());      // grupos → lista del BaseGraficos
+    baseGraficos.fijarSegmentos(_listaMotor());      // grupos → lista del baseGraficos
     pintarPantallaAutoria();
     _pintarMapa();
   }
@@ -2392,7 +2392,7 @@ const BaseDescomponer = (() => {
       _pintarMapa();
       _mostrarPanel();
       if (dentro.length > 1) {
-        BaseDirector.avisar(dentro.length + ' segmentos marcados: "Unir" los ' +
+        baseDirector.avisar(dentro.length + ' segmentos marcados: "Unir" los ' +
           'fusiona; un clic en el mapa los desmarca.');
       }
       return;
@@ -2461,7 +2461,7 @@ const BaseDescomponer = (() => {
     // es arte (y el recuadro ya no la marca; esto es por si un
     // GWI editado a mano la metió en «marcados»).
     if (lista.some(_esCartucho)) {
-      BaseDirector.avisarError('El segmento de cartucho no participa en ' +
+      baseDirector.avisarError('El segmento de cartucho no participa en ' +
         'uniones: es la ficha del cartucho, no arte.');
       return;
     }
@@ -2478,14 +2478,14 @@ const BaseDescomponer = (() => {
     // para reintentar tras corregir (o desmarcar con un clic).
     const tipos = new Set(lista.map(g => g.prop.tipo));
     if (tipos.size > 1) {
-      BaseDirector.avisarError('No se pueden unir segmentos de tipos distintos (' +
+      baseDirector.avisarError('No se pueden unir segmentos de tipos distintos (' +
         [...tipos].join(', ') + '): ponlos todos del mismo tipo antes de unir.');
       return;
     }
     // F5-I15 (E7): dígitos y contadores no se unen.
     const noUnible = _motivoNoUnible(lista);
     if (noUnible) {
-      BaseDirector.avisarError(noUnible);
+      baseDirector.avisarError(noUnible);
       return;
     }
     // UNIR de un «8» = DÍGITO (F4-I9 v4): si lo marcado son exacta-
@@ -2509,7 +2509,7 @@ const BaseDescomponer = (() => {
     seleccion = _grupoDeComp(id) || null;
     _refrescar();
     _mostrarPanel();
-    BaseDirector.avisar('Unidos ' + ids + ' en la pieza nueva ' +
+    baseDirector.avisar('Unidos ' + ids + ' en la pieza nueva ' +
       _segId(seleccion) + ' (los originales quedan absorbidos).');
   }
 
@@ -2599,8 +2599,8 @@ const BaseDescomponer = (() => {
   }
   /**
    * ESCRIBE la Secuencia en el PUENTE (corrección del 23-10-2026):
-   * ComunListas.fijarSecuencia, con lo que la ficha tiene AHORA. La
-   * escribía solo BaseDirector al cargar (json.secuencia): definir la
+   * comunListas.fijarSecuencia, con lo que la ficha tiene AHORA. La
+   * escribía solo baseDirector al cargar (json.secuencia): definir la
    * Secuencia en el editor y pulsar Start sin recargar dejaba el
    * puente con null — las animaciones no se lanzaban nunca. La llama
    * _reconstruir() (todo cambio de la ficha pasa por ahí: ticks,
@@ -2608,9 +2608,9 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
   function _sincronizarSecuencia() {
-    if (typeof ComunListas !== 'undefined' &&
-      typeof ComunListas.fijarSecuencia === 'function') {
-      ComunListas.fijarSecuencia(_secuenciaDelCartucho());
+    if (typeof comunListas !== 'undefined' &&
+      typeof comunListas.fijarSecuencia === 'function') {
+      comunListas.fijarSecuencia(_secuenciaDelCartucho());
     }
   }
 
@@ -2672,15 +2672,15 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
   function _sincronizarDirector() {
-    if (typeof ComunListas === 'undefined') return;
-    if (typeof ComunListas.fijarPausas === 'function') {
-      ComunListas.fijarPausas(_pausasDelCartucho());
+    if (typeof comunListas === 'undefined') return;
+    if (typeof comunListas.fijarPausas === 'function') {
+      comunListas.fijarPausas(_pausasDelCartucho());
     }
-    if (typeof ComunListas.fijarAceleracion === 'function') {
-      ComunListas.fijarAceleracion(_aceleracionDelCartucho());
+    if (typeof comunListas.fijarAceleracion === 'function') {
+      comunListas.fijarAceleracion(_aceleracionDelCartucho());
     }
-    if (typeof ComunListas.fijarRutas === 'function') {
-      ComunListas.fijarRutas(_rutasDelCartucho());
+    if (typeof comunListas.fijarRutas === 'function') {
+      comunListas.fijarRutas(_rutasDelCartucho());
     }
   }
 
@@ -2813,12 +2813,12 @@ const BaseDescomponer = (() => {
   function _hacerDigito() {
     const lista = grupos.filter(g => marcados.has(g));
     if (lista.length !== 7) {
-      BaseDirector.avisarError('Hacer dígito necesita exactamente 7 barras ' +
+      baseDirector.avisarError('Hacer dígito necesita exactamente 7 barras ' +
         'marcadas (hay ' + lista.length + ').');
       return;
     }
     if (lista.some(g => g.prop.tipo !== 'juego')) {
-      BaseDirector.avisarError('Las siete barras deben ser de tipo juego ' +
+      baseDirector.avisarError('Las siete barras deben ser de tipo juego ' +
         '(sin jugador, inicios ni contadores).');
       return;
     }
@@ -2827,14 +2827,14 @@ const BaseDescomponer = (() => {
     for (const g of lista) {
       const dueno = _digitoDeBarra(g);
       if (dueno) {
-        BaseDirector.avisarError(_segId(g) + ' ya es barra del dígito ' +
+        baseDirector.avisarError(_segId(g) + ' ya es barra del dígito ' +
           _segId(dueno) + ': las barras no se comparten.');
         return;
       }
     }
     const barras = _clasificarBarras(lista);
     if (!barras) {
-      BaseDirector.avisarError('La selección no parece un «8»: se necesitan ' +
+      baseDirector.avisarError('La selección no parece un «8»: se necesitan ' +
         '3 barras horizontales (a, g, d) y 4 verticales sin ' +
         'ambigüedad (b, c a la derecha; f, e a la izquierda).');
       return;
@@ -2868,7 +2868,7 @@ const BaseDescomponer = (() => {
     seleccion = _grupoDeComp(id) || null;
     _refrescar();
     _mostrarPanel();
-    BaseDirector.avisar('Dígito creado: ' + _segId(seleccion) +
+    baseDirector.avisar('Dígito creado: ' + _segId(seleccion) +
       ' agrupa las siete barras (dejan de ser manejables).');
   }
   /**
@@ -2898,12 +2898,12 @@ const BaseDescomponer = (() => {
   function _hacerContador() {
     const lista = grupos.filter(g => marcados.has(g));
     if (lista.length < 1 || lista.length > 4) {
-      BaseDirector.avisarError('Hacer contador necesita de 1 a 4 dígitos ' +
+      baseDirector.avisarError('Hacer contador necesita de 1 a 4 dígitos ' +
         'marcados (hay ' + lista.length + ').');
       return;
     }
     if (lista.some(g => g.prop.tipo !== 'dígito')) {
-      BaseDirector.avisarError('Sólo se agrupan segmentos de tipo dígito ' +
+      baseDirector.avisarError('Sólo se agrupan segmentos de tipo dígito ' +
         '(usa «Hacer dígito» antes con cada «8»).');
       return;
     }
@@ -2911,7 +2911,7 @@ const BaseDescomponer = (() => {
     for (const g of lista) {
       const dueno = _contadorDeDigito(g);
       if (dueno) {
-        BaseDirector.avisarError(_segId(g) + ' ya es dígito del contador ' +
+        baseDirector.avisarError(_segId(g) + ' ya es dígito del contador ' +
           _segId(dueno) + ': los dígitos no se comparten.');
         return;
       }
@@ -2964,7 +2964,7 @@ const BaseDescomponer = (() => {
     seleccion = _grupoDeComp(id) || null;
     _refrescar();
     _mostrarPanel();
-    BaseDirector.avisar('Contador creado: ' + _segId(seleccion) + ' agrupa ' +
+    baseDirector.avisar('Contador creado: ' + _segId(seleccion) + ' agrupa ' +
       lista.length + ' dígito(s); usa el contador interno ' + interno +
       ' (cámbialo en su panel si no es el que querías).');
   }
@@ -2992,7 +2992,7 @@ const BaseDescomponer = (() => {
       // del contador quedaría colgante. Sepárase el contador antes.
       const cont = _contadorDeDigito(g);
       if (cont) {
-        BaseDirector.avisarError(_segId(g) + ' es dígito del contador ' +
+        baseDirector.avisarError(_segId(g) + ' es dígito del contador ' +
           _segId(cont) + ': separa primero el contador.');
         return;
       }
@@ -3011,7 +3011,7 @@ const BaseDescomponer = (() => {
       seleccion = null;
       _refrescar();
       _mostrarPanel();
-      BaseDirector.avisar('Dígito separado: sus siete barras vuelven al ' +
+      baseDirector.avisar('Dígito separado: sus siete barras vuelven al ' +
         'mapa como segmentos manejables.');
     } else if (g.prop.tipo === 'contador') {
       // Igual que el dígito: baja APLICADA al estado vivo + registro
@@ -3027,7 +3027,7 @@ const BaseDescomponer = (() => {
       seleccion = null;
       _refrescar();
       _mostrarPanel();
-      BaseDirector.avisar('Contador separado: sus dígitos vuelven al ' +
+      baseDirector.avisar('Contador separado: sus dígitos vuelven al ' +
         'mapa como segmentos manejables.');
     } else if (f.miembros) {
       // Pieza de UNIÓN (v4): separar devuelve los ABSORBIDOS al
@@ -3060,7 +3060,7 @@ const BaseDescomponer = (() => {
       seleccion = null;
       _refrescar();
       _mostrarPanel();
-      BaseDirector.avisar('Pieza separada: los ' + f.miembros.length +
+      baseDirector.avisar('Pieza separada: los ' + f.miembros.length +
         ' segmentos absorbidos vuelven al mapa como manejables ' +
         '(sus enlaces externos apuntaban a la pieza y quedan anulados).');
     }
@@ -3082,7 +3082,7 @@ const BaseDescomponer = (() => {
       // autor. Se bloquea con error sin tocar nada: que cambie el
       // tipo de uno de los dos antes de unir.
       if (origen.prop.tipo !== destino.prop.tipo) {
-        BaseDirector.avisarError('No se pueden unir segmentos de tipos distintos (' +
+        baseDirector.avisarError('No se pueden unir segmentos de tipos distintos (' +
           origen.prop.tipo + ' y ' + destino.prop.tipo +
           '): cambia el tipo de uno de los dos antes de unir.');
         _refrescar();
@@ -3090,7 +3090,7 @@ const BaseDescomponer = (() => {
       }
       const noUnible = _motivoNoUnible([origen, destino]);   // F5-I15 (E7)
       if (noUnible) {
-        BaseDirector.avisarError(noUnible);
+        baseDirector.avisarError(noUnible);
         _refrescar();
         return;
       }
@@ -3101,12 +3101,12 @@ const BaseDescomponer = (() => {
       seleccion = _grupoDeComp(id) || null;
       _refrescar();
       _mostrarPanel();
-      BaseDirector.avisar('Unidos ' + idO + ' y ' + idD + ' en la pieza nueva ' +
+      baseDirector.avisar('Unidos ' + idO + ' y ' + idD + ' en la pieza nueva ' +
         _segId(seleccion) + ' (los originales quedan absorbidos).');
       return;
     }
     if (destino === origen) {
-      BaseDirector.avisarError('Un segmento no puede apuntar a sí mismo.');
+      baseDirector.avisarError('Un segmento no puede apuntar a sí mismo.');
       _refrescar();
       return;
     }
@@ -3120,7 +3120,7 @@ const BaseDescomponer = (() => {
     // sería imposible de recorrer por el motor).
     if (ENLACES_JUGADOR.indexOf(campo) >= 0 &&
       destino.prop.tipo !== 'jugador') {
-      BaseDirector.avisarError('La dirección "' + campo + '" debe apuntar a ' +
+      baseDirector.avisarError('La dirección "' + campo + '" debe apuntar a ' +
         'un segmento de tipo jugador (' + idD + ' es ' +
         destino.prop.tipo + ').');
       _refrescar();
@@ -3131,7 +3131,7 @@ const BaseDescomponer = (() => {
     if (CAMPOS_SECUENCIA.indexOf(campo) >= 0 &&
       destino.prop.tipo !== 'juego' && destino.prop.tipo !== 'inicio' &&
       destino.prop.tipo !== 'adicional') {
-      BaseDirector.avisarError('El segmento de la Secuencia debe ser de ' +
+      baseDirector.avisarError('El segmento de la Secuencia debe ser de ' +
         'tipo juego, inicio o adicional (' + idD + ' es ' +
         destino.prop.tipo + ').');
       _refrescar();
@@ -3144,23 +3144,23 @@ const BaseDescomponer = (() => {
     if (campo === 'mostrarJunto') {
       const pd = destino.prop;
       if (pd.tipo !== 'juego') {
-        BaseDirector.avisarError('El secundario «mostrar junto a» debe ser ' +
+        baseDirector.avisarError('El secundario «mostrar junto a» debe ser ' +
           'de tipo juego (' + idD + ' es ' + pd.tipo + ').');
         _refrescar(); return;
       }
       if (pd.siguiente !== null || pd.salvado !== null || pd.muerte !== null ||
         pd.colision !== null) {
-        BaseDirector.avisarError(idD + ' forma parte de una cadena o declara ' +
+        baseDirector.avisarError(idD + ' forma parte de una cadena o declara ' +
           'colisión: un secundario no pertenece a ninguna red de enlaces.');
         _refrescar(); return;
       }
       if (pd.mostrarJunto !== null) {
-        BaseDirector.avisarError(idD + ' ya es principal de otro secundario: ' +
+        baseDirector.avisarError(idD + ' ya es principal de otro secundario: ' +
           'no se encadenan acompañamientos.');
         _refrescar(); return;
       }
       if (pd.mostradoJunto !== null && _grupoDeComp(pd.mostradoJunto) !== origen) {
-        BaseDirector.avisarError(idD + ' ya es secundario de ' +
+        baseDirector.avisarError(idD + ' ya es secundario de ' +
           _resolverEnlace(pd.mostradoJunto) + ': un secundario tiene ' +
           'un solo principal.');
         _refrescar(); return;
@@ -3169,7 +3169,7 @@ const BaseDescomponer = (() => {
         ['siguiente', 'salvado', 'muerte'].some(c =>
           _grupoDeComp(x.prop[c]) === destino));
       if (duenoC) {
-        BaseDirector.avisarError(idD + ' es eslabón de la cadena de ' +
+        baseDirector.avisarError(idD + ' es eslabón de la cadena de ' +
           _segId(duenoC) + ': un secundario no pertenece a ninguna ' +
           'red de enlaces.');
         _refrescar(); return;
@@ -3177,7 +3177,7 @@ const BaseDescomponer = (() => {
     }
     if (campo === 'colision') {
       if (destino.prop.tipo !== 'jugador') {
-        BaseDirector.avisarError('La colisión debe apuntar a un segmento de tipo ' +
+        baseDirector.avisarError('La colisión debe apuntar a un segmento de tipo ' +
           'jugador (' + idD + ' es ' + destino.prop.tipo + ').');
         _refrescar();
         return;
@@ -3186,7 +3186,7 @@ const BaseDescomponer = (() => {
         x.prop.colision !== null &&
         _grupoDeComp(x.prop.colision) === destino);
       if (dueno) {
-        BaseDirector.avisarError(idD + ' ya es el punto de colisión de ' +
+        baseDirector.avisarError(idD + ' ya es el punto de colisión de ' +
           _segId(dueno) + ': un jugador no puede serlo de varios ' +
           'elementos.');
         _refrescar();
@@ -3200,7 +3200,7 @@ const BaseDescomponer = (() => {
     // jugador no tiene sentido.
     if ((campo === 'salvado' || campo === 'muerte') && p.colision !== null &&
       destino.prop.tipo === 'jugador') {
-      BaseDirector.avisarError('El desenlace ' + campo + ' debe enlazar con un ' +
+      baseDirector.avisarError('El desenlace ' + campo + ' debe enlazar con un ' +
         'segmento de tipo juego, inicio o vida/muerte (' + idD + ' es ' +
         destino.prop.tipo + ').');
       _refrescar();
@@ -3212,7 +3212,7 @@ const BaseDescomponer = (() => {
     // tampoco se comparten entre dígitos.
     if (ENLACES_CONTADOR.indexOf(campo) >= 0) {
       if (destino.prop.tipo !== 'dígito') {
-        BaseDirector.avisarError('El contador debe enlazar con un segmento de ' +
+        baseDirector.avisarError('El contador debe enlazar con un segmento de ' +
           'tipo dígito (' + idD + ' es ' + destino.prop.tipo + ').');
         _refrescar();
         return;
@@ -3221,7 +3221,7 @@ const BaseDescomponer = (() => {
         if (x.prop.tipo === 'contador' && x !== origen) {
           for (const otra of ENLACES_CONTADOR) {
             if (_grupoDeComp(x.prop[otra]) === destino) {
-              BaseDirector.avisarError(idD + ' ya es dígito del contador ' +
+              baseDirector.avisarError(idD + ' ya es dígito del contador ' +
                 _segId(x) + ': los dígitos no se comparten.');
               _refrescar();
               return;
@@ -3232,7 +3232,7 @@ const BaseDescomponer = (() => {
     }
     if (ENLACES_DIGITO.indexOf(campo) >= 0) {
       if (destino.prop.tipo !== 'juego') {
-        BaseDirector.avisarError('Las barras son segmentos de tipo juego (' +
+        baseDirector.avisarError('Las barras son segmentos de tipo juego (' +
           idD + ' es ' + destino.prop.tipo + ').');
         _refrescar();
         return;
@@ -3241,7 +3241,7 @@ const BaseDescomponer = (() => {
         if (x.prop.tipo === 'dígito' && x !== origen) {
           for (const otra of ENLACES_DIGITO) {
             if (_grupoDeComp(x.prop[otra]) === destino) {
-              BaseDirector.avisarError(idD + ' ya es la barra "' +
+              baseDirector.avisarError(idD + ' ya es la barra "' +
                 otra.replace('barra_', '') + '" del dígito ' +
                 _segId(x) + ': las barras no se comparten.');
               _refrescar();
@@ -3354,7 +3354,7 @@ const BaseDescomponer = (() => {
     seleccion = _grupoDeComp(origen.raiz) || null;   // grupos nuevos tras reconstruir
     _refrescar();
     _mostrarPanel();
-    BaseDirector.avisar(idO + '.' + campo + ' = ' + idD + '.');
+    baseDirector.avisar(idO + '.' + campo + ' = ' + idD + '.');
   }
 
   // ---- Panel de propiedades ----
@@ -3585,7 +3585,7 @@ const BaseDescomponer = (() => {
             if (nuevo > 99) {            // F5-I16 (R2): recorte por arriba, con aviso
               nuevo = 99;
               inpT.value = String(nuevo);
-              BaseDirector.avisar('Ticks entre lanzamientos limitados a 99.');
+              baseDirector.avisar('Ticks entre lanzamientos limitados a 99.');
             }
           }
           if (nuevo === p.secTicks) return;
@@ -3617,7 +3617,7 @@ const BaseDescomponer = (() => {
         bElegir.addEventListener('click', () => {
           eleccion = { campo: campo, origen: g };
           _refrescarInfo();
-          BaseDirector.avisar('Pulsa en el mapa el segmento ' + k +
+          baseDirector.avisar('Pulsa en el mapa el segmento ' + k +
             ' de la Secuencia.');
         });
         fila.appendChild(et);
@@ -3667,7 +3667,7 @@ const BaseDescomponer = (() => {
             if (maximo && nuevo > maximo) {   // F5-I16 (R3): recorte por arriba, con aviso
               nuevo = maximo;
               inp.value = String(nuevo);
-              BaseDirector.avisar(etiqueta + ': limitado a ' + maximo + '.');
+              baseDirector.avisar(etiqueta + ': limitado a ' + maximo + '.');
             }
           }
           if (nuevo === p[campo]) return;
@@ -3744,7 +3744,7 @@ const BaseDescomponer = (() => {
       bSubir.textContent = '↑ Subir';
       bSubir.addEventListener('click', () => {
         if (!_moverNumero(g, -1)) {
-          BaseDirector.avisar('Ya es el primero de su ' +
+          baseDirector.avisar('Ya es el primero de su ' +
             ((p.tipo === 'inicio') ? 'ruta' : 'contador') + '.');
           return;
         }
@@ -3758,7 +3758,7 @@ const BaseDescomponer = (() => {
       bBajar.textContent = '↓ Bajar';
       bBajar.addEventListener('click', () => {
         if (!_moverNumero(g, +1)) {
-          BaseDirector.avisar('Ya es el último de su ' +
+          baseDirector.avisar('Ya es el último de su ' +
             ((p.tipo === 'inicio') ? 'ruta' : 'contador') + '.');
           return;
         }
@@ -3795,7 +3795,7 @@ const BaseDescomponer = (() => {
       const fSel = ficticios.find(x => x.id === g.raiz);
       if (g.raiz < 0 && !(fSel && fSel.miembros) &&
         selTipo.value !== 'dígito' && selTipo.value !== 'contador') {
-        BaseDirector.avisarError('Un segmento ficticio (creado por ' +
+        baseDirector.avisarError('Un segmento ficticio (creado por ' +
           '«Hacer dígito»/«Hacer contador») solo puede ser dígito ' +
           'o contador: sepáralo primero si quieres otra cosa.');
         selTipo.value = p.tipo;
@@ -3806,7 +3806,7 @@ const BaseDescomponer = (() => {
       // «Hacer contador», con sus barras y dígitos, no de una unión.
       if (fSel && fSel.miembros &&
         (selTipo.value === 'dígito' || selTipo.value === 'contador')) {
-        BaseDirector.avisarError('Una pieza de unión no puede ser ' +
+        baseDirector.avisarError('Una pieza de unión no puede ser ' +
           selTipo.value + ': el dígito y el contador nacen de «Hacer ' +
           'dígito» y «Hacer contador».');
         selTipo.value = p.tipo;
@@ -3928,7 +3928,7 @@ const BaseDescomponer = (() => {
             segmento: cart.raiz, finJuego: null,
             antes: { finJuego: anterior }
           });
-          BaseDirector.avisar('Sin segmentos de ' + anterior +
+          baseDirector.avisar('Sin segmentos de ' + anterior +
             ': el fin de partida queda sin definir.');
         }
       }
@@ -3942,7 +3942,7 @@ const BaseDescomponer = (() => {
           segmento: cart.raiz, finJuego: p.tipo,
           antes: { finJuego: null }
         });
-        BaseDirector.avisar('Fin de partida asociado a los iconos de ' +
+        baseDirector.avisar('Fin de partida asociado a los iconos de ' +
           p.tipo + ' (primer segmento de la familia).');
       }
       // F5-I15 (E4): si se descartó el «mostrar junto a», el SECUNDARIO
@@ -4056,11 +4056,11 @@ const BaseDescomponer = (() => {
           });
           p.primero = true;
           _registrarCambios(entradas);
-          BaseDirector.avisar('Primer jugador: ' + _segId(g) + '.');
+          baseDirector.avisar('Primer jugador: ' + _segId(g) + '.');
         } else {
           _registrarCambio(g.raiz, { primero: null }, { primero: p.primero });
           p.primero = null;
-          BaseDirector.avisar('Sin marca de primer jugador: el motor usará ' +
+          baseDirector.avisar('Sin marca de primer jugador: el motor usará ' +
             'el primero que encuentre.');
         }
         _reconstruir();
@@ -4116,7 +4116,7 @@ const BaseDescomponer = (() => {
         if (!activo) return;
         eleccion = { campo: campo, origen: g };
         _refrescarInfo();
-        BaseDirector.avisar('Pulsa en el mapa el segmento «' + nombres[campo] +
+        baseDirector.avisar('Pulsa en el mapa el segmento «' + nombres[campo] +
           '» de ' + _segId(g) + '.');
       });
       fila.appendChild(et);
@@ -4249,7 +4249,7 @@ const BaseDescomponer = (() => {
           if (!activo) return;
           eleccion = { campo: 'colision', origen: g };
           _refrescarInfo();
-          BaseDirector.avisar('Pulsa en el mapa el segmento «' + nombreCol +
+          baseDirector.avisar('Pulsa en el mapa el segmento «' + nombreCol +
             '» de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
@@ -4298,7 +4298,7 @@ const BaseDescomponer = (() => {
           if (!activo) return;
           eleccion = { campo: campo, origen: g };
           _refrescarInfo();
-          BaseDirector.avisar('Pulsa en el mapa el segmento «' + nombresDes[campo] +
+          baseDirector.avisar('Pulsa en el mapa el segmento «' + nombresDes[campo] +
             '» de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
@@ -4369,7 +4369,7 @@ const BaseDescomponer = (() => {
           seleccion = _grupoDeComp(g.raiz) || null;
           _refrescar();
           _mostrarPanel();
-          BaseDirector.avisar(_segId(g) + '.' + campo + ' = ' +
+          baseDirector.avisar(_segId(g) + '.' + campo + ' = ' +
             (nuevo === null ? 'ninguno' : nuevo) + '.');
         });
         fila.appendChild(et);
@@ -4402,7 +4402,7 @@ const BaseDescomponer = (() => {
         bElegir.addEventListener('click', () => {
           eleccion = { campo: campo, origen: g };
           _refrescarInfo();
-          BaseDirector.avisar('Pulsa en el mapa la barra ' + letra +
+          baseDirector.avisar('Pulsa en el mapa la barra ' + letra +
             ' de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
@@ -4494,7 +4494,7 @@ const BaseDescomponer = (() => {
         bElegir.addEventListener('click', () => {
           eleccion = { campo: campo, origen: g };
           _refrescarInfo();
-          BaseDirector.avisar('Pulsa en el mapa el DÍGITO de ' + _segId(g) + '.');
+          baseDirector.avisar('Pulsa en el mapa el DÍGITO de ' + _segId(g) + '.');
         });
         fila.appendChild(et);
         fila.appendChild(valor);
@@ -4561,7 +4561,7 @@ const BaseDescomponer = (() => {
           if (nuevo > 255) {            // F5-I16 (R1): recorte por arriba, con aviso
             nuevo = 255;
             inp.value = String(nuevo);
-            BaseDirector.avisar('Valor inicial limitado a 255.');
+            baseDirector.avisar('Valor inicial limitado a 255.');
           }
           if (nuevo === p.valorInicial) return;
           const viejo = p.valorInicial;
@@ -4676,7 +4676,7 @@ const BaseDescomponer = (() => {
       bUnir.addEventListener('click', () => {
         eleccion = { campo: 'unir', origen: g };
         _refrescarInfo();
-        BaseDirector.avisar('Pulsa en el mapa el segmento a unir con ' + _segId(g) + '.');
+        baseDirector.avisar('Pulsa en el mapa el segmento a unir con ' + _segId(g) + '.');
       });
       filaUnir.appendChild(etUnir);
       filaUnir.appendChild(bUnir);
@@ -4719,7 +4719,7 @@ const BaseDescomponer = (() => {
   // ---- Verificación y guardado ----
 
   /**
-   * Llama a la verificación del diseñador (en BaseCartucho desde
+   * Llama a la verificación del diseñador (en baseCartucho desde
    * F5-I5: es el contrato de los formatos, no lógica del editor),
    * presenta sus hallazgos y, si todo lo bloqueante pasa, guarda el
    * GWI.
@@ -4727,7 +4727,7 @@ const BaseDescomponer = (() => {
    */
   function verificarYGuardar() {
     if (!base || grupos.length === 0) {
-      BaseDirector.avisarError('No hay nada que verificar: descompón la imagen primero.');
+      baseDirector.avisarError('No hay nada que verificar: descompón la imagen primero.');
       return;
     }
     if (_cambiosSinAplicar()) return;        // F5-I17 (M12)
@@ -4735,12 +4735,12 @@ const BaseDescomponer = (() => {
     // clausura: los grupos del editor, sus helpers y las constantes
     // de los enlaces. Los inversos que calcula se registran en el
     // historial del editor, como siempre.
-    const hallazgos = BaseCartucho.verificarCartucho(_ctxVerificacion());
+    const hallazgos = baseCartucho.verificarCartucho(_ctxVerificacion());
     const errores = hallazgos.errores;
     const avisos = hallazgos.avisos;
     if (errores.length > 0) {
       for (const e of errores) console.error('[verificar] ' + e);
-      BaseDirector.avisarError('Definición incompleta: ' + errores.length +
+      baseDirector.avisarError('Definición incompleta: ' + errores.length +
         ' error(es) — mira la consola (F12). Primero: ' + errores[0]);
       return;
     }
@@ -4786,10 +4786,10 @@ const BaseDescomponer = (() => {
       segmentos: segmentos(),
       secuencia: _secuenciaDelCartucho() || undefined
     };
-    if (!BaseCartucho.validarTopes(json)) {
+    if (!baseCartucho.validarTopes(json)) {
       console.warn('[gwc] el cartucho supera el tope de 255 ' +
         'sprites/segmentos/secuencias del GWC.');
-      BaseDirector.avisar('Aviso: el cartucho supera el tope de 255 ' +
+      baseDirector.avisar('Aviso: el cartucho supera el tope de 255 ' +
         'sprites/segmentos/secuencias del GWC: no se podrá generar ' +
         '(el botón «Generar GWI+GWC» lo bloqueará).');
     }
@@ -4846,7 +4846,7 @@ const BaseDescomponer = (() => {
   function _descargarGWS(setup) {
     if (!setup) return;
     const blob = new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' });
-    BasePACK.descargarBlob(blob, _nombreFichero(setup.nombre, '.GWS'));
+    basePack.descargarBlob(blob, _nombreFichero(setup.nombre, '.GWS'));
   }
 
   /**
@@ -4855,7 +4855,7 @@ const BaseDescomponer = (() => {
    * MISMA función independiente que «Verificar y Guardar»
    * (bloqueante), comprueba los topes del GWC (bloqueantes aquí:
    * no se genera NINGUNO de los dos ficheros), genera el GWC
-   * primero — BaseCartucho.generarGWC sobre las mismas listas, con
+   * primero — baseCartucho.generarGWC sobre las mismas listas, con
    * la pantalla declarada del setup como destino y la geometría
    * extraída (img_s) como fuente, escalado vecino más cercano — y
    * guarda el GWI después con el CODIGO DEL PAR: la suma de
@@ -4870,14 +4870,14 @@ const BaseDescomponer = (() => {
       await _generarPar();
     } catch (e) {
       console.error(e);
-      BaseDirector.avisarError('No se generó el par GWI+GWC: ' + e.message);
+      baseDirector.avisarError('No se generó el par GWI+GWC: ' + e.message);
     }
   }
 
   /** El cuerpo de «Generar»: se monta todo en memoria y los ficheros se descargan al final (atomicidad del par). */
   async function _generarPar() {
     if (!base || grupos.length === 0) {
-      BaseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
+      baseDirector.avisarError('No hay nada que generar: descompón la imagen primero.');
       return;
     }
     if (_cambiosSinAplicar()) return;        // F5-I17 (M12)
@@ -4885,21 +4885,21 @@ const BaseDescomponer = (() => {
     // resolución, imágenes y botones) salen de la FICHA de la pestaña
     // Cartucho: se verifican antes de generar NADA (los tres ficheros
     // salen de la misma foto de memoria).
-    const ficha = BaseFicha.verificar({ generar: true, mostrar: true });
+    const ficha = baseFicha.verificar({ generar: true, mostrar: true });
     for (const a of ficha.avisos) console.warn('[ficha] ' + a);
     if (ficha.errores.length > 0) {
       for (const e of ficha.errores) console.error('[ficha] ' + e);
-      BaseDirector.avisarError('La ficha del cartucho tiene ' + ficha.errores.length +
+      baseDirector.avisarError('La ficha del cartucho tiene ' + ficha.errores.length +
         ' error(es): ' + ficha.errores[0] + ' (pestaña Cartucho).');
       return;
     }
-    const imagenesFicha = BaseFicha.imagenesEnMemoria();
+    const imagenesFicha = baseFicha.imagenesEnMemoria();
     // 1. La verificación del diseñador, BLOQUEANTE (misma llamada y
     // misma presentación que «Verificar y Guardar»).
-    const hallazgos = BaseCartucho.verificarCartucho(_ctxVerificacion());
+    const hallazgos = baseCartucho.verificarCartucho(_ctxVerificacion());
     if (hallazgos.errores.length > 0) {
       for (const e of hallazgos.errores) console.error('[verificar] ' + e);
-      BaseDirector.avisarError('Definición incompleta: ' + hallazgos.errores.length +
+      baseDirector.avisarError('Definición incompleta: ' + hallazgos.errores.length +
         ' error(es) — mira la consola (F12). Primero: ' + hallazgos.errores[0]);
       return;
     }
@@ -4907,10 +4907,10 @@ const BaseDescomponer = (() => {
     // 2. Topes del GWC, BLOQUEANTES aquí (en descomponer y al
     // guardar el GWI son un aviso): no se genera NINGÚN fichero.
     const json = _montarGWI();
-    if (!BaseCartucho.validarTopes(json)) {
+    if (!baseCartucho.validarTopes(json)) {
       console.error('[gwc] el cartucho supera el tope de 255 ' +
         'sprites/segmentos/secuencias del GWC: no se genera nada.');
-      BaseDirector.avisarError('El cartucho supera el tope de 255 ' +
+      baseDirector.avisarError('El cartucho supera el tope de 255 ' +
         'sprites/segmentos/secuencias del GWC: no se genera nada. ' +
         'Reduce el cartucho y vuelve a generar.');
       return;
@@ -4920,9 +4920,9 @@ const BaseDescomponer = (() => {
     // es la geometría extraída de img_s (base): las máscaras y las
     // posiciones viajan escaladas a esa pantalla, lo que el
     // simulador pinta al vuelo.
-    const pantallaSetup = BaseDirector.pantallaDeSetup();
+    const pantallaSetup = baseDirector.pantallaDeSetup();
     if (!pantallaSetup) {
-      BaseDirector.avisarError('Sin setup cargado no hay pantalla declarada: ' +
+      baseDirector.avisarError('Sin setup cargado no hay pantalla declarada: ' +
         'el GWC no sabe a qué resolución escalar. Carga el ' +
         'setup de la máquina primero.');
       return;
@@ -4931,8 +4931,8 @@ const BaseDescomponer = (() => {
       ancho: pantallaSetup.ancho, alto: pantallaSetup.alto,
       fuente: { ancho: base.ancho, alto: base.alto }
     };
-    BaseDirector.avisar('Generando GWC…');
-    const gwc = BaseCartucho.generarGWC(json, sprites, pantalla);
+    baseDirector.avisar('Generando GWC…');
+    const gwc = baseCartucho.generarGWC(json, sprites, pantalla);
     // Espacio ahorrado por la deduplicación de sprites: los segmentos
     // que comparten imagen solo la escriben UNA vez (sin deduplicación,
     // cada segmento llevaría su copia). GWI: bytes del PNG real de cada
@@ -4957,17 +4957,17 @@ const BaseDescomponer = (() => {
       ? Math.round((ahorroGWI / tamanoSinDedup) * 100) : 0;
     const pctGWC = gwc.bytes.length + gwc.ahorroSprites > 0
       ? Math.round((gwc.ahorroSprites / (gwc.bytes.length + gwc.ahorroSprites)) * 100) : 0;
-    BaseDirector.avisar(BaseCartucho.estadistica(gwc));
+    baseDirector.avisar(baseCartucho.estadistica(gwc));
     // F5-I20 (MA02) y F5-I21: ocupación de la memoria, solo informativa. La
     // memoria es la del Setup (solo se edita allí y es la que lleva el GWI);
     // sin memoria (o a 0) no hay texto. RAM usada = bytes del GWC; FLASH
     // usada = el bloque de fondo, que hoy no se cuenta (0). Los informativos
     // «Último GWC calculado» y «Último fondo» del Setup salen de aquí mismo.
-    const setupMem = BaseDirector.datosSetup();
-    const memoriaSetup = BaseCartucho.memoriaNoCero(setupMem ? setupMem.memoria : null);
+    const setupMem = baseDirector.datosSetup();
+    const memoriaSetup = baseCartucho.memoriaNoCero(setupMem ? setupMem.memoria : null);
     const bytesFondo = 0;
-    const textoMemoria = BaseCartucho.ocupacionMemoria(memoriaSetup || {}, gwc.bytes.length, bytesFondo);
-    BaseSetup.informarUltimos({ gwc: gwc.bytes.length, fondo: bytesFondo, memoria: memoriaSetup });
+    const textoMemoria = baseCartucho.ocupacionMemoria(memoriaSetup || {}, gwc.bytes.length, bytesFondo);
+    baseSetup.informarUltimos({ gwc: gwc.bytes.length, fondo: bytesFondo, memoria: memoriaSetup });
     const avisoMemoria = textoMemoria ? ' ' + textoMemoria : '';
     // 4. El GWI después, con el Código GWC del par: el código del
     // GWC recién generado (TEXTO «#HHHH#», visible igual que en la
@@ -4975,19 +4975,19 @@ const BaseDescomponer = (() => {
     // «Verificar y Guardar» guarda sin codigoGWC, el GWI no lleva
     // sobras).
     json.codigoGWC = gwc.codigo;
-    BaseFicha.actualizarCodigoGWC(gwc.codigo);   // F5-I17 (M1): la ficha enseña el código nuevo
+    baseFicha.actualizarCodigoGWC(gwc.codigo);   // F5-I17 (M1): la ficha enseña el código nuevo
     // F5-I17 (M2): si el GWI cargado traía codigoGWC (#X#) y el código
     // nuevo del par es #Y# distinto, el GWC #X# de la carpeta queda
     // desfasado: aviso explícito con los dos códigos (si el GWI no
     // traía código, no hay nada que desparejar).
-    const codigoAnterior = (typeof BaseDirector !== 'undefined' && BaseDirector.codigoGWCCargado)
-      ? BaseDirector.codigoGWCCargado() : null;
+    const codigoAnterior = (typeof baseDirector !== 'undefined' && baseDirector.codigoGWCCargado)
+      ? baseDirector.codigoGWCCargado() : null;
     const avisoPar = (codigoAnterior && codigoAnterior !== gwc.codigo)
       ? ' Atención: el GWC anterior (' + codigoAnterior + ') de la carpeta queda desfasado: sustitúyelo por el nuevo (' + gwc.codigo + ').'
       : '';
     if (avisoPar) console.warn('[par] ' + avisoPar.trim());
-    BaseDirector.avisar('Guardando GWI…');
-    const tamGWI = await BaseCartucho.guardarGWI(json, sprites,
+    baseDirector.avisar('Guardando GWI…');
+    const tamGWI = await baseCartucho.guardarGWI(json, sprites,
       imagenesFicha.img_f, imagenesFicha.img_s,
       imagenesFicha.img_m, hallazgos.avisos.length);
     // El GWB después (F5-I10): los tres ficheros de la misma ficha, ya
@@ -4998,16 +4998,16 @@ const BaseDescomponer = (() => {
       // setup vigente (real o derivado del cartucho), así la carpeta de
       // destino queda con TODO lo necesario (F5-I19: el GWC binario
       // necesita su setup al lado para poder volver a cargarse).
-      const setup = (typeof BaseDirector !== 'undefined') ? BaseDirector.datosSetup() : null;
+      const setup = (typeof baseDirector !== 'undefined') ? baseDirector.datosSetup() : null;
       if (setup) _descargarGWS(setup);
-      const gwbOk = await BaseFicha.guardar();
-      if (gwbOk) BaseDirector.avisar('Generados GWS, GWB, GWI y GWC (' + json.nombre + ').' + avisoPar + avisoMemoria);
+      const gwbOk = await baseFicha.guardar();
+      if (gwbOk) baseDirector.avisar('Generados GWS, GWB, GWI y GWC (' + json.nombre + ').' + avisoPar + avisoMemoria);
     }
     // F5-I7: los dos tamaños del par, a la vista en el Editor
     // F5-I7+: la línea de deduplicación, DEBAJO de la de tamaños del
     // panel (informarTamanos la reparte; sin deduplicación, la línea
     // se queda vacía y el CSS la oculta).
-    BaseDirector.informarTamanos({
+    baseDirector.informarTamanos({
       gwi: tamGWI || null, gwc: gwc.bytes.length,
       deduplicacion: 'Deduplicadas ' + nDedup + ' imágenes, ahorro GWI ' +
         ahorroGWI + ' bytes (' + pctGWI((tamGWI || 0) + ahorroGWI) + '%), GWC ' +
@@ -5026,10 +5026,10 @@ const BaseDescomponer = (() => {
    * Monta el GWI completo con el estado vigente de la autoría: el
    * JSON del cartucho con sus sprites, segmentos e historial legible
    * (cambios con ids F01/F02… + contador). Desde la F5-I4 el fichero
-   * ZIP lo escribe BaseCartucho.guardarGWI, que recibe este objeto
+   * ZIP lo escribe baseCartucho.guardarGWI, que recibe este objeto
    * YA montado junto a las imágenes en memoria: el editor conoce la
    * autoría, el módulo de cartuchos los ficheros. La serialización
-   * compacta del JSON (formatearGWI) también vive en BaseCartucho.
+   * compacta del JSON (formatearGWI) también vive en baseCartucho.
    * @param {?string} codigo - Código GWC del par (F5-I6): la suma de
    *        verificación del GWC como TEXTO visible «#HHHH#». SOLO lo
    *        estampa «Generar GWI+GWC» (recién calculada); sin él el
@@ -5074,7 +5074,7 @@ const BaseDescomponer = (() => {
 
     // F5-I10: nombre, estilo, resolución, imágenes y botones son los de
     // la FICHA de la pestaña Cartucho (completados con el setup).
-    const ficha = BaseFicha.datosCartucho();
+    const ficha = baseFicha.datosCartucho();
     const segs = segmentos();
     const json = {
       tipo: 'GWI',
@@ -5139,14 +5139,14 @@ const BaseDescomponer = (() => {
    * Cartucho) son BORRADORES hasta Aplicar (F5-I12); los botones del
    * Editor (Verificar y Guardar y Generar) trabajan SIEMPRE con los
    * datos aplicados. La ficha de Cartucho la cubre
-   * BaseFicha.verificar({generar:true}); aquí se ataja la del setup.
+   * baseFicha.verificar({generar:true}); aquí se ataja la del setup.
    * @returns {boolean} true si el setup tiene cambios sin aplicar (y el
    *   error ya se ha mostrado): no se genera ni guarda nada.
    */
   function _cambiosSinAplicar() {
-    if (typeof BaseSetup === 'undefined' || !BaseSetup.hayCambios) return false;
-    if (!BaseSetup.hayCambios()) return false;
-    BaseDirector.avisarError('El setup tiene cambios sin aplicar: pulsa «Aplicar» (o «Guardar GWS») en la pestaña Setup antes de generar o guardar.');
+    if (typeof baseSetup === 'undefined' || !baseSetup.hayCambios) return false;
+    if (!baseSetup.hayCambios()) return false;
+    baseDirector.avisarError('El setup tiene cambios sin aplicar: pulsa «Aplicar» (o «Guardar GWS») en la pestaña Setup antes de generar o guardar.');
     return true;
   }
 
@@ -5157,7 +5157,7 @@ const BaseDescomponer = (() => {
    * cartucho_gwi.json es un cartucho COMPLETO — copia imagenes y
    * botones de la FICHA del cartucho (F5-I10) — por lo que carga
    * de forma autónoma sin depender de su GWB. El fichero ZIP lo
-   * escribe BaseCartucho.guardarGWI (F5-I4); aquí queda la
+   * escribe baseCartucho.guardarGWI (F5-I4); aquí queda la
    * verificación previa, el montaje del GWI y el repintado del
    * aparato con el estado vigente (fondo + segmentos en negro).
    * @param {number} nAvisos - Avisos de la verificación (informativo).
@@ -5170,24 +5170,24 @@ const BaseDescomponer = (() => {
     // explícito (nunca en silencio): recargar el GWB lo repone.
     // F5-I10: esos datos salen de la FICHA de la pestaña Cartucho, que
     // se verifica antes de escribir nada.
-    const ficha = BaseFicha.verificar({ generar: true, mostrar: true });
+    const ficha = baseFicha.verificar({ generar: true, mostrar: true });
     for (const a of ficha.avisos) console.warn('[ficha] ' + a);
     if (ficha.errores.length > 0) {
       for (const e of ficha.errores) console.error('[ficha] ' + e);
-      BaseDirector.avisarError('La ficha del cartucho tiene ' + ficha.errores.length +
+      baseDirector.avisarError('La ficha del cartucho tiene ' + ficha.errores.length +
         ' error(es): ' + ficha.errores[0] + ' (pestaña Cartucho).');
       return;
     }
-    const imagenesFicha = BaseFicha.imagenesEnMemoria();
+    const imagenesFicha = baseFicha.imagenesEnMemoria();
     // El módulo de cartuchos gestiona JSZip, los avisos de inicio y
     // fin, y el bloqueo del botón mientras el ZIP se escribe.
-    const tamGWI = await BaseCartucho.guardarGWI(_montarGWI(), sprites,
+    const tamGWI = await baseCartucho.guardarGWI(_montarGWI(), sprites,
       imagenesFicha.img_f, imagenesFicha.img_s,
       imagenesFicha.img_m, nAvisos);
     if (tamGWI) {
       // F5-I7: el tamaño del GWI nuevo; el GWC anterior ya no es su
       // pareja, así que su tamaño deja de mostrarse.
-      BaseDirector.informarTamanos({ gwi: tamGWI, gwc: null, deduplicacion: null, memoria: null });
+      baseDirector.informarTamanos({ gwi: tamGWI, gwc: null, deduplicacion: null, memoria: null });
       // El canvas del aparato presenta el estado vigente tras
       // guardar: fondo + TODOS los segmentos en negro (look LCD).
       componerPantalla = true;
@@ -5195,14 +5195,14 @@ const BaseDescomponer = (() => {
       // F5-I17 (M2): el GWI guardado a secas viaja SIN codigoGWC (F5-I6);
       // si el GWI cargado traía uno, el GWC de la carpeta queda
       // desparejado: aviso no bloqueante («Generar GWI+GWC» lo repara).
-      const codigoAnterior = (typeof BaseDirector !== 'undefined' && BaseDirector.codigoGWCCargado)
-        ? BaseDirector.codigoGWCCargado() : null;
+      const codigoAnterior = (typeof baseDirector !== 'undefined' && baseDirector.codigoGWCCargado)
+        ? baseDirector.codigoGWCCargado() : null;
       if (codigoAnterior) {
         console.warn('[gwi] el GWI se guarda sin codigoGWC: el GWC ' + codigoAnterior +
           ' del destino queda desparejado.');
-        BaseDirector.avisar('GWI guardado SIN codigoGWC: el GWC del destino (' +
+        baseDirector.avisar('GWI guardado SIN codigoGWC: el GWC del destino (' +
           codigoAnterior + ') queda desparejado; usa Generar GWI+GWC para mantener el par.');
-        BaseFicha.actualizarCodigoGWC(null);   // el guardado suelta el código: la ficha lo refleja
+        baseFicha.actualizarCodigoGWC(null);   // el guardado suelta el código: la ficha lo refleja
       }
       // Aviso de topes (F5-I6): al guardar el GWI es NO bloqueante
       // — el diseñador decide si seguir; «Generar GWI+GWC» bloquea.
@@ -5270,7 +5270,7 @@ const BaseDescomponer = (() => {
       }
     }
     if (colgantes > 0) {
-      BaseDirector.avisarError(colgantes + ' referencia(s) colgante(s) en la autoría ' +
+      baseDirector.avisarError(colgantes + ' referencia(s) colgante(s) en la autoría ' +
         'cargada — mira la consola (F12).');
     }
     return colgantes;
@@ -5288,18 +5288,18 @@ const BaseDescomponer = (() => {
    * @returns {boolean} true si arrancó bien.
    */
   function arrancar(imgS, cartucho, autoria) {
-    const error = BaseExtractor.verificarBN(imgS);
+    const error = baseExtractor.verificarBN(imgS);
     if (error) {
-      BaseDirector.avisarError('Descomposición fallida: ' + error);
+      baseDirector.avisarError('Descomposición fallida: ' + error);
       return false;
     }
-    const resultado = BaseExtractor.extraerBN(imgS);
+    const resultado = baseExtractor.extraerBN(imgS);
     if (resultado.ruido > 0) {
       console.warn('[extractor] ' + resultado.ruido + ' componente(s) de menos de ' +
-        BaseExtractor.UMBRAL_RUIDO + ' px descartada(s) como ruido.');
+        baseExtractor.UMBRAL_RUIDO + ' px descartada(s) como ruido.');
     }
     if (resultado.comps.length === 0) {
-      BaseDirector.avisarError('La imagen no tiene contenido negro: nada que descomponer.');
+      baseDirector.avisarError('La imagen no tiene contenido negro: nada que descomponer.');
       return false;
     }
     base = resultado;
@@ -5328,7 +5328,7 @@ const BaseDescomponer = (() => {
     console.log('[autoría] ' + base.comps.length + ' componente(s), ' +
       sprites.length + ' sprite(s) único(s), ' + grupos.length + ' segmento(s)');
     listar();
-    BaseDirector.avisar('Imagen descompuesta: ' + grupos.length + ' segmento(s)' +
+    baseDirector.avisar('Imagen descompuesta: ' + grupos.length + ' segmento(s)' +
       (autoria ? ' (autoría precargada).' : ', todos de tipo juego por defecto. Pulsa en el mapa para editarlos.'));
     // Aviso de topes (F5-I6): al descomponer es NO bloqueante — el
     // diseñador decide si seguir con un cartucho que el GWC no podrá
@@ -5343,7 +5343,7 @@ const BaseDescomponer = (() => {
    */
   function reset() {
     base = null;
-    ComunListas.limpiar();    // listas del cartucho anterior (puente), fuera
+    comunListas.limpiar();    // listas del cartucho anterior (puente), fuera
     uniones = [];
     props = new Map();
     cambios = [];             // historial anterior, fuera
@@ -5369,7 +5369,7 @@ const BaseDescomponer = (() => {
    * F5-I17 (M3): número de ACCIONES de la autoría en curso, contadas
    * por bloques del historial (nº de acción distinto); el alta de la
    * ficha del cartucho NO cuenta (no es acción del autor, F5-I15 E5).
-   * La usa BaseDirector para el aviso «se descarta el historial (N
+   * La usa baseDirector para el aviso «se descarta el historial (N
    * acciones)» al cargar un GWB sobre un GWI con autoría.
    * @returns {number} Acciones de la autoría (0 si no hay historial).
    */
@@ -5384,7 +5384,7 @@ const BaseDescomponer = (() => {
 
   /**
    * Deja en memoria las listas de un GWI para el motor. Las
-   * listas viven en ComunListas (el puente de datos entre la
+   * listas viven en comunListas (el puente de datos entre la
    * autoría y el juego, fichero propio): esta función es solo el
    * punto de escritura desde el flujo de carga.
    * @param {Array<Object>} sp - Lista sprites del GWI.
@@ -5392,11 +5392,11 @@ const BaseDescomponer = (() => {
    * @returns {void}
    */
   function cargarListas(sp, segs) {
-    ComunListas.cargar(sp, segs);
+    comunListas.cargar(sp, segs);
   }
 
   /**
-   * Cablea el clic del mapa de segmentos (lo llama el BaseDirector al
+   * Cablea el clic del mapa de segmentos (lo llama el baseDirector al
    * inicializar).
    * @returns {void}
    */

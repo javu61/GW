@@ -1,4 +1,4 @@
-// pruebas/pruebasDirector.js — Pruebas del DIRECTOR del editor (BaseDirector): carga de cartuchos
+// pruebas/pruebasDirector.js — Pruebas del DIRECTOR del editor (baseDirector): carga de cartuchos
 // ================================================================================================
 // PROPÓSITO
 //   Cargan cartuchos por los inputs del diseñador, como si el usuario los eligiera, y comprueban
@@ -49,9 +49,9 @@
   const U = Pruebas.util;
 
   const _estado = () => ({
-    tipo: BaseDirector.datosCartucho() ? BaseDirector.datosCartucho().tipo : null,
-    nombre: BaseDirector.datosCartucho() ? BaseDirector.datosCartucho().nombre : null,
-    imgS: !!BaseDirector.imagenSegmentos(),
+    tipo: baseDirector.datosCartucho() ? baseDirector.datosCartucho().tipo : null,
+    nombre: baseDirector.datosCartucho() ? baseDirector.datosCartucho().nombre : null,
+    imgS: !!baseDirector.imagenSegmentos(),
     guardar: !document.getElementById('btnGuardar').disabled,
     generar: !document.getElementById('btnGenerar').disabled,
     pesEditor: !document.getElementById('pesEditor').disabled
@@ -87,8 +87,8 @@
     ok('D1 (previo): con el GWI cargado hay autoría y Guardar/Generar activos',
       antes.tipo === 'GWI' && antes.guardar && antes.generar && antes.pesEditor, JSON.stringify(antes));
     const lab = U.cartuchoLaboratorio();
-    lab.json.estilo = BaseDirector.datosCartucho().estilo;     // el GWC ha de ser de la máquina cargada
-    const gwc = BaseCartucho.generarGWC(lab.json, lab.sprites, lab.pantalla);
+    lab.json.estilo = baseDirector.datosCartucho().estilo;     // el GWC ha de ser de la máquina cargada
+    const gwc = baseCartucho.generarGWC(lab.json, lab.sprites, lab.pantalla);
     await U.cargarEn('ficheroCartucho', [U.fichero('lab.gwc', gwc.bytes)], 1500);
     const despues = _estado();
     ok('D1: tras cargar el GWC el cartucho es el GWC', despues.tipo === 'GWC', JSON.stringify(despues));
@@ -248,7 +248,7 @@
     const out = [];
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
     const estado = () => document.getElementById('estado').textContent;
-    const gwb = () => BaseFicha.estado();
+    const gwb = () => baseFicha.estado();
     // 1) Un GWS con memoria/nombre/ColorFondo: la ficha de Cartucho los recibe.
     const setup = JSON.parse(new TextDecoder().decode(await U.traerBytes('pruebas/cartuchos/setup2.json')));
     setup.nombre = 'Memoria';
@@ -256,14 +256,14 @@
     setup.memoria = { RAM: 216, FLASH: 128 };
     await U.cargarEn('ficheroCartucho', [U.fichero('setup2.json', JSON.stringify(setup))], 500);
     ok('D9 (previo): el GWS cargó y no hay cartucho',
-      _estado().tipo === null && BaseDirector.datosCartucho() === null, JSON.stringify(_estado()));
+      _estado().tipo === null && baseDirector.datosCartucho() === null, JSON.stringify(_estado()));
     const e1 = gwb();
     ok('D9: el nombre del setup llega a la ficha de Cartucho', e1.nombre === 'Memoria', e1.nombre);
     // F5-I21: la memoria ya no está en la ficha de Cartucho: vive en el Setup.
     ok('D9: la memoria del setup (RAM/FLASH) vive en el Setup (no en la ficha)',
-      JSON.stringify(BaseDirector.datosSetup().memoria) === JSON.stringify({ RAM: 216, FLASH: 128 })
+      JSON.stringify(baseDirector.datosSetup().memoria) === JSON.stringify({ RAM: 216, FLASH: 128 })
       && e1.memoria === undefined,
-      JSON.stringify(BaseDirector.datosSetup().memoria));
+      JSON.stringify(baseDirector.datosSetup().memoria));
     ok('D9: el ColorFondo del setup llega a la ficha de Cartucho',
       e1.colorFondo === '#AABBCC', String(e1.colorFondo));
     ok('D9: estilo y resolución siguen llegando (como antes)',
@@ -272,7 +272,7 @@
     //    subcampo: su RAM 128 manda; la FLASH no la declara y sigue 128, del GWS).
     await U.cargarEn('ficheroCartucho',
       [await _gwbModificado(j => { j.memoria = { RAM: 128 }; })], 2500);
-    const memDerivada = BaseDirector.datosSetup().memoria;
+    const memDerivada = baseDirector.datosSetup().memoria;
     ok('D9: la memoria del GWB pasa al setup derivado (subcampo a subcampo)',
       JSON.stringify(memDerivada) === JSON.stringify({ RAM: 128, FLASH: 128 }),
       JSON.stringify(memDerivada));
@@ -300,11 +300,11 @@
     ok('D9: #estado avisa de que el cartucho sigue en memoria',
       /el cartucho y su autoría siguen en memoria/.test(estado()), estado());
     ok('D9: el nombre tocado en la ficha llega al setup vigente',
-      BaseDirector.datosSetup().nombre === 'Memoria2',
-      String(BaseDirector.datosSetup().nombre));
+      baseDirector.datosSetup().nombre === 'Memoria2',
+      String(baseDirector.datosSetup().nombre));
     ok('D9: la memoria sigue en el Setup tras aplicar en caliente',
-      JSON.stringify(BaseDirector.datosSetup().memoria) === JSON.stringify({ RAM: 128, FLASH: 128 }),
-      JSON.stringify(BaseDirector.datosSetup().memoria));
+      JSON.stringify(baseDirector.datosSetup().memoria) === JSON.stringify({ RAM: 128, FLASH: 128 }),
+      JSON.stringify(baseDirector.datosSetup().memoria));
     return out;
   }
 
@@ -355,34 +355,34 @@
     await U.cargarEn('ficheroCartucho',
       [U.fichero('gwi.zip', await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip'))], 3500);
     ok('D10 (previo): el GWI cargó con juego en memoria',
-      BaseDescomponer.segmentos().length > 0 && BaseDirector.datosCartucho() !== null,
+      baseDescomponer.segmentos().length > 0 && baseDirector.datosCartucho() !== null,
       JSON.stringify(_estado()));
-    const acciones = BaseDescomponer.numeroDeCambios();
-    const en320 = crudos(BaseDescomponer.segmentos());
-    const dimsBase = () => JSON.stringify(BaseDescomponer.dimensionesBase());
-    const dimsSprites = () => JSON.stringify(BaseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]));
+    const acciones = baseDescomponer.numeroDeCambios();
+    const en320 = crudos(baseDescomponer.segmentos());
+    const dimsBase = () => JSON.stringify(baseDescomponer.dimensionesBase());
+    const dimsSprites = () => JSON.stringify(baseDescomponer.sprites().map(s => [s.id, s.ancho, s.alto]));
     const base320 = dimsBase(), sprites320 = dimsSprites();
     // 1. A la MISMA resolución no toca nada (y no pide nada).
     ok('D10: ajustar a la misma resolución no toca nada',
-      BaseDirector.aplicarAjusteResolucion(320, 240) === true &&
-      crudos(BaseDescomponer.segmentos()) === en320, '');
+      baseDirector.aplicarAjusteResolucion(320, 240) === true &&
+      crudos(baseDescomponer.segmentos()) === en320, '');
     // 2. Ajuste a 640×480: SOLO la resolución declarada cambia; el juego
     //    queda EXACTO (posiciones, sprites e img_s) — el GWI conserva el
     //    origen; el escalado lo hacen el emulador (al vuelo) y el GWC (al generar).
     ok('D10: ajustar a 640×480 se aplica',
-      BaseDirector.aplicarAjusteResolucion(640, 480) === true, estado());
+      baseDirector.aplicarAjusteResolucion(640, 480) === true, estado());
     ok('D10: el juego no se reescala (posiciones exactas)',
-      crudos(BaseDescomponer.segmentos()) === en320, '');
+      crudos(baseDescomponer.segmentos()) === en320, '');
     ok('D10: el juego no se reescala (sprites exactos)',
       dimsSprites() === sprites320, '');
     ok('D10: img_s no se reescala (espacio fuente intacto)',
       dimsBase() === base320, '');
     ok('D10: la autoría queda intacta (mismas acciones)',
-      BaseDescomponer.numeroDeCambios() === acciones, String(acciones));
+      baseDescomponer.numeroDeCambios() === acciones, String(acciones));
     ok('D10: el setup declara la nueva resolución',
-      BaseDirector.datosSetup().resolucion.ancho === 640 &&
-      BaseDirector.datosSetup().resolucion.alto === 480,
-      JSON.stringify(BaseDirector.datosSetup().resolucion));
+      baseDirector.datosSetup().resolucion.ancho === 640 &&
+      baseDirector.datosSetup().resolucion.alto === 480,
+      JSON.stringify(baseDirector.datosSetup().resolucion));
     ok('D10: la pantalla del aparato mide lo nuevo',
       document.getElementById('pantalla').width === 640 &&
       document.getElementById('pantalla').height === 480, 'canvas');
@@ -395,10 +395,10 @@
       JSON.stringify(resolucionFicha()));
     // 3. Fuera de rango (F5-I16): se rechaza ANTES de tocar nada (atómico).
     ok('D10: fuera de rango (200×200) se rechaza sin tocar nada',
-      BaseDirector.aplicarAjusteResolucion(200, 200) === false &&
-      BaseDirector.datosSetup().resolucion.ancho === 640, estado());
+      baseDirector.aplicarAjusteResolucion(200, 200) === false &&
+      baseDirector.datosSetup().resolucion.ancho === 640, estado());
     // 4. La ventana: contenido, fuera de rango deshabilita y cancelar conserva.
-    BaseDirector.ajustarResolucion();
+    baseDirector.ajustarResolucion();
     const vent = document.querySelector('.ventanaResolucion');
     ok('D10: la ventana abre con factor de escala y aviso de que el juego queda igual',
       vent && /Factor de escala/.test(vent.textContent) &&
@@ -410,8 +410,8 @@
       btnCancelar && botonesVent().some(b => b.textContent === 'Ajustar resolución'), '');
     btnCancelar.click();
     ok('D10: cancelar cierra y conserva', !document.querySelector('.ventanaResolucion') &&
-      BaseDirector.datosSetup().resolucion.ancho === 640, '');
-    BaseDirector.ajustarResolucion();
+      baseDirector.datosSetup().resolucion.ancho === 640, '');
+    baseDirector.ajustarResolucion();
     const vent2 = document.querySelector('.ventanaResolucion');
     const inputs = Array.from(vent2.querySelectorAll('input[type=number]'));
     inputs[0].value = '200'; inputs[1].value = '200';
@@ -423,10 +423,10 @@
       btnFuera && btnFuera.disabled && /fuera del rango/.test(vent2.textContent), '');
     Array.from(vent2.querySelectorAll('button')).find(b => b.textContent === 'Cancelar').click();
     // 5. Vuelta a 320×240: el juego sigue exacto (nada se reescala nunca).
-    BaseDirector.aplicarAjusteResolucion(320, 240);
+    baseDirector.aplicarAjusteResolucion(320, 240);
     ok('D10: vuelta a 320×240 con el juego exacto',
-      crudos(BaseDescomponer.segmentos()) === en320 && dimsBase() === base320 &&
-      BaseDirector.datosSetup().resolucion.ancho === 320, '');
+      crudos(baseDescomponer.segmentos()) === en320 && dimsBase() === base320 &&
+      baseDirector.datosSetup().resolucion.ancho === 320, '');
     return out;
   }
 

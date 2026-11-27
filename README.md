@@ -3,15 +3,15 @@ Game &amp; Watch: Proyecto de creación de un sistema para juegos del tipo WG en
 
 NOTA: El fichero cartucho_GWC.gwc es el único binario y no se debe tocar, igual que los empaquetados 
       y los de imágenes *.png, pero para el resto todos los ficheros de texto y de fuentes deben usar
-      convención de fin de línea de Windows CR+LF.
+      convención de fin de línea de Windows CR+LF. Los nombres de ficheros deben ir en camelCase.
 
-Tipos de Cartucho:
+# Tipos de Cartucho:
 GWS: Setup, el de la máquina final (pantalla y botones)
 GWB: Base, imágenes de partida y botones a usar
 GWI: Intermedio, todo lo necesario para el juego, en formato legible + imágenes
 GWC: Compacto, el único binario preparado para la carga en el ESP32
 
-
+# Estructura de ficheros
 Directorio  GW Memoria        : Memoria del proyecto
 Directorio  GW Iteraciones    : Diario del desarrollo
 
@@ -27,7 +27,7 @@ Directorio  cartucho          : Cartucho GWB sin comprimir
 Ficheros    cartucho*         : Datos de los cartuchos creados
 Directorio  pruebas           : Pruebas (ver PRUEBAS más abajo)
 
-PRUEBAS:
+# PRUEBAS:
   Una prueba, un sitio: la lógica de cada prueba está en un solo fichero y se lanza
   de dos formas con el MISMO código: el botón de la pestaña «Pruebas» (visible solo con
   GW_DEBUG) o un comando de consola. index.html debe abrirse por servidor local (http).
@@ -63,7 +63,7 @@ PRUEBAS:
     COMPARAR=fichero las compara con las guardadas (red de seguridad del motor)
 
 
-ORDEN DE CARGA DE LOS MÓDULOS:
+# ORDEN DE CARGA DE LOS MÓDULOS:
   <script src="designer/jszip.min.js"></script>
   <script src="designer/comunListas.js"></script>
   <script src="designer/baseExtractor.js"></script>

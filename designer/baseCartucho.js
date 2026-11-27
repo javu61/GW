@@ -1951,10 +1951,12 @@ var baseCartucho = (function () {
   /**
    * Texto de ocupación: «RAM: 4 de 216 KB (2 %) · FLASH: 0 de 216 KB (0 %)».
    * Solo entran los tipos con memoria > 0; sin ninguna, null (ni porcentaje
-   * ni aviso). RAM usada = bytes del GWC; FLASH usada = bloque de fondo.
+   * ni aviso). RAM usada = los DATOS del GWC (el total MENOS el bloque del
+   * fondo: la imagen no se carga en RAM, irá a FLASH); FLASH usada = el
+   * bloque del fondo.
    * @param {{RAM:number, FLASH:number}} efectiva - De memoriaEfectiva.
-   * @param {number} bytesRAM - Bytes del GWC.
-   * @param {number} bytesFLASH - Bytes del bloque de fondo (hoy 0).
+   * @param {number} bytesRAM - Bytes de datos del GWC (ya sin el fondo).
+   * @param {number} bytesFLASH - Bytes del bloque de fondo.
    * @returns {?string} El texto, o null si no hay memoria declarada.
    */
   function ocupacionMemoria(efectiva, bytesRAM, bytesFLASH) {

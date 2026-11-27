@@ -4963,15 +4963,17 @@ const baseDescomponer = (() => {
     baseDirector.avisar(baseCartucho.estadistica(gwc));
     // F5-I20 (MA02) y F5-I21: ocupación de la memoria, solo informativa. La
     // memoria es la del Setup (solo se edita allí y es la que lleva el GWI);
-    // sin memoria (o a 0) no hay texto. RAM usada = bytes del GWC; FLASH
-    // usada = el bloque del fondo (A02: la img_f escalada ya viaja en el
-    // GWC). Los informativos
+    // sin memoria (o a 0) no hay texto. RAM usada = los DATOS del GWC (el
+    // total MENOS el bloque del fondo: la imagen no se carga en RAM, irá a
+    // FLASH); FLASH usada = el bloque del fondo (A02: la img_f escalada ya
+    // viaja en el GWC). Los informativos
     // «Último GWC calculado» y «Último fondo» del Setup salen de aquí mismo.
     const setupMem = baseDirector.datosSetup();
     const memoriaSetup = baseCartucho.memoriaNoCero(setupMem ? setupMem.memoria : null);
     const bytesFondo = gwc.bloques.fondo;
-    const textoMemoria = baseCartucho.ocupacionMemoria(memoriaSetup || {}, gwc.bytes.length, bytesFondo);
-    baseSetup.informarUltimos({ gwc: gwc.bytes.length, fondo: bytesFondo, memoria: memoriaSetup });
+    const bytesRAM = gwc.bytes.length - bytesFondo;
+    const textoMemoria = baseCartucho.ocupacionMemoria(memoriaSetup || {}, bytesRAM, bytesFondo);
+    baseSetup.informarUltimos({ gwc: bytesRAM, fondo: bytesFondo, memoria: memoriaSetup });
     const avisoMemoria = textoMemoria ? ' ' + textoMemoria : '';
     // 4. El GWI después, con el Código GWC del par: el código del
     // GWC recién generado (TEXTO «#HHHH#», visible igual que en la

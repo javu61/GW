@@ -1837,6 +1837,9 @@ var baseDirector = (function () {
     const fondoBytes = leido.fondoImagen ? leido.fondoImagen.bytes.length + 5 : 0;
     baseSetup.informarUltimos({ gwc: fichero.size - fondoBytes, fondo: fondoBytes,
       memoria: setupGWS ? setupGWS.memoria : null });
+    // F5-I21: la ficha de Cartucho también enseña el CRC y los tamaños
+    // del GWC cargado (el «Último GWC» de solo lectura).
+    baseFicha.actualizarCodigoGWC(leido.codigo || null);
     console.info('[cartucho] GWC cargado: ' + leido.sprites.length +
       ' sprite(s), ' + leido.segmentos.length +
       ' segmento(s) en memoria, listos para el motor.');

@@ -25,7 +25,8 @@
 //   C8 memoria (F5-I20, MA02)   Al generar el par con memoria declarada (RAM/FLASH, en el setup o,
 //                               por subcampo, en el cartucho) sale el porcentaje en la línea del
 //                               panel y en el aviso final; sin memoria, o a 0, no sale nada; FLASH
-//                               siempre 0 KB y 0 %. Solo en consola: el paso descarga los ficheros.
+//                               con el bloque del fondo (A02). Solo en consola: el paso descarga
+//                               los ficheros.
 //   C9 ajuste (F5-I21)          Tras ajustar la resolución, cada sprite mide lo mismo que da el
 //                               «escalar» del generador de GWC con la nueva pantalla, y las
 //                               posiciones de los segmentos son su redondeo canónico. Solo
@@ -298,20 +299,22 @@
     const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
     const PORC = '\\((?:< 1|\\d+) %\\)';
     const reRAM = (kb) => new RegExp('RAM: [\\d.]+ de ' + kb + ' KB ' + PORC);
-    const FLASH0 = (kb) => 'FLASH: 0 de ' + kb + ' KB (0 %)';
+    const reFLASH = (kb) => new RegExp('FLASH: [\\d.]+ de ' + kb + ' KB ' + PORC);
 
-    // 1) Memoria en el setup: porcentaje en el panel y en el aviso final; FLASH a 0.
+    // 1) Memoria en el setup: porcentaje en el panel y en el aviso final; FLASH
+    //    con el bloque del fondo (A02: el GWI de pruebas lleva img_f).
     let r = await _generarConMemoria(opc, { RAM: 64, FLASH: 32 }, null);
     ok('C8: con memoria en el setup, el aviso final trae la RAM con su porcentaje',
       reRAM(64).test(r.estado), r.estado);
-    ok('C8: FLASH sale con 0 KB y 0 % (aún no se cuenta el fondo)', r.estado.includes(FLASH0(32)), r.estado);
+    ok('C8: FLASH trae el fondo del GWC (Bloque 5) con su porcentaje',
+      reFLASH(32).test(r.estado) && !/FLASH: 0 de/.test(r.estado), r.estado);
     ok('C8: la línea del panel (informarTamanos) trae también la ocupación',
-      reRAM(64).test(r.panel) && r.panel.includes(FLASH0(32)), r.panel);
+      reRAM(64).test(r.panel) && reFLASH(32).test(r.panel), r.panel);
 
     // 2) El cartucho manda por subcampo: su RAM gana, la FLASH sigue siendo la del setup.
     r = await _generarConMemoria(opc, { RAM: 64, FLASH: 32 }, { RAM: 128 });
     ok('C8: la RAM del cartucho manda sobre la del setup', reRAM(128).test(r.estado) && !reRAM(64).test(r.estado), r.estado);
-    ok('C8: la FLASH que el cartucho no declara se toma del setup', r.estado.includes(FLASH0(32)), r.estado);
+    ok('C8: la FLASH que el cartucho no declara se toma del setup', reFLASH(32).test(r.estado), r.estado);
 
     // 3) Sin memoria, o a 0: ni porcentaje ni aviso ni línea de panel.
     for (const [etiqueta, ms] of [['ausente', null], ['a 0', { RAM: 0, FLASH: 0 }]]) {

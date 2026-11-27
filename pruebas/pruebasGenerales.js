@@ -14,11 +14,15 @@
 //                             «combinar» en el Bloque 0 y tamaños de los Bloques 0 y 1.
 //   G3 ColorFondo (ficha GWB) Destructiva: la ficha entrega el ColorFondo (el blanco no viaja) y un
 //                             GWB sin img_f lo guarda y pinta el fondo con él.
+//   G4 Bloque 5 Fondo (A02)   El fondo de img_f viaja como PNG YA escalado a la
+//                             pantalla declarada (mismo registro que los sprites); sin fondo, el
+//                             bloque no existe; el factor de escalado es declarada/img_f.
 //
 // FUNCIONES
 //   _pruebaCrcYLector         Prueba «G1 CRC y lector del GWC».
 //   _pruebaColorFondo         Prueba «G2 ColorFondo en el GWC».
 //   _pruebaColorFondoFicha    Prueba «G3 ColorFondo (ficha y GWB)».
+//   _pruebaFondoGWC           Prueba «G4 Bloque 5 Fondo (A02)».
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -127,11 +131,69 @@
     return out;
   }
 
+  function _pruebaFondoGWC() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    const { json: j, sprites, pantalla: pant } = Pruebas.util.cartuchoLaboratorio();
+    const dirFondo = (gwc) => new DataView(gwc.bytes.buffer).getUint32(14 + 5 + 12 + 5 * 4, true);
+    const esPNG = (b) => !!b && b.length > 24 && b[0] === 0x89 && b[1] === 0x50 &&
+      b[2] === 0x4E && b[3] === 0x47 && b[4] === 0x0D && b[5] === 0x0A &&
+      b[6] === 0x1A && b[7] === 0x0A;
+    const dimsIHDR = (b) => ({
+      ancho: (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19],
+      alto: (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23]
+    });
+
+    // 1) Sin fondo: el Bloque 5 no existe y su dirección del Bloque 0 va a nulo.
+    const g0 = baseCartucho.generarGWC(j, sprites, pant);
+    ok('G4: sin fondo, el Bloque 5 no existe (dirección a nulo)',
+      dirFondo(g0) === 0xFFFFFFFF && g0.bloques.fondo === 0 &&
+      baseCartucho.leerGWC(g0.bytes).fondoImagen === null, dirFondo(g0));
+
+    // 2) Con fondo del tamaño declarado: el Bloque 5 viaja con los bytes PNG
+    //    de la img_f (formato PROVISIONAL, F6 lo cambiará por el del ESP32).
+    const fondo = document.createElement('canvas');
+    fondo.width = 320; fondo.height = 240;
+    const gg = fondo.getContext('2d');
+    gg.fillStyle = '#FFFFFF'; gg.fillRect(0, 0, 320, 240);
+    gg.fillStyle = '#000'; gg.fillRect(10, 10, 40, 20);
+    const g1 = baseCartucho.generarGWC(j, sprites, pant, fondo);
+    const l1 = baseCartucho.leerGWC(g1.bytes);
+    const d1 = l1.fondoImagen && dimsIHDR(l1.fondoImagen.bytes);
+    ok('G4: con fondo, el Bloque 5 viaja con un PNG a la resolución declarada',
+      dirFondo(g1) !== 0xFFFFFFFF && !!l1.fondoImagen && esPNG(l1.fondoImagen.bytes) &&
+      d1.ancho === 320 && d1.alto === 240,
+      l1.fondoImagen ? (l1.fondoImagen.bytes.length + ' bytes, ' + d1.ancho + 'x' + d1.alto) : '(sin fondo)');
+    ok('G4: el tamaño del bloque es el del PNG más la cabecera del bloque',
+      !!l1.fondoImagen && g1.bloques.fondo === 5 + l1.fondoImagen.bytes.length,
+      g1.bloques.fondo + ' vs ' + (l1.fondoImagen ? 5 + l1.fondoImagen.bytes.length : '?'));
+    ok('G4: el fondo entra bajo el CRC y en la estadística',
+      g1.codigo !== g0.codigo && g1.bytes.length > g0.bytes.length &&
+      baseCartucho.estadistica(g1).includes('Fondo ' + g1.bloques.fondo),
+      baseCartucho.estadistica(g1));
+
+    // 3) Fondo en tamaño ORIGINAL distinto de la declarada (un GWB descompuesto):
+    //    el generador lo escala A la declarada antes de empaquetar el PNG
+    //    (la fuente del escalado es la propia img_f, nunca img_s).
+    const fondo2 = document.createElement('canvas');
+    fondo2.width = 160; fondo2.height = 120;
+    const gg2 = fondo2.getContext('2d');
+    gg2.fillStyle = '#FFFFFF'; gg2.fillRect(0, 0, 160, 120);
+    gg2.fillStyle = '#000'; gg2.fillRect(10, 10, 20, 10);
+    const f2 = baseCartucho.leerGWC(baseCartucho.generarGWC(j, sprites, pant, fondo2).bytes).fondoImagen;
+    const d2 = f2 && dimsIHDR(f2.bytes);
+    ok('G4: fondo más pequeño que la declarada se escala A la declarada',
+      !!f2 && esPNG(f2.bytes) && d2.ancho === 320 && d2.alto === 240,
+      f2 ? (d2.ancho + 'x' + d2.alto) : '(sin fondo)');
+    return out;
+  }
+
   Pruebas.registrar([
     { id: 'crcLector', grupo: 'generales', nombre: 'G1 CRC y lector del GWC', ejecutar: () => _pruebaCrcYLector() },
     { id: 'colorFondo', grupo: 'generales', nombre: 'G2 ColorFondo en el GWC', ejecutar: () => _pruebaColorFondo() },
     { id: 'colorFondoFicha', grupo: 'generales', nombre: 'G3 ColorFondo (ficha y GWB)', destructiva: true,
-      ejecutar: (o) => _pruebaColorFondoFicha(o) }
+      ejecutar: (o) => _pruebaColorFondoFicha(o) },
+    { id: 'fondoGWC', grupo: 'generales', nombre: 'G4 Bloque 5 Fondo (A02)', ejecutar: () => _pruebaFondoGWC() }
   ]);
 })();
 

@@ -52,6 +52,7 @@
 //   _montarSprites          Bloque 2: máscaras de 1 bit escaladas.
 //   _montarSegmentos        Bloque 3: registros fijos de 32 bytes.
 //   _montarSecuencias       Bloque 4: la Secuencia (opcional).
+//   _montarFondo            Bloque 5: el fondo como PNG ya escalado (opcional, A02).
 //   _montarDatosGenerales   Bloque 0: estilo, pantalla, conteos, fondo, reglas, direcciones.
 //   _montarCabecera         Cabecera con código «#HHHH#» y tamaño.
 //   validarTopes            Comprueba el tope de 255 elementos por índice.
@@ -76,6 +77,7 @@
 //   _leerSpritesGWC
 //   _leerSegmentosGWC
 //   _leerSecuenciasGWC      Un paso de la lectura cada una.
+//   _leerFondoGWC           Bloque 5: los bytes PNG del fondo (o null).
 //
 //  Otras funciones internas (lista completada en F5-I14)
 //   _crearURL                     Crea una object URL para un fichero y la anota para revocarla al li…
@@ -1615,7 +1617,7 @@ var baseCartucho = (function () {
   const BLOQUE_SPRITES_GWC = 2;      // tabla de direcciones + máscaras 1 bit
   const BLOQUE_SEGMENTOS_GWC = 3;    // registros fijos de 32 bytes
   const BLOQUE_SECUENCIAS_GWC = 4;   // registros de 6 bytes (opcional)
-  // El bloque 5 (fondo) está RESERVADO: la v1 no lo escribe.
+  const BLOQUE_FONDO_GWC = 5;        // PNG del fondo ya escalado (opcional, A02)
 
   // Los 20 enlaces del registro de segmento, en el ORDEN FIJO del formato.
   // Los inversos calculados (colisionDe, mostradoJunto) NO viajan: el
@@ -2037,11 +2039,13 @@ var baseCartucho = (function () {
    *        del editor con su imagen en memoria (para las máscaras).
    * @param {{ancho:number, alto:number, fuente:{ancho:number, alto:number}}}
    *        pantalla - Pantalla declarada y dimensiones de la fuente.
+   * @param {?HTMLImageElement|?HTMLCanvasElement} [imgF] - El fondo en
+   *        memoria (o null/ausente: el Bloque 5 no se escribe, como en la v1).
    * @returns {{bytes:Uint8Array, checksum:number, codigo:string,
    *            bloques:Object, nSprites:number, nSegmentos:number}} El
    *            fichero y su descomposición por bloques (para estadistica).
    */
-  function generarGWC(json, spritesConImagen, pantalla) {
+  function generarGWC(json, spritesConImagen, pantalla, imgF) {
     if (!validarTopes(json)) {
       throw new Error('el cartucho supera los topes del GWC (' +
         TOPE_GWC + ' sprites/segmentos/secuencias por índice de 1 byte).');
@@ -2069,16 +2073,18 @@ var baseCartucho = (function () {
     const indiceDeSprite = new Map(viaja.sprites.map((s, i) => [s.id, i]));
     const escala = _escalasDePantalla(pantalla);
 
-    // El Bloque 5 (Fondo) es RESERVADO: la v1 no lo escribe.
     const bloqueConfiguracion = _montarConfiguracion(json);
     const bloqueSprites = _montarSprites(viaja, imagenDeSprite, pantalla);
     const bloqueSegmentos = _montarSegmentos(viaja, indiceDeSprite, indiceDeSegmento, escala.x, escala.y);
     const bloqueSecuencias = _montarSecuencias(json, indiceDeSegmento);
-    const bloqueDatos = _montarDatosGenerales(json, viaja, pantalla, bloqueConfiguracion, bloqueSprites, bloqueSegmentos, bloqueSecuencias);
+    const bloqueFondo = _montarFondo(imgF, pantalla);
+    const bloqueDatos = _montarDatosGenerales(json, viaja, pantalla, bloqueConfiguracion, bloqueSprites,
+      bloqueSegmentos, bloqueSecuencias, bloqueFondo);
 
     // Ensamblado en el orden de los tipos; este cuerpo es lo que protege la suma.
     const partes = [bloqueDatos, bloqueConfiguracion, bloqueSprites, bloqueSegmentos];
     if (bloqueSecuencias) partes.push(bloqueSecuencias);
+    if (bloqueFondo) partes.push(bloqueFondo);
     const cuerpo = _concatenar(partes);
 
     const cabecera = _montarCabecera(cuerpo);
@@ -2113,7 +2119,8 @@ var baseCartucho = (function () {
         configuracion: bloqueConfiguracion.length,
         sprites: bloqueSprites.length,
         segmentos: bloqueSegmentos.length,
-        secuencias: bloqueSecuencias ? bloqueSecuencias.length : 0
+        secuencias: bloqueSecuencias ? bloqueSecuencias.length : 0,
+        fondo: bloqueFondo ? bloqueFondo.length : 0
       }
     };
   }
@@ -2259,9 +2266,36 @@ var baseCartucho = (function () {
   }
 
   /**
+   * Bloque 5 Fondo (OPCIONAL, PROVISIONAL — F6 lo revisará con el ESP32):
+   * los BYTES PNG de la img_f YA ESCALADA a la pantalla declarada. Si el
+   * fondo ya mide lo que declara la máquina, el canvas lo pinta sin
+   * escalar (copia directa); si no, se reescala en el momento de generar —
+   * la fuente del escalado es la PROPIA img_f (factor declarada/img_f),
+   * NUNCA img_s. El PNG es un formato provisional: el navegador lo
+   * decodifica nativo y cierra la fase sin trabajo, pero en el ESP32 no es
+   * lo adecuado; F6 lo sustituirá por el formato definitivo. Sin fondo
+   * devuelve null: el bloque no existe y su dirección del Bloque 0 viaja a
+   * nulo, como en los GWC de la v1.
+   * @param {?HTMLImageElement|?HTMLCanvasElement} imgF - Fondo en memoria.
+   * @param {{ancho:number, alto:number}} pantalla - Pantalla declarada.
+   * @returns {?Uint8Array} El Bloque 5 completo, o null.
+   */
+  function _montarFondo(imgF, pantalla) {
+    if (!imgF) return null;
+    const lienzo = document.createElement('canvas');
+    lienzo.width = pantalla.ancho;
+    lienzo.height = pantalla.alto;
+    lienzo.getContext('2d').drawImage(imgF, 0, 0, pantalla.ancho, pantalla.alto);
+    const binaria = atob(lienzo.toDataURL('image/png').split(',')[1]);
+    const png = new Uint8Array(binaria.length);
+    for (let i = 0; i < png.length; i++) png[i] = binaria.charCodeAt(i);
+    return bloque(BLOQUE_FONDO_GWC, png);
+  }
+
+  /**
    * Bloque 0 Datos Generales: estilo, pantalla declarada, conteos, color de
-   * fondo RGB (json.ColorFondo, blanco por defecto: la v1 no escribe el
-   * bloque de imagen de fondo) y las
+   * fondo RGB (json.ColorFondo, blanco por defecto; si la img_f viaja en el
+   * Bloque 5, ese color queda DEBAJO de la imagen) y las
    * direcciones de los seis bloques (los ausentes, a nulo). Mide SIEMPRE 41
    * bytes (36 de contenido): las direcciones se calculan con los TAMAÑOS
    * de los bloques ya montados — por eso se monta el último aunque en el
@@ -2273,17 +2307,22 @@ var baseCartucho = (function () {
    * @param {Uint8Array} bloqueSprites - Bloque 2 montado.
    * @param {Uint8Array} bloqueSegmentos - Bloque 3 montado.
    * @param {?Uint8Array} bloqueSecuencias - Bloque 4 montado (o null).
+   * @param {?Uint8Array} bloqueFondo - Bloque 5 montado (o null).
    * @returns {Uint8Array} El Bloque 0 completo.
    */
   function _montarDatosGenerales(json, viaja, pantalla, bloqueConfig, bloqueSprites,
-    bloqueSegmentos, bloqueSecuencias) {
+    bloqueSegmentos, bloqueSecuencias, bloqueFondo) {
     const direccionBloque0 = TAM_CABECERA_GWC;
     const direccionBloque1 = direccionBloque0 + TAM_CABECERA_BLOQUE_GWC + TAM_CONTENIDO_DATOS_GWC;
     const direccionBloque2 = direccionBloque1 + bloqueConfig.length;
     const direccionBloque3 = direccionBloque2 + bloqueSprites.length;
     const direccionBloque4 = bloqueSecuencias
       ? direccionBloque3 + bloqueSegmentos.length : NULO32_GWC;
-    const direccionBloque5 = NULO32_GWC;   // Fondo: RESERVADO
+    const direccionBloque5 = bloqueFondo
+      ? (bloqueSecuencias
+        ? direccionBloque4 + bloqueSecuencias.length
+        : direccionBloque3 + bloqueSegmentos.length)
+      : NULO32_GWC;
 
     const contenido = [];
     contenido.push(..._byteDe(Number(json.estilo) || 0));
@@ -2364,6 +2403,7 @@ var baseCartucho = (function () {
       bloques.datos + ' · Configuración ' + bloques.configuracion + ' · Sprites ' +
       bloques.sprites + ' (' + gwc.nSprites + ') · Segmentos ' + bloques.segmentos +
       ' (' + gwc.nSegmentos + ') · Secuencias ' + bloques.secuencias +
+      ' · Fondo ' + (bloques.fondo || 0) +
       ' · código GWC ' + gwc.codigo + '.';
   }
 
@@ -2652,6 +2692,35 @@ var baseCartucho = (function () {
   }
 
   /**
+   * Bloque 5 (OPCIONAL): los bytes PNG del fondo, ya escalados a la
+   * pantalla declarada por el generador (A02, provisional — F6 lo
+   * revisará). Si su dirección del Bloque 0 va a nulo no hay fondo (los
+   * GWC de la v1 no lo traen: devuelve null).
+   * @param {Uint8Array} bytes - El fichero completo.
+   * @param {Object} lector - Lectores little-endian.
+   * @param {number} posicion - Dirección del Bloque 5 (o NULO32_GWC).
+   * @returns {?{bytes:Uint8Array}} Los bytes PNG del fondo, o null si el
+   *          bloque no viaja.
+   */
+  function _leerFondoGWC(bytes, lector, posicion) {
+    if (posicion === NULO32_GWC) return null;
+    const bloqueFondo = _abrirBloqueGWC(bytes, lector, posicion, BLOQUE_FONDO_GWC, 'Fondo');
+    const FIRMA = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    if (bloqueFondo.tam < FIRMA.length) {
+      throw new Error('el Bloque 5 de Fondo está incompleto (' + bloqueFondo.tam +
+        ' bytes; un PNG no baja de ' + FIRMA.length + ').');
+    }
+    for (let i = 0; i < FIRMA.length; i++) {
+      if (bytes[bloqueFondo.inicio + i] !== FIRMA[i]) {
+        throw new Error('el Bloque 5 de Fondo no empieza con la firma PNG.');
+      }
+    }
+    const png = new Uint8Array(bloqueFondo.tam);
+    for (let i = 0; i < png.length; i++) png[i] = bytes[bloqueFondo.inicio + i];
+    return { bytes: png };
+  }
+
+  /**
    * Lee un cartucho GWC y reconstruye las listas: valida la cabecera,
    * recorre los bloques en su orden y devuelve estilo, pantalla declarada,
    * color de fondo, configuración, sprites (máscaras), segmentos con sus
@@ -2661,10 +2730,12 @@ var baseCartucho = (function () {
    * devolver nada y quien llama conserva el cartucho anterior).
    * @param {Uint8Array|ArrayBuffer} datos - Los bytes del GWC.
    * @returns {{estilo:string, pantalla:Object, fondo:string,
+   *            fondoImagen:?{bytes:Uint8Array},
    *            pausas:Object, aceleracion:?Object, rutas:Object,
    *            fin:?Object, sprites:Array, segmentos:Array,
    *            secuencia:?Object, checksum:number, codigo:string}} Las
-   *            listas y la configuración (codigo: el «#HHHH#» de la cabecera).
+   *            listas y la configuración (codigo: el «#HHHH#» de la cabecera;
+   *            fondoImagen: los bytes PNG del Bloque 5, o null si no viaja).
    */
   function leerGWC(datos) {
     const bytes = (datos instanceof Uint8Array) ? datos : new Uint8Array(datos);
@@ -2677,11 +2748,13 @@ var baseCartucho = (function () {
     const sprites = _leerSpritesGWC(bytes, lector, direcciones[2], generales.nSprites);
     const segmentos = _leerSegmentosGWC(bytes, lector, direcciones[3], generales.nSegmentos, sprites);
     const secuencia = _leerSecuenciasGWC(bytes, lector, direcciones[4], generales.nSecuencias, generales.nSegmentos);
+    const fondoImagen = _leerFondoGWC(bytes, lector, direcciones[5]);
 
     return {
       estilo: String(generales.estilo),
       resolucion: { ancho: generales.ancho, alto: generales.alto },
       fondo: generales.fondo,
+      fondoImagen: fondoImagen,
       pausas: configuracion.pausas,
       aceleracion: configuracion.aceleracion,
       rutas: configuracion.rutas,

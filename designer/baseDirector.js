@@ -1711,9 +1711,9 @@ var baseDirector = (function () {
    * bloques) y se presentan el fondo y los segmentos en pantalla —
    * visualmente lo mismo que un GWI — con el juego LISTO para arrancar:
    * las listas van al puente con la IMAGEN de cada segmento fabricada
-   * de su máscara de 1 bit (el GWC no lleva PNG) y el fondo es un
-   * canvas plano del color del Bloque 0 (la v1 no escribe el bloque de
-   * fondo). El EDITOR NO SE TOCA: el GWC no lleva geometría ni
+   * de su máscara de 1 bit (el GWC no lleva PNG) y el fondo se reconstruye
+   * del Bloque 5 si viaja (PNG ya escalado, A02) o, si no, es un canvas
+   * plano del color del Bloque 0 (los GWC de la v1). El EDITOR NO SE TOCA: el GWC no lleva geometría ni
    * autoría, no hay nada que editar — y el estado previo (si había un
    * GWI en edición) se conserva intacto, que es lo que pide el ciclo
    * de ida y vuelta: cargar el GWC generado y, sin tocar nada,
@@ -1758,12 +1758,14 @@ var baseDirector = (function () {
     baseDescomponer.reset();
     editable = false;
     tamGWI = null;
-    // El fondo del GWC es un COLOR (v1: sin bloque de fondo): se
-    // fabrica un canvas plano del color del Bloque 0 — el mismo
-    // camino que img_f (pintado, motor gráfico y puente).
+    // El fondo del GWC: el PNG del Bloque 5 (A02) cargado como imagen, o un
+    // canvas plano del color del Bloque 0 si no viaja (v1) — el mismo camino
+    // que img_f (pintado, motor gráfico y puente).
     colorFondo = leido.fondo;
-    imgF = _fabricarFondoColor(leido.fondo, leido.resolucion.ancho,
-      leido.resolucion.alto);
+    imgF = leido.fondoImagen
+      ? await _fabricarFondoDePNG(leido.fondoImagen.bytes)
+      : _fabricarFondoColor(leido.fondo, leido.resolucion.ancho,
+        leido.resolucion.alto);
     imgS = null;                   // el GWC no lleva img_s: sin geometría
     imgM = null;                   // ni portada
     _pintarFondoCartucho(imgF);
@@ -1883,6 +1885,23 @@ var baseDirector = (function () {
     }
     ctx.putImageData(d, 0, 0);
     return c;
+  }
+
+  /**
+   * Fabrica la IMAGEN del fondo de un GWC a partir de su Bloque 5 (A02,
+   * PROVISIONAL — F6 lo revisará con el ESP32): los bytes PNG que el
+   * generador dejó ya escalados a la pantalla declarada. Carga asíncrona
+   * por blob URL, como cualquier img_f; el códec cambiará en F6.
+   * @param {Uint8Array} bytes - Los bytes PNG del Bloque 5.
+   * @returns {Promise<HTMLImageElement>} La imagen del fondo cargada.
+   */
+  function _fabricarFondoDePNG(bytes) {
+    return new Promise((resolver, rechazar) => {
+      const imagen = new Image();
+      imagen.onload = () => resolver(imagen);
+      imagen.onerror = () => rechazar(new Error('El fondo del GWC no se pudo decodificar.'));
+      imagen.src = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+    });
   }
 
   // ---------------- Descomposición (delegada) ----------------

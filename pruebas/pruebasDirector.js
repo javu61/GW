@@ -26,17 +26,21 @@
 //       memoria del setup derivado sale del cartucho, subcampo a subcampo. Con
 //       cartucho en memoria pide SIEMPRE confirmación (cancelar conserva, confirmar
 //       aplica) y con GW_DEBUG no se pide (criterio D8).
-//   D10 (F5-I21) Ajuste de resolución: a la misma resolución no toca nada; con juego
-//       en memoria REESCALA imágenes, sprites y posiciones con el redondeo del GWC
-//       (más escalar, F5-I21), la autoría queda intacta, Fuera de rango (F5-I16) se
-//       rechaza sin tocar nada; la ventana muestra actuales, nuevos, factor de escala
-//       y si afecta a los segmentos; cancelar conserva todo.
+//   D10 (F5-I21) Ajuste de resolución (modelo simple): SOLO cambia la resolución
+//       declarada (setup, ficha y canvas del aparato); el JUEGO NO SE REESCALA nunca
+//       (img_s, sprites y segmentos quedan igual: el emulador reescala al vuelo y el
+//       GWC escala al generar). Fuera de rango (F5-I16) se rechaza sin tocar nada; la
+//       ventana muestra actuales, nuevos, factor de escala y si afecta a los
+//       segmentos; cancelar conserva todo.
+//   D11 (A02) El fondo del GWC en el emulador: un GWC con Bloque 5 reconstruye la
+//       img_f YA escalada y la pinta; el ColorFondo del Bloque 0 queda debajo.
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 ... _pruebaD10
-//                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20; D10: F5-I21).
+//   _pruebaD1 ... _pruebaD11
+//                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20;
+//                        D10: F5-I21; D11: A02).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -430,6 +434,43 @@
     return out;
   }
 
+  async function _pruebaD11() {
+    const U = Pruebas.util;
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    // Máquina previa (el GWC la exige, D5) y GWC de laboratorio CON fondo
+    // (160×120 → declarada 320×240: el generador escala el Bloque 5 ×2).
+    await U.cargarEn('ficheroCartucho', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    const lab = U.cartuchoLaboratorio();
+    lab.json.estilo = baseDirector.datosSetup().estilo;   // el GWC ha de ser de la máquina cargada
+    const fondo = document.createElement('canvas');
+    fondo.width = 160; fondo.height = 120;
+    const g = fondo.getContext('2d');
+    g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, 160, 120);
+    g.fillStyle = '#000'; g.fillRect(10, 10, 20, 10);
+    const gwc = baseCartucho.generarGWC(lab.json, lab.sprites, lab.pantalla, fondo);
+    await U.cargarEn('ficheroCartucho', [U.fichero('labFondo.gwc', gwc.bytes)], 2000);
+    const estado = document.getElementById('estado').textContent;
+    ok('D11: el GWC con Bloque 5 carga', /Cartucho cargado \(GWC\)/.test(estado), estado);
+    const imgF = baseDirector.imagenFondo();
+    ok('D11: el fondo reconstruido mide la pantalla declarada',
+      !!imgF && (imgF.naturalWidth || imgF.width) === 320 &&
+      (imgF.naturalHeight || imgF.height) === 240,
+      imgF ? ((imgF.naturalWidth || imgF.width) + 'x' + (imgF.naturalHeight || imgF.height)) : '(sin fondo)');
+    const lienzo = document.createElement('canvas');
+    lienzo.width = 320; lienzo.height = 240;
+    if (imgF) lienzo.getContext('2d').drawImage(imgF, 0, 0);
+    const ctx = lienzo.getContext('2d');
+    const negro = ctx.getImageData(30, 30, 1, 1).data;
+    const claro = ctx.getImageData(5, 5, 1, 1).data;
+    ok('D11: el cuadrado negro del fondo queda en su sitio (×2)',
+      !!negro && negro[0] === 0 && !!claro && claro[0] === 255,
+      negro && claro ? (negro[0] + '/' + claro[0]) : '(sin canvas)');
+    ok('D11: el ColorFondo del Bloque 0 queda bajo el fondo',
+      baseDirector.colorFondo() === '#FFFFFF', baseDirector.colorFondo());
+    return out;
+  }
+
   Pruebas.registrar([
     // F5-I19: d5 y d6 necesitan la página RECIÉN cargada: d5 PRIMERO.
     { id: 'd5', grupo: 'director', nombre: 'D5 GWC sin máquina (requiere página recién cargada)', destructiva: false, ejecutar: () => _pruebaD5() },
@@ -441,7 +482,8 @@
     { id: 'd7', grupo: 'director', nombre: 'D7 cambio de máquina en caliente (F5-I19)', destructiva: true, ejecutar: () => _pruebaD7() },
     { id: 'd8', grupo: 'director', nombre: 'D8 botón Limpiar de la Carga (F5-I19)', destructiva: true, ejecutar: () => _pruebaD8() },
     { id: 'd9', grupo: 'director', nombre: 'D9 aplicar propaga datos comunes y confirma (F5-I20)', destructiva: true, ejecutar: () => _pruebaD9() },
-    { id: 'd10', grupo: 'director', nombre: 'D10 ajuste de resolución (F5-I21)', destructiva: true, ejecutar: () => _pruebaD10() }
+    { id: 'd10', grupo: 'director', nombre: 'D10 ajuste de resolución (F5-I21)', destructiva: true, ejecutar: () => _pruebaD10() },
+    { id: 'd11', grupo: 'director', nombre: 'D11 fondo del GWC en el emulador (A02)', destructiva: true, ejecutar: () => _pruebaD11() }
   ]);
 })();
 

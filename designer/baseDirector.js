@@ -1016,7 +1016,10 @@ var baseDirector = (function () {
    * texto de pantalla ("textoPantalla") TAMBIÉN viajan en ellos: manda
    * el cartucho (F5-I19) y, lo
    * que él no declara, se hereda del setup previo (vacíos si no hay
-   * setup). FUNCION PURA: no toca el estado ni el DOM (el llamador
+   * setup). El NOMBRE de la máquina es independiente del del
+   * cartucho (F5-I21): con setup previo se conserva el suyo; sin
+   * él, manda el del cartucho o «Derivado del cartucho».
+   * FUNCION PURA: no toca el estado ni el DOM (el llamador
    * decide cuándo se aplica).
    * @param {Object} json - JSON del cartucho cargado (GWB o GWI).
    * @param {?Object} previo - El setup anterior (o null).
@@ -1079,7 +1082,12 @@ var baseDirector = (function () {
     const hayMemoria = Object.keys(memoriaDerivada).length > 0;
     return {
       tipo: GWS_TIPO, version: GWS_VERSION,
-      nombre: json.nombre || 'Derivado del cartucho',
+      // F5-I21: el nombre de la máquina y el del cartucho son
+      // INDEPENDIENTES: con setup previo se conserva SU nombre (cargar
+      // un GWB/GWI no machaca el del GWS cargado); sin previo, el del
+      // cartucho (F5-I19).
+      nombre: previo ? (previo.nombre || 'Derivado del cartucho') :
+        (json.nombre || 'Derivado del cartucho'),
       estilo: estilo,
       resolucion: { ancho: resolucion.ancho, alto: resolucion.alto },
       botones: botones,

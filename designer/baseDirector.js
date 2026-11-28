@@ -191,10 +191,10 @@ var baseDirector = (function () {
   // en minúsculas), la tecla de flecha del PC que los activa y el
   // símbolo que pinta la pista del botón.
   const CURSORES = {
-    'cursor-izquierda': { flecha: 'ArrowLeft', simbolo: '\u2190' },
-    'cursor-derecha':   { flecha: 'ArrowRight', simbolo: '\u2192' },
-    'cursor-arriba':    { flecha: 'ArrowUp', simbolo: '\u2191' },
-    'cursor-abajo':     { flecha: 'ArrowDown', simbolo: '\u2193' }
+    'cursor-izquierda': { flecha: 'ArrowLeft', simbolo: '←' },
+    'cursor-derecha':   { flecha: 'ArrowRight', simbolo: '→' },
+    'cursor-arriba':    { flecha: 'ArrowUp', simbolo: '↑' },
+    'cursor-abajo':     { flecha: 'ArrowDown', simbolo: '↓' }
   };
 
   /**
@@ -510,9 +510,9 @@ var baseDirector = (function () {
     caja.appendChild(titulo);
 
     const actual = document.createElement('p');
-    actual.textContent = 'Valores actuales: ' + setupGWS.resolucion.ancho + '\u00d7' +
+    actual.textContent = 'Valores actuales: ' + setupGWS.resolucion.ancho + '×' +
       setupGWS.resolucion.alto + ' px' +
-      (baseDims ? ' (segmentos: ' + baseDims.ancho + '\u00d7' + baseDims.alto + ' px)' : '');
+      (baseDims ? ' (segmentos: ' + baseDims.ancho + '×' + baseDims.alto + ' px)' : '');
     caja.appendChild(actual);
 
     const filaNueva = document.createElement('p');
@@ -526,7 +526,7 @@ var baseDirector = (function () {
     inAncho.style.width = '5em';
     const inAlto = inAncho.cloneNode(true);
     inAlto.value = String(setupGWS.resolucion.alto);
-    filaNueva.append(inAncho, document.createTextNode(' \u00d7 '), inAlto);
+    filaNueva.append(inAncho, document.createTextNode(' × '), inAlto);
     caja.appendChild(filaNueva);
 
     const factor = document.createElement('p');
@@ -540,7 +540,7 @@ var baseDirector = (function () {
     function _recalcular() {
       const a = parseInt(inAncho.value, 10), l = parseInt(inAlto.value, 10);
       if (!(a > 0) || !(l > 0)) {
-        factor.textContent = 'Factor de escala: \u2014';
+        factor.textContent = 'Factor de escala: —';
         afecta.textContent = '';
         avisoEscala.textContent = '';
         errorRango.textContent = 'Resolución no válida.';
@@ -549,8 +549,8 @@ var baseDirector = (function () {
       }
       const fx = a / fuenteX, fy = l / fuenteY;
       factor.textContent = 'Factor de escala: ' + (Math.round(fx * 100) / 100) +
-        ' \u00d7 ' + (Math.round(fy * 100) / 100) +
-        (baseDims ? ' (sobre img_s: ' + fuenteX + '\u00d7' + fuenteY + ' px)' : '');
+        ' × ' + (Math.round(fy * 100) / 100) +
+        (baseDims ? ' (sobre img_s: ' + fuenteX + '×' + fuenteY + ' px)' : '');
       afecta.textContent = haySegmentos
         ? 'El juego NO se reescala: ' + resumen.segmentos + ' segmento(s) y ' +
           resumen.imagenes + ' sprite(s) quedan igual (el emulador reescala al vuelo y el GWC escala al generar).'
@@ -629,7 +629,7 @@ var baseDirector = (function () {
         _pintarFondoNeutro();
       }
       pintarInfo();
-      avisar('Resolución ajustada: ' + anchoNuevo + '\u00d7' + altoNuevo +
+      avisar('Resolución ajustada: ' + anchoNuevo + '×' + altoNuevo +
         ' (el juego no se toca: img_s, sprites y segmentos quedan sin escalar).');
       return true;
     } catch (e) {
@@ -2067,6 +2067,7 @@ var baseDirector = (function () {
       vistaEditor: 'pesEditor',
       vistaSprites: 'pesSprites',
       vistaCartucho: 'pesCartucho',
+      vistaGenerador: 'pesGenerador',
       vistaPruebas: 'pesPruebas'
     };
     for (const v of Object.keys(botones)) {
@@ -2080,6 +2081,7 @@ var baseDirector = (function () {
     // F5-I12: img_s ya no se bloquea: cambiarla solo tiene efecto al
     // Aplicar, que descarta y recalcula segmentos y sprites.
     if (id === 'vistaCartucho') baseFicha.pintar(_$('fichaCartucho'));
+    if (id === 'vistaGenerador') baseGenerador.pintar(_$('fichaGenerador'));
     if (id === 'vistaSetup') baseSetup.pintar(_$('fichaSetup'));
   }
 
@@ -2101,6 +2103,7 @@ var baseDirector = (function () {
     _$('pesCartucho').disabled = enJuego || !setupGWS;
     _$('pesEditor').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesSprites').disabled = enJuego || !setupGWS || !editable || soloSimulador;
+    _$('pesGenerador').disabled = enJuego || !setupGWS || !editable || soloSimulador;   // F6-I03: genera con autoría, como el Editor
     _$('pesSimulador').disabled = !setupGWS;
     _$('pesPruebas').disabled = enJuego;    // Pruebas: con partida no se toca (GW_DEBUG la descubre pruebas/pruebas.js)
     for (const id of BOTONES_CARGA) _$(id).disabled = enJuego;
@@ -2245,10 +2248,10 @@ var baseDirector = (function () {
       'panelSegmento', 'ficheroCartucho', 'carpetaCartucho',
       'panelCarga',
       'pesCarga', 'pesSetup', 'pesSimulador', 'pesEditor',
-      'pesSprites', 'pesCartucho', 'pesPruebas',
+      'pesSprites', 'pesCartucho', 'pesGenerador', 'pesPruebas',
       'vistaCarga', 'vistaSetup', 'vistaSimulador', 'vistaEditor',
-      'vistaSprites', 'vistaCartucho', 'fichaSetup',
-      'fichaCartucho', 'lienzoEditor']
+      'vistaSprites', 'vistaCartucho', 'vistaGenerador', 'fichaSetup',
+      'fichaCartucho', 'fichaGenerador', 'lienzoEditor']
       .concat(BOTONES_CARGA, BOTONES_SETUP, BOTONES_CARTUCHO, BOTONES_AUTORIA);
     const faltan = necesarios.filter(id => _$(id) === null);
     if (faltan.length > 0) {
@@ -2318,6 +2321,7 @@ var baseDirector = (function () {
     _$('pesEditor').addEventListener('click', () => mostrarPestanna('vistaEditor'));
     _$('pesSprites').addEventListener('click', () => mostrarPestanna('vistaSprites'));
     _$('pesCartucho').addEventListener('click', () => mostrarPestanna('vistaCartucho'));
+    _$('pesGenerador').addEventListener('click', () => mostrarPestanna('vistaGenerador'));
     _$('pesPruebas').addEventListener('click', () => mostrarPestanna('vistaPruebas'));
 
     _$('btnGuardar').addEventListener('click', _verificarYGuardar);

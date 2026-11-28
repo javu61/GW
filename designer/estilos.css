@@ -260,7 +260,7 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 #panelCarga p { margin: 0; color: #7a7a7a; font-size: 0.9rem; }
 #panelCarga.sobre { border-color: #2a7a4f; background: #eefcf2; }
 /* ---------- Pestaña Cartucho (F5-I10): la ficha ---------- */
-#fichaCartucho, #fichaSetup { max-width: 980px; }
+#fichaCartucho, #fichaSetup, #fichaGenerador { max-width: 980px; }
 .fichaSeccion { border: 1px solid #555; border-radius: 6px; padding: 10px 14px; margin: 0 0 14px 0; }
 .fichaSeccion h3 { margin: 0 0 10px 0; font-size: 1rem; }
 .fichaRejilla { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; align-items: center; }
@@ -271,19 +271,20 @@ body:not([data-vista="vistaEditor"]) #infoDiseno { display: none !important; }
 .fichaInformativo { font-size: 0.95rem; color: #e8e8e8; }
 .fichaPar { display: flex; align-items: center; gap: 6px; }
 #fichaCartucho input[type=text], #fichaCartucho input[type=number], #fichaCartucho select,
-#fichaSetup input[type=text], #fichaSetup input[type=number], #fichaSetup select {
+#fichaSetup input[type=text], #fichaSetup input[type=number], #fichaSetup select,
+#fichaGenerador select {
   font-size: 0.95rem; padding: 5px 8px; border: 1px solid #555; border-radius: 6px;
   background: #1f2226; color: #e8e8e8;
 }
 #fichaCartucho input[type=text], #fichaSetup input[type=text] { min-width: 260px; }
 #fichaCartucho input[type=number], #fichaSetup input[type=number] { width: 90px; }
 #fichaCartucho input:disabled { opacity: 0.4; }
-#fichaCartucho button {
+#fichaCartucho button, #fichaGenerador button {
   font-size: 0.95rem; padding: 6px 12px; border: 1px solid #555; border-radius: 8px;
   background: #3a3f47; color: #e8e8e8; cursor: pointer;
 }
-#fichaCartucho button:hover:not(:disabled) { background: #4a5059; }
-#fichaCartucho button:disabled { opacity: 0.4; cursor: not-allowed; }
+#fichaCartucho button:hover:not(:disabled), #fichaGenerador button:hover:not(:disabled) { background: #4a5059; }
+#fichaCartucho button:disabled, #fichaGenerador button:disabled { opacity: 0.4; cursor: not-allowed; }
 .fichaImagenes { display: flex; gap: 14px; flex-wrap: wrap; }
 .fichaImagen { flex: 1 1 260px; max-width: 300px; border: 1px solid #444; border-radius: 6px; padding: 8px; }
 .fichaImagen h4 { margin: 0 0 6px 0; font-size: 0.9rem; }

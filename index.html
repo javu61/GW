@@ -33,6 +33,7 @@
     <button id="pesEditor" disabled>Editor</button>
     <button id="pesSprites" disabled>Segmentos y Sprites</button>
     <button id="pesSimulador" disabled>Simulador</button>
+    <button id="pesGenerador" disabled>Generador</button>
     <button id="pesPruebas" class="oculto" disabled>Pruebas</button>
   </nav>
 
@@ -156,6 +157,13 @@
     <div id="fichaCartucho"></div>
   </div>
 
+  <!-- Vista GENERADOR (F6-I03): los selectores de Destino y Etapa y el
+       botón «Generar». En esta iteración solo la pantalla: lo que hace
+       el botón llega en F6-I04 (baseGenerador.js). -->
+  <div id="vistaGenerador" class="oculto">
+    <div id="fichaGenerador"></div>
+  </div>
+
   <!-- Vista PRUEBAS: SOLO con GW_DEBUG activo (la pestaña correspondiente la
        descubre pruebas/pruebas.js). Sus botones lanzan EN LA PÁGINA las pruebas
        portadas del directorio pruebas y pintan el resultado en esta vista; no
@@ -191,6 +199,7 @@
   <script src="designer/baseCartucho.js"></script> <!-- Manejo de Cartuchos -->
   <script src="designer/baseSetup.js"></script> <!-- La ficha de la pestaña Setup (F5-I12, no depende de nadie). -->
   <script src="designer/baseFicha.js"></script> <!-- La ficha de la pestaña Cartucho (no depende de nadie). -->
+  <script src="designer/baseGenerador.js"></script> <!-- La ficha de la pestaña Generador (F6-I03, no depende de nadie). -->
   <script src="designer/baseDirector.js"></script>
   <script src="designer/juegoMotorEstados.js"></script>
   <script src="designer/juegoMotorGrafico.js"></script>

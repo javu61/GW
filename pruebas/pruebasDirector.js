@@ -34,13 +34,17 @@
 //       segmentos; cancelar conserva todo.
 //   D11 (A02) El fondo del GWC en el emulador: un GWC con Bloque 5 reconstruye la
 //       img_f YA escalada y la pinta; el ColorFondo del Bloque 0 queda debajo.
+//   D12 (F6-I03) La pestaña Generador: se habilita con un cartucho editable (como
+//       el Editor); la ficha trae los selectores de Destino (Mega/ESP) y Etapa
+//       (Prueba/Completa) y el botón Generar, que aún no genera nada (avisa de
+//       que su contenido llega en F6-I04).
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 ... _pruebaD11
+//   _pruebaD1 ... _pruebaD12
 //                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20;
-//                        D10: F5-I21; D11: A02).
+//                        D10: F5-I21; D11: A02; D12: F6-I03).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -471,6 +475,40 @@
     return out;
   }
 
+  async function _pruebaD12() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    // Con un setup sin cartucho editable, la pestaña no está disponible.
+    await U.cargarEn('ficheroCartucho', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    ok('D12: con solo el setup, la pestaña Generador está deshabilitada',
+      document.getElementById('pesGenerador').disabled);
+    // Con un GWI editable, se habilita y la ficha trae sus controles.
+    await U.cargarEn('ficheroCartucho', [U.fichero('cartucho_GWI.zip', await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip'))], 3000);
+    ok('D12: con un GWI editable, la pestaña Generador está habilitada',
+      !document.getElementById('pesGenerador').disabled);
+    document.getElementById('pesGenerador').click();
+    ok('D12: la vista Generador queda delante',
+      document.body.dataset.vista === 'vistaGenerador' &&
+      !document.getElementById('vistaGenerador').classList.contains('oculto'),
+      document.body.dataset.vista);
+    ok('D12: la ficha trae los dos selectores y el botón',
+      !!document.getElementById('genDestino') && !!document.getElementById('genEtapa') &&
+      !!document.getElementById('btnGeneradorGenerar'));
+    ok('D12: valores por defecto: destino Mega y etapa Prueba',
+      baseGenerador.estado().destino === 'mega' && baseGenerador.estado().etapa === 'prueba',
+      JSON.stringify(baseGenerador.estado()));
+    document.getElementById('genDestino').value = 'esp';
+    document.getElementById('genEtapa').value = 'completa';
+    ok('D12: los selectores aceptan ESP y Completa',
+      baseGenerador.estado().destino === 'esp' && baseGenerador.estado().etapa === 'completa',
+      JSON.stringify(baseGenerador.estado()));
+    document.getElementById('btnGeneradorGenerar').click();
+    ok('D12: Generar aún no genera nada y avisa de que llega en F6-I04',
+      /F6-I04/.test(document.getElementById('genNota').textContent),
+      document.getElementById('genNota').textContent);
+    return out;
+  }
+
   Pruebas.registrar([
     // F5-I19: d5 y d6 necesitan la página RECIÉN cargada: d5 PRIMERO.
     { id: 'd5', grupo: 'director', nombre: 'D5 GWC sin máquina (requiere página recién cargada)', destructiva: false, ejecutar: () => _pruebaD5() },
@@ -483,7 +521,8 @@
     { id: 'd8', grupo: 'director', nombre: 'D8 botón Limpiar de la Carga (F5-I19)', destructiva: true, ejecutar: () => _pruebaD8() },
     { id: 'd9', grupo: 'director', nombre: 'D9 aplicar propaga datos comunes y confirma (F5-I20)', destructiva: true, ejecutar: () => _pruebaD9() },
     { id: 'd10', grupo: 'director', nombre: 'D10 ajuste de resolución (F5-I21)', destructiva: true, ejecutar: () => _pruebaD10() },
-    { id: 'd11', grupo: 'director', nombre: 'D11 fondo del GWC en el emulador (A02)', destructiva: true, ejecutar: () => _pruebaD11() }
+    { id: 'd11', grupo: 'director', nombre: 'D11 fondo del GWC en el emulador (A02)', destructiva: true, ejecutar: () => _pruebaD11() },
+    { id: 'd12', grupo: 'director', nombre: 'D12 la pestaña Generador (F6-I03)', destructiva: true, ejecutar: () => _pruebaD12() }
   ]);
 })();
 

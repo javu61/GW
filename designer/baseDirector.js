@@ -2104,6 +2104,7 @@ var baseDirector = (function () {
     _$('pesEditor').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesSprites').disabled = enJuego || !setupGWS || !editable || soloSimulador;
     _$('pesGenerador').disabled = enJuego || !setupGWS || !editable || soloSimulador;   // F6-I03: genera con autoría, como el Editor
+    _$('btnGeneradorGenerar').disabled = enJuego || !setupGWS || !editable || soloSimulador;   // F6-I04
     _$('pesSimulador').disabled = !setupGWS;
     _$('pesPruebas').disabled = enJuego;    // Pruebas: con partida no se toca (GW_DEBUG la descubre pruebas/pruebas.js)
     for (const id of BOTONES_CARGA) _$(id).disabled = enJuego;
@@ -2251,7 +2252,7 @@ var baseDirector = (function () {
       'pesSprites', 'pesCartucho', 'pesGenerador', 'pesPruebas',
       'vistaCarga', 'vistaSetup', 'vistaSimulador', 'vistaEditor',
       'vistaSprites', 'vistaCartucho', 'vistaGenerador', 'fichaSetup',
-      'fichaCartucho', 'fichaGenerador', 'lienzoEditor']
+      'fichaCartucho', 'fichaGenerador', 'btnGeneradorGenerar', 'lienzoEditor']
       .concat(BOTONES_CARGA, BOTONES_SETUP, BOTONES_CARTUCHO, BOTONES_AUTORIA);
     const faltan = necesarios.filter(id => _$(id) === null);
     if (faltan.length > 0) {

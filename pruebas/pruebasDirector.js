@@ -36,15 +36,19 @@
 //       img_f YA escalada y la pinta; el ColorFondo del Bloque 0 queda debajo.
 //   D12 (F6-I03) La pestaña Generador: se habilita con un cartucho editable (como
 //       el Editor); la ficha trae los selectores de Destino (Mega/ESP) y Etapa
-//       (Prueba/Completa) y el botón Generar, que aún no genera nada (avisa de
-//       que su contenido llega en F6-I04).
+//       (Prueba/Completa) y el botón Generar de la barra, que con combinaciones
+//       sin contenido avisa «Nada que generar en este momento» (F6-I04).
+//   D13 (F6-I04) Generación Mega + Prueba: descarga el .h con el GWC (sin
+//       bloque de fondo) y el .ino de la prueba; el GWC del .h se revalida
+//       con leerGWC (cabecera, CRC y código «#HHHH#») y el .ino trae la
+//       Secuencia constante, la pausa, las tiras y el motor de marcas.
 //
 // FUNCIONES
 //   _estado              Lo que ve el usuario: tipo y nombre del cartucho, botones y pestañas.
 //   _gwbModificado       El GWB de ejemplo con el JSON y la imagen img_s cambiados (en memoria).
-//   _pruebaD1 ... _pruebaD12
+//   _pruebaD1 ... _pruebaD13
 //                        Una función por prueba (D5/D6/D7/D8: F5-I19; D9: F5-I20;
-//                        D10: F5-I21; D11: A02; D12: F6-I03).
+//                        D10: F5-I21; D11: A02; D12: F6-I03; D13: F6-I04).
 //
 // USO
 //   Pestaña «Pruebas» (index.html por servidor local con GW_DEBUG) o, en consola:
@@ -503,8 +507,77 @@
       baseGenerador.estado().destino === 'esp' && baseGenerador.estado().etapa === 'completa',
       JSON.stringify(baseGenerador.estado()));
     document.getElementById('btnGeneradorGenerar').click();
-    ok('D12: Generar aún no genera nada y avisa de que llega en F6-I04',
-      /F6-I04/.test(document.getElementById('genNota').textContent),
+    ok('D12: ESP + Completa avisa «Nada que generar en este momento» (F6-I04)',
+      /Nada que generar en este momento/.test(document.getElementById('genNota').textContent),
+      document.getElementById('genNota').textContent);
+    document.getElementById('genEtapa').value = 'prueba';
+    document.getElementById('btnGeneradorGenerar').click();
+    ok('D12: ESP + Prueba también avisa «Nada que generar en este momento»',
+      /Nada que generar en este momento/.test(document.getElementById('genNota').textContent),
+      document.getElementById('genNota').textContent);
+    return out;
+  }
+
+  async function _pruebaD13() {
+    const out = [];
+    const ok = (n, c, x) => out.push([n, !!c, x === undefined ? '' : String(x)]);
+    await U.cargarEn('ficheroCartucho', [U.fichero('setup2.json', await U.traerBytes('pruebas/cartuchos/setup2.json'))], 500);
+    await U.cargarEn('ficheroCartucho', [U.fichero('cartucho_GWI.zip', await U.traerBytes('pruebas/cartuchos/cartucho_GWI.zip'))], 3000);
+    document.getElementById('pesGenerador').click();
+    document.getElementById('genDestino').value = 'mega';
+    document.getElementById('genEtapa').value = 'prueba';
+    const descargas = [];
+    const dlReal = basePack.descargarBlob;
+    basePack.descargarBlob = function (blob, nombre) {
+      const fr = new FileReader();
+      fr.onload = () => { descargas.push({ nombre: String(nombre), texto: String(fr.result) }); };
+      fr.readAsText(blob);
+    };
+    try {
+      document.getElementById('btnGeneradorGenerar').click();
+      await U.esperar(3000);
+    } finally {
+      basePack.descargarBlob = dlReal;
+    }
+    const cab = descargas.find(d => /_gwc\.h$/.test(d.nombre));
+    const ino = descargas.find(d => /_prueba_mega\.ino$/.test(d.nombre));
+    ok('D13: Mega + Prueba descarga DOS ficheros (.h e .ino)',
+      descargas.length === 2 && !!cab && !!ino,
+      descargas.map(d => d.nombre).join(', '));
+    ok('D13: el .h trae el array PROGMEM y su tamaño',
+      !!cab && /const uint8_t GWC\[\] PROGMEM = \{/.test(cab.texto) && /#define GWC_TAM \d+/.test(cab.texto),
+      cab ? cab.nombre : 'sin descarga');
+    // El GWC del .h, reconstruido, se revalida con el lector (cabecera, CRC y código).
+    let leido = null, tam = 0;
+    if (cab) {
+      const trozo = cab.texto.split('= {')[1] || '';
+      const cuerpo = (trozo.split('};')[0] || '');
+      const hexs = cuerpo.match(/0x[0-9A-Fa-f]{2}/g) || [];
+      const bytes = new Uint8Array(hexs.map(h => parseInt(h.slice(2), 16)));
+      tam = bytes.length;
+      try { leido = baseCartucho.leerGWC(bytes); } catch (e) { leido = null; }
+    }
+    ok('D13: el GWC del .h se revalida con leerGWC y su código «#HHHH#»',
+      !!leido && /^#[0-9A-F]{4}#$/.test(leido.codigo),
+      leido ? leido.codigo + ' (' + tam + ' bytes)' : 'no se revalida');
+    if (leido && cab) {
+      const crcDelComentario = (cab.texto.match(/CRC (#[0-9A-F]{4}#)/) || [])[1];
+      ok('D13: el CRC declarado en el .h coincide con el del GWC',
+        crcDelComentario === leido.codigo, crcDelComentario || 'sin CRC en el comentario');
+    }
+    ok('D13: el GWC del .h NO lleva bloque de fondo (fondoImagen nula)',
+      !!leido && leido.fondoImagen === null, leido ? String(leido.fondoImagen) : 'sin lectura');
+    ok('D13: el .ino incluye su .h, la Secuencia constante y la pausa',
+      !!ino && ino.texto.indexOf('#include "') >= 0 && /const uint8_t SECUENCIA\[\]/.test(ino.texto) &&
+      /const uint16_t PAUSA_MS/.test(ino.texto) && /SECUENCIA_N/.test(ino.texto),
+      ino ? ino.nombre : 'sin descarga');
+    ok('D13: el .ino pinta con tiras horizontales y motor de marcas',
+      !!ino && /pantallaTira/.test(ino.texto) && /mgFijarSegmento/.test(ino.texto) &&
+      /mgPresentar/.test(ino.texto) && /freeRam/.test(ino.texto) && /micros\(\)/.test(ino.texto),
+      ino ? ino.nombre : 'sin descarga');
+    ok('D13: la nota de la ficha apunta a los dos ficheros',
+      /_gwc\.h/.test(document.getElementById('genNota').textContent) &&
+      /_prueba_mega\.ino/.test(document.getElementById('genNota').textContent),
       document.getElementById('genNota').textContent);
     return out;
   }
@@ -522,7 +595,8 @@
     { id: 'd9', grupo: 'director', nombre: 'D9 aplicar propaga datos comunes y confirma (F5-I20)', destructiva: true, ejecutar: () => _pruebaD9() },
     { id: 'd10', grupo: 'director', nombre: 'D10 ajuste de resolución (F5-I21)', destructiva: true, ejecutar: () => _pruebaD10() },
     { id: 'd11', grupo: 'director', nombre: 'D11 fondo del GWC en el emulador (A02)', destructiva: true, ejecutar: () => _pruebaD11() },
-    { id: 'd12', grupo: 'director', nombre: 'D12 la pestaña Generador (F6-I03)', destructiva: true, ejecutar: () => _pruebaD12() }
+    { id: 'd12', grupo: 'director', nombre: 'D12 la pestaña Generador (F6-I03)', destructiva: true, ejecutar: () => _pruebaD12() },
+    { id: 'd13', grupo: 'director', nombre: 'D13 generación Mega + Prueba (F6-I04)', destructiva: true, ejecutar: () => _pruebaD13() }
   ]);
 })();
 

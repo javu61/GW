@@ -2863,6 +2863,7 @@ var baseCartucho = (function () {
     leerGWC: leerGWC,
     generarGWC: generarGWC,
     validarTopes: validarTopes,
+    viajanEnGWC: _viajanEnGWC,        // F6-I04: lo que viaja, para el Generador (la Secuencia como índices)
     estadistica: estadistica,
     // Utilidades compartidas
     escalar: escalar,               // F5-I21: la misma conversión que el GWC (ajuste de resolución)

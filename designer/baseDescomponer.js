@@ -128,6 +128,9 @@
 //                          topes (aviso) + guardar GWI.
 //   generarGWIyGWC         Botón «Generar GWS+GWB+GWI+GWC» (F5-I17 M9): verificar
 //                          + topes BLOQUEANTES + GWC + su GWS + GWI con el Código GWC.
+//   prepararGWC            F6-I04 (Generador): las mismas comprobaciones y el GWC
+//                          montado para un destino, SIN estampar nada (el par
+//                          del Editor no se toca).
 //   _cambiosSinAplicar     F5-I17 (M12): «Generar pide Aplicar» — si el
 //                          setup tiene cambios sin aplicar, no se genera.
 //   _ctxVerificacion        El contexto que pide baseCartucho para
@@ -4871,6 +4874,62 @@ const baseDescomponer = (() => {
    * uno del otro.
    * @returns {Promise<void>}
    */
+  /**
+   * F6-I04 (Generador): prepara lo que necesita un DESTINO del generador.
+   * Son las mismas comprobaciones que «Generar GWI+GWC» (cambios sin
+   * aplicar, ficha del Cartucho, verificación del diseñador, topes y
+   * pantalla declarada) y el GWC montado; NO estampa nada: no es el par
+   * del Editor, es un build para un destino. El fondo solo viaja si el
+   * destino lo pide (la prueba del Mega va con fondo liso: Bloque 5
+   * vacío, F6-I02).
+   * @param {Object} [opciones] - { conFondo:boolean }.
+   * @returns {?Object} { json, gwc, pantalla, secuencia, ticks } — el
+   *          GWI montado, el GWC (baseCartucho.generarGWC), la pantalla
+   *          declarada, la Secuencia como ÍNDICES del GWC (los que no
+   *          viajan, fuera, como en el Bloque 4) y sus ticks; o null si
+   *          ya se avisó de los cambios sin aplicar.
+   * @throws {Error} Las comprobaciones bloqueantes, con su mensaje.
+   */
+  function prepararGWC(opciones) {
+    const conFondo = !!(opciones && opciones.conFondo);
+    if (!base || grupos.length === 0)
+      throw new Error('no hay cartucho descompuesto que generar.');
+    if (_cambiosSinAplicar()) return null;
+    const ficha = baseFicha.verificar({ generar: true, mostrar: true });
+    for (const a of ficha.avisos) console.warn('[ficha] ' + a);
+    if (ficha.errores.length > 0) {
+      for (const e of ficha.errores) console.error('[ficha] ' + e);
+      throw new Error('la ficha del cartucho tiene ' + ficha.errores.length +
+        ' error(es): ' + ficha.errores[0] + ' (pestaña Cartucho).');
+    }
+    const hallazgos = baseCartucho.verificarCartucho(_ctxVerificacion());
+    if (hallazgos.errores.length > 0) {
+      for (const e of hallazgos.errores) console.error('[verificar] ' + e);
+      throw new Error('definición incompleta: ' + hallazgos.errores[0]);
+    }
+    const json = _montarGWI();
+    if (!baseCartucho.validarTopes(json))
+      throw new Error('el cartucho supera el tope de 255 sprites/segmentos/secuencias del GWC.');
+    const pantallaSetup = baseDirector.pantallaDeSetup();
+    if (!pantallaSetup)
+      throw new Error('sin setup cargado no hay pantalla declarada: el GWC no sabe a qué resolución escalar.');
+    const pantalla = {
+      ancho: pantallaSetup.ancho, alto: pantallaSetup.alto,
+      fuente: { ancho: base.ancho, alto: base.alto }
+    };
+    const gwc = baseCartucho.generarGWC(json, sprites, pantalla,
+      conFondo ? baseDirector.imagenFondo() : null);
+    const viaja = baseCartucho.viajanEnGWC(json);
+    const indiceDeSegmento = new Map(viaja.segmentos.map((s, i) => [s.id, i]));
+    const secuencia = (((json.secuencia || {}).segmentos) || [])
+      .map(id => indiceDeSegmento.get(id))
+      .filter(i => i !== undefined);
+    return {
+      json: json, gwc: gwc, pantalla: pantalla, secuencia: secuencia,
+      ticks: (json.secuencia && Number(json.secuencia.ticks)) || 1
+    };
+  }
+
   async function generarGWIyGWC() {
     try {
       await _generarPar();
@@ -5447,6 +5506,7 @@ const baseDescomponer = (() => {
     arrancar: arrancar,
     verificarYGuardar: verificarYGuardar,
     generarGWIyGWC: generarGWIyGWC,
+    prepararGWC: prepararGWC,                     // F6-I04: el Generador pide el GWC para su destino
     deshacer: deshacer,
     rehacer: rehacer,
     cargarAutoria: cargarAutoria,

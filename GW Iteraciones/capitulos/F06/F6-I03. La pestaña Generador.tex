@@ -1,0 +1,52 @@
+\section{Tercera iteración de la Fase 6: La pestaña Generador}\label{sec:F6I03}
+
+Hasta ahora el Designer genera sus cartuchos con los botones del Editor: Guardar GWI, Guardar GWB y Generar GWI+GWC (el GWC). Ese camino sirve para el simulador, pero la Fase 6 trae un destino nuevo, el ESP32, y con él necesidades nuevas: el Bloque 5 del fondo en su formato definitivo (véase la sección~\ref{sec:F6I91}), los ficheros de cabecera con los datos del cartucho para el firmware, y variantes según lo que se quiera probar en cada momento. Meter todo eso en los botones que ya tiene el Editor los convertiría en una lista confusa de órdenes cuyo alcance no se ve.
+
+Esta iteración crea el sitio donde vive todo eso: una pestaña nueva, \textbf{Generador}, con los selectores de \textbf{Destino} (Mega o ESP) y \textbf{Etapa} (Prueba o Completa) y un único botón \textbf{Generar}. Es una iteración de pantalla: la pestaña existe, se activa como las demás y los selectores guardan la elección, pero el botón todavía no genera nada; lo que hace se define en la iteración siguiente (F6-I04).
+
+\subsection{La pestaña y cuándo está activa}
+\label{sec:F6I03Pestanna}
+
+La pestaña se añade tras el Simulador, como última de las pestañas de trabajo (solo la de Pruebas, que es de depuración, va después), y su activación replica el mecanismo de \texttt{actualizarPestanas}:
+
+\begin{itemize}
+	\item \textbf{Con un cartucho editable (GWB o GWI):} habilitada. Generar necesita la autoría completa: los mismos datos que usa el Editor para guardar y generar.
+	\item \textbf{Con solo el setup cargado:} deshabilitada. Sin cartucho no hay nada que generar.
+	\item \textbf{Tras cargar un GWC:} deshabilitada. El GWC es ejecución pura y no trae la autoría (igual que el Editor).
+	\item \textbf{Durante una partida:} deshabilitada, como el resto de pestañas salvo el Simulador.
+\end{itemize}
+
+La condición es, por tanto, la misma que la del Editor: \texttt{enJuego || !setupGWS || !editable || soloSimulador}.
+
+\subsection{La ficha del generador}
+\label{sec:F6I03Ficha}
+
+La pestaña muestra una ficha pequeña, construida por un módulo nuevo (\texttt{baseGenerador.js}) con el mismo patrón que las fichas de Setup y Cartucho (se construye una vez y conserva lo escrito entre visitas):
+
+\begin{itemize}
+	\item \textbf{Destino:} selector con dos valores, \emph{Mega} y \emph{ESP}. Es el sistema al que va lo generado: el Arduino Mega de las pruebas de Fase 6 o el ESP32 definitivo. Cada destino tiene su propio formato de entrega (por ahora solo se decide a quién va dirigido el resultado).
+	\item \textbf{Etapa:} selector con dos valores, \emph{Prueba} y \emph{Completa}. Prueba genera los cartuchos y el programa de la prueba de la fase (como el cartucho de fondo y segmento móvil de la sección~\ref{sec:F6I92}); Completa genera el juego entero para el aparato.
+	\item \textbf{Generar:} un único botón. No hay un botón por destino ni por etapa: lo que genera lo deciden los dos selectores, de modo que la pestaña crece por dentro (nuevos destinos o etapas en los selectores) sin crecer por fuera.
+	\item \textbf{Nota informativa:} una línea bajo el botón explica qué prepara la ficha y avisa de que, en esta iteración, el botón aún no genera nada. Al pulsarlo, la nota lo recuerda: su trabajo llega en F6-I04. No hay mensajes de error ni en la barra de estado, porque no hay nada que falle.
+\end{itemize}
+
+\subsection{Decisiones}
+\label{sec:F6I03Decisiones}
+
+\begin{itemize}
+	\item \textbf{Pestaña nueva y no más botones en el Editor:} el generador es una tarea distinta (producir lo que consume el hardware) de la autoría (construir el cartucho). Separada, el Editor conserva sus tres botones de siempre y la Fase 6 tiene un sitio propio donde crecer.
+	\item \textbf{Un solo botón:} la combinación Destino + Etapa es la orden completa; un botón por caso sería una botonera que solo crece.
+	\item \textbf{Los valores son texto simple:} \texttt{mega}/\texttt{esp} y \texttt{prueba}/\texttt{completa} como valores internos, con el texto visible en español. F6-I04 los usa para elegir el generador que toque.
+	\item \textbf{Sin persistencia:} la selección vive solo en la página. Si más adelante conviene recordarla entre sesiones, se guarda como los demás datos del setup, no de forma especial.
+	\item \textbf{Módulo independiente:} \texttt{baseGenerador.js} no conoce ni al director ni a los generadores de cartuchos; cuando tenga contenido, recibirá los datos que necesite, como hacen las fichas.
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F6I03Pruebas}
+
+La prueba D12 del grupo \texttt{director} cubre la iteración: con solo el setup cargado la pestaña está deshabilitada; con un GWI editable se habilita; al entrar, la vista queda delante y la ficha trae los dos selectores y el botón; los valores por defecto son Mega y Prueba; los selectores aceptan sus valores (ESP, Completa); y pulsar Generar no genera nada y deja el aviso de que el contenido llega en F6-I04. Las demás suites no cambian: la pestaña nueva no toca datos ni cartuchos.
+
+\subsection{Lo que traerá F6-I04}
+\label{sec:F6I03Siguiente}
+
+El contenido del botón, destino a destino y etapa a etapa: para el ESP, el Bloque 5 con el formato de la sección~\ref{sec:F6I91} y las cabeceras del firmware; para el Mega, lo equivalente a su carta de pruebas. Esta iteración deja preparado el sitio y la interfaz para que esa incorporación no toque ni la pestaña ni las pruebas de pantalla.

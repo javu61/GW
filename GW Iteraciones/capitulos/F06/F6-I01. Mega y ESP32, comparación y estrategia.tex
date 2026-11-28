@@ -33,9 +33,10 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 		\toprule
 		& Arduino Mega 2560 & ESP32 DevKitC V2 \\
 		\midrule
-		Cartucho & Compilado dentro del programa (array en \texttt{PROGMEM}), más adelante cargado desde la SD & Partición de datos de la flash, y más adelante cargado desde la SD \\
+		Cartucho & Compilado dentro del programa (array en \texttt{PROGMEM}) & Partición de datos de la flash \\
 		Fondo & No es posible (no cabe en la RAM ni se puede mapear cómodamente) & Sí, desde la flash \\
-		Carga de cartuchos & Posibilidad de usar la SD & Posibilidad de usar la SD, Wifi o Bluetooth \\
+		Carga de cartuchos & Posibilidad de usar la SD & Posibilidad de usar la SD,  Bluetooth o Wifi\\
+		\bottomrule
 	\end{tabular}
 \caption{Donde irán los datos en cada sistema}
 \label{tab:F6I01PlataformasDatos}
@@ -46,11 +47,11 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 \label{sec:F6I01Posible}
 
 \begin{itemize}
-	\item \textbf{Mega, posible sin incluir el fondo:} el motor completo parece posible para un juego de la talla del Parachute (estimación, solo se puede confirmar ejecutando el desarrollo):
+	\item \textbf{Mega, posible sin incluir el fondo:} el motor completo \textbf{parece posible} para un juego de la talla del Parachute (estimación, solo se puede confirmar ejecutando el desarrollo):
 	\begin{itemize}
 		\item \textbf{Flash:} el GWC del Parachute son unos 7\,KB y el código del motor con las bibliotecas rondará 20 a 40\,KB, de 256\,KB.
 		\item \textbf{RAM:} el estado de ejecución (marcas de visible y cambiar de unos 54 segmentos, rutas activas, contadores, jugador, temporizadores y posición del generador aleatorio) ronda 1\,KB; con la biblioteca de pantalla, la pila y el puerto serie, debería quedar por debajo de 3\,KB de los 8\,KB.
-		\item \textbf{Velocidad:} la lógica sobra; lo costoso es pintar, unos pocos milisegundos por sprite, y por iteración solo cambian unos pocos.
+		\item \textbf{Velocidad:} la lógica sobra; lo costoso es pintar, unos pocos milisegundos por sprite, y en cada iteración solo cambian unos pocos.
 		\item \textbf{Simplicidad}: Al no incluir el fondo no hay que pensar en recortes, el motor gráfico maneja los sprites de forma que se borran y escriben directamente en la pantalla sin preocuparse de conflictos con fondo o entre sí, las imágenes son una rsitra de ceros y unos, para dibujarlos donde hay un 0 no se hace nada, donde hay un 1 se pinta un punto negro, para eliminarlos si hay un cero no se hace nada, si hay un 1 se pinta un punto del color del fondo elegido.
 	\end{itemize}
 	\item \textbf{Mega, lo que no se puede:} imagen de fondo, cartuchos intercambiables (la memoria de programa no se escribe con facilidad en ejecución) y el selector de la SD; juegos con muchos más segmentos o rutas toparían con la RAM.
@@ -61,7 +62,7 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 \label{sec:F6I01Estrategia}
 
 \begin{itemize}
-	\item \textbf{Un solo código con compilación condicional.} El programa se escribe una vez en C/C++ con el entorno de Arduino (el mismo proyecto, p.~ej. con PlatformIO) y se compila expresamente para cada aparato. Las diferencias se aíslan con \texttt{\#if defined(ARDUINO)} y \texttt{\#if defined(ESP32)} en una pequeña capa de plataforma.
+	\item \textbf{Un solo código con compilación condicional.} El programa se escribe una sola vez en C/C++ con el entorno de Arduino (el mismo proyecto, p.~ej. con PlatformIO) y se compila expresamente para cada aparato. Las diferencias se aíslan con \texttt{\#if defined(ARDUINO)} y \texttt{\#if defined(ESP32)} en una pequeña capa de plataforma.
 	\item \textbf{Lo común}: casi todo, el director, el motor de estados, el lector del GWC y la lógica del juego.
 	\item \textbf{Lo que cambia}: la capa de plataforma y el motor gráfico (aunque solo la parte que muestra y borra los sprites, el núcleo base es común)
 \end{itemize}
@@ -102,18 +103,20 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 \label{sec:F6I01Ruta}
 
 \begin{enumerate}
-	\item \textbf{Primera Etapa: Mega sin fondo.}
+	\item \textbf{Mega sin fondo.}
 	\begin{enumerate}
-		\item Prueba gráfica mínima: el paracaidista cae, con el cartucho real del Parachute, el director y un motor de estados mínimo.
-		\item Motor de estados completo (teclado, rutas, aleatorios, colisiones, contadores y fin del juego, las Fases 2 y 3) llevado al Mega, con botones físicos.
+		\item \textbf{MP1} Prueba gráfica mínima: el paracaidista cae \underline{sobre una pantalla sin fondo}, con el cartucho real del Parachute, el director y un motor de estados mínimo.
+		\item \textbf{MP2} Motor de estados completo (teclado, rutas, aleatorios, colisiones, contadores y fin del juego, las Fases 2 y 3) llevado al Mega, con botones físicos.
 	\end{enumerate}
-	\item \textbf{Segunda Etapa: ESP32 con fondo.} 
+	\item \textbf{ESP32 con fondo.} 
 	\begin{enumerate}
-		\item Prueba gráfica mínima: el paracaidista cae sobre un fondo, con el cartucho real del Parachute, el director y un motor de estados mínimo.
-		\item Desarrollo completo: pantalla y reloj SPI, el lector del cartucho sobre la flash mapeada, el fondo y el compositor, con la prueba del segmento móvil. El motor de estados no se toca: es el mismo de la etapa 1.
+		\item \textbf{EP1} Prueba gráfica mínima: el paracaidista cae \underline{sobre una pantalla con un fondo}, con el cartucho real del Parachute, el director y un motor de estados mínimo.
+		\item \textbf{EP2} Desarrollo completo: pantalla y reloj SPI, el lector del cartucho sobre la flash mapeada, el fondo y el compositor, con la prueba del segmento móvil. El motor de estados no se toca: es el mismo de la etapa 1.
 	\end{enumerate}
 	\item \textbf{Tercera Etapa (se desarrolla en la Fase 7):} selector de cartuchos desde la SD.
 \end{enumerate}
+
+El orden adecuado de desarrollor será MP1, EP1, MP2, EP2, ya que se comparte en ambos casos la mayor parte del desarrollo, los motores serán prácticamente iguales en ambos aparatos, lo que cambia es la parte gráfica.
 
 \subsection{Equipo necesario para la etapa 1}
 \label{sec:F6I01Equipo}
@@ -122,9 +125,9 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 	\item \textbf{Arduino Mega 2560 R3 con el shield TFT de 2,4\,pulgadas de MCUFRIEND con SD.} Es un shield de formato UNO con bus paralelo de 8 bits. 
 	\begin{itemize}
 		\item \textbf{Resolución:} 320$\times$240, que es la mínima que admite el GWC.
-		\item \textbf{Controlador:} los shields de MCUFRIEND montan varios (ILI9341, ILI9325, ST7781, \ldots). La biblioteca \texttt{MCUFRIEND\_kbv} lo identifica leyendo su código.
+		\item \textbf{Controlador:} los shields de MCUFRIEND montan varios dodelos de controlador diferente, no visible en la placa (ILI9341, ILI9325, ST7781, \ldots). La biblioteca \texttt{MCUFRIEND\_kbv} lo identifica leyendo su código.
 		\item \textbf{Pines que ocupa:} los de datos y control en los conectores del formato UNO (digitales 2 a 9 para los datos y analógicos A0 a A4 para el control), y los de la SD en los digitales 10 a 13, que en el Mega \textbf{no coinciden} con su SPI físico (50 a 53). 
-		\item \textbf{Pines libres:} los digitales 22 a 49 (los de los dos lados del Mega) quedan libres y son los que se usan para los botones.
+		\item \textbf{Pines libres:} los analógicos 8 a 15 y los digitales 22 a 49 quedan libres, los usados para los botones serán de los digitales por comodidad.
 		\item \textbf{Biblioteca:} \texttt{MCUFRIEND\_kbv} con \texttt{Adafruit\_GFX}; según su documentación incluye escritura directa a los puertos del Mega, que es lo que da velocidad (a comprobar midiendo).
 	\end{itemize}
 	\item \textbf{Botones:} de 2 a 5 botones de juego más los de sistema (Start, Stop, Reloj; F5-I10), conectados a los pines libres 22 a 49. Con las resistencias de arrastre internas (\texttt{INPUT\_PULLUP}) no hacen falta resistencias externas: el botón conecta el pin a masa. Si se usan resistencias externas, la clásica de 10\,k$\Omega$ de arrastre a positivo con el botón a masa funciona igual y se lee con la misma lógica invertida.
@@ -136,7 +139,7 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 
 \begin{itemize}
 	\item \textbf{RAM del Mega:} es el riesgo principal. Se mide desde el primer día (memoria libre al arrancar y mínima durante el juego) y las reglas del apartado de estrategia se cumplen siempre.
-	\item \textbf{Velocidad de pintado:} depende de la pantalla y de la biblioteca. Si la de serie fuera lenta, se sustituye por escritura directa a puertos solo en \texttt{basePantalla}.
+	\item \textbf{Velocidad de dibujo:} depende de la pantalla y de la biblioteca. Si la de serie fuera lenta, se sustituye por escritura directa a puertos solo en \texttt{basePantalla}.
 	\item \textbf{Modelo de la pantalla del Mega y biblioteca:} controlador, resolución, orientación y pines. Se comprueba en el paso 2.
 	\item \textbf{No optimizar de más para el Mega:} que el código quepa en 8\,KB es una ventaja, pero el destino es el ESP32. La única exigencia propia del Mega es no usar memoria dinámica.
 	\item \textbf{Entorno:} Arduino IDE o PlatformIO; para dos plataformas con un mismo código es más cómodo PlatformIO (un entorno por plataforma). Se decide tras pruebas antes de comenzar.
@@ -147,9 +150,9 @@ Al disponer de ambos sistemas para el desarrollo en el sistema externo, en esta 
 \label{sec:F6I01Criterios}
 
 \begin{itemize}
-	\item Queda decidido y documentado que la Fase~6 se hace en dos etapas: Mega sin fondo y después ESP32 con fondo.
-	\item Queda definida la capa de plataforma y la interfaz común del motor gráfico, de modo que el trabajo de la etapa 1 se reutiliza íntegro en la etapa 2.
-	\item Si las pruebas simples de movimiento del paracaidista no se ven correctas, se abandona el intento de usar el Mega y se pasa al ESP32 directamente.
+	\item La Fase~6 se hace en etapas: Mega sin fondo y ESP32 con fondo, primero la prueba simple y luego la completa.
+	\item Se definirán completamente la capa de plataforma y la interfaz común del motor gráfico, de modo que el trabajo se reutiliza íntegro para cada máquina
+	\item \textbf{Importante}: Si las pruebas simples de movimiento del paracaidista no se ven correctas, se abandona el intento de usar el Mega y se pasa al ESP32 directamente.
 \end{itemize}
 
 \clearpage

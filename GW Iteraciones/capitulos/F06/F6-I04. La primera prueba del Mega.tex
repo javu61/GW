@@ -1,0 +1,56 @@
+\section{Cuarta iteración de la Fase 6: La primera prueba del Mega}\label{sec:F6I04}
+
+La pestaña Generador existía desde la iteración anterior con el botón sin contenido; esta iteración le pone trabajo. La combinación \textbf{Mega + Prueba} genera ya los dos ficheros de la primera prueba del Mega (la de la sección~\ref{sec:F6I92}): el cartucho de prueba y el programa que lo ejecuta. Cualquier otra combinación de los selectores todavía no tiene contenido: el botón avisa \emph{«Nada que generar en este momento»} y no genera nada.
+
+\subsection{Los dos ficheros de la prueba}
+\label{sec:F6I04Ficheros}
+
+Pulsar Generar con Mega y Prueba descarga dos ficheros, nombrados con el nombre del cartucho saneado como identificador C (letras, dígitos y subrayado):
+
+\begin{itemize}
+	\item \texttt{<cartucho>\_gwc.h}: el GWC completo como datos de un fichero de cabecera, \texttt{const uint8_t GWC[] PROGMEM}, con \texttt{\#define GWC\_TAM} y el array a doce bytes por línea en hexadecimal. La cabecera del fichero comenta el CRC, el número de sprites y de segmentos y el tamaño total. La vía del .h es la recomendada para el Mega (sección~\ref{sec:F6I02}): evita tarjetas SD y lecturas lentas, y el compilador coloca los datos en la flash de 256~KB del ATmega2560, donde caben los cartuchos de prueba.
+	\item \texttt{<cartucho>\_prueba\_mega.ino}: el programa de la prueba, listo para compilar en el IDE de Arduino.
+\end{itemize}
+
+El GWC del .h no lleva el bloque del fondo: la prueba del Mega va con fondo liso (el \texttt{ColorFondo} del Bloque~0), como decidió la sección~\ref{sec:F6I02}.
+
+\subsection{El programa de la prueba}
+\label{sec:F6I04Ino}
+
+El .ino implementa, sobre las bibliotecas de F6-I01 (\texttt{Adafruit\_GFX} y \texttt{MCUFRIEND\_kbv}), la prueba completa de la sección~\ref{sec:F6I92}:
+
+\begin{itemize}
+	\item \textbf{Lectura del GWC desde PROGMEM}: accesores \texttt{byteEn}, \texttt{u16En} y \texttt{u32En} sobre \texttt{pgm\_read\_byte} (todo little-endian, como en el formato).
+	\item \textbf{Validación al arrancar}: cabecera \texttt{GWC1}, los cuatro dígitos hexadecimales del CRC (calculado sobre el cuerpo con CRC-16/CCITT-FALSE, la misma función que en el Designer) y el tamaño declarado igual al del array. Si algo falla, el programa se detiene con un mensaje claro por el serie.
+	\item \textbf{Parseo de bloques}: recorre la lista de bloques y extrae los Datos Generales (pantalla, ColorFondo, contadores y direcciones) y las tablas de sprites (direcciones desde el inicio del bloque, registros ancho/alto/máscara) y segmentos (registros fijos de 32~bytes). Solo va a RAM lo imprescindible: dimensión y dirección de cada elemento.
+	\item \textbf{Motor gráfico de fondo liso}: \texttt{pantallaTira} es un \texttt{fillRect} de un píxel de alto; pintar un segmento recorre la máscara de su sprite por filas y pinta cada tira de unos consecutivos con una sola orden. Los cambios se marcan (\texttt{mgFijarSegmento}) y se presentan juntos (\texttt{mgPresentar}), como en el simulador.
+	\item \textbf{Motor de juego mínimo}: la Secuencia viaja como constante \texttt{SECUENCIA[]} (los índices de segmento, en el orden del GWI) con su \texttt{TICKS}; un cursor la recorre en bucle, apagando el segmento que sale y encendiendo el que entra.
+	\item \textbf{Director}: el \texttt{loop()} mide cada iteración con \texttt{micros()} (mínimo, medio y máximo cada 20 iteraciones) y la RAM libre, y hace la pausa de 500~ms entre iteraciones. Sin Secuencia en el cartucho, avisa por el serie y se queda en el fondo.
+	\item \textbf{Pantalla}: el identificador del controlador se lee con \texttt{readID()} (con el fallback del shield de solo escritura) y la rotación se fija según la resolución declarada (apaisada si el ancho supera el alto).
+\end{itemize}
+
+\subsection{Las comprobaciones, reutilizadas}
+\label{sec:F6I04Comprobaciones}
+
+El GWC de la prueba lo monta un generador nuevo en \texttt{baseDescomponer} (\texttt{prepararGWC}) que reutiliza TODAS las comprobaciones del par del Editor: los cambios sin aplicar (avisan y abortan), la verificación de la ficha del Cartucho, la verificación de la definición, los topes de 255 y la pantalla declarada por el setup (que es a la que se escalan datos y, más adelante, el fondo). Lo único que no hace es estampar nada: no toca el código del par, ni los informativos de último GWC, ni la memoria; es un build para un destino, no el cartucho del Editor.
+
+La Secuencia del programa sale del GWI completo y no del Bloque~4 del GWC, que solo transporta los primeros cinco segmentos; así el programa recibe la Secuencia entera tal y como la guarda el cartucho de autoría.
+
+\subsection{Lo que NO hace}
+\label{sec:F6I04Limites}
+
+\begin{itemize}
+	\item \textbf{Otras combinaciones:} ESP (ambas etapas) y Mega + Completa avisan \emph{«Nada que generar en este momento»} en la nota de la ficha y no generan nada. El ESP necesita antes el formato definitivo del Bloque~5 (sección~\ref{sec:F6I91}); la etapa Completa, los botones y el resto del juego en el destino.
+	\item \textbf{El par del Editor:} intacto. Generar GWI+GWC sigue estampando su par y sus informativos; el Generador no lo toca.
+	\item \textbf{El fondo:} la prueba del Mega no lleva imagen de fondo; el escalado y la conversión del Bloque~5 para el ESP llega con esa iteración.
+\end{itemize}
+
+\subsection{Pruebas}
+\label{sec:F6I04Pruebas}
+
+La D12 del grupo \texttt{director} se ajusta: con ESP + Completa y con ESP + Prueba, el botón deja el aviso de \emph{«Nada que generar en este momento»} y no descarga nada. La D13 nueva cubre la generación: con un GWI editable, Mega + Prueba descarga exactamente dos ficheros (.h e .ino); el .h trae el array PROGMEM y su tamaño; los bytes del array, reconstruidos, se revalidan con el lector del GWC (cabecera, CRC y código \texttt{\#HHHH\#}, que coincide con el comentado en la cabecera del .h) y no traen bloque de fondo; el .ino incluye su .h y trae la Secuencia constante, la pausa, las tiras horizontales, el motor de marcas y las medidas; y la nota de la ficha apunta a los dos ficheros.
+
+\subsection{Lo que traerá la iteración siguiente}
+\label{sec:F6I04Siguiente}
+
+El resto de combinaciones del Generador: el ESP con el Bloque~5 en su formato definitivo y las cabeceras del firmware, y la etapa Completa con el juego entero.

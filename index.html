@@ -158,9 +158,13 @@
   </div>
 
   <!-- Vista GENERADOR (F6-I03): los selectores de Destino y Etapa y el
-       botón «Generar». En esta iteración solo la pantalla: lo que hace
-       el botón llega en F6-I04 (baseGenerador.js). -->
+       botón «Generar» en la barra superior (F6-I04): lo que hace
+       el botón vive en baseGenerador.js. -->
   <div id="vistaGenerador" class="oculto">
+    <div class="barraBotones">
+      <button id="btnGeneradorGenerar" disabled
+        title="Genera lo que necesita el destino y la etapa elegidos (Mega + Prueba)">Generar</button>
+    </div>
     <div id="fichaGenerador"></div>
   </div>
 

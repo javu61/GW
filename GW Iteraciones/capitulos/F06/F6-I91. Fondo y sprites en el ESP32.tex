@@ -1,10 +1,10 @@
 \section{Vigésima iteración de la Fase 6: El fondo y los sprites en el ESP32}
-\label{sec:F6I01}
+\label{sec:F6I91}
 
 Esta iteración es de DISEÑO: no toca código. Deja decidido y documentado cómo se guarda la imagen del fondo (img\_f) en el ESP32 y cómo se presentan y borran los sprites encima de ella, de la forma más compacta posible y sin que el aparato tenga que procesar mucho. Se escribe antes de empezar el firmware para tener previsto todo (formato en el GWC, algoritmo del compositor, memoria, tiempos, pruebas y cambios en el Designer) y que el desarrollo posterior sea una aplicación directa de lo aquí recogido.
 
 \subsection{Datos de partida}
-\label{sec:F6I01Datos}
+\label{sec:F6I91Datos}
 
 \begin{itemize}
 	\item \textbf{Pantalla:} 320$\times$240 píxeles en el equipo de pruebas, pero el diseño debe valer para pantallas algo mayores (p.~ej. 480$\times$320) y, como máximo, para el rango que admite el GWC (320$\times$240 a 1024$\times$600). El controlador habitual (ILI9341, ST7789 u otro similar) se maneja por SPI y la memoria de vídeo está \textbf{en la pantalla, no en el ESP32}.
@@ -18,11 +18,11 @@ Esta iteración es de DISEÑO: no toca código. Deja decidido y documentado cóm
 \end{itemize}
 
 \subsection{Análisis}
-\label{sec:F6I01Analisis}
+\label{sec:F6I91Analisis}
 
 \subsubsection{Presupuesto de memoria}
 
-La imagen de fondo ocupa lo que muestra la tabla~\ref{tab:F6I01Tamanos} según el formato. Los números son exactos (píxeles $\times$ bytes por píxel, más la paleta cuando existe).
+La imagen de fondo ocupa lo que muestra la tabla~\ref{tab:F6I91Tamanos} según el formato. Los números son exactos (píxeles $\times$ bytes por píxel, más la paleta cuando existe).
 
 \begin{table}[H]
 	\centering
@@ -36,7 +36,7 @@ La imagen de fondo ocupa lo que muestra la tabla~\ref{tab:F6I01Tamanos} según e
 		\bottomrule
 	\end{tabular}
 	\caption{Tamaño del fondo en bytes según el formato y la resolución}
-	\label{tab:F6I01Tamanos}
+	\label{tab:F6I91Tamanos}
 \end{table}
 
 \begin{itemize}
@@ -61,7 +61,7 @@ La imagen de fondo ocupa lo que muestra la tabla~\ref{tab:F6I01Tamanos} según e
 		\bottomrule
 	\end{tabular}
 	\caption{Alternativas descartadas}
-	\label{tab:F6I01Descartadas}
+	\label{tab:F6I91Descartadas}
 \end{table}
 
 \subsubsection{La idea elegida: la flash ya es la copia guardada}
@@ -77,7 +77,7 @@ La solución es el \textbf{compositor de rectángulos sucios:} al cambiar un spr
 Esto trae además dos ventajas: \textbf{no hay parpadeo} (nunca se ve el borrado y después el dibujado, la pantalla recibe el resultado final) y no hace falta ninguna RAM proporcional al número de sprites.
 
 \subsection{Diseño}
-\label{sec:F6I01Diseno}
+\label{sec:F6I91Diseno}
 
 \subsubsection{Modelo de datos en el firmware}
 
@@ -85,7 +85,7 @@ Esto trae además dos ventajas: \textbf{no hay parpadeo} (nunca se ve el borrado
 	\item \textbf{Tabla de sprites} (constante, en la flash, sale del GWC; los Bloques 2 y 3 ya contienen estos datos): por cada sprite \texttt{ancho}, \texttt{alto}, \texttt{x}, \texttt{y} y el desplazamiento de su máscara. La caja es $[x,\,x+ancho)\times[y,\,y+alto)$.
 	\item \textbf{Máscara:} cadena de bits continua, de $ancho\times alto$ bits, por filas, de izquierda a derecha y de arriba a abajo; el bit más significativo del byte es el primero. No se rellena cada fila hasta el byte: así el formato coincide con el que ya genera el GWC, y el compositor lleva un índice de bit que simplemente se incrementa (sin multiplicaciones por píxel).
 	\item \textbf{Estado de presentación} (RAM, 1 bit por sprite): \texttt{visible[i]}. Es todo lo que el compositor necesita saber en tiempo de ejecución.
-	\item \textbf{Lista de vecinos} de cada sprite: los otros sprites cuya caja corta con la suya. Se calcula una sola vez al cargar el cartucho (con 54 sprites son $54^2\approx 2\,900$ comparaciones de rectángulos, despreciable) y se guarda como una lista corta de índices. Se puede calcular en el firmware o en el Designer; se decide al implementar (ver \ref{sec:F6I01Abiertos}).
+	\item \textbf{Lista de vecinos} de cada sprite: los otros sprites cuya caja corta con la suya. Se calcula una sola vez al cargar el cartucho (con 54 sprites son $54^2\approx 2\,900$ comparaciones de rectángulos, despreciable) y se guarda como una lista corta de índices. Se puede calcular en el firmware o en el Designer; se decide al implementar (ver \ref{sec:F6I91Abiertos}).
 	\item Un sprite sin vecinos (lo habitual) usa el camino rápido descrito más abajo.
 \end{itemize}
 
@@ -107,7 +107,7 @@ Hoy el Bloque 5 del GWC está reservado y vacío (F5-I06). Se propone el siguien
 		\bottomrule
 	\end{tabular}
 	\caption{Contenido propuesto para el Bloque 5 (fondo)}
-	\label{tab:F6I01Bloque5}
+	\label{tab:F6I91Bloque5}
 \end{table}
 
 \begin{itemize}
@@ -161,9 +161,9 @@ para cada sprite i marcado como cambiado:
 \end{itemize}
 
 \subsection{Estimaciones de tiempo}
-\label{sec:F6I01Tiempos}
+\label{sec:F6I91Tiempos}
 
-Son órdenes de magnitud para decidir; se medirán en el equipo (\ref{sec:F6I01Pruebas}).
+Son órdenes de magnitud para decidir; se medirán en el equipo (\ref{sec:F6I91Pruebas}).
 
 \begin{table}[H]
 	\centering
@@ -178,27 +178,29 @@ Son órdenes de magnitud para decidir; se medirán en el equipo (\ref{sec:F6I01P
 		\bottomrule
 	\end{tabular}
 	\caption{Tiempo de envío por SPI según el tamaño del rectángulo}
-	\label{tab:F6I01Tiempos}
+	\label{tab:F6I91Tiempos}
 \end{table}
+
+Los tiempos de la tabla usan el rendimiento teórico del SPI a 40\,MHz (unos 5\,MB/s). En la práctica el envío efectivo queda entre el 60 y el 75\,\% de ese valor, por las órdenes de ventana entre envíos y los solapes del DMA, de modo que los tiempos reales serán algo mayores; las medidas del equipo (\ref{sec:F6I91Pruebas}) darán la cifra del equipo.
 
 \begin{itemize}
 	\item Una iteración típica (decenas de sprites cambiando como mucho, casi siempre pocos) queda en pocos milisegundos. Las Game \& Watch iteran a decenas o centenas de milisegundos, con lo que hay mucho margen.
 	\item El fondo completo solo se pinta al arrancar.
-	\item La lectura de la flash mapeada y la composición añaden poco frente al SPI, pero se medirán por separado (\ref{sec:F6I01Pruebas}).
+	\item La lectura de la flash mapeada y la composición añaden poco frente al SPI, pero se medirán por separado (\ref{sec:F6I91Pruebas}).
 \end{itemize}
 
 \subsection{Impacto en el resto del sistema}
-\label{sec:F6I01Impacto}
+\label{sec:F6I91Impacto}
 
 \begin{itemize}
-	\item \textbf{GWC (Bloque 5):} pasa de reservado a llevar el fondo con el formato anterior. El principio de F5-I13 (<<un GWC debe contener los mismos datos que el GWI y el juego debe funcionar igual>>) se mantiene: el lector del simulador debe poder interpretar el Bloque 5 y mostrar el mismo fondo. Como el RGB565 pierde bits de color, el simulador debería mostrar el fondo ya redondeado a RGB565 al cargar un GWC, para que lo que se ve en el navegador sea lo que verá el ESP32.
+	\item \textbf{GWC (Bloque 5):} pasa de reservado a llevar el fondo con el formato anterior. El principio de F5-I13 (<<un GWC debe contener los mismos datos que el GWI y el juego debe funcionar igual>>) se mantiene: el lector del simulador debe poder interpretar el Bloque 5 y mostrar el mismo fondo. Como el RGB565 pierde bits de color, el simulador debería mostrar el fondo ya redondeado a RGB565 al cargar un GWC, para que lo que se ve en el navegador sea lo que verá el ESP32. Y la comparación de equivalencia del GWI y del GWC se hace tras convertir AMBOS lados a RGB565, no sólo el del GWC.
 	\item \textbf{Designer:} un generador del Bloque 5 (conversión a RGB565 en el orden de bytes elegido, detección de 16 o 256 colores exactos, paleta, CRC), y la prueba de equivalencia GWI/GWC ampliada con el fondo.
 	\item \textbf{F5-I20 (memoria):} la FLASH informada es el tamaño del bloque de fondo, que hasta ahora era siempre 0. En cuanto el Bloque 5 deje de ser nulo, el aviso del porcentaje lo recoge sin cambiar nada, como se dejó previsto. La RAM del GWC no cambia por el fondo.
 	\item \textbf{RAM del firmware:} los búferes del compositor (unos 20\,KB), la tabla de sprites y de vecinos y el bit de visibilidad de cada sprite no los cuenta el GWC; se suman a la RAM que el usuario declara en el Setup para saber cuánto se deja libre.
 \end{itemize}
 
 \subsection{Pruebas previstas}
-\label{sec:F6I01Pruebas}
+\label{sec:F6I91Pruebas}
 
 \begin{itemize}
 	\item \textbf{Compositor en el PC:} el compositor se escribe como una función pura (entrada: fondo, tabla de sprites, estados y caja; salida: búfer), sin dependencias del ESP32, de modo que se compile y se pruebe en el PC.
@@ -210,7 +212,7 @@ Son órdenes de magnitud para decidir; se medirán en el equipo (\ref{sec:F6I01P
 \end{itemize}
 
 \subsection{Puntos abiertos}
-\label{sec:F6I01Abiertos}
+\label{sec:F6I91Abiertos}
 
 \begin{itemize}
 	\item \textbf{Lista de vecinos:} calcularla en el firmware al cargar (más sencillo, un poco más de arranque) o guardarla en el GWC (más datos en el cartucho, nada que calcular). Mi inclinación es calcularla en el firmware.
@@ -222,7 +224,7 @@ Son órdenes de magnitud para decidir; se medirán en el equipo (\ref{sec:F6I01P
 \end{itemize}
 
 \subsection{Criterios de aceptación}
-\label{sec:F6I01Criterios}
+\label{sec:F6I91Criterios}
 
 \begin{itemize}
 	\item El fondo no se guarda en la RAM en ningún formato; solo se leen de la flash las filas que hacen falta.
